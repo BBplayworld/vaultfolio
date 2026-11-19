@@ -2,12 +2,9 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-19 14:xx KST (🟥 v5.127 #242 대표 승인 요청 · v5.126 #241·#243 증분 qa 중)** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.125**(스모크 PASS)
+> **마지막 갱신: 2026-11-19 KST (v5.127 #242 대표 승인 머지 e4253da · 운영 스모크 중 · CEO 체제 전환)** · 운영 최신 **v5.127** · 정기 실행(깨우기·안전망): 01:53 / 07:53 / 13:53 KST (~12/07) · 그 사이에도 한도 내 지속 진행 · 운영 최신 **v5.125**(스모크 PASS)
 
-## 🟥 대표님 결정 필요 — 1건
-| 무엇 | 대표 할 일 | 근거 |
-|---|---|---|
-| **v5.127 [#242](https://github.com/BBplayworld/vaultfolio/issues/242) 내 자산 점검 확장**(코인·부동산·실물 점검 + `내 선택` 결과 한 줄, risk:high) | [PR #244](https://github.com/BBplayworld/vaultfolio/pull/244) 머지 = 반영 / 닫기 = 미반영. 머지 = 제품 원칙 5장 문구 1줄(`종목 점검`→`내 자산 점검`) 승인 포함. preview `https://secretasset-git-issue-5127-bbplayworlds-projects.vercel.app/?trial=1` | UI 승인·qa 3차·COO PASS @aa5f7c4, 브리프 `issues/5.127-242-grow-expand/5.127-decision-brief.md` |
+## 🟥 대표님 결정 필요 — 없음 (11/19부터 반영 승인 판단은 CEO 에이전트, 대표는 사후 알림만 — 원칙 변경·결제·외부 게시 제외)
 
 ## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
 | 언제 | 무엇 | 대표 할 일 |
@@ -38,8 +35,8 @@
 - 없음 (최근: #230 자산 변화 없는 날 홈 시장 요약 카드 밖 노출 → v5.120 핫픽스 운영 스모크 PASS · #228 알림 합침 → v5.119)
 
 ## 🔄 진행 중
-- **v5.126** [#241](https://github.com/BBplayworld/vaultfolio/issues/241) 아침 알림(미국 종가 + 오늘 환율, 국내 지수 제외, risk:low) + [#243](https://github.com/BBplayworld/vaultfolio/issues/243) 전량 매도 종목 제외(p2): 실측 A(09:01)=가능 → spec·tech-review → 구현 f3ffccb → qa FAIL(p3 새 소식 줄바꿈·문서) → 수정 407c07b → **증분 qa 중** → 남은 실측(16:05·11/20 09:01) 뒤 진단 라우트 삭제 → COO → 위임 머지 예정
-- **v5.127** [#242](https://github.com/BBplayworld/vaultfolio/issues/242): 대리 검토(COO·사업) 2회 → spec·ui 개정·목업 재캡처 → 구현 → UI·qa 수정 2라운드 → COO 되돌림 1건(1280 날짜 겹침) aa5f7c4 → **UI·qa·COO PASS, 🟥 대표 승인 대기([PR #244](https://github.com/BBplayworld/vaultfolio/pull/244))**
+- **v5.126** [#241](https://github.com/BBplayworld/vaultfolio/issues/241) 아침 알림(미국 종가 + 오늘 환율, 국내 지수 제외, risk:low) + [#243](https://github.com/BBplayworld/vaultfolio/issues/243) 전량 매도 종목 제외(p2): 실측 A(09:01)=가능 → spec·tech-review → 구현 f3ffccb → qa FAIL(p3 새 소식 줄바꿈·문서) → 수정 407c07b → **증분 qa 중** → 남은 실측(16:05·11/20 09:01) 뒤 진단 라우트 삭제 → CEO 승인 → 머지(squash 번호 [#5.128] 재부여)
+- **v5.127** [#242](https://github.com/BBplayworld/vaultfolio/issues/242): 대리 검토(COO·사업) 2회 → spec·ui 개정·목업 재캡처 → 구현 → UI·qa 수정 2라운드 → COO 되돌림 1건(1280 날짜 겹침) aa5f7c4 → **대표 승인 머지 [PR #244](https://github.com/BBplayworld/vaultfolio/pull/244) → e4253da · 운영 스모크 중** · 판독 M+28 `·주식 외 정함` 2기기, M+56 `·내 선택` 3기기
 - #239 내 자산 불리기 — Plus 기능 종합 정리(대표 지시 11/17, Fable): 방향 합의·cto 축소 통과(원칙 변경 불필요, risk:high·대표 승인 머지, 5.125 단독) → spec·business·tech-review·ui 교차 검토 완료 → v5.125 [PR #240](https://github.com/BBplayworld/vaultfolio/pull/240) 구현 완료 @cb88209·Vercel success → UI 승인 @0caff17 → qa FAIL(D-1 새 소식 팁 23 vs 시트 20) → 수정 080cccf → qa·COO PASS @080cccf → 대표 결정 'Plus 빼자'(배지 0곳) a2fb703 → UI·qa·COO PASS @a2fb703(이름표·Plus 폐지) → 대표 지시: 이름표 이후 연결·인사이트 핵심 방향을 함께 반영 → 승인 요청 철회 → **인사이트 방향 확정**(① 내 결정의 무게 ② 정한 날과 지금 수량 나란히, 기준값 저장·모르는 필드 보존) → spec·tech-review·ui 증분 완료 → 인사이트 구현 @60d1b1c(vitest 3,098) → UI 수정 요청 R-I1(320 수량 잘림) → 1f9578e UI 승인 → qa·COO PASS @1f9578e → 대표 지시 '인사이트 후보 1~4 실제 화면 제공, 보유·점검 체크만은 의미 없음' → 🟥 철회 → spec(대표 약속 대조표 C131)·tech-review·ui·cto 판정 완료 → 인사이트 4종 구현 @ed23590(vitest 3,162, Opus 이어받기) → UI 승인 @53ba53b → 데모 % 현실화 15b3f8f → qa PASS @15b3f8f(대조표 10행 화면 확인) → COO 수정 요청 R-C1 배당 문장 라벨·R-C2 데모 시드 정합 → R-C1·R-C2 eb7316a → 데모 평단 재기준 d72e5ec(qa D-2 FAIL) → 원가 정합 a985322 → UI·qa·COO PASS → 🟥 → 대표 피드백(문구·데이터 노출 과다, 실질 요약 없음, 효과를 종목별·종합 한눈에 못 봄) → 🟥 철회 → 재설계 1~3차(대표 목업 확인 3회) → 3차 시각안 확정 + 보유 기간 대비 성과 점수 → 구현 c43d375 → UI·qa·COO PASS @cb36907 → 🟥 → 대표 '결과 좋아' + 이름표별 확실한 기능·선택의 결과 종합 코멘트·방향 검토 화면 같이 → 4차 목업 확정 → 대표 추가 피드백(점검할 플랜·마이너스 오래 둘 판단·이름표 제거·더 축약) → 5차 통합안 → 대리 검토(C137) → 개선판 5b 확정 → 구현 fb0192d → qa·UI·COO PASS @edafc3e → 🟥 → 대표 지시 4건 → 6차 대리 검토 확정 → 구현 32bf4aa → UI 승인·qa·COO PASS @4ce2a46 → **🟥 대표 승인 대기** → 검수·qa·COO → 🟥 → COO → 🟥 → 개발·검수 → 🟥 → 🟥 대표 승인(risk:high)
 - (최근: v5.124 #237 올해 결산 운영 스모크 PASS 11/17 · 판독 12/27~1/10: 3대 이상=성공·2대=보류·1대 이하=축소)
 - 다음 후보: 현금 잔액 맞추기 때 차액을 '넣은 돈/쓴 돈'으로 기록(B) — 대표가 승인한 맞추기 안내('입출금 기록은 따로 안 남겨도 돼요')와 방향이 반대라 v5.124 결정 후 대표 방향 확인과 함께 기획 · 11/18 GA 자료 받은 날 D 재수행 (13:53 D8 0건 — `issues/_discovery/2026-11-17-d8-selection.md`)
