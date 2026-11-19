@@ -1,0 +1,242 @@
+{
+ "detail/stocks:touch": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-stock",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-stock"
+ },
+ "detail/stocks:kbd": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-stock",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 1px",
+    "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.58499 0.0288518 -0.231183 / 0.5) 0px 0px 0px 2px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "focusVisible": true,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-stock"
+ },
+ "detail/stocks:mouse1280": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-stock",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-stock"
+ },
+ "detail/crypto:touch": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-crypto",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-crypto"
+ },
+ "detail/crypto:kbd": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-crypto",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 1px",
+    "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.58499 0.0288518 -0.231183 / 0.5) 0px 0px 0px 2px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "focusVisible": true,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-crypto"
+ },
+ "detail/crypto:mouse1280": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-crypto",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-crypto"
+ },
+ "detail/cash:touch": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-cash",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-cash"
+ },
+ "detail/cash:kbd": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-cash",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 1px",
+    "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.58499 0.0288518 -0.231183 / 0.5) 0px 0px 0px 2px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "focusVisible": true,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-cash"
+ },
+ "detail/cash:mouse1280": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-cash",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-cash"
+ },
+ "detail/loans:touch": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-loan",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-loan"
+ },
+ "detail/loans:kbd": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-loan",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 1px",
+    "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.58499 0.0288518 -0.231183 / 0.5) 0px 0px 0px 2px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "focusVisible": true,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-loan"
+ },
+ "detail/loans:mouse1280": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-loan",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-loan"
+ },
+ "detail/real-estate:touch": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-real-estate",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-real-estate"
+ },
+ "detail/real-estate:kbd": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-real-estate",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 1px",
+    "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.58499 0.0288518 -0.231183 / 0.5) 0px 0px 0px 2px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "focusVisible": true,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-real-estate"
+ },
+ "detail/real-estate:mouse1280": {
+  "rows": 5,
+  "picked": [
+   {
+    "id": "welcome-manual-real-estate",
+    "bg": "lab(22.2112 -0.180319 -5.21668)",
+    "accent": "lab(22.2112 -0.180319 -5.21668)",
+    "fw": "600",
+    "outline": "none 3px",
+    "shadow": "none",
+    "focusVisible": false,
+    "active": true
+   }
+  ],
+  "active": "welcome-manual-real-estate"
+ }
+}

@@ -1,0 +1,3263 @@
+[
+ {
+  "w": 390,
+  "s": "home",
+  "hash": "",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail",
+  "hash": "#detail",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   323
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/stocks",
+  "hash": "#detail/stocks",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/stocks-xray",
+  "hash": "#detail/stocks-xray",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   135
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/stocks-trades",
+  "hash": "#detail/stocks-trades",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/stocks-item",
+  "hash": "#detail/stocks-item",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   144
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/real-estate",
+  "hash": "#detail/real-estate",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/crypto",
+  "hash": "#detail/crypto",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/crypto-transactions",
+  "hash": "#detail/crypto-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/cash",
+  "hash": "#detail/cash",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   176
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/cash-transactions",
+  "hash": "#detail/cash-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/loans",
+  "hash": "#detail/loans",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/loan-transactions",
+  "hash": "#detail/loan-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "detail/physical",
+  "hash": "#detail/physical",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 390,
+  "s": "tax",
+  "hash": "#tax",
+  "scrollY": 2003,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 4,
+   "bottom": 52,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 0,
+   "bottom": 56,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 10,
+   "bottom": 46,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   "trial-banner:0-56",
+   "sticky top-[var(--trial-bar-h,:56-172"
+  ]
+ },
+ {
+  "w": 390,
+  "s": "activity",
+  "hash": "#activity",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   108
+  ]
+ },
+ {
+  "w": 390,
+  "s": "activity/change",
+  "hash": "#activity/change",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 390,
+  "s": "activity/change-market",
+  "hash": "#activity/change-market",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 390,
+  "s": "activity/dividend",
+  "hash": "#activity/dividend",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 390,
+  "s": "activity/report",
+  "hash": "#activity/report",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 390,
+  "s": "more",
+  "hash": "#more",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   81
+  ]
+ },
+ {
+  "w": 390,
+  "s": "settings",
+  "hash": "#settings",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 378,
+   "w": 366,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 390,
+   "w": 390,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 221,
+   "right": 372,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   117
+  ]
+ },
+ {
+  "w": 390,
+  "gtagCalls": 0,
+  "errs": [
+   "Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+  ],
+  "reqs": [
+   "POST https://secretasset-git-issue-5131-bbplayworlds-projects.vercel.app/api/xray-classify"
+  ]
+ },
+ {
+  "w": 320,
+  "s": "home",
+  "hash": "",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail",
+  "hash": "#detail",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/stocks",
+  "hash": "#detail/stocks",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/stocks-xray",
+  "hash": "#detail/stocks-xray",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/stocks-trades",
+  "hash": "#detail/stocks-trades",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/stocks-item",
+  "hash": "#detail/stocks-item",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/real-estate",
+  "hash": "#detail/real-estate",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   176
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/crypto",
+  "hash": "#detail/crypto",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   118
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/crypto-transactions",
+  "hash": "#detail/crypto-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/cash",
+  "hash": "#detail/cash",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/cash-transactions",
+  "hash": "#detail/cash-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/loans",
+  "hash": "#detail/loans",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   155
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/loan-transactions",
+  "hash": "#detail/loan-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 320,
+  "s": "detail/physical",
+  "hash": "#detail/physical",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   111
+  ]
+ },
+ {
+  "w": 320,
+  "s": "tax",
+  "hash": "#tax",
+  "scrollY": 2284,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 4,
+   "bottom": 52,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 0,
+   "bottom": 56,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 10,
+   "bottom": 46,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   "trial-banner:0-56",
+   "sticky top-[var(--trial-bar-h,:56-172"
+  ]
+ },
+ {
+  "w": 320,
+  "s": "activity",
+  "hash": "#activity",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   384
+  ]
+ },
+ {
+  "w": 320,
+  "s": "activity/change",
+  "hash": "#activity/change",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "activity/change-market",
+  "hash": "#activity/change-market",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "activity/dividend",
+  "hash": "#activity/dividend",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "activity/report",
+  "hash": "#activity/report",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "s": "more",
+  "hash": "#more",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   357
+  ]
+ },
+ {
+  "w": 320,
+  "s": "settings",
+  "hash": "#settings",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 12,
+   "right": 308,
+   "w": 296,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 320,
+   "w": 320,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 151,
+   "right": 302,
+   "w": 151,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 2,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 320,
+  "gtagCalls": 0,
+  "errs": [
+   "Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+  ],
+  "reqs": [
+   "POST https://secretasset-git-issue-5131-bbplayworlds-projects.vercel.app/api/xray-classify"
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "home",
+  "hash": "",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   338
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail",
+  "hash": "#detail",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   222
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/stocks",
+  "hash": "#detail/stocks",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/stocks-xray",
+  "hash": "#detail/stocks-xray",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   230
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/stocks-trades",
+  "hash": "#detail/stocks-trades",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/stocks-item",
+  "hash": "#detail/stocks-item",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   313
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/real-estate",
+  "hash": "#detail/real-estate",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   63,
+   111,
+   5
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/crypto",
+  "hash": "#detail/crypto",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/crypto-transactions",
+  "hash": "#detail/crypto-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/cash",
+  "hash": "#detail/cash",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   286
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/cash-transactions",
+  "hash": "#detail/cash-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/loans",
+  "hash": "#detail/loans",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   63,
+   111,
+   5
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/loan-transactions",
+  "hash": "#detail/loan-transactions",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "detail/physical",
+  "hash": "#detail/physical",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "tax",
+  "hash": "#tax",
+  "scrollY": 1919,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 4,
+   "bottom": 52,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 0,
+   "bottom": 56,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 10,
+   "bottom": 46,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   "trial-banner:0-56",
+   "sticky top-[var(--trial-bar-h,:56-187"
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "activity",
+  "hash": "#activity",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   68,
+   116,
+   0
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "activity/change",
+  "hash": "#activity/change",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "activity/change-market",
+  "hash": "#activity/change-market",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   302
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "activity/dividend",
+  "hash": "#activity/dividend",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   420
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "activity/report",
+  "hash": "#activity/report",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   379
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "more",
+  "hash": "#more",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   205
+  ]
+ },
+ {
+  "w": 1280,
+  "s": "settings",
+  "hash": "#settings",
+  "scrollY": 0,
+  "bars": 1,
+  "tags": 1,
+  "notes": 1,
+  "btns": 1,
+  "sameNode": true,
+  "card": {
+   "top": 68,
+   "bottom": 116,
+   "left": 48,
+   "right": 1232,
+   "w": 1184,
+   "h": 48
+  },
+  "bar": {
+   "top": 64,
+   "bottom": 120,
+   "left": 0,
+   "right": 1280,
+   "w": 1280,
+   "h": 56
+  },
+  "btn": {
+   "top": 74,
+   "bottom": 110,
+   "left": 1059,
+   "right": 1226,
+   "w": 167,
+   "h": 36
+  },
+  "btnLines": 1,
+  "textLines": 1,
+  "hitTopBottom": "true/true",
+  "overl": [],
+  "oldText": false,
+  "notSaved": 1,
+  "hscroll": false,
+  "wb": "nowrap/nowrap/nowrap",
+  "dark": true,
+  "after": [
+   4,
+   52,
+   240
+  ]
+ },
+ {
+  "w": 1280,
+  "gtagCalls": 0,
+  "errs": [
+   "Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+  ],
+  "reqs": [
+   "POST https://secretasset-git-issue-5131-bbplayworlds-projects.vercel.app/api/xray-classify"
+  ]
+ }
+]

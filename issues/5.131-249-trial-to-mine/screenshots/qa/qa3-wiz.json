@@ -1,0 +1,67 @@
+{
+ "detail/stocks": {
+  "firstStep": [
+   "주식 스크린샷 업로드"
+  ],
+  "sentOnOpen": [
+   "onboarding_action:웰컴·스크린샷 등록:"
+  ]
+ },
+ "detail/crypto": {
+  "firstStep": [
+   "암호화폐 스크린샷 업로드"
+  ],
+  "sentOnOpen": [
+   "onboarding_action:웰컴·스크린샷 등록:"
+  ]
+ },
+ "detail/cash": {
+  "firstStep": [
+   "현금 스크린샷 업로드"
+  ],
+  "sentOnOpen": [
+   "onboarding_action:웰컴·스크린샷 등록:"
+  ],
+  "afterSkip": [
+   "대출 스크린샷 업로드"
+  ],
+  "afterClose": {
+   "title": "첫 번째 자산을 추가해보세요",
+   "ls": "{\"categories\":{\"stock\":\"pending\",\"crypto\":\"pending\",\"cash\":\"skipped\",\"loan\":\"pending\"},\"dismissed\":true}"
+  },
+  "reopen": [
+   "주식 스크린샷 업로드"
+  ],
+  "allSent": [
+   "onboarding_action:웰컴·스크린샷 등록:",
+   "wizard_step:온보딩:",
+   "wizard_step:온보딩:",
+   "welcome_view:웰컴:",
+   "onboarding_action:웰컴·스크린샷 등록:"
+  ]
+ },
+ "detail/loans": {
+  "firstStep": [
+   "대출 스크린샷 업로드"
+  ],
+  "sentOnOpen": [
+   "onboarding_action:웰컴·스크린샷 등록:"
+  ]
+ },
+ "detail/real-estate": {
+  "firstStep": [
+   "주식 스크린샷 업로드"
+  ],
+  "sentOnOpen": [
+   "onboarding_action:웰컴·스크린샷 등록:"
+  ]
+ },
+ "plain": {
+  "firstStep": [
+   "주식 스크린샷 업로드"
+  ],
+  "sent": [
+   "onboarding_action:웰컴·스크린샷 등록:"
+  ]
+ }
+}

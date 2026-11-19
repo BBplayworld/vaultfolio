@@ -1,0 +1,8 @@
+{
+ "cssRule": [
+  "@layer utilities {\n  .\\@container\\/card-header { container: card-header / inline-size; }\n  .\\@container { container-type: inline-size; }\n  .pointer-events-auto { pointer-events: auto; }\n  .pointer-eve",
+  ".trial-bar-sticky { top: var(--trial-bar-top,0px); }",
+  "@media (display-mode: standalone) {\n  html { --trial-bar-top: env(safe-area-inset-top,0px); }\n  html[data-device=\"pc\"] { --trial-bar-top: 74px; }\n}",
+  "html:has([data-trial-bar]) { --trial-bar-h: calc(var(--trial-bar-top,0px) + 56px); }"
+ ]
+}

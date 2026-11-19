@@ -1,0 +1,134 @@
+{
+ "320:detail/cash": {
+  "srcHash": "#detail/cash",
+  "trialGtag": 0,
+  "url": "/",
+  "ss": [],
+  "title": "현금성 자산부터 추가해보세요",
+  "desc": "방금 본 화면이 내 현금성 자산으로 채워져요.",
+  "focus": "welcome-cta-wizard",
+  "wizBrand": true,
+  "moreBrand": false,
+  "titleRect": [
+   168,
+   196
+  ],
+  "wizRect": [
+   260,
+   300
+  ],
+  "moreRect": [
+   312,
+   352
+  ],
+  "vh": 568,
+  "scrollY": 526,
+  "gtag": [
+   "page_view:홈",
+   "theme_mode:다크 모드 사용",
+   "welcome_view:웰컴",
+   "onboarding_action:웰컴·체험",
+   "onboarding_action:웰컴·체험·현금"
+  ],
+  "btnCount": 2,
+  "gate": true,
+  "banner": false,
+  "reload": {
+   "ss": [],
+   "gtag": [
+    "page_view:홈",
+    "welcome_view:웰컴"
+   ],
+   "title": "첫 번째 자산을 추가해보세요"
+  },
+  "errs": []
+ },
+ "320:detail/crypto": {
+  "srcHash": "#detail/crypto",
+  "trialGtag": 0,
+  "url": "/",
+  "ss": [],
+  "title": "암호화폐부터 추가해보세요",
+  "desc": "방금 본 화면이 내 암호화폐로 채워져요.",
+  "focus": "welcome-cta-wizard",
+  "wizBrand": true,
+  "moreBrand": false,
+  "titleRect": [
+   188,
+   216
+  ],
+  "wizRect": [
+   260,
+   300
+  ],
+  "moreRect": [
+   312,
+   352
+  ],
+  "vh": 568,
+  "scrollY": 506,
+  "gtag": [
+   "page_view:홈",
+   "theme_mode:다크 모드 사용",
+   "welcome_view:웰컴",
+   "onboarding_action:웰컴·체험",
+   "onboarding_action:웰컴·체험·암호화폐"
+  ],
+  "btnCount": 2,
+  "gate": true,
+  "banner": false,
+  "reload": {
+   "ss": [],
+   "gtag": [
+    "page_view:홈",
+    "welcome_view:웰컴"
+   ],
+   "title": "첫 번째 자산을 추가해보세요"
+  },
+  "errs": []
+ },
+ "320:detail/loans": {
+  "srcHash": "#detail/loans",
+  "trialGtag": 0,
+  "url": "/",
+  "ss": [],
+  "title": "대출부터 추가해보세요",
+  "desc": "방금 본 화면이 내 대출로 채워져요.",
+  "focus": "welcome-cta-wizard",
+  "wizBrand": true,
+  "moreBrand": false,
+  "titleRect": [
+   188,
+   216
+  ],
+  "wizRect": [
+   260,
+   300
+  ],
+  "moreRect": [
+   312,
+   352
+  ],
+  "vh": 568,
+  "scrollY": 506,
+  "gtag": [
+   "page_view:홈",
+   "theme_mode:다크 모드 사용",
+   "welcome_view:웰컴",
+   "onboarding_action:웰컴·체험",
+   "onboarding_action:웰컴·체험·대출"
+  ],
+  "btnCount": 2,
+  "gate": true,
+  "banner": false,
+  "reload": {
+   "ss": [],
+   "gtag": [
+    "page_view:홈",
+    "welcome_view:웰컴"
+   ],
+   "title": "첫 번째 자산을 추가해보세요"
+  },
+  "errs": []
+ }
+}

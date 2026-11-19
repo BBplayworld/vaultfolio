@@ -1,0 +1,26 @@
+{
+ "390": {
+  "home": {
+   "banner": 0,
+   "barH": "",
+   "barTop": "",
+   "firstMainChild": "상세\n성과\n3.5\n데모\n\n순자산\n\n568,462,052원\n\n▼ -7만원\n(-0.0%)\n전일 대비\n환율 하락\n"
+  },
+  "tax": [
+   "0px:0"
+  ],
+  "taxScrollMt": "128px"
+ },
+ "1280": {
+  "home": {
+   "banner": 0,
+   "barH": "",
+   "barTop": "",
+   "firstMainChild": "상세\n성과\n3.5\n데모\n\n순자산\n\n568,462,052원\n\n▼ -7만원\n(-0.0%)\n전일 대비\n환율 하락\n"
+  },
+  "tax": [
+   "0px:0"
+  ],
+  "taxScrollMt": "128px"
+ }
+}
