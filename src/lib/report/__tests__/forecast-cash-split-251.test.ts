@@ -160,6 +160,19 @@ describe("#251 예측 분해 — 구간 안 등록 현금·대출 분리", () =>
     expect(sumEffects(a)).toBeCloseTo(a.deltaNet, 6);
   });
 
+  it("13. (qa D-1) 새 계좌 + 시작일 당일 입금 → 첫 구간은 당일 입금도 income 몫, 신규 현금은 등록 당시 잔액(이중 0)", () => {
+    const data = emptyData();
+    const c = cash({ balance: 6_000_000 }); // 등록 500만 + 시작일(FROM) 날짜로 소급 입금 100만
+    data.cash = [c];
+    data.cashTransactions = [cashTx({ cashId: c.id, date: FROM })];
+    const a = run(data, [legacy(10_000_000), enriched(TO, 16_000_000)]);
+    expect(a.incomeEffect).toBe(1_000_000);
+    expect(eff(a, "cash")?.amount).toBeCloseTo(5_000_000, 6);
+    expect(eff(a, "price")?.amount ?? 0).toBeCloseTo(0, 6);
+    expect(labels(a)).toEqual(["현금 입금", "신규 현금"]);
+    expect(sumDisplayed(a)).toBeCloseTo(a.deltaNet, 6);
+  });
+
   it("12. 등록일이 시작일 당일·끝일 이후인 현금 → 구간 밖(현행)", () => {
     const data = emptyData();
     data.cash = [cash({ id: `cash_${msOf(FROM)}` }), cash({ id: `cash_${msOf("2026-05-25")}` })];
