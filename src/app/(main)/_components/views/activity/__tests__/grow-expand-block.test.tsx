@@ -413,3 +413,52 @@ describe("세그먼트·허브(AC-19·20) — 칸 이름 `내 자산 점검`, �
     expect(view).toContain('<span className="whitespace-nowrap">장기 보유 {growStatus.keep} ·</span><span className="whitespace-nowrap">점검 대상 {growStatus.check}</span>');
   });
 });
+
+// ui-review(R-1~R-6)·qa(D1) 수정 라운드 회귀
+describe("수정 라운드 — 이력 줄 말줄임·다음 점검 날짜 겹침·좁은 폭 끊김", () => {
+  const block = readFileSync(path.resolve(__dirname, "../stock-label-block.tsx"), "utf8");
+  const panel = readFileSync(path.resolve(__dirname, "../grow-pick-panel.tsx"), "utf8");
+  const stockSheet = (labels: StockLabels, withAfter = true) => {
+    const row = buildBoardRows([st("a", "AAA", 100, 120)], { USD: 1400, JPY: 9 }, labels, NOW)[0];
+    return renderToStaticMarkup(<ReviewSheet row={row} labels={labels} nowMs={NOW} planOpen={false} onPlanOpen={() => {}} onChoose={() => {}} onSavePlan={() => {}} onOpenPage={() => {}} afterOf={withAfter ? () => ({ kind: "next", pct: 123.4 }) : undefined} />);
+  };
+  it("R-1·D1: 이력 줄의 선택 낱말은 말줄임하지 않는다 — 낱말은 nowrap, 값은 넘치면 같은 행 둘째 줄 오른쪽으로(flex-wrap + ml-auto)", () => {
+    const labels = mk({ AAA: it0("keep", 20, 100) }, [{ t: "AAA", at: day(20), from: "keep", choice: "check", price: 90, rate: -10 }]);
+    const line = stockSheet(labels).match(/<p data-testid="grow-history-row"[\s\S]*?<\/p>/)![0];
+    expect(line).toContain("flex-wrap");
+    expect(line).not.toMatch(/truncate|grid-cols|overflow-hidden|text-ellipsis/);
+    expect(line.match(/<span data-testid="grow-history-choice" class="([^"]*)"/)![1]).toBe("whitespace-nowrap");
+    expect(tag(line, "grow-history-after")).toMatch(/class="ml-auto whitespace-nowrap/);
+    expect(text(line)).toMatch(/^\d{1,2}월 \d{1,2}일점검 대상으로다음 점검까지 \+123\.4%$/); // 최장 조합도 글자가 전부 있다
+    // 값이 없는 줄은 빈 칸을 만들지 않는다
+    expect(stockSheet(labels, false).match(/<p data-testid="grow-history-row"[\s\S]*?<\/p>/)![0]).not.toContain("grow-history-after");
+  });
+  it("R-6: 차례가 아닌 행은 이유 줄 `다음 점검 {날짜}` 한 줄만 — 버튼 아래 `그대로 두면 다음 점검은`은 차례인 행에서만(두 날짜 동시 노출 없음)", () => {
+    const notDue = stockSheet(mk({ AAA: it0("check", 20, 100) }));
+    expect(inner(notDue, "grow-sheet-reason")).toMatch(/^다음 점검 \d{1,2}월 \d{1,2}일$/);
+    expect(notDue).not.toMatch(/grow-choice-next|그대로 두면|aria-describedby/);
+    const due = stockSheet(mk({ AAA: it0("check", 150, 100) }));
+    expect(inner(due, "grow-sheet-reason")).toBe("점검 차례 · 점검 주기 3개월이 지났어요");
+    expect(inner(due, "grow-choice-next", "p")).toMatch(/^그대로 두면 다음 점검은\d{1,2}월 \d{1,2}일$/);
+    expect(due.match(/다음 점검/g)).toHaveLength(1);
+    // 오늘 점검한 행도 이유 줄 1곳뿐
+    const today = stockSheet(mk({ AAA: { ...it0("check", 150, 100), checkedAt: day(0) } }, [{ t: "AAA", at: day(0), from: "check", choice: "same", price: 120, rate: 20 }]));
+    expect(today).not.toContain("grow-choice-next");
+  });
+  it("R-5: 바닥 줄 `이 앱 기록`은 nowrap 조각 — 가운뎃점 뒤에서만 줄이 바뀐다(글자는 그대로)", () => {
+    const html = stockSheet(mk({}));
+    expect(html).toContain('<span class="whitespace-nowrap">최근 3개월 거래 0건 ·</span> <span class="whitespace-nowrap">이 앱 기록</span>');
+    expect(text(html)).toContain("최근 3개월 거래 0건 · 이 앱 기록종목 페이지");
+  });
+  it("R-3: 부동산·실물 보기는 lg에서 주식 목록 열과 같은 몫(7/12, 왼쪽)만 쓴다", () => {
+    const own = tag(render({ realEstate: [re()] }, mk()), "grow-view")!;
+    expect(own).toContain("lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]");
+    expect(tag(render({ stocks: STOCKS }, mk()), "grow-view")!).toContain("lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]");
+  });
+  it("R-4: 이어진 막대는 4px보다 가늘어지지 않는다(min-w-1). R-2: 수정 창이 닫히면 누른 버튼으로 포커스를 돌린다", () => {
+    expect(panel).toContain('className="relative block h-2 min-w-1 overflow-hidden rounded-[2px] bg-foreground/14"');
+    expect(panel).toContain("onClick={(e) => { focusBackAfterDialog(e.currentTarget); onEdit(row); }}");
+    expect(panel).toContain("if (btn.isConnected && (!document.activeElement || document.activeElement === document.body)) btn.focus();");
+    expect(block).toContain("const showNext = row.due && !row.checkedToday && nextIfSame !== null && label !== null;");
+  });
+});

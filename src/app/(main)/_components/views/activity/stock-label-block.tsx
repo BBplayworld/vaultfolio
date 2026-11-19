@@ -332,7 +332,8 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
   // 부동산·실물 — 값이 내가 넣은 숫자라 ±% 조건·이력 값·바닥 줄이 없다
   const own = row.kind === "real" || row.kind === "physical";
   const nextId = `grow-next-${row.key}`;
-  const showNext = !row.checkedToday && nextIfSame !== null && label !== null;
+  // 버튼 아래 `그대로 두면 다음 점검은 {날짜}`는 차례인 행에서만 — 차례가 아닌 행은 이유 줄에 이미 `다음 점검 {날짜}`가 있어 같은 낱말에 날짜가 둘이 된다(ui-review R-6)
+  const showNext = row.due && !row.checkedToday && nextIfSame !== null && label !== null;
   const choices: { choice: StockReviewChoice; text: string }[] = label === "keep"
     ? [{ choice: "same", text: "그대로 두기" }, { choice: "check", text: "점검 대상으로" }, { choice: "none", text: "정하지 않음" }]
     : label === "check"
@@ -388,16 +389,17 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
                 {history.length === 0 ? "아직 점검 기록이 없어요" : `최근 기록 · 점검 ${history.length}번 · 그대로 ${history.filter((r) => r.choice === "same").length}번`}
               </p>
               {history.slice(0, 3).map((r) => (
-                <p key={`${r.t}@${r.at}`} data-testid="grow-history-row" className="grid min-h-7 grid-cols-[0.875rem_4rem_minmax(0,1fr)_auto] items-center gap-x-1.5 text-sm">
-                  <span aria-hidden className="size-[7px] justify-self-center rounded-full bg-foreground/45" />
-                  <span className="whitespace-nowrap text-muted-foreground tabular-nums">{monthDayText(Date.parse(r.at))}</span>
-                  <span className="truncate">{historyText(r)}</span>
+                // 선택 낱말은 어느 폭에서도 온전히 보인다(말줄임 없음). 낱말 + 값이 한 줄에 안 들어가면 값이 같은 행 둘째 줄 오른쪽으로 내려간다(ui-review R-1·qa D1)
+                <p key={`${r.t}@${r.at}`} data-testid="grow-history-row" className="flex min-h-7 flex-wrap items-center gap-x-1.5 text-sm">
+                  <span aria-hidden className="mx-[3.5px] size-[7px] shrink-0 rounded-full bg-foreground/45" />
+                  <span className="w-16 shrink-0 whitespace-nowrap text-muted-foreground tabular-nums">{monthDayText(Date.parse(r.at))}</span>
+                  <span data-testid="grow-history-choice" className="whitespace-nowrap">{historyText(r)}</span>
                   {/* 그날 가격부터 다음 기록(다음 점검까지)·지금(지금까지)까지. 값이 없으면 비운다. 부동산·실물은 가격이 시세가 아니라 값이 없다 */}
                   {(() => {
                     const a = own ? null : afterOf?.(r) ?? null;
                     return a
-                      ? <span data-testid="grow-history-after" data-kind={a.kind} className="whitespace-nowrap text-right text-xs text-muted-foreground tabular-nums">{a.kind === "now" ? "지금까지" : "다음 점검까지"} <b className={`text-sm font-bold ${pctTone(a.pct)}`}>{pctText(a.pct)}</b></span>
-                      : <span />;
+                      ? <span data-testid="grow-history-after" data-kind={a.kind} className="ml-auto whitespace-nowrap text-right text-xs text-muted-foreground tabular-nums">{a.kind === "now" ? "지금까지" : "다음 점검까지"} <b className={`text-sm font-bold ${pctTone(a.pct)}`}>{pctText(a.pct)}</b></span>
+                      : null;
                   })()}
                 </p>
               ))}
@@ -407,7 +409,8 @@ export function ReviewSheet({ row, labels, nowMs, planOpen, onPlanOpen, onChoose
       )}
       {!own && (
       <div className="flex min-h-8 items-center justify-between gap-2 border-t border-border pt-2 text-xs text-muted-foreground dark:border-border/40">
-        <span className="tabular-nums text-pretty break-keep">최근 3개월 거래 {row.tradeCount}건 · 이 앱 기록</span>
+        {/* 가운뎃점 뒤에서만 줄이 바뀐다(320 `· 이` / `앱 기록` 끊김 방지, ui-review R-5) */}
+        <span className="flex flex-wrap gap-x-1 tabular-nums"><span className="whitespace-nowrap">최근 3개월 거래 {row.tradeCount}건 ·</span>{" "}<span className="whitespace-nowrap">이 앱 기록</span></span>
         <button type="button" data-testid="grow-row-open" onClick={() => onOpenPage(row)} className="inline-flex min-h-10 items-center gap-0.5 whitespace-nowrap text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
           {/* 낱말 = 도착 화면 제목. 코인은 보유 건이 하나면 그 코인의 매수/매도 내역, 여럿이면 상세 › 암호화폐 */}
           {row.kind === "crypto" ? (row.groupStockIds.length === 1 ? "매수/매도 내역" : "암호화폐") : "종목 페이지"} <ChevronRight aria-hidden className="size-4" />
@@ -671,7 +674,8 @@ function GrowViewPanel({ view, rows, store, now, onPickOpen }: {
   const pickPanelId = `grow-pick-panel-${view}`;
 
   return (
-    <div data-testid="grow-view" data-view={view} className={`grid gap-5 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 ${view === "own" ? "" : "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start"}`}>
+    <div data-testid="grow-view" data-view={view} className={`grid gap-5 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 ${view === "own" ? "lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start" : "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start"}`}>
+      {/* 부동산·실물 보기는 카드가 없어 목록 하나뿐 — lg에서는 주식 보기의 목록 열과 같은 몫(7/12, 왼쪽)만 쓴다(ui-review R-3) */}
       {/* ① 종합 카드 — 부동산·실물 보기에는 없다(값이 내가 넣은 숫자라 합계를 주식과 같은 잣대에 놓지 않는다) */}
       {view !== "own" && (
       <section data-testid="grow-total-card" className={`min-w-0 ${SECTION}`}>

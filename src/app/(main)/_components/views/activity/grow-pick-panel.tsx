@@ -128,7 +128,7 @@ function Tally({ n, up, scale }: { n: number; up: number; scale: number }) {
   return (
     <span ref={ref} aria-hidden data-testid="grow-pick-tally" data-dense={dense ? "true" : "false"} className="flex h-2 min-w-0 gap-0.5">
       {dense ? (
-        <i className="relative block h-2 overflow-hidden rounded-[2px] bg-foreground/14" style={{ width: `${(n / scale) * 100}%` }}>
+        <i className="relative block h-2 min-w-1 overflow-hidden rounded-[2px] bg-foreground/14" style={{ width: `${(n / scale) * 100}%` }}>
           <i className="absolute inset-y-0 left-0 block rounded-[2px] bg-foreground/60" style={{ width: `${(up / n) * 100}%` }} />
         </i>
       ) : (
@@ -264,6 +264,26 @@ export const PICK_FILTER_LABEL: Record<PickFilter, string> = {
  * 한 장의 값 구획 — 내가 넣은 시세(실물은 평가액)와 수정 창으로 가는 유일한 진입 1개. 금액은 상세 카드와 같은 포맷 함수.
  * 실거래 추정 줄은 추정가가 저장된 부동산에만(없으면 줄 자체가 없다)
  */
+/**
+ * 수정 창이 닫히면(저장·X·바깥 누름·Esc 무엇이든) 포커스를 누른 버튼으로 되돌린다(ui-review R-2).
+ * 수정 창은 이 버튼을 트리거로 알지 못해(이벤트로 연다) 스스로 돌려주지 못한다 — body에 창이 붙었다 떨어지는 것을 보고 돌린다
+ */
+function focusBackAfterDialog(btn: HTMLElement) {
+  if (typeof MutationObserver === "undefined") return;
+  let seen = false;
+  const mo = new MutationObserver(() => {
+    const open = !!document.querySelector('[role="dialog"]');
+    if (open) { seen = true; return; }
+    if (!seen) return;
+    mo.disconnect();
+    // 창이 스스로 포커스를 돌려놓은 경우(Esc)는 건드리지 않는다
+    requestAnimationFrame(() => { if (btn.isConnected && (!document.activeElement || document.activeElement === document.body)) btn.focus(); });
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+  // 창이 열리지 않은 채 남지 않게
+  window.setTimeout(() => { if (!seen) mo.disconnect(); }, 5000);
+}
+
 export function OwnValueBox({ row, onEdit }: { row: BoardRow; onEdit: (row: BoardRow) => void }) {
   if (!row.own) return null;
   const word = row.kind === "physical" ? "평가액" : "시세";
@@ -279,7 +299,7 @@ export function OwnValueBox({ row, onEdit }: { row: BoardRow; onEdit: (row: Boar
           type="button"
           data-testid="grow-value-edit"
           aria-label={`${row.name} ${word} 고치기`}
-          onClick={() => onEdit(row)}
+          onClick={(e) => { focusBackAfterDialog(e.currentTarget); onEdit(row); }}
           className="ml-auto inline-flex min-h-10 shrink-0 items-center gap-0.5 whitespace-nowrap rounded-lg bg-muted pr-2.5 pl-3 text-sm font-semibold outline-none hover:bg-muted/80 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96] motion-safe:transition-[transform,background-color] motion-safe:duration-150"
         >
           {word} 고치기 <ChevronRight aria-hidden className="size-3.5 text-muted-foreground" />
