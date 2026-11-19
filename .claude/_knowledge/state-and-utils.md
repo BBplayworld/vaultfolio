@@ -1027,10 +1027,10 @@ computePriceChange(points) → % | null
 
 ```
 // lib/push/ (#4.93 알림, 4.91) — 서버에는 endpoint·keys(암호화)·알림 종류 ID(morning·kr·settle·tax)·cond만
-// quotes.ts(server) — fetchUsQuotes·fetchKrQuotes(지수+환율 `X`/FX@KRW)·changeFromSeries(마지막 행 날짜=기대 거래일 검증)·항목별 status ok|stale|fail
-// cron-run.ts(server) — runPushCron(req,"morning"|"kr"): 종류별 플래그(시세 없으면 미설정)·구독자별 합치기·`[push-cron]` 로그
+// quotes.ts(server) — fetchUsQuotes(직전 미국 거래일)·fetchFxQuote(아침 환율: 기대일=오늘, 오늘 값=전일 값이면 flat 생략, #241)·fetchKrQuotes(16시: 코스피·코스닥+환율 `X`/FX@KRW)·changeFromSeries(마지막 행 날짜=기대 거래일 검증)·항목별 status ok|stale|fail|flat·estimateKisCalls(us,fx,kr)
+// cron-run.ts(server) — runPushCron(req,"morning"|"kr"): 종류별 플래그(시세 없으면 미설정)·구독자별 합치기·`[push-cron]` 로그(quotes=·subs=morning:n|kr:n·건수). loadPushQuotes(today,{us,fx,kr},round) → {us,fx,kr,status} — 아침 = 미국 + 오늘 환율(국내 조회 0), kr 회차 = 오늘 국내 3종
 // catalog.ts — PUSH_CATALOG(4: morning·kr·settle·tax)·normalizePushTopics·getPushTopic
-// message.ts — buildMorningMessage·buildKrCloseMessage·mergePushPayloads(PUSH_MERGE_ORDER)·holidayMarketsOn, pushDueOn(todayKst) → [{kind,payload{m,t,b}}]·buildSettleMessage·TAX_PUSH_DATES(5/1·12/24). 결산 창 첫날 = settlement.ts isSettlementWindowOpenDay
+// message.ts — buildMorningMessage(today,us,fx,cond: `미국 M/D 종가 … | 환율 …`, 국내 지수 0)·expectedCloseDate(today: 미국 기대 거래일, 조회·본문 공용)·isRepeatedClose(today: 미국 반복 거래일)·buildKrCloseMessage·mergePushPayloads(PUSH_MERGE_ORDER)·holidayMarketsOn, pushDueOn(todayKst) → [{kind,payload{m,t,b}}]·buildSettleMessage·TAX_PUSH_DATES(5/1·12/24). 결산 창 첫날 = settlement.ts isSettlementWindowOpenDay
 // prefs.ts — secretasset.push_prefs {v:3,on,topics,cond}(v1·v2 무시·기본 off·미선택)·summarizePushPrefs·consumePushFlag(→ target morning|kr|settle|tax)
 // client.ts — detectPushEnv(standalone 아니면 needs-install)·enablePush·updatePushTargets·unsubscribePush(keepPrefs)·sendTestPush·reconcilePush
 // validate.ts — parseSubscribeBody(standalone 필수·허용 호스트·카탈로그 ID)·parseEndpointBody
