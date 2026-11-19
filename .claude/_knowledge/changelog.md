@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-11-20 (v5.133)
+
+### 체험 경계 보강·홈 원인 줄 지수 날짜 (#5.133, risk:low)
+- **왜**: 체험은 더보기·설정을 뺐는데 스와이프·주소 해시로는 닿았고, 숨은 GA 제외 토글이 체험 GA 차단을 덮어쓸 수 있었다. 320 복귀 웰컴(현금)이 `현금성 / 자산으로`로 갈렸다. 홈 1280 원인 줄 `코스피 종가 +2.0%`는 날짜가 없어 다른 날짜 값 옆에서 같은 날로 읽혔다(C142).
+- `navigation-context.tsx` `swipeOrderOf`·`guardTrialView`(체험 중 스와이프 순서에서 more 제외, `#more`·`#settings` → 홈 `replaceState`), `settings-page.tsx` `handleGaOptoutTap` 체험 중 무시, `welcome-guide.tsx` 현금 설명 U+00A0, `market-entry-line.tsx` `causeMarketText`·`CauseMarketSegment` = 지수 줄과 같은 `M/D 종가 코스피 +x.x%`(기준일 계산 4.90 그대로).
+- 비체험 경로·저장 키·스키마·동기화·서버 전송 diff 0. `trial-boot.ts`·`trial-gate.tsx`·`ga.ts`·`layout.tsx`·`TRIAL_BLOCKED_PATHS` 무변경.
+
 ## 2026-11-19 (v5.131)
 
 ### 둘러본 사람이 그 자리에서 내 자산으로 넘어간다 (#5.131, 이슈 #249, risk:medium)

@@ -9,7 +9,7 @@ vi.mock("@/app/(main)/_components/layout/navigation/navigation-context", () => (
 }));
 
 import { NetAssetSummaryBox, WeekTrendCard } from "../dashboard";
-import { MarketLine, type MarketEntryValue } from "../../activity/market-entry-line";
+import { MarketLine, causeMarketText, type MarketEntryValue } from "../../activity/market-entry-line";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 const mv = (m: "kr" | "us", rate: number, endDate: string, holiday = false): MarketLineValue => ({ m, rate, endDate, holiday });
@@ -157,17 +157,23 @@ describe("A 노출 연결(NetAssetSummaryBox, 5.105 보조 줄·패널 합침)",
     expect(on).not.toContain('data-placement="slot"');
     expect(on.indexOf("home-cause-panel")).toBeLessThan(on.indexOf("home-market-today"));
     expect(on.indexOf("home-market-today")).toBeLessThan(on.indexOf("home-cause-collapse"));
-    expect(text(lineOf(on))).toBe("주식 시세 하락 -1096만원 외 2개 · 코스피 종가 +0.8%");
+    expect(text(lineOf(on))).toBe("주식 시세 하락 -1096만원 외 2개 · 11/11 종가 코스피 +0.8%");
     expect(on).toContain("@max-[300px]:hidden");
     expect(on).toContain("@max-[260px]:hidden");
     expect(on).not.toContain("max-[359px]");
     expect(on).toContain("home-cause-market");
-    expect(on).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 -1096만원 외 2개, 코스피 종가 +0.8%"');
+    expect(on).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 -1096만원 외 2개, 11/11 종가 코스피 +0.8%"');
     expect(text(on)).not.toContain("지난 접속");
   });
-  it("휴장: 보조 줄 `코스피 휴장`, 0.0% 없음", () => {
+  it("원인 줄 지수 날짜 = 지수 줄과 같은 끝 날짜·같은 문구(5.133 C142, 다른 날짜 값과 구분)", () => {
+    const d = box({ ...props, market: market({ values: [mv("kr", 2.0, "2026-11-18"), mv("us", -0.2, "2026-11-18")] }), marketLine: "on" });
+    expect(text(lineOf(d))).toBe("주식 시세 하락 -1096만원 외 2개 · 11/18 종가 코스피 +2.0%");
+    expect(causeMarketText(mv("kr", 2.0, "2026-11-18"))).toBe("11/18 종가 코스피 +2.0%");
+    expect(causeMarketText(mv("kr", 0, "2026-11-27", true))).toBe("11/27 코스피 휴장");
+  });
+  it("휴장: 보조 줄 `M/D 코스피 휴장`(종가 생략), 0.0% 없음", () => {
     const h = box({ ...props, market: market({ values: [mv("kr", 0, "2026-11-27", true)] }), marketLine: "on" });
-    expect(text(lineOf(h))).toBe("주식 시세 하락 -1096만원 외 2개 · 코스피 휴장");
+    expect(text(lineOf(h))).toBe("주식 시세 하락 -1096만원 외 2개 · 11/27 코스피 휴장");
     expect(lineOf(h)).not.toContain("0.0%");
   });
   it("로딩: 지수 구간 자리만 스켈레톤·원인 구간은 즉시, 조회 실패: 구간 생략", () => {

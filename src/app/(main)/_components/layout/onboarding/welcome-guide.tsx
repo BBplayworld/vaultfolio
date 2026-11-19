@@ -438,7 +438,7 @@ const ROW_CLASS =
 export const WELCOME_PICK_COPY: Record<TrialExitAsset, { title: string; desc: string }> = {
   stock: { title: "주식부터 추가해보세요", desc: "방금 본 화면이 내 주식으로 채워져요." },
   crypto: { title: "암호화폐부터 추가해보세요", desc: "방금 본 화면이 내 암호화폐로 채워져요." },
-  cash: { title: "현금성 자산부터 추가해보세요", desc: "방금 본 화면이 내 현금성 자산으로 채워져요." },
+  cash: { title: "현금성 자산부터 추가해보세요", desc: "방금 본 화면이 내 현금성 자산으로 채워져요." },
   loan: { title: "대출부터 추가해보세요", desc: "방금 본 화면이 내 대출로 채워져요." },
   "real-estate": { title: "부동산부터 추가해보세요", desc: "부동산은 직접 입력으로 넣어요." },
 };

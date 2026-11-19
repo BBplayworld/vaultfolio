@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, useRef, ty
 import { recordVisit, viewToKey } from "@/lib/feature-usage";
 import { trackScreen, trackThemeMode } from "@/lib/analytics/ga";
 import { useStockPageStore } from "@/stores/stock-page-store";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 
 export type DetailTab = "hub" | "stocks" | "stocks-xray" | "stocks-trades" | "stocks-item" | "real-estate" | "physical" | "crypto" | "crypto-transactions" | "cash" | "cash-transactions" | "loans" | "loan-transactions";
 // change-market = 자산 변화 하위 화면 '시장과 비교'(#132)
@@ -97,6 +98,16 @@ type MainViewType = typeof PAGE_ORDER[number];
 export type SlideDir = "left" | "right" | null;
 // settings는 더보기, tax는 상세 하위 페이지(4.89) — 스와이프 위치상 각각 more·detail로 취급(PAGE_ORDER는 불변)
 const mainTypeOf = (t: AssetView["type"]): MainViewType => (t === "settings" ? "more" : t === "tax" ? "detail" : t);
+// 체험(#59)은 더보기·설정을 두지 않는다(하단 탭·상단 메뉴와 같은 범위) — 스와이프 순서에서 more 제외
+const TRIAL_SWIPE_ORDER: readonly MainViewType[] = ["home", "detail", "activity"];
+export function swipeOrderOf(trial: boolean): readonly MainViewType[] {
+  return trial ? TRIAL_SWIPE_ORDER : PAGE_ORDER;
+}
+// 체험 중 해시로 더보기·설정에 들어오면 홈으로(체험 아니면 같은 참조 그대로)
+export function guardTrialView(view: AssetView, trial: boolean): AssetView {
+  if (trial && (view.type === "more" || view.type === "settings")) return { type: "home" };
+  return view;
+}
 
 export function parseHash(hash: string): AssetView {
   const clean = hash.replace(/^#/, "");
@@ -235,7 +246,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // 종목 한 장은 대상 store가 비면(새로고침·직접 URL) 상세·주식으로 — 주소도 바꿔 둔다(히스토리 추가 없음)
     const parsed = parseHash(window.location.hash);
-    const initial = guardStockPageView(parsed, !!useStockPageStore.getState().target);
+    const initial = guardTrialView(guardStockPageView(parsed, !!useStockPageStore.getState().target), isTrialMode());
     if (initial !== parsed) window.history.replaceState(null, "", toHash(initial));
     // 옛 해시(#activity/netasset 등)로 들어오면 주소창도 새 해시로 바꿔 둔다(히스토리 추가 없음)
     if (initial.type === "activity" && initial.init && window.location.hash !== toHash(initial)) {
@@ -248,10 +259,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // 현재 테마(<html class="dark"> 여부)를 세션당 1회 계측 — 설정에서 전환하면 settings-page가 새 모드로 재전송
     trackThemeMode(document.documentElement.classList.contains("dark") ? "dark" : "light");
     const onPop = () => {
-      const next = guardStockPageView(
+      const guarded = guardStockPageView(
         withRestoredChangeInit(parseHash(window.location.hash), viewRef.current, changeInitForReturn),
         !!useStockPageStore.getState().target,
       );
+      const next = guardTrialView(guarded, isTrialMode());
+      if (next !== guarded) window.history.replaceState(null, "", toHash(next));
       if (next.type === "detail" && next.tab === "stocks" && window.location.hash !== toHash(next)) {
         window.history.replaceState(null, "", toHash(next));
       }
@@ -326,15 +339,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const isFlick = duration < 400 && absX > 30; // 빠르고 짧은 플릭
       if (duration <= 1000 && isHorizontal && (enoughDistance || isFlick)) {
         const currentType = mainTypeOf(view.type);
-        if (!PAGE_ORDER.includes(currentType)) return;
+        const order = swipeOrderOf(isTrialMode());
+        if (!order.includes(currentType)) return;
 
-        const currentIndex = PAGE_ORDER.indexOf(currentType);
+        const currentIndex = order.indexOf(currentType);
 
         if (deltaX > 0) {
           // LtoR swipe: 하단 NAV 기준 왼쪽 메뉴 이동 (인덱스 감소)
           const newIndex = currentIndex - 1;
           if (newIndex >= 0) {
-            const targetType = PAGE_ORDER[newIndex];
+            const targetType = order[newIndex];
             if (targetType === "home") navigate({ type: "home" });
             else if (targetType === "detail") navigate({ type: "detail", tab: "hub" });
             else if (targetType === "activity") navigate({ type: "activity", tab: "hub" });
@@ -343,8 +357,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         } else {
           // RtoL swipe: 하단 NAV 기준 오른쪽 메뉴 이동 (인덱스 증가)
           const newIndex = currentIndex + 1;
-          if (newIndex < PAGE_ORDER.length) {
-            const targetType = PAGE_ORDER[newIndex];
+          if (newIndex < order.length) {
+            const targetType = order[newIndex];
             if (targetType === "home") navigate({ type: "home" });
             else if (targetType === "detail") navigate({ type: "detail", tab: "hub" });
             else if (targetType === "activity") navigate({ type: "activity", tab: "hub" });

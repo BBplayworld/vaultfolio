@@ -124,4 +124,18 @@ describe("정적 검사 — 숨김 목록·인라인 GA 플래그", () => {
   it("인앱 게이트에 isTrialMode() 전달", () => {
     expect(read("app/(main)/_components/pwa/in-app-browser-gate.tsx")).toContain("resolveInAppGate({ isTrial: isTrialMode(),");
   });
+  it("스와이프·해시 가드에 isTrialMode() 전달(5.133)", () => {
+    const nav = read("app/(main)/_components/layout/navigation/navigation-context.tsx");
+    expect(nav).toContain("const order = swipeOrderOf(isTrialMode());");
+    expect(nav).toContain("guardTrialView(guardStockPageView(parsed, !!useStockPageStore.getState().target), isTrialMode())");
+    expect(nav).toContain("const next = guardTrialView(guarded, isTrialMode());");
+  });
+  it("숨은 GA 제외 토글은 체험 중 무시(5.133)", () => {
+    const src = read("app/(main)/_components/header-menu/settings-page.tsx");
+    const start = src.indexOf("const handleGaOptoutTap = () => {");
+    const body = src.slice(start, src.indexOf("\n  };", start));
+    expect(start).toBeGreaterThan(-1);
+    expect(body).toContain("if (isTrialMode()) return;");
+    expect(body.indexOf("if (isTrialMode()) return;")).toBeLessThan(body.indexOf("gaTapRef.current"));
+  });
 });
