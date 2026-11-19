@@ -17,6 +17,7 @@
 - GA: 신규 `grow_pick` → `내 자산 불리기·내 선택`(값 있는 패널을 처음 열 때 로드당 1회), `grow_other_label` → `내 자산 불리기·주식 외 정함`(이 기기 저장으로 주식 외 0→1). 기존 `·정함`·`·점검`·`·조건`·`·다시 봄`은 **주식 키만** 본다.
 - 데모 시드(`stockLabels`만): AAPL @D-160 기록 166·−10.3·hit down, plan.at @M-6D10, `r:demo_re_1` 장기 보유 13개월 전, `c:BTC` 점검 대상(+6.1%). `priceByAnyLabelKey`로 `c:` 키 가격도 실시간 배율로 옮긴다. 새 소식 `20261118-01`.
 - #243과 같은 줄: 수량 0만 남은 보유 건을 행에서 뺀다(5.126과 글자까지 동일). 판 종목의 이름표 저장 값은 지우지 않는다(매도 기록이 있으면 `내 선택` 건수에만 들어간다).
+- 수정 라운드(ui-review R-1~R-6·qa D1·D2): 이력 줄 선택 낱말 말줄임 제거(값은 둘째 줄로), `그대로 두면 다음 점검은`은 차례인 행에서만, 수정 창 닫힌 뒤 포커스 복귀, 1280 부동산·실물 목록 7/12 폭, 이어진 막대 최소 4px, `이 앱 기록` nowrap. 실시세 데모는 **코인 평단도** 실시간 배율로 옮기고 기록의 코인 투입원가를 같은 만큼 옮긴다(`withCryptoAveragePrices`, `rebaseDemoRows` 여섯째 인자) — 원인 분해·결산은 전과 원 단위까지 같다. 코인 거래 단가는 옮기지 않는다(올해 결산 '넣은 돈'에 번진다).
 - 테스트: `stock-labels-5125-compat.test.ts`(신규, 5.125 원문 사본 `fixtures/stock-labels-5125.ts`와 복원 7행) · `grow-pick.test.ts`(신규) · `grow-expand-block.test.tsx`(신규) · `use-stock-labels`·`ga`·`demo-label-rebase`·`grow-board`·`stock-labels-storage`·`asset-grade-copy`·`whats-new`·`home-tip` 갱신.
 
 ## 2026-11-18 (v5.125, 재설계 6차)

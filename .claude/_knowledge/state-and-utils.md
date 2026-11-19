@@ -454,7 +454,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
   - `lib/asset/grow-pick.ts`(신규, 순수): `computePick(labels, "stock"|"crypto", input, nowMs)` → `{state: count|buy|wait, n, up, rows: {set, same, move}, hit, buys, late, records, waitReason, events}` — 결론 줄·패널·이력 줄 값의 단일 계산. `stockPickInput(stocks, tx)`·`cryptoPickInput(crypto, cryptoTx)` · `pickHeadline(r)`·`pickUpText(tally, unit, always)`(굵게 그릴 조각 `b` 표시) · `pickAfterOf(r, key, at)`(이력 줄 `now|next` %) · `PICK_ROWS`(고정 순서, `move`의 표시 낱말만 `바꾸기`) · `PICK_MIN_DAYS` 30 · `PICK_MIN_COUNT` 3. 화면 밖 전송 0
   - `use-stock-labels.ts`: `record(key, choice, snap, base?, hit?)`. GA 분리 — `grow_label`·`grow_check`·`grow_plan`은 주식 키만, `grow_other_label`은 이 기기 저장으로 주식 외 유효 이름표 0→1
   - `views/activity/report-tab.ts`: `getGrowView`·`setGrowView`(종류 줄 선택 세션 메모리, `resetReportTab`이 함께 비움)
-  - `preview/demo-live-rebase.ts`: `priceByAnyLabelKey(stocks, crypto)`(주식 + `c:` 키 시세 — 코인 정한 날 가격 재기준)
+  - `preview/demo-live-rebase.ts`: `priceByAnyLabelKey(stocks, crypto)`(주식 + `c:` 키 시세 — 코인 정한 날 가격 재기준) · `rebaseDemoAveragePrices`는 코인에도 쓴다(id·평단·시세·수량만 본다) · `withCryptoAveragePrices(data, avg)` · `rebaseDemoRows(rows, ref, ks, kc, costShift?, cryptoCostShift?)`(코인 원가 칸). 코인 거래 단가는 옮기지 않는다(결산에 번짐)
   - 테스트: `__tests__/stock-labels-5125-compat.test.ts`(5.125 원문 사본 `fixtures/stock-labels-5125.ts` + 복원 7행) · `grow-pick.test.ts` · `views/activity/__tests__/grow-expand-block.test.tsx`
 - 테스트: `__tests__/stock-labels-merge.test.ts` · `stock-labels-storage.test.ts` · `stock-labels-sync.test.ts` · `trial-boot.test.ts` · `hooks/__tests__/use-stock-labels.test.ts` · `report/__tests__/asset-grade-copy.test.ts`
 

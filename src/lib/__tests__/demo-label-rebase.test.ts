@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { materializeDemo } from "../preview/demo-payload";
-import { demoCostShifts, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows, rebaseRatio, withAveragePrices } from "../preview/demo-live-rebase";
+import { demoCostShifts, demoSeedStockMap, pickRebaseRef, priceByLabelKey, rebaseDemoAveragePrices, rebaseDemoLabelPrices, rebaseDemoRows, rebaseRatio, withAveragePrices, withCryptoAveragePrices, priceByAnyLabelKey } from "../preview/demo-live-rebase";
 import { buildLiveAttributionCurr, computeAttributionSince, computePeriodAttribution } from "../report/asset-report";
 import { resolveSettlementWindow } from "../report/settlement";
 import { computeSettlementCauses, settlementDelta } from "@/app/(main)/_components/views/activity/change-hero";
@@ -14,6 +14,7 @@ import { computeAssetCost, computeNetAsset } from "@/contexts/asset-data-context
 import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 import { parseStockLabels, setStockLabel, type StockLabels } from "../asset/stock-labels";
 import { buildGrowRows } from "../asset/grow-rows";
+import { buildCryptoRows, buildGrowBoards, growStatus } from "../asset/grow-kinds";
 import { assetDataSchema } from "@/types/asset";
 import type { Stock } from "@/types/asset";
 
@@ -259,6 +260,79 @@ describe("평단 재기준 전후 원인 분해 일치(기록 원가를 같은 �
       }
     });
   }
+  // #242 qa D2(C132) — 실시세 데모에서 코인 `평단 대비`·`정한 날 대비`·조건 도달이 서로 모순되지 않게 코인 평단도 옮긴다
+  for (const [today, k] of [["2026-11-17", 0.61], ["2026-11-17", 1.8], ["2027-01-31", 0.61]] as const) {
+    it(`${today} 코인 ${k}배: 코인 한 장의 세 값이 체험(시드 시세)과 같고, 홈·기간 4개·월 결산·연 결산이 코인 평단 재기준 전과 원 단위까지 같다`, () => {
+      const p = materializeDemo(raw, today) as unknown as P;
+      const parsed = assetDataSchema.parse(p.assetData);
+      const stocks = parsed.stocks;
+      const seed = demoSeedStockMap(stocks);
+      const cseed = demoSeedStockMap(parsed.crypto);
+      const labels = parseStockLabels((materializeDemo(raw, today) as { stockLabels: unknown }).stockLabels)!;
+      const now = Date.parse(`${today}T03:00:00Z`);
+      const liveCrypto = parsed.crypto.map((c) => ({ ...c, currentPrice: c.currentPrice * k }));
+      const data = { ...p.assetData, stocks: live(stocks, SCENES.실측), crypto: liveCrypto } as AssetData;
+      // 재기준 전(f366ed2 동작): 이름표의 c: 가격만 옮기고 코인 평단은 그대로 → 세 값이 어긋난다
+      const movedLabels = rebaseDemoLabelPrices(labels, labels, priceByAnyLabelKey(stocks, parsed.crypto), priceByAnyLabelKey(data.stocks, liveCrypto));
+      const coin = (crypto: typeof liveCrypto) => buildCryptoRows(crypto, movedLabels, now)[0];
+      const round = (v: number) => Math.round(v * 10) / 10;
+      const seedRow = buildCryptoRows(parsed.crypto, labels, now)[0];
+      const stale = coin(liveCrypto);
+      if (k < 1) expect([round(stale.rate!), stale.due]).toEqual([-28.8, true]); // 평단 대비 −28.8%·조건 −20% 도달인데 정한 날 대비는 +6.1% — qa D2
+      expect(round(stale.since!.pct)).toBe(6.1);
+      // 재기준 뒤: 평단 대비·정한 날 대비·차례가 체험과 같다
+      const nextCrypto = rebaseDemoAveragePrices(liveCrypto, cseed);
+      const fixed = coin(nextCrypto);
+      expect([round(fixed.rate!), round(fixed.since!.pct), fixed.due, fixed.dueReason]).toEqual([round(seedRow.rate!), round(seedRow.since!.pct), seedRow.due, seedRow.dueReason]);
+      expect([round(fixed.rate!), round(fixed.since!.pct), fixed.due]).toEqual([16.7, 6.1, false]);
+      // 정한 날 가격이 평단보다 높고 지금 가격보다 낮다(정한 날 이미 조건에 닿아 있던 모순 없음)
+      const base = movedLabels.items["c:BTC"].base!.price!;
+      expect(base).toBeGreaterThan(nextCrypto[0].averagePrice);
+      expect(base).toBeLessThan(nextCrypto[0].currentPrice);
+      // 전 종류 합 = 체험과 같은 `점검 차례 4개`
+      expect(growStatus(buildGrowBoards({ ...data, stocks: rebaseDemoAveragePrices(data.stocks, seed), crypto: nextCrypto }, RATES_LIVE, movedLabels, now))).toMatchObject({ kind: "due", due: 4, unit: "개" });
+      // 원인 분해 — 코인 평단을 옮긴 만큼 기록의 코인 원가를 옮겨 전과 같다(C134). 거래 단가·수량·시세·그 밖 필드는 그대로
+      const before = session(p.snapshots.daily, p.snapshots.monthly, stocks, data, RATES_LIVE, today, seed, true);
+      const nextData = { ...before.data, crypto: nextCrypto } as AssetData;
+      const prev = withCryptoAveragePrices(nextData, cseed);
+      const rows = [...p.snapshots.daily, ...p.snapshots.monthly];
+      const cShifts = demoCostShifts(rows, prev, nextData, liveOf(prev, RATES_LIVE), liveOf(nextData, RATES_LIVE), RATES_LIVE);
+      const ref = pickRebaseRef(p.snapshots.daily, today)!;
+      const n = computeNetAsset(nextData, RATES_LIVE);
+      const prevS = withAveragePrices(nextData, demoSeedStockMap(stocks));
+      const sShifts = demoCostShifts(rows, prevS, nextData, liveOf(prevS, RATES_LIVE), liveOf(nextData, RATES_LIVE), RATES_LIVE);
+      const scale = <T extends DailyAssetSnapshot | MonthlyAssetSnapshot>(r: T[]) => rebaseDemoRows(r, ref, rebaseRatio(n.stockValue, ref.stocks), rebaseRatio(n.cryptoValue, ref.crypto), sShifts, cShifts);
+      const after = { data: nextData, daily: scale(p.snapshots.daily), monthly: scale(p.snapshots.monthly) };
+      expect(cShifts.size).toBeGreaterThan(0);
+      const a = causes(after, RATES_LIVE, today);
+      const b = causes(before, RATES_LIVE, today);
+      expect(b.year).not.toBe("null");
+      for (const key of ["home", "1w", "1m", "3m", "ytd", "month", "year"] as const) expect(a[key], key).toEqual(b[key]);
+      // 주식 원가 칸은 건드리지 않는다 — 코인 칸과 합계만
+      for (const [i, r] of after.daily.entries()) if (r.cost && before.daily[i].cost) { expect(r.cost.stock).toBe(before.daily[i].cost!.stock); expect(r.cost.total - before.daily[i].cost!.total).toBe(r.cost.crypto - before.daily[i].cost!.crypto); }
+      expect(nextData.cryptoTransactions).toBe(before.data.cryptoTransactions); // 거래 단가는 옮기지 않는다(올해 결산 '넣은 돈'에 번진다)
+      expect(nextCrypto.map((c) => [c.quantity, c.currentPrice])).toEqual(liveCrypto.map((c) => [c.quantity, c.currentPrice]));
+    });
+  }
+  it("코인 평단 재기준 — 실사용자 데이터에서 작동 0회(시드에 없는 id·수량이 바뀐 코인은 같은 배열), 멱등, 가드는 주식과 같은 한 곳", () => {
+    const parsed = assetDataSchema.parse((materializeDemo(raw, "2026-11-17") as unknown as P).assetData);
+    const cseed = demoSeedStockMap(parsed.crypto);
+    const moved = parsed.crypto.map((c) => ({ ...c, currentPrice: c.currentPrice * 0.61 }));
+    const user = moved.map((c) => ({ ...c, id: c.id.replace("demo_", "u_") }));
+    expect(rebaseDemoAveragePrices(user, cseed)).toBe(user);
+    const traded = moved.map((c) => ({ ...c, quantity: c.quantity + 0.01 }));
+    expect(rebaseDemoAveragePrices(traded, cseed)).toBe(traded);
+    const once = rebaseDemoAveragePrices(moved, cseed);
+    expect(once[0].averagePrice).toBeCloseTo(120_000_000 * 0.61, 3);
+    expect(rebaseDemoAveragePrices(once, cseed)).toBe(once);
+    expect(rebaseDemoAveragePrices(parsed.crypto, cseed)).toBe(parsed.crypto); // 시세가 시드와 같으면(체험) 그대로
+    const comp = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/preview/demo-snapshot-rebase.tsx"), "utf8");
+    const at = comp.indexOf("rebaseDemoAveragePrices(assetData.crypto");
+    expect(comp.slice(comp.lastIndexOf("useEffect", at), at)).toContain("if (!eligible || !seed) return;");
+    expect(comp.match(/saveData\(/g)).toHaveLength(1);
+    expect(comp).toContain("saveData({ ...assetData, stocks: next, crypto: nextCrypto });");
+    expect(comp).not.toMatch(/cryptoTransactions/); // 거래는 쓰지 않는다
+  });
   it("새로고침을 반복해도 누적되지 않는다 — 옮긴 기록·평단을 기준으로 다시 옮겨도 처음부터 옮긴 것과 같다", () => {
     const today = "2026-11-17";
     const p = materializeDemo(raw, today) as unknown as P;

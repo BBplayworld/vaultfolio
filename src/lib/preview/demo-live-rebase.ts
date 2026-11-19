@@ -29,7 +29,7 @@ export const rebaseRatio = (live: number, ref: number): number => (ref > 0 && li
  * rows의 주식·코인 평가를 ks·kc배로 옮긴다. enrich 기록은 breakdown·netAsset·financialAsset·fxBase.USD(외화 주식 노출, 근사)를 함께,
  * net-only 기록은 기준 평가액 몫만큼 netAsset·financialAsset을 옮긴다. cost·fx·부동산·현금·대출은 그대로. 입력은 바꾸지 않는다.
  */
-export function rebaseDemoRows<T extends Row>(rows: T[], ref: RebaseRef, ks: number, kc: number, costShift?: ReadonlyMap<string, number>): T[] {
+export function rebaseDemoRows<T extends Row>(rows: T[], ref: RebaseRef, ks: number, kc: number, costShift?: ReadonlyMap<string, number>, cryptoCostShift?: ReadonlyMap<string, number>): T[] {
   return rows.map((r) => {
     const b = r.breakdown;
     const dS = b ? b.stocks * (ks - 1) : ref.stocks * (ks - 1);
@@ -42,6 +42,9 @@ export function rebaseDemoRows<T extends Row>(rows: T[], ref: RebaseRef, ks: num
     // 주식 투입원가 — 데모 평단을 옮긴 만큼 기록마다 더한다(demoCostShifts). 원인 분해가 평단 재기준 전과 같아진다
     const shift = r.cost && r.date ? costShift?.get(r.date) : undefined;
     if (r.cost && shift) next.cost = { ...r.cost, stock: r.cost.stock + shift, total: r.cost.total + shift };
+    // 코인 투입원가 — 데모 코인 평단을 옮긴 만큼(#242 qa D2). 주식과 같은 방식, 칸만 crypto
+    const cShift = r.cost && r.date ? cryptoCostShift?.get(r.date) : undefined;
+    if (next.cost && cShift) next.cost = { ...next.cost, crypto: next.cost.crypto + cShift, total: next.cost.total + cShift };
     return next as T;
   });
 }
@@ -125,7 +128,7 @@ export type DemoSeedStock = Pick<Stock, "averagePrice" | "currentPrice" | "quant
  *  - 해외 주식의 매입 환율(purchaseExchangeRate)·그 밖의 필드는 그대로. 언제나 시드에서 다시 계산(누적 곱셈 없음)
  *  - 바뀐 게 없으면 같은 배열을 돌려준다
  */
-export function rebaseDemoAveragePrices<S extends Stock>(stocks: S[], seed: ReadonlyMap<string, DemoSeedStock>): S[] {
+export function rebaseDemoAveragePrices<S extends Pick<Stock, "id" | "averagePrice" | "currentPrice" | "quantity">>(stocks: S[], seed: ReadonlyMap<string, DemoSeedStock>): S[] {
   let changed = false;
   const next = stocks.map((s) => {
     const sd = seed.get(s.id);
@@ -172,7 +175,17 @@ export function withAveragePrices(data: AssetData, avg: ReadonlyMap<string, Demo
   return { ...data, stocks: data.stocks.map((s) => { const a = avg.get(s.id); return a && s.quantity === a.quantity ? { ...s, averagePrice: a.averagePrice } : s; }) };
 }
 
+/**
+ * 지금 데이터의 코인 평단만 바꾼 사본(#242 qa D2) — 기준에 있는 id이고 수량이 같은 코인만(주식 withAveragePrices와 같은 규칙).
+ * 데모 코인 평단도 주식과 같이 실시간 배율로 옮긴다(rebaseDemoAveragePrices를 코인에도 쓴다) — 이름표의 코인 정한 날 가격(c: 키)과 같은 배율이라
+ * `평단 대비`·`정한 날 대비`·조건 도달이 서로 모순되지 않는다. 코인 거래의 체결 단가는 옮기지 않는다:
+ * 거래 금액은 원인 분해·올해 결산의 '넣은 돈'에 그대로 들어가 옮기면 결산 숫자가 번진다(C134 — 주식 거래 단가도 같은 이유로 그대로다)
+ */
+export function withCryptoAveragePrices(data: AssetData, avg: ReadonlyMap<string, DemoSeedStock>): AssetData {
+  return { ...data, crypto: data.crypto.map((c) => { const a = avg.get(c.id); return a && c.quantity === a.quantity ? { ...c, averagePrice: a.averagePrice } : c; }) };
+}
+
 /** 시드 주식 목록 → id별 기준값 */
-export function demoSeedStockMap(stocks: Stock[]): Map<string, DemoSeedStock> {
+export function demoSeedStockMap(stocks: readonly Pick<Stock, "id" | "averagePrice" | "currentPrice" | "quantity">[]): Map<string, DemoSeedStock> {
   return new Map(stocks.map((s) => [s.id, { averagePrice: s.averagePrice, currentPrice: s.currentPrice, quantity: s.quantity }]));
 }
