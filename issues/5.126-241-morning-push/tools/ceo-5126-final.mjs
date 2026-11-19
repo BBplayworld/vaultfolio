@@ -1,0 +1,31 @@
+import { chromium, proxy } from "/home/user/vaultfolio/.memory/issues/5.114-typography-scale/tools/lib.mjs";
+const PV = "https://secretasset-git-issue-5126-bbplayworlds-projects.vercel.app";
+const OUT = process.argv[2];
+const br = await chromium.launch({ proxy }); const out = {};
+const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: "dark", isMobile: true, hasTouch: true });
+const p = await ctx.newPage(); const errs = []; p.on("pageerror", (e) => errs.push(String(e).slice(0, 120)));
+const writes = []; p.on("request", (r) => { if (r.method() !== "GET") writes.push(r.method() + " " + new URL(r.url()).pathname); });
+const T = "000660"; const sel = `[data-testid="grow-row"][data-ticker="${T}"]`;
+await p.goto(`${PV}/?trial=1&t=${Date.now()}`, { waitUntil: "networkidle", timeout: 90000 }).catch(() => {}); await p.waitForTimeout(7000);
+out.version = await p.evaluate(() => (document.body.innerText.match(/v?5\.\d{3}/) || [null])[0]);
+const hub = async (name) => { await p.evaluate(() => { location.hash = "#activity"; }); await p.waitForTimeout(2500); const h = await p.evaluate(() => document.body.innerText.match(/[^\n]*점검 차례[^\n]*/g) ?? []); await p.screenshot({ path: `${OUT}/${name}.png` }); return h; };
+const report = async () => { await p.evaluate(() => { location.hash = "#activity/report"; }); await p.waitForSelector('[data-testid="grow-row"]', { timeout: 30000 }); await p.waitForTimeout(3000); };
+const open = async () => { if (!(await p.$(`${sel} [data-testid="grow-sheet"]`))) { await p.click(`${sel} [data-testid="grow-row-toggle"]`); await p.waitForTimeout(800); } };
+const rowText = () => p.evaluate((s) => document.querySelector(s)?.innerText ?? null, sel);
+const card = () => p.evaluate(() => document.querySelector('[data-testid="grow-summary-check"]')?.textContent ?? null);
+out.hub0 = await hub("1-hub-before");
+await report(); await p.screenshot({ path: `${OUT}/2-report-top.png` });
+await open(); out.rowBefore = await rowText(); out.cardBefore = await card();
+await p.locator(sel).scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/3-row-before.png` });
+await p.click(`${sel} [data-testid="grow-choice-same"]`); await p.waitForTimeout(1000);
+out.rowAfter = await rowText(); out.cardAfter = await card();
+await p.locator(sel).scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/4-row-after.png` });
+out.hub1 = await hub("5-hub-after");
+await report(); await open(); out.rowReenter = await rowText();
+await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400); await p.screenshot({ path: `${OUT}/6-report-after-top.png` });
+out.tabs = await p.evaluate(() => [...document.querySelectorAll('[role="tab"],button')].map((b) => b.innerText.trim().replace(/\n/g, " / ")).filter((t) => /성적표|점검/.test(t)).slice(0, 8));
+// 둘째 칸(자산 성적표)
+const second = await p.evaluateHandle(() => [...document.querySelectorAll('[role="tab"],button')].find((b) => /^자산 성적표/.test(b.innerText.trim())));
+if (second.asElement()) { await second.asElement().click(); await p.waitForTimeout(1500); await p.screenshot({ path: `${OUT}/7-grade.png` }); out.gradeHasHint = !!(await p.$('[data-testid="report-grade-hint"]')); out.gradeTitle = !!(await p.$('[data-testid="report-section-title"]')); }
+out.errs = errs; out.writes = [...new Set(writes)];
+console.log(JSON.stringify(out, null, 1)); await br.close();
