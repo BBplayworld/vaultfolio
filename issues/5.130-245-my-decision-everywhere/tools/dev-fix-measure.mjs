@@ -55,9 +55,9 @@ for (const W of WIDTHS) {
       const btns = p.locator('button[aria-label*="더보기"], [data-testid="tool-menu-trigger"]'); if (await btns.count()) { await btns.first().click(); await p.waitForTimeout(800); await p.locator('[data-testid="more-whats-new"]').first().click().catch(() => {}); }
     }
     await p.waitForTimeout(1200);
-    const it = await p.evaluate((LS) => { const LINES = eval(LS); const li = [...document.querySelectorAll('[data-testid="whats-new-item"]')].find((x) => x.textContent.includes("주식 목록에서")); if (!li) return null; return LINES(li).map((l) => l.t); }, LINES.toString());
+    const it = await p.evaluate((LS) => { const LINES = eval(LS); const li = [...document.querySelectorAll('[data-testid="whats-new-item"]')].find((x) => x.textContent.includes("닿은 종목을")); if (!li) return null; return LINES(li).map((l) => l.t); }, LINES.toString());
     console.log(W, JSON.stringify(it));
-    const li = p.locator('[data-testid="whats-new-item"]', { hasText: "주식 목록에서" }); if (await li.count()) await li.first().screenshot({ path: `${SHOT}dv-${W}-whatsnew.png` });
+    const li = p.locator('[data-testid="whats-new-item"]', { hasText: "닿은 종목을" }); if (await li.count()) await li.first().screenshot({ path: `${SHOT}dv-${W}-whatsnew.png` });
     await p.context().close();
   }
 }
