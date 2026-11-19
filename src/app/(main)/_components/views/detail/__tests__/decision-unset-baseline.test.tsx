@@ -209,13 +209,25 @@ describe("AC-1·2·7 상세·주식 행 표시", () => {
       expect(a).toBe(before.find((r) => r.includes(`>${name}<`)));
     }
   });
-  it("`점검 차례`만 인디고·굵게, 나머지는 muted. 360 미만은 차례 행에만(장기 보유·점검 대상 숨김)", () => {
+  it("`점검 차례`만 인디고·굵게, 나머지는 muted. 390 미만은 차례 행에만(장기 보유·점검 대상 숨김 — 좁은 폭 행 높이 +0, qa D-1)", () => {
     const cls = (name: string) => /data-testid="stock-row-decision" data-kind="\w+" class="([^"]*)"/.exec(rowOf(name))![1];
     expect(cls("SK하이닉스")).toContain("font-semibold text-indigo-600 dark:text-indigo-200");
-    expect(cls("SK하이닉스")).not.toContain("max-[359px]:hidden");
+    expect(cls("SK하이닉스")).not.toMatch(/max-\[\d+px\]:hidden/);
     for (const n of ["삼성전자", "Apple"]) {
       expect(cls(n)).toContain("text-muted-foreground");
-      expect(cls(n)).toContain("max-[359px]:hidden");
+      // C99 — 폭 < 390이면 숨김(1을 빼서 쓰지 않는다)
+      expect(cls(n)).toContain("max-[390px]:hidden");
+      expect(cls(n)).not.toMatch(/max-\[3[0-8]\dpx\]/);
+    }
+  });
+  it("390 미만 비차례 행 — 숨김 표시 말고는 미정 행과 글자·조각이 같다(행 높이 +0 회귀)", () => {
+    const before = tab(null);
+    for (const n of ["삼성전자", "Apple"]) {
+      const b = before.split('data-testid="stock-row-left"').slice(1).find((r) => r.includes(`>${n}<`))!;
+      const narrow = rowOf(n).replace(/<span data-testid="stock-row-decision"[^>]*><span[^>]*>[^<]*<\/span>[^<]*<\/span>/, "");
+      expect(narrow).not.toContain("stock-row-decision");
+      // 보이는 글자(숨김 표시 제외)가 미정 상태와 같다 — 좁은 폭에서 그려지는 조각은 수량 하나뿐
+      expect(text(narrow)).toBe(text(b.slice(0, b.indexOf('data-testid="stock-row-right"'))));
     }
   });
   it("메타 줄 글자 — `65주 · 장기 보유` 꼴이고 줄 머리·줄 끝에 가운뎃점이 없다. 가운뎃점은 뒤 조각의 머리에 있다(줄이 바뀌면 잘린 자리로 들어간다)", () => {
@@ -297,14 +309,17 @@ describe("AC-3 종목 한 장 머리", () => {
     expect(/<span class="font-semibold ([^"]*)">-6\.3%<\/span>/.exec(h)![1]).not.toContain("muted");
     // 조건 절 — 하한·상한 둘 다면 360 미만에서 생략, 줄은 `또는` 앞에서만 끊긴다
     const plan = cutByTestId(h, "stock-page-decision-plan");
-    expect(plan).toContain("max-[359px]:hidden");
+    expect(plan).toContain("max-[360px]:hidden");
+    // 조각 안에서 접히는 줄이 보이는 가장자리에서 시작 — 조각 ml-2 + 점 -ml-3(같은 줄 간격은 그대로 12px), ui p1-1
+    expect(/^<span[^>]*>/.exec(plan)![0]).toContain("ml-2 min-w-0");
+    expect(plan).toMatch(/<span aria-hidden="true" class="-ml-3 inline-block w-3/);
     expect(plan).toContain('<span class="whitespace-nowrap font-medium text-foreground">또는 +25% 이상</span>');
     expect(text(plan)).not.toMatch(/·.*·/);
   });
   it("한쪽 조건만이면 360 미만에서도 조건 절을 지킨다", () => {
     const h = head(UNSET_STOCKS[2], mk({ AAPL: check(30, 160.1, { down: 15 }) }));
     expect(sentence(h)).toBe("점검 대상 · 정한 날 대비 -6.3% · 다시 볼 조건 평단 대비 −15% 이하");
-    expect(cutByTestId(h, "stock-page-decision-plan")).not.toContain("max-[359px]:hidden");
+    expect(cutByTestId(h, "stock-page-decision-plan")).not.toMatch(/max-\[\d+px\]:hidden/);
   });
   it("값 없는 조각은 통째로 없다 — 빈 꼬리·`—` 없음", () => {
     const h = head(UNSET_STOCKS[0], mk({ "005930": check(30) }));
@@ -344,11 +359,11 @@ describe("AC-14 `내 자산 점검` 타일", () => {
     const n = Number(/data-testid="stock-tool-grow-value" data-kind="due" data-due="(\d+)"/.exec(html)![1]);
     expect(n).toBe(html.match(/data-testid="stock-row-decision" data-kind="due"/g)!.length);
   });
-  it("격자 — 4개는 2×2·PC 4칸(360 미만은 아래 두 타일 한 줄씩), 줄 끝 가운뎃점 숨김", () => {
+  it("격자 — 4개는 모바일·PC 모두 2×2(360 미만은 아래 두 타일 한 줄씩), 줄 끝 가운뎃점 숨김", () => {
     const tools = cutByTestId(tab(MIXED), "stock-tools");
-    expect(tools).toContain("grid grid-cols-2 gap-2 lg:grid-cols-4");
-    expect(/^<button[^>]*>/.exec(cutByTestId(tools, "stock-tool-grow"))![0]).toContain("max-[359px]:col-span-2");
-    expect(/^<button[^>]*>/.exec(cutByTestId(tools, "stock-tool-tax"))![0]).toContain("max-[359px]:col-span-2");
+    expect(tools).toContain("grid grid-cols-2 gap-2 lg:grid-cols-2");
+    expect(/^<button[^>]*>/.exec(cutByTestId(tools, "stock-tool-grow"))![0]).toContain("max-[360px]:col-span-2");
+    expect(/^<button[^>]*>/.exec(cutByTestId(tools, "stock-tool-tax"))![0]).toContain("max-[360px]:col-span-2");
     expect(line(mk())).toContain("-ml-2 [clip-path:inset(-2px_-100vw_-2px_0.5rem)]");
   });
   it("주식 보기에 행이 없으면(전부 상장폐지·수량 0) 타일이 없다", () => {

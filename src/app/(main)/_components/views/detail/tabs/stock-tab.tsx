@@ -325,9 +325,9 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
               <span className="text-sm font-semibold text-primary max-sm:hidden">{pct.toFixed(1)}%</span>
             </>
           )}
-          {/* 내 결정(#245) — 차례면 `점검 차례`만. 줄이 바뀌어도 가운뎃점이 줄 머리·줄 끝에 남지 않는다(dot-wrap). 360 미만은 차례 행에만 */}
+          {/* 내 결정(#245) — 차례면 `점검 차례`만. 줄이 바뀌어도 가운뎃점이 줄 머리·줄 끝에 남지 않는다(dot-wrap). 390 미만은 차례 행에만(좁은 폭 행 높이 +0, #245 qa D-1) */}
           {!screenshotMode && decision && (
-            <span data-testid="stock-row-decision" data-kind={decision} className={`whitespace-nowrap text-sm ${decision === "due" ? DUE_TEXT : "text-muted-foreground max-[359px]:hidden"}`}>
+            <span data-testid="stock-row-decision" data-kind={decision} className={`whitespace-nowrap text-sm ${decision === "due" ? DUE_TEXT : "text-muted-foreground max-[390px]:hidden"}`}>
               <DotLead />{DECISION_TEXT[decision]}
             </span>
           )}
@@ -1243,7 +1243,7 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, refData, mergedStocks, groupedStocks, exchangeRates, assetData.stocks]);
 
-  // 관찰용 `·내 결정 보임` — 이름표를 읽은 뒤 지금 목록에 정한 종목 행이 1개 이상이면 1회(표시를 그렸는지가 아니라 — 360 미만은 표시를 안 그린다)
+  // 관찰용 `·내 결정 보임` — 이름표를 읽은 뒤 지금 목록에 정한 종목 행이 1개 이상이면 1회(표시를 그렸는지가 아니라 — 390 미만 비차례 행은 표시를 안 그린다)
   const hasDecisionRow = !!decisions && listStocks.some((st) => decisionOf(st) !== undefined);
   useEffect(() => {
     if (!hasDecisionRow || decisionViewSent) return;
