@@ -162,6 +162,9 @@ describe("A 노출 연결(NetAssetSummaryBox, 5.105 보조 줄·패널 합침)",
     expect(on).toContain("@max-[260px]:hidden");
     expect(on).not.toContain("max-[359px]");
     expect(on).toContain("home-cause-market");
+    // 5.133 qa D-1: 날짜 표기로 지수 구간이 넓어져 숨김 경계 W<440 → W<480
+    expect(on).toContain("@max-[480px]:hidden");
+    expect(on).not.toContain("@max-[440px]:hidden");
     expect(on).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 -1096만원 외 2개, 11/11 종가 코스피 +0.8%"');
     expect(text(on)).not.toContain("지난 접속");
   });

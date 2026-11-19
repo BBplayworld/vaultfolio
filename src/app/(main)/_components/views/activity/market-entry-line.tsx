@@ -150,7 +150,7 @@ const HIDE_REST_DIFF_DATE = "@max-[380px]:hidden";
 // 보조 줄(홈 원인 1줄) 지수 구간 — 첫 시장 1개만, 지수 줄과 같은 `M/D 종가 코스피 +0.8%`(휴장은 `M/D 코스피 휴장`, 5.133 C142 날짜 표기).
 // 값은 패널 지수 줄·'하루' 행과 같은 market.values(C65), 문구는 지수 줄과 같은 marketLineLabel
 export const causeMarketText = (v: MarketLineValue) => marketLineLabel([v]);
-// 폭 W<440이면(모바일·큰 휴대폰, 라벨·큰 금액·외 N개 말줄임 방지 — 5.105 qa D1 430 실측) 컨테이너 쿼리로 숨김(JS 측정 금지). 로딩 = 자리만 스켈레톤, 조회 실패 = 생략
+// 폭 W<480이면(모바일·큰 휴대폰, 라벨·큰 금액·외 N개 말줄임 방지 — 5.105 qa D1 430 실측, 5.133 날짜 표기로 구간 +35~40px라 440→480, qa D-1) 컨테이너 쿼리로 숨김(JS 측정 금지). 로딩 = 자리만 스켈레톤, 조회 실패 = 생략
 export function CauseMarketSegment({ market }: { market: MarketEntryValue }) {
   const first = market.values[0];
   if (market.ready && !first) return null;
@@ -161,7 +161,7 @@ export function CauseMarketSegment({ market }: { market: MarketEntryValue }) {
       data-market={first?.m}
       data-holiday={first ? (first.holiday ? "true" : "false") : undefined}
       data-screenshot-hide
-      className="inline-flex shrink-0 items-center @max-[440px]:hidden"
+      className="inline-flex shrink-0 items-center @max-[480px]:hidden"
     >
       <span aria-hidden className="mx-1 text-muted-foreground/60">·</span>
       {first ? (
