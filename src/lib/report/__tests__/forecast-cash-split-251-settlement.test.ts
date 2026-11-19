@@ -1,10 +1,12 @@
 // #251 qa D-2 · CEO D-2 판정 3절 — 예측 구간(레거시 시작점) 신규 대출의 주·월·연 결산 원인 전/후 대조.
 // 매핑·후처리(mapSettlementCauses·withLoanCause/splitLoanCause) 코드는 그대로, 엔진 effects의 debt만 바뀐다.
 // '전' 상수는 수정 전 코드(c40e461)에서 같은 픽스처로 얻은 값이고, 등록일을 못 읽는 id(현행 폴백)로도 같은 값이 나와야 한다.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { computeChainCauses, computeSettlementCauses } from "@/app/(main)/_components/views/activity/change-hero";
 import { resolveYearChain } from "../settlement";
 import { buildYearConclusion, groupYearSettlement } from "../year-settlement";
+import { buildYearSettlementModel } from "@/app/(main)/_components/views/activity/year-settlement-block";
+import { summaryOf } from "./year-settlement-fixture";
 import type { AssetData, MonthlyAssetSnapshot } from "@/types/asset";
 
 const RATES = { USD: 1400, JPY: 900 };
@@ -55,6 +57,10 @@ const MONTH_BEFORE = [
 ];
 
 // ── 연(올해 결산 블록) ──
+// 주의(qa 2차 권고): 아래 yearOf는 체인 전체(레거시 앵커 포함)를 computeChainCauses에 넣는 **엔진 단위 입력 꼴**이다.
+// 실제 연 화면(buildYearSettlementModel)은 splitYearChain으로 예측 첫 구간을 '월 기록 전 기간' 줄로 따로 떼고
+// 실측 구간만 원인으로 나누므로 이 꼴을 쓰지 않는다 — 연 화면 변화 0은 맨 아래 '화면 경로' 테스트가 단언한다.
+// 아래 연 단언 3건은 엔진 effects 변화가 후처리(splitLoanCause)·묶음·결론까지 어떻게 전파되는지 고정하는 용도로 유지한다.
 const YE = "2026-10-28";
 const NEW_LOAN_ID_YEAR = `loan_${msOf("2026-05-10")}`; // 예측 구간(작년 말 앵커 ~ 8월 기록) 안 등록
 const yearOf = (loanId: string) => {
@@ -112,5 +118,39 @@ describe("#251 D-2 결산 원인 전/후 — 예측 구간 신규 대출", () =>
     const b = yearOf(LEGACY_ID);
     expect(a.mapped.causes).toEqual(b.mapped.causes);
     expect(a.conclusion).toBeNull();
+  });
+
+  it("연 화면 경로(buildYearSettlementModel): 예측 구간은 별도 기간 줄 → 신규 대출이어도 수정 전과 같다(화면 변화 0)", () => {
+    const TODAY = YE;
+    const modelOf = (loanId: string) => {
+      const d = data();
+      d.yearlyNetAssets = [{ year: 2025, netAsset: 50 * M, note: "" }, { year: 2026, netAsset: 49 * M, note: "자동" }];
+      d.stocks = [{ id: "s", category: "domestic", name: "국내주식", ticker: "005930", quantity: 1000, averagePrice: 30_000, currentPrice: 43_000, currency: "KRW", purchaseDate: "2024-03-02" }] as AssetData["stocks"];
+      d.cash = [{ id: "c", type: "bank", name: "통장", balance: 12 * M, currency: "KRW" }] as AssetData["cash"];
+      d.loans = loanOf(loanId, 6 * M, 0);
+      d.cashTransactions = [deposit("p", "2026-10-10", 2 * M)];
+      const monthly = [snap("2026-08", "2026-08-28", { cash: 10 * M, stock: 40 * M, stockCost: 30 * M, loans: 6 * M })];
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(`${TODAY}T03:00:00Z`));
+      try {
+        return buildYearSettlementModel({
+          assetData: d, monthly, daily: [], rates: RATES, exchangeHistory: {},
+          summary: summaryOf(d, RATES as never), today: TODAY,
+        })!;
+      } finally {
+        vi.useRealTimers();
+      }
+    };
+    const after = modelOf(NEW_LOAN_ID_YEAR);
+    const before = modelOf(LEGACY_ID);
+    expect(after.split).toBe("mixed");
+    expect(after.period).toEqual(before.period);
+    expect(after.period?.amount).toBe(-6_000_000); // 예측 구간(신규 대출 포함)은 금액 1줄
+    expect(after.groups).toEqual(before.groups);
+    expect(after.conclusion).toEqual(before.conclusion);
+    expect(after.groups?.loan ?? null).toBeNull();
+    expect(after.conclusion).toEqual({ n: 40, m: 60 }); // 수정 전부터 노출
+    const visible = (after.groups?.income ?? 0) + (after.groups?.growth?.amount ?? 0) + (after.groups?.loan ?? 0) + (after.groups?.unrecorded?.amount ?? 0) + (after.period?.amount ?? 0);
+    expect(visible).toBe(after.total);
   });
 });
