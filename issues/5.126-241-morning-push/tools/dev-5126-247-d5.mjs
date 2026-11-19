@@ -10,7 +10,7 @@ const T = "000660"; const sel = `[data-testid="grow-row"][data-ticker="${T}"]`;
 await p.goto(`${PV}/?trial=1&t=${Date.now()}`, { waitUntil: "networkidle", timeout: 90000 }).catch(() => {}); await p.waitForTimeout(7000);
 out.version = await p.evaluate(() => (document.body.innerText.match(/v?5\.\d{3}/) || [null])[0]);
 const hubN = async () => { await p.evaluate(() => { location.hash = "#activity"; }); await p.waitForTimeout(2500); const h = await p.evaluate(() => document.body.innerText.match(/점검 차례[^\n]*/g) ?? []); await p.evaluate(() => { location.hash = "#activity/report"; }); await p.waitForSelector('[data-testid="grow-row"]', { timeout: 30000 }); await p.waitForTimeout(3000); if (!(await p.$(`${sel} [data-testid="grow-sheet"]`))) { await p.click(`${sel} [data-testid="grow-row-toggle"]`); await p.waitForTimeout(700); } return h; };
-const st = () => p.evaluate(([sel, t]) => { const r = document.querySelector(sel); const q = (s) => r?.querySelector(`[data-testid="${s}"]`)?.textContent ?? null; const L = JSON.parse(localStorage.getItem("secretasset.stock_labels") ?? "{}"); return { due: r?.dataset.due, rowDue: q("grow-row-due"), reason: q("grow-sheet-reason"), same: q("grow-choice-same"), card: document.querySelector('[data-testid="grow-summary-check"]')?.textContent ?? null, plan: L.items?.[t]?.plan, itemAt: L.items?.[t]?.at, hits: (L.reviews ?? []).filter((x) => x.t === t).map((x) => x.hit ?? "-") }; }, [sel, T]);
+const st = () => p.evaluate(([sel, t]) => { const r = document.querySelector(sel); const q = (s) => r?.querySelector(`[data-testid="${s}"]`)?.textContent ?? null; const L = JSON.parse(localStorage.getItem("secretasset.stock_labels") ?? "{}"); return { due: r?.dataset.due, rowDue: q("grow-row-due"), reason: q("grow-sheet-reason"), same: q("grow-choice-same"), sameDisabled: r?.querySelector('[data-testid="grow-choice-same"]')?.getAttribute("aria-disabled") ?? null, next: q("grow-choice-next"), card: document.querySelector('[data-testid="grow-summary-check"]')?.textContent ?? null, plan: L.items?.[t]?.plan, itemAt: L.items?.[t]?.at, hits: (L.reviews ?? []).filter((x) => x.t === t).map((x) => x.hit ?? "-") }; }, [sel, T]);
 out.hub0 = await hubN(); out.before = await st();
 await p.click(`${sel} [data-testid="grow-choice-same"]`); await p.waitForTimeout(900); out.afterSame = await st();
 if (!(await p.$(`${sel} [data-testid="grow-plan-form"]`))) { await p.click(`${sel} [data-testid="grow-plan-summary"]`); await p.waitForTimeout(600); }
@@ -20,5 +20,9 @@ out.hubAfterMemo = await hubN(); out.afterMemoReenter = await st();
 if (!(await p.$(`${sel} [data-testid="grow-plan-form"]`))) { await p.click(`${sel} [data-testid="grow-plan-summary"]`); await p.waitForTimeout(600); }
 await p.fill(`${sel} [data-testid="grow-plan-up"]`, "20"); await p.locator(`${sel} [data-testid="grow-plan-up"]`).blur(); await p.waitForTimeout(900);
 out.afterPctEdit = await st(); await p.screenshot({ path: `${OUT}/32-d5-after-pct-edit-390.png` });
+await p.click(`${sel} [data-testid="grow-choice-same"]`); await p.waitForTimeout(900); out.afterRepress = await st(); out.nextAfterRepress = await p.evaluate((s) => document.querySelector(s)?.querySelector('[data-testid="grow-choice-next"]')?.textContent ?? null, sel);
+await p.locator(sel).scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/33-d5-after-repress-390.png` });
+await p.click(`${sel} [data-testid="grow-choice-same"]`).catch(() => {}); await p.waitForTimeout(600); out.afterThirdClick = (await st()).hits;
+out.hubEnd = await hubN();
 out.errs = errs; out.writes = [...new Set(writes)];
 console.log(JSON.stringify(out, null, 1)); await br.close();
