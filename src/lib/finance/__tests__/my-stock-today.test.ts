@@ -8,6 +8,7 @@ import {
   buildMyStockRows, myStockAriaLabel, myStockLineState, myStockQueryKey, myStockText, myStockTickerList, pickMyStockToday,
 } from "../my-stock-today";
 import { PARAM_VALUES, featureTitleOf } from "@/lib/analytics/ga";
+import { WHATS_NEW } from "@/config/whats-new";
 
 const RATES = { USD: 1400, JPY: 900 };
 const at = (kst: string) => new Date(`${kst}+09:00`);
@@ -237,5 +238,15 @@ describe("조회 비용 — 상세·주식과 같은 키(AC-6·7)", () => {
     const dash = readFileSync("src/app/(main)/_components/views/home/dashboard.tsx", "utf8");
     expect(dash.match(/category: "home_my_stock"/g)).toHaveLength(1);
     expect(dash).toMatch(/category: "home_my_stock" \}\);\s*navigate\(\{ type: "detail", tab: "stocks" \}\)/);
+  });
+});
+
+describe("새 소식 20261120-01 (CEO 확정 본문·ui-review 제목)", () => {
+  it("제목·본문 글자 그대로, `한 줄로`는 U+00A0으로 묶음, `오늘`·순위 낱말·금액 0", () => {
+    const e = WHATS_NEW.find((x) => x.id === "20261120-01")!;
+    expect(e.title).toBe("순자산 아래에 내 종목 등락이 나와요");
+    expect(e.body).toBe("홈에서 내 자산을 크게 움직인 내 종목을 한\u00a0줄로 보여 줘요");
+    expect(e.body!.replace(/\u00a0/g, " ")).toBe("홈에서 내 자산을 크게 움직인 내 종목을 한 줄로 보여 줘요");
+    for (const t of [e.title, e.body!]) expect(t).not.toMatch(/오늘|가장|1위|원\b|\d/);
   });
 });
