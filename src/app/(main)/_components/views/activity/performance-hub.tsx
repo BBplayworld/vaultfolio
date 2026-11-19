@@ -16,7 +16,7 @@ import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
 import { useStockLabels } from "@/hooks/use-stock-labels";
-import { boardStatus, buildBoardRows } from "@/lib/asset/grow-board";
+import { buildGrowBoards, growStatus } from "@/lib/asset/grow-kinds";
 import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
 import { tierLabel } from "@/lib/report/asset-grade";
 import { TIER_STYLE } from "./asset-report-view";
@@ -100,13 +100,13 @@ export function PerformanceHub() {
   const go = (tab: ActivityTab) => navigate({ type: "activity", tab });
 
   // 자산 성적표·불리기 카드(#239 6차) — 큰 값 = 성적표가 기록해 둔 최신 등급(재계산 없음, 홈 미니 트로피와 같은 값),
-  // 둘째 줄 = 점검 차례 수(불리기 행 '점검 차례'와 같은 판정). 화면 밖에서 차례를 알리는 유일한 신호다(푸시·홈 팁·알림 0)
+  // 둘째 줄 = 점검 차례 수(불리기 행 '점검 차례'와 같은 판정, #242부터 주식·코인·부동산·실물 전 종류 합). 화면 밖에서 차례를 알리는 유일한 신호다(푸시·홈 팁·알림 0)
   const { labels, ready: labelsReady } = useStockLabels();
   const latestGrade = useLatestAssetGrade();
   const [growNow] = useState(() => Date.now());
   const grow = useMemo(
-    () => boardStatus(buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? [])),
-    [assetData.stocks, assetData.transactions, exchangeRates, labels, growNow],
+    () => growStatus(buildGrowBoards(assetData, exchangeRates, labels, growNow)),
+    [assetData, exchangeRates, labels, growNow],
   );
 
   // 자산 변화 카드(#32 r2) — 결산 창(말일−3일~다음 달 10일, 비교 가능) 안이면 "N월 결산" 배지 + 구간 증감,
@@ -205,7 +205,7 @@ export function PerformanceHub() {
         <KpiCard
           icon={Sprout}
           title="자산 성적표·불리기"
-          description="종합 등급과 종목 점검을 한곳에서"
+          description="성적표와 내 자산 점검을 한곳에서"
           // 큰 값 = 등급(등급 낱말만 등급 색, 숫자는 본문색). 성적표를 아직 연 적 없으면 행동 문구
           primary={!hasAssets ? undefined : (
             <span data-testid="hub-report-primary" data-tier={latestGrade?.tier ?? ""} className="whitespace-nowrap">
@@ -219,12 +219,12 @@ export function PerformanceHub() {
             <span data-testid="hub-report-secondary" data-kind="empty" className="text-muted-foreground">자산 등록 후 볼 수 있어요</span>
           ) : !labelsReady || grow.kind === "empty" ? null : (
             <span data-testid="hub-report-secondary" data-kind={grow.kind} data-due={grow.due} className="whitespace-nowrap text-muted-foreground tabular-nums">
-              {grow.kind === "due" ? <>점검 차례 <span className="font-semibold text-indigo-600 dark:text-indigo-200">{grow.due}종목</span></>
+              {grow.kind === "due" ? <>점검 차례 <span className="font-semibold text-indigo-600 dark:text-indigo-200">{grow.due}{grow.unit}</span></>
                 : grow.kind === "labeled" ? `장기 보유 ${grow.keep} · 점검 대상 ${grow.check}`
                   : "장기 보유·점검 대상 정하기"}
             </span>
           )}
-          onClick={() => { resetReportTab(); go("report"); }} // 허브는 한 입구 — 기본 칸(종목 점검)으로 연다
+          onClick={() => { resetReportTab(); go("report"); }} // 허브는 한 입구 — 기본 칸(내 자산 점검)으로 연다
         />
         </div>
       </div>

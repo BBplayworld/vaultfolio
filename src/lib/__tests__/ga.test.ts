@@ -313,6 +313,8 @@ describe("내 자산 불리기 GA (5.125 #239)", () => {
     ["grow_revisit", "내 자산 불리기·다시 봄"],
     ["grow_plan", "내 자산 불리기·조건"],
     ["grow_grade_tab", "내 자산 불리기·성적표 탭"],
+    ["grow_pick", "내 자산 불리기·내 선택"], // #242(5.127) 주 지표 — 값이 있는 `내 선택` 패널을 열 때
+    ["grow_other_label", "내 자산 불리기·주식 외 정함"], // #242 보조 — 코인·부동산·실물을 이 기기에서 처음 정할 때
   ] as const)("%s는 성적표 화면에서도 자기 title로 가고 page_title·page_location 외 값을 싣지 않는다", (category, title) => {
     trackScreen("activity:report");
     gtag.mockClear();
