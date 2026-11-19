@@ -1,0 +1,27 @@
+390 first tile {"listTop":631.8,"group":{"x":12,"y":250,"w":366,"h":165.8},"grow":{"id":"stock-tool-grow","x":12,"y":327.3,"w":179,"h":88.5,"text":"장기 보유 · 점검 대상 정하기 전","valueW":155,"valueH":38.5,"contentW":191,"badDots":0,"dotStates":["wrapped"]}}
+390 first rows {"decisions":0,"entries":0,"heights":[63.5,63.5,63.5,63.5,63.5,63.5]}
+390 first home-tip "whats_new"
+390 labeled tile {"listTop":631.8,"grow":{"id":"stock-tool-grow","x":12,"y":327.3,"w":179,"h":88.5,"text":"주식 장기 보유 1 · 점검 대상 1","valueW":155,"valueH":38.5,"contentW":184.9,"badDots":0,"dotStates":["wrapped"]}}
+390 head both {"headH":228,"kind":"sentence","text":"점검 대상 · 정한 날 대비 -6.3% · 다시 볼 조건 평단 대비 −15% 이하 또는 +25% 이상","gap":8,"h":42,"w":342,"areaW":334,"lines":2,"planW":334.1,"planShown":true,"planPieces":[225.7,104.7],"planLines":1,"badDots":0,"dotStates":["same-visible","wrapped-hidden"],"overlap":null}
+375 first tile {"listTop":631.8,"group":{"x":12,"y":250,"w":351,"h":165.8},"grow":{"id":"stock-tool-grow","x":12,"y":327.3,"w":171.5,"h":88.5,"text":"장기 보유 · 점검 대상 정하기 전","valueW":147.5,"valueH":38.5,"contentW":191,"badDots":0,"dotStates":["wrapped"]}}
+375 first rows {"decisions":0,"entries":0,"heights":[63.5,63.5,63.5,63.5,63.5,63.5]}
+375 first home-tip "whats_new"
+375 labeled tile {"listTop":631.8,"grow":{"id":"stock-tool-grow","x":12,"y":327.3,"w":171.5,"h":88.5,"text":"주식 장기 보유 1 · 점검 대상 1","valueW":147.5,"valueH":38.5,"contentW":184.9,"badDots":0,"dotStates":["wrapped"]}}
+375 head both {"headH":248,"kind":"sentence","text":"점검 대상 · 정한 날 대비 -6.3% · 다시 볼 조건 평단 대비 −15% 이하 또는 +25% 이상","gap":8,"h":62,"w":327,"areaW":319,"lines":3,"planW":327,"planShown":true,"planPieces":[225.7,104.7],"planLines":2,"badDots":0,"dotStates":["same-visible","wrapped-hidden"],"overlap":null}
+360 first tile {"listTop":631.8,"group":{"x":12,"y":250,"w":336,"h":165.8},"grow":{"id":"stock-tool-grow","x":12,"y":327.3,"w":164,"h":88.5,"text":"장기 보유 · 점검 대상 정하기 전","valueW":140,"valueH":38.5,"contentW":191,"badDots":0,"dotStates":["wrapped"]}}
+360 first rows {"decisions":0,"entries":0,"heights":[63.5,63.5,63.5,63.5,63.5,63.5]}
+360 first home-tip "whats_new"
+360 labeled tile {"listTop":631.8,"grow":{"id":"stock-tool-grow","x":12,"y":327.3,"w":164,"h":88.5,"text":"주식 장기 보유 1 · 점검 대상 1","valueW":140,"valueH":38.5,"contentW":184.9,"badDots":0,"dotStates":["wrapped"]}}
+360 head both {"headH":248,"kind":"sentence","text":"점검 대상 · 정한 날 대비 -6.3% · 다시 볼 조건 평단 대비 −15% 이하 또는 +25% 이상","gap":8,"h":62,"w":312,"areaW":304,"lines":3,"planW":312,"planShown":true,"planPieces":[225.7,104.7],"planLines":2,"badDots":0,"dotStates":["same-visible","wrapped-hidden"],"overlap":null}
+320 first tile {"listTop":709.8,"group":{"x":12,"y":270,"w":296,"h":223.8},"grow":{"id":"stock-tool-grow","x":12,"y":347.3,"w":296,"h":69.3,"text":"장기 보유 · 점검 대상 정하기 전","valueW":272,"valueH":19.3,"contentW":191,"badDots":0,"dotStates":["same"]}}
+320 first rows {"decisions":0,"entries":0,"heights":[87.5,87.5,87.5,87.5,87.5,87.5]}
+320 first home-tip "whats_new"
+320 labeled tile {"listTop":709.8,"grow":{"id":"stock-tool-grow","x":12,"y":347.3,"w":296,"h":69.3,"text":"주식 장기 보유 1 · 점검 대상 1","valueW":272,"valueH":19.3,"contentW":184.9,"badDots":0,"dotStates":["same"]}}
+320 head both {"headH":228,"kind":"sentence","text":"점검 대상 · 정한 날 대비 -6.3% · 다시 볼 조건 평단 대비 −15% 이하 또는 +25% 이상","gap":8,"h":20,"w":272,"areaW":264,"lines":1,"planW":0,"planShown":false,"planPieces":[0,0],"planLines":null,"badDots":0,"dotStates":["same-visible","wrapped-hidden"],"overlap":null}
+1280 first tile {"listTop":563.5,"group":{"x":48,"y":270.1,"w":1184,"h":96.8},"grow":{"id":"stock-tool-grow","x":644,"y":270.1,"w":290,"h":96.8,"text":"장기 보유 · 점검 대상 정하기 전","valueW":266,"valueH":22,"contentW":217.2,"badDots":0,"dotStates":["same"]}}
+1280 first rows {"decisions":0,"entries":0,"heights":[44.8,44.8,44.8,44.8,44.8,44.8]}
+1280 first home-tip "whats_new"
+1280 labeled tile {"listTop":563.5,"grow":{"id":"stock-tool-grow","x":644,"y":270.1,"w":290,"h":96.8,"text":"주식 장기 보유 1 · 점검 대상 1","valueW":266,"valueH":22,"contentW":210.2,"badDots":0,"dotStates":["same"]}}
+1280 head both {"headH":223.8,"kind":"sentence","text":"점검 대상 · 정한 날 대비 -6.3% · 다시 볼 조건 평단 대비 −15% 이하 또는 +25% 이상","gap":8,"h":22.8,"w":1160,"areaW":1152,"lines":1,"planW":380.7,"planShown":true,"planPieces":[256.8,119.6],"planLines":1,"badDots":0,"dotStates":["same-visible","same-visible"],"overlap":null}
+light theme {"dark":false,"row":"lab(38.4009 52.6132 -92.3857)"}
+light entry {"color":"lab(38.4009 52.6132 -92.3857)","bg":"oklab(0.13604 0.00919639 0.00305023 / 0.06)","parentBg":"rgba(0, 0, 0, 0)"}
