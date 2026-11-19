@@ -247,7 +247,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // 종목 한 장은 대상 store가 비면(새로고침·직접 URL) 상세·주식으로 — 주소도 바꿔 둔다(히스토리 추가 없음)
     const parsed = parseHash(window.location.hash);
     const initial = guardTrialView(guardStockPageView(parsed, !!useStockPageStore.getState().target), isTrialMode());
-    if (initial !== parsed) window.history.replaceState(null, "", toHash(initial));
+    // 홈 해시는 ""라 replaceState("")로는 해시가 남는다 — 경로+쿼리로 바꾼다(navigate와 같은 방식)
+    if (initial !== parsed) window.history.replaceState(null, "", toHash(initial) || window.location.pathname + window.location.search);
     // 옛 해시(#activity/netasset 등)로 들어오면 주소창도 새 해시로 바꿔 둔다(히스토리 추가 없음)
     if (initial.type === "activity" && initial.init && window.location.hash !== toHash(initial)) {
       window.history.replaceState(null, "", toHash(initial));
@@ -264,7 +265,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         !!useStockPageStore.getState().target,
       );
       const next = guardTrialView(guarded, isTrialMode());
-      if (next !== guarded) window.history.replaceState(null, "", toHash(next));
+      if (next !== guarded) window.history.replaceState(null, "", toHash(next) || window.location.pathname + window.location.search);
       if (next.type === "detail" && next.tab === "stocks" && window.location.hash !== toHash(next)) {
         window.history.replaceState(null, "", toHash(next));
       }
