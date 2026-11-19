@@ -9,7 +9,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { HEADER_ENTRY_BTN_BRAND, HEADER_ICON_BTN } from "./menu-styles";
 import { ShareScreenshotDialog } from "./share/share-menu";
 import { recordVisit } from "@/lib/feature-usage";
-import { useAssetNavigation, getBackLabel } from "../layout/navigation/navigation-context";
+import { useAssetNavigation, getBackLabel, isReportEnteredFromDetail } from "../layout/navigation/navigation-context";
 import { InlineSelector } from "../layout/ui/inline-selector";
 import { PwaInstallButton } from "../pwa/pwa-install-button";
 import { InstallNudge } from "../pwa/install-nudge";
@@ -99,7 +99,7 @@ export function TopBar() {
   const { view, navigate, back } = useAssetNavigation();
   const { assetData, isSharePending } = useAssetData();
   const stockPageOrigin = useStockPageStore((s) => s.target?.origin);
-  const title = getBackLabel(view, stockPageOrigin);
+  const title = getBackLabel(view, stockPageOrigin, isReportEnteredFromDetail());
   const isSubView = view.type !== "home";
 
   // 웰컴가이드(자산 없음·공유 대기) 시 상단 상세/성과·더보기 영역 숨김

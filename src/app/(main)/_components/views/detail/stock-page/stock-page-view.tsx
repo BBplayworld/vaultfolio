@@ -33,6 +33,12 @@ import { BODY_ENTER } from "../../activity/change-hero";
 import { formatCurrencyDisplay } from "../asset-detail-tabs";
 import { formatPriceByCurrency } from "@/lib/number-utils";
 import { fmtDot, PriceChart } from "./price-chart";
+import { useStockLabelsRead } from "@/hooks/use-stock-labels";
+import { isStockLabelKey, type StockLabels } from "@/lib/asset/stock-labels";
+import { buildBoardRows } from "@/lib/asset/grow-board";
+import { decisionRowsOf, dueEntryText, headDecisionOf, type HeadDecision } from "@/lib/asset/grow-decision";
+import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
+import { GrowDueEntry } from "../../activity/grow-due-entry";
 
 const RANGE_OPTIONS: { value: PriceRange; label: string; testId: string }[] = [
   { value: "1y", label: "1년", testId: "stock-page-range-1y" },
@@ -64,8 +70,42 @@ export function StockPageView() {
   return <StockPageBody target={target} />;
 }
 
-export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeof useStockPageStore.getState>["target"]> }) {
+/**
+ * 머리의 내 결정 문장(#245) — `{내 결정} · {정한 날 대비|점검일 대비} {%} · {조건 절}`. 읽기 전용(결정·조건은 점검 칸에서만 바꾼다).
+ * 조각 단위로만 줄이 바뀌고 줄 끝에 가운뎃점이 남지 않는다(dot-wrap). 조건 절은 폭이 모자라면 `또는` 앞에서만 끊긴다.
+ * 360 미만에서 하한·상한이 둘 다면 조건 절을 뺀다(그대로 두면 3줄)
+ */
+export function StockPageDecision({ value }: { value: HeadDecision }) {
+  const s = value.since;
+  const [planHead, planTail] = value.plan?.both ? value.plan.value.split(" 또는 ") : [value.plan?.value ?? "", ""];
+  return (
+    <p
+      data-testid="stock-page-decision"
+      data-kind={value.kind}
+      data-since={s.state}
+      className={`-mt-2 flex flex-wrap gap-x-1 gap-y-0.5 text-sm text-muted-foreground tabular-nums ${DOT_WRAP_ROW}`}
+    >
+      <span className={`whitespace-nowrap font-semibold text-foreground ${DOT_WRAP_FIRST}`}>{value.label}</span>
+      {s.state === "today" && <span className="whitespace-nowrap"><DotLead />{s.text}</span>}
+      {(s.state === "set" || s.state === "checked") && (
+        <span className="whitespace-nowrap"><DotLead />{s.label} <span className={`font-semibold ${Math.round(s.pct * 10) === 0 ? "text-muted-foreground" : getProfitLossColor(s.pct)}`}>{s.text}</span></span>
+      )}
+      {value.plan && (
+        <span data-testid="stock-page-decision-plan" className={`min-w-0${value.plan.both ? " max-[359px]:hidden" : ""}`}>
+          <span className="whitespace-nowrap"><DotLead />{value.plan.prefix} <span className="font-medium text-foreground">{planHead}</span></span>
+          {planTail && <>{" "}<span className="whitespace-nowrap font-medium text-foreground">또는 {planTail}</span></>}
+        </span>
+      )}
+    </p>
+  );
+}
+
+// labelStore = 테스트가 이름표 값을 직접 넣는 자리(정적 렌더는 effect가 돌지 않아 훅이 늘 읽기 전이다)
+export function StockPageBody({ target, labelStore }: { target: NonNullable<ReturnType<typeof useStockPageStore.getState>["target"]>; labelStore?: { labels: StockLabels; ready: boolean } }) {
   const { assetData, exchangeRates } = useAssetData();
+  const ownLabelStore = useStockLabelsRead();
+  const { labels, ready: labelsReady } = labelStore ?? ownLabelStore;
+  const [growNow] = useState(() => Date.now());
   const { navigate } = useAssetNavigation();
   const setTradeTarget = useTradeViewStore((s) => s.setTarget);
   const setTradesFromStockPage = useStockPageStore((s) => s.setTradesFromStockPage);
@@ -78,6 +118,16 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
     () => buildStockGroupHead(groupStocks, exchangeRates, target.displayCurrency),
     [groupStocks, exchangeRates, target.displayCurrency],
   );
+
+  // 내 결정(#245) — 점검 칸 주식 보기와 같은 행(티커 전체·원화 기준)을 이름표 키로 찾아 읽기만 한다. 이름표를 읽기 전·미정 종목은 아무것도 그리지 않는다
+  const decisionRow = useMemo(() => {
+    if (!labelsReady || !head.merged.ticker || !groupStocks.some((s) => s.inactiveStatus !== "delisted" && s.quantity > 0)) return undefined;
+    const key = normalizeTicker(head.merged);
+    if (!isStockLabelKey(key)) return undefined;
+    return decisionRowsOf(buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? [])).get(key);
+  }, [labelsReady, head.merged, groupStocks, assetData.stocks, assetData.transactions, exchangeRates, labels, growNow]);
+  const dueEntry = decisionRow ? dueEntryText(decisionRow) : null;
+  const headDecision = headDecisionOf(decisionRow, labels, growNow);
 
   const ticker = normalizeTicker(head.merged).toUpperCase();
   const flow = !!ticker && groupStocks.some(hasPriceFlow);
@@ -185,6 +235,10 @@ export function StockPageBody({ target }: { target: NonNullable<ReturnType<typeo
           </span>
           <span data-testid="stock-page-quantity" className="ml-auto text-sm text-muted-foreground tabular-nums">총 {head.quantity.toLocaleString()}주</span>
         </div>
+        {/* 내 결정(#245) — 차례면 문장 대신 점검 한 장 진입(둘을 같이 그리지 않는다). 미정 종목은 없음 */}
+        {dueEntry && decisionRow?.labelKey
+          ? <GrowDueEntry name={head.merged.name} text={dueEntry} labelKey={decisionRow.labelKey} at="head" className="-mt-1" />
+          : headDecision && <StockPageDecision value={headDecision} />}
       </section>
 
       <section

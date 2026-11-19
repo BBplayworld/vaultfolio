@@ -39,6 +39,13 @@ import { useAssetNavigation } from "../../../layout/navigation/navigation-contex
 import { useTradeViewStore } from "@/stores/trade-view-store";
 import { useStockPageStore } from "@/stores/stock-page-store";
 import { displayShareWidths } from "@/lib/report/min-share";
+import { useStockLabelsRead } from "@/hooks/use-stock-labels";
+import { isStockLabelKey, type StockLabels } from "@/lib/asset/stock-labels";
+import { buildBoardRows } from "@/lib/asset/grow-board";
+import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, growTileValueOf, type DecisionKind } from "@/lib/asset/grow-decision";
+import { isPreviewEnv } from "@/lib/cloud-sync/config";
+import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
+import { DUE_TEXT, GrowDueEntry } from "../../activity/grow-due-entry";
 
 export const CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -270,7 +277,9 @@ function TodayChangeChip({ rate, label, className = "" }: { rate: number; label:
 }
 
 // 아이콘 + 이름/수량/비중 + 금액/손익 공통 헤더
-export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, shotBig = false, displayCurrency = "KRW", usdRate = 1, todayChip }: StockRowData & {
+export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRate, categoryLabels, maskFn, screenshotMode = false, shotBig = false, displayCurrency = "KRW", usdRate = 1, todayChip, decision }: StockRowData & {
+  /** 내 결정 표시(#245) — 정한 종목만. 없으면 마크업이 그대로다(미정 종목 diff 0). 인증카드는 넘기지 않는다 */
+  decision?: DecisionKind;
   categoryLabels?: string[];
   maskFn?: (v: number) => string;
   screenshotMode?: boolean;
@@ -306,15 +315,21 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             <Badge variant="outline" className={`text-red-600 border-red-600 ${badgeCls}`}>상장폐지</Badge>
           )}
         </div>
-        <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
+        <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap${decision ? ` ${DOT_WRAP_ROW}` : ""}`}>
           {/* 인증카드 금액 숨김(maskFn이 ••• 반환) 시 수량도 가림 — 수량×현재가로 평가금액 역산 차단(#155) */}
-          <span className={`${qtyCls} text-foreground tabular-nums`}>{screenshotMode && hideAmounts ? maskFn!(stock.quantity) : stock.quantity.toLocaleString()}주</span>
+          <span className={`${qtyCls} text-foreground tabular-nums${decision ? ` ${DOT_WRAP_FIRST}` : ""}`}>{screenshotMode && hideAmounts ? maskFn!(stock.quantity) : stock.quantity.toLocaleString()}주</span>
           {/* 인증카드는 비중 정보를 상단 범례로 통합 — 리스트 행에서는 % 미노출 */}
           {!screenshotMode && (
             <>
               <span className="text-sm text-muted-foreground max-sm:hidden">·</span>
               <span className="text-sm font-semibold text-primary max-sm:hidden">{pct.toFixed(1)}%</span>
             </>
+          )}
+          {/* 내 결정(#245) — 차례면 `점검 차례`만. 줄이 바뀌어도 가운뎃점이 줄 머리·줄 끝에 남지 않는다(dot-wrap). 360 미만은 차례 행에만 */}
+          {!screenshotMode && decision && (
+            <span data-testid="stock-row-decision" data-kind={decision} className={`whitespace-nowrap text-sm ${decision === "due" ? DUE_TEXT : "text-muted-foreground max-[359px]:hidden"}`}>
+              <DotLead />{DECISION_TEXT[decision]}
+            </span>
           )}
           {/* 종목별 오늘 등락 — 우측이 3줄로 늘어지지 않게 좌측 메타 줄에 배치. 장중 미확정/기준가 없으면 미표시 */}
           {!screenshotMode && todayChip && (
@@ -444,6 +459,8 @@ interface StockCardProps {
   maskFn?: (v: number) => string;
   displayCurrency?: StockDisplayCurrency;
   todayChip?: TodayChipView | null;
+  /** 내 결정(#245) — 정한 종목만. entry = 차례 행의 점검 한 장 진입(문장·이름표 키) */
+  decision?: { kind: DecisionKind; entry: { text: string; labelKey: string } | null };
 }
 
 interface SplitItem {
@@ -757,7 +774,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
   );
 }
 
-export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, shotBig = false, maskFn, displayCurrency = "KRW", todayChip }: StockCardProps) {
+export function StockCard({ stock, color, pct, currentVal, profit, profitRate, isForeign, krwMul, currencyGain, currencyGainRate, linkedLoans, onDelete, onDeleteGroup, categoryLabels, defaultOpen = false, onFirstInteract, isFirstVisit = false, subItems, exchangeRates = { USD: 1, JPY: 1 }, totalValue = 0, groupItems, marketMap, screenshotMode = false, shotBig = false, maskFn, displayCurrency = "KRW", todayChip, decision }: StockCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const usdRate = exchangeRates.USD;
   const [splitOpen, setSplitOpen] = useState(false);
@@ -831,7 +848,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
           <div className={ASSET_THEME.cardHeader}>
             <CollapsibleTrigger asChild>
               <button className={ASSET_THEME.cardTriggerButton}>
-                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabels={categoryLabels} displayCurrency={displayCurrency} usdRate={usdRate} todayChip={todayChip} />
+                <StockRowHeader stock={stock} color={color} pct={pct} currentVal={currentVal} profit={profit} profitRate={profitRate} categoryLabels={categoryLabels} displayCurrency={displayCurrency} usdRate={usdRate} todayChip={todayChip} decision={decision?.kind} />
                 <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               </button>
             </CollapsibleTrigger>
@@ -844,6 +861,12 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
           )}
           <CollapsibleContent>
             <div className={ASSET_THEME.cardExpandBox}>
+              {/* 차례 행만 — 점검 한 장 진입(#245). 종목 한 장 머리와 같은 컴포넌트 */}
+              {decision?.entry && (
+                <div className="px-4 pt-1 pb-2">
+                  <GrowDueEntry name={stock.name} text={decision.entry.text} labelKey={decision.entry.labelKey} at="row" />
+                </div>
+              )}
               {/* 이름 줄 전체 = 종목 한 장 입구(4.83). 1년 요청은 펼쳤을 때만 — 총 N주는 접힌 행·증권사별 항목이 정본이라 뺐다 */}
               <StockPageEntry
                 stock={stock}
@@ -1069,6 +1092,8 @@ export function StockCategorySection({
 // 비교 페이지에서 뒤로 돌아와 다시 마운트돼도 선택이 그대로다(K3). 비중 막대·인증카드 순서는 평가금 순 고정
 type StockSort = "value" | "rate";
 let stockSortMemory: StockSort = "value";
+// `상세·주식·내 결정 보임`(#245) — 페이지 수명당 1회(저장 키 0)
+let decisionViewSent = false;
 
 // 정렬 컨트롤 — 카테고리 줄 오른쪽 글자 버튼(면·테두리 없음, ui.md 4절 r2).
 // 아이콘형은 기본 정렬(`평가금 순`)일 때만: 360 미만, 또는 카테고리 7칸이면서 400 미만. `등락률 순` 선택 중에는 폭·칸 수와 무관하게 라벨.
@@ -1110,8 +1135,12 @@ function StockSortSelect({ value, onChange, categoryCount }: { value: StockSort;
   );
 }
 
-export function StockTab() {
+// labelStore = 테스트가 이름표 값을 직접 넣는 자리(정적 렌더는 effect가 돌지 않아 훅이 늘 읽기 전이다 — 점검 블록 store 선례)
+export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; ready: boolean } } = {}) {
   const { assetData, deleteStock, deleteStocks, saveData } = useAssetData();
+  const ownLabelStore = useStockLabelsRead();
+  const { labels, ready: labelsReady } = labelStore ?? ownLabelStore;
+  const [growNow] = useState(() => Date.now());
   const { navigate } = useAssetNavigation();
   const [activeCategory, setActiveCategory] = useState("all");
   const [hasInteracted, setHasInteracted] = useState(() => {
@@ -1180,6 +1209,23 @@ export function StockTab() {
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
+  // 내 결정(#245) — 점검 칸 주식 보기와 같은 행을 1번 만들어(buildBoardRows) 행 표시·차례 진입·타일 값이 함께 읽는다. 새 판정 0.
+  // 차례·%는 티커 전체·원화 기준이다(카테고리 탭·달러 보기의 부분 묶음과 다를 수 있다 — 정본은 점검 칸)
+  const boardRows = useMemo(
+    () => buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? []),
+    [assetData.stocks, assetData.transactions, exchangeRates, labels, growNow],
+  );
+  const decisions = useMemo(() => (labelsReady ? decisionRowsOf(boardRows) : null), [labelsReady, boardRows]);
+  const growTile = boardRows.length === 0 ? undefined : labelsReady ? growTileValueOf(boardRows) ?? undefined : "pending";
+  const decisionOf = (stock: Stock) => {
+    if (!decisions || !stock.ticker || stock.inactiveStatus === "delisted" || !(stock.quantity > 0)) return undefined;
+    const key = normalizeTicker(stock);
+    const row = isStockLabelKey(key) ? decisions.get(key) : undefined;
+    if (!row) return undefined;
+    const text = dueEntryText(row);
+    return { kind: decisionKindOf(row), entry: text ? { text, labelKey: key } : null };
+  };
+
   const [sort, setSort] = useState<StockSort>(() => stockSortMemory);
   const changeSort = (v: StockSort) => {
     if (v === sort) return;
@@ -1196,6 +1242,14 @@ export function StockTab() {
     return sortByChipRate(mergedStocks, (st) => computeTodayChip(groupedStocks.get(groupKeyOf(st)) ?? [st], refData, exchangeRates)?.rate ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, refData, mergedStocks, groupedStocks, exchangeRates, assetData.stocks]);
+
+  // 관찰용 `·내 결정 보임` — 이름표를 읽은 뒤 지금 목록에 정한 종목 행이 1개 이상이면 1회(표시를 그렸는지가 아니라 — 360 미만은 표시를 안 그린다)
+  const hasDecisionRow = !!decisions && listStocks.some((st) => decisionOf(st) !== undefined);
+  useEffect(() => {
+    if (!hasDecisionRow || decisionViewSent) return;
+    decisionViewSent = true;
+    if (!isPreviewEnv()) track("feature_use", { category: "stock_decision_view" });
+  }, [hasDecisionRow]);
 
   // 카테고리 줄 — 6칸 이상이면 조밀(칸 좌우 여백 축소). 카테고리·정렬을 바꾸면 선택 칸을 보이게 스크롤
   const denseCategories = visibleCategories.length >= 6;
@@ -1238,8 +1292,8 @@ export function StockTab() {
           todayChip={todayChip}
         />
 
-        {/* 내 주식 도구 타일(시장과 비교·X-Ray·세금, 4.83 — 인증카드 제외) */}
-        <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} />
+        {/* 내 주식 도구 타일(시장과 비교·X-Ray·내 자산 점검·세금, 4.83·#245 — 인증카드 제외) */}
+        <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} grow={growTile} />
 
         {/* 카테고리 selector + 정렬(같은 줄, 줄 수 +0) */}
         <div data-testid="stock-category-row" className="flex items-center gap-2">
@@ -1300,6 +1354,7 @@ export function StockTab() {
                 totalValue={totalValue}
                 marketMap={marketMap}
                 displayCurrency={effectiveDisplayCurrency}
+                decision={decisionOf(stock)}
               />
             );
           }}

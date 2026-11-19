@@ -80,7 +80,8 @@ export function stockLabelActions({ notify, track: send, now }: StockLabelAction
   };
 }
 
-export function useStockLabels() {
+/** 저장소 값과 읽기 완료 여부 — 자산 데이터가 바뀔 때(동기화 수신 포함) 다시 읽는다 */
+function useStockLabelsState() {
   const { assetData } = useAssetData();
   const [labels, setLabels] = useState<StockLabels>(emptyStockLabels);
   const [ready, setReady] = useState(false);
@@ -89,6 +90,18 @@ export function useStockLabels() {
     setLabels(readStockLabels());
     setReady(true);
   }, [assetData]);
+
+  return { labels, ready, setLabels };
+}
+
+/** 읽기 전용(#245) — 상세·주식 행 표시·종목 한 장 머리·홈 팁처럼 결정을 읽기만 하는 화면용. 쓰기·GA 결선이 없다 */
+export function useStockLabelsRead(): { labels: StockLabels; ready: boolean } {
+  const { labels, ready } = useStockLabelsState();
+  return { labels, ready };
+}
+
+export function useStockLabels() {
+  const { labels, ready, setLabels } = useStockLabelsState();
 
   const actions = useMemo(() => {
     const a = stockLabelActions({
@@ -103,7 +116,7 @@ export function useStockLabels() {
       setPlan: (ticker: string, plan: Pick<StockLabelPlan, "down" | "up" | "months" | "memo">) => show(a.setPlan(ticker, plan)),
       setCycle: (months: StockLabelCycleMonths) => show(a.setCycle(months)),
     };
-  }, []);
+  }, [setLabels]);
 
   return { labels, ready, ...actions };
 }

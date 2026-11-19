@@ -304,7 +304,7 @@ describe("7. 상한·격리·전송", () => {
     expect(raw()).toBe(before);
     expect(raw()).not.toContain("c:BTC");
   });
-  it("전송 — 이름표·`내 선택`을 읽는 파일이 정해진 곳뿐이다(AI 프롬프트·공유·홈·알림·API 라우트 0)", () => {
+  it("전송 — 이름표·`내 선택`을 읽는 파일이 정해진 곳뿐이다(AI 프롬프트·공유·알림·API 라우트 0, 홈은 #245 팁 상자 1곳만 읽기 전용)", () => {
     const root = path.resolve(__dirname, "../..");
     const hits: string[] = [];
     const walk = (dir: string) => {
@@ -316,7 +316,13 @@ describe("7. 상한·격리·전송", () => {
       }
     };
     walk(root);
-    for (const f of hits) expect(f, f).not.toMatch(/^app\/api\/|ai-prompts|share|push|home|analytics/);
+    // #245(5.130): 홈 팁 상자 1곳만 읽기 전용으로 읽는다(점검 차례 수·단위·이유 문장 — 종목명·금액·수량 없음, 서버 전송 0). 홈의 다른 파일·AI 프롬프트·공유·알림·API는 그대로 0
+    const HOME_TIP = "app/(main)/_components/views/home/home-tip-box.tsx";
+    for (const f of hits) if (f !== HOME_TIP) expect(f, f).not.toMatch(/^app\/api\/|ai-prompts|share|push|home|analytics/);
+    expect(hits).toContain(HOME_TIP);
+    const tipBox = readFileSync(path.join(root, HOME_TIP), "utf8");
+    expect(tipBox).not.toMatch(/fetch\(|writeStockLabels|recordReview|setStockLabel|setStockPlan/);
+    expect(tipBox).toContain('track("feature_use", { category: "home_tip_due" })'); // 나가는 것은 title 1개뿐(수·종목 미전송)
     expect(hits.some((f) => f.endsWith("stock-label-block.tsx"))).toBe(true);
   });
 });

@@ -168,6 +168,12 @@ export function checkMonthsOf(item: StockLabelItem | undefined, cycleMonths: num
 
 const ROUND1 = (v: number) => Math.round(v * 10) / 10;
 
+/** `+16.7%` / `-3.1%` — 표시 기준(소수 1자리 반올림)이 0이면 부호 없음. 불리기 화면·상세·주식·종목 한 장이 같은 글자를 쓴다(#245) */
+export const pctText = (v: number): string => {
+  const r = ROUND1(v);
+  return `${r > 0 ? "+" : ""}${(r === 0 ? 0 : r).toFixed(1)}%`;
+};
+
 /** 주기·기간이 없는 종목의 ±% 확인이 유지되는 기간(개월) — 점검 주기 선택지의 가장 짧은 값(3개월) */
 export const PCT_ACK_MONTHS = STOCK_LABEL_CYCLES[0];
 
