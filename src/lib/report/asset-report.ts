@@ -5,6 +5,7 @@
 
 import { cashLinkId } from "@/lib/trade/linked-record";
 import { resyncInflowDate } from "@/lib/asset/resync/apply";
+import { assetIdRegisteredDate } from "./settlement";
 import { deriveBaseSnapshot, type PositionLike, type TxLike } from "@/lib/trade/trade-utils";
 import type { AssetData, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot } from "@/types/asset";
 
@@ -635,7 +636,7 @@ function estimatePeriodInflows(
   fromDate: string,
   toDate: string,
   rates: { USD: number; JPY: number },
-): { stock: number; crypto: number; realEstate: number; physical: number; debt: number } {
+): { stock: number; crypto: number; realEstate: number; physical: number; cash: number; debt: number } {
   const inPeriod = (d?: string) => !!d && d > fromDate && d <= toDate;
   // 기간 내 반영 거래를 가진 종목 id — 이 종목의 투입은 buy/sell로 계산되므로 매수일 추정에서 제외
   const tradedStockIds = new Set(
@@ -682,12 +683,24 @@ function estimatePeriodInflows(
   for (const p of data.physicalAssets ?? []) {
     if (inPeriod(p.purchaseDate)) physical += p.purchasePrice;
   }
+  // #251 현금·대출 등록일 추정 — id의 13자리 ms(4.94 assetIdRegisteredDate 재사용, 못 읽으면 null → 현행 폴백).
+  // 구간 안 등록 현금 = 등록 당시 잔액(현재 잔액 − 이후 반영 입출금, 입출금은 income이 따로 잡아 이중 계상 0).
+  // 외화는 현재 환율 환산(예측). 기존 계좌 잔액 직접 수정은 등록일이 구간 밖이라 여기서 못 잡는다(한계, 시세 잔차 유지).
+  let cash = 0;
+  for (const c of data.cash) {
+    if (!inPeriod(assetIdRegisteredDate(c.id, toDate) ?? undefined)) continue;
+    const later = (data.cashTransactions || [])
+      .filter((t) => t.reflected && t.cashId === c.id && t.date > fromDate)
+      .reduce((s, t) => s + (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates), 0);
+    cash += c.balance * krwMul(c.currency, rates) - later;
+  }
   let debt = 0;
   for (const l of data.loans) {
     if (loanTxLoanIds.has(l.id)) continue;
-    if (inPeriod(l.startDate)) debt -= l.balance; // 기간 내 신규 대출 = 부채 증가(−)
+    // 기간 내 신규 대출 = 부채 증가(−). startDate가 과거여도 구간 안에 등록한 대출이면 신규로 본다(#251)
+    if (inPeriod(l.startDate) || inPeriod(assetIdRegisteredDate(l.id, toDate) ?? undefined)) debt -= l.balance;
   }
-  return { stock, crypto, realEstate, physical, debt };
+  return { stock, crypto, realEstate, physical, cash, debt };
 }
 
 // 기간[from, to] 내 반영된 대출 상환/추가대출 순액(Σ상환−Σ추가대출)을 집계.
@@ -903,7 +916,8 @@ function resolveAttribution(
     }, 0)
     : 0;
   const inflows = estimatePeriodInflows(assetData, prev._date, curr._date, rates);
-  const savingEffect = inflows.stock + inflows.crypto + inflows.realEstate + inflows.physical;
+  // 구간 안 등록 현금(#251)도 새로 넣은 돈 — saving에 더해 항등식(price+…+saving=Δ순자산)을 유지한다
+  const savingEffect = inflows.stock + inflows.crypto + inflows.realEstate + inflows.physical + inflows.cash;
   // breakdown(자산군별 평가액)은 fx/fxBase/cost 없이도 양쪽에 있을 수 있다 — breakdown.loans는
   // breakdown 존재 시 항상 채워지는 필수 필드이므로, 있으면 정밀 분기와 동일하게 잔액 차이로
   // 대출 증감을 직접 계산한다(대출 상환을 기록 없이 잔액만 수정한 경우도 정확히 잡힘).
@@ -937,6 +951,7 @@ function resolveAttribution(
     { key: inflows.realEstate >= 0 ? "buy:realEstate" : "sell:realEstate", amount: inflows.realEstate, estimated: true },
     ...(inflows.physical !== 0 ? [{ key: (inflows.physical > 0 ? "buy:physical" : "sell:physical") as AttributionCauseKey, amount: inflows.physical, estimated: true }] : []),
     { key: "income", amount: incomeEffect },
+    ...(inflows.cash !== 0 ? [{ key: "cash" as const, amount: inflows.cash, estimated: true }] : []), // 0이면 원인 목록 현행 그대로(#251)
     { key: "debt", amount: debtEffect, estimated: debtFromBreakdown === null },
   ]);
   return {
