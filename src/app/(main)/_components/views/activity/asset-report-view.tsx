@@ -427,6 +427,15 @@ export function AssetReportView() {
     (key === "diversification" && assetData.stocks.length > 0) || key === "growth" ||
     (key === "habit" && assetData.cash.length > 0);
 
+  // 5축 설명 ⓘ — 구획 제목 옆(세그먼트 없음) 또는 Hero 오른쪽 위(세그먼트 있음)에 같은 내용으로 한 번만 그린다
+  const gradeHint = (
+    <InfoHint summary="5개 축을 5점 만점으로 채점해 가중 평균한 종합 등급이에요.">
+      <p className="text-pretty break-keep">5개 축(장기 순자산 성장·수익의 질·레버리지 건전성·분산·투자 습관)을 각 5점 만점으로 채점하고 가중 평균해 종합 등급을 계산합니다.</p>
+      <p className="text-pretty break-keep">데이터가 부족한 축은 <span className="font-semibold text-foreground">측정불가</span>로 제외하고, 측정 가능한 축만으로 등급을 냅니다. 기록이 쌓이면 자동으로 정밀해집니다.</p>
+      <p className="text-pretty break-keep">투자 조언이 아닌, 내 자산의 구조·습관을 일반적 자산관리 기준으로 비춰보는 참고 지표입니다.</p>
+    </InfoHint>
+  );
+
   return (
     <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
       <CardHeader className={ASSET_THEME.contentPad}>
@@ -477,19 +486,18 @@ export function AssetReportView() {
             {/* ── 자산 성적표 칸 — 기존 구획 그대로 옮김(6차, 렌더 diff 0). 숨겨도 마운트 유지(등급 기록·세그먼트 값) ── */}
             <div hidden={shownTab !== "grade"} data-testid="report-panel-grade" className="space-y-4">
 
-            {/* ── 자산 성적표 구획 제목 — 화면 제목에 있던 InfoHint가 여기로 내려왔다(문구 그대로) ── */}
-            <div className="pt-1">
-              <SectionHeader icon={Trophy} title="자산 성적표" titleTestId="report-section-title">
-                <InfoHint summary="5개 축을 5점 만점으로 채점해 가중 평균한 종합 등급이에요.">
-                  <p className="text-pretty break-keep">5개 축(장기 순자산 성장·수익의 질·레버리지 건전성·분산·투자 습관)을 각 5점 만점으로 채점하고 가중 평균해 종합 등급을 계산합니다.</p>
-                  <p className="text-pretty break-keep">데이터가 부족한 축은 <span className="font-semibold text-foreground">측정불가</span>로 제외하고, 측정 가능한 축만으로 등급을 냅니다. 기록이 쌓이면 자동으로 정밀해집니다.</p>
-                  <p className="text-pretty break-keep">투자 조언이 아닌, 내 자산의 구조·습관을 일반적 자산관리 기준으로 비춰보는 참고 지표입니다.</p>
-                </InfoHint>
-              </SectionHeader>
-            </div>
+            {/* ── 자산 성적표 구획 제목 — 세그먼트가 보이면 둘째 칸 머리와 같은 낱말이라 제목 줄을 빼고 ⓘ만 Hero 오른쪽 위에 둔다(문구 그대로) ── */}
+            {!showSegment && (
+              <div className="pt-1">
+                <SectionHeader icon={Trophy} title="자산 성적표" titleTestId="report-section-title">
+                  {gradeHint}
+                </SectionHeader>
+              </div>
+            )}
 
             {/* ── 등급 Hero: 트로피 티어 + 종합 별점 ── */}
-            <div className="rounded-xl bg-card dark:shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
+            <div className="relative rounded-xl bg-card dark:shadow-xs p-5 sm:p-6 text-center space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500">
+              {showSegment && <span data-testid="report-grade-hint" className="absolute right-3 top-3 inline-flex">{gradeHint}</span>}
               <Trophy className={`mx-auto size-14 sm:size-16 ${tierStyle.color} ${tierStyle.shadow}`} strokeWidth={1.75} />
               <div>
                 <p className={`text-2xl font-bold ${tierStyle.color}`}>{tierLabel(grade.tier)}</p>
@@ -524,7 +532,7 @@ export function AssetReportView() {
               >
                 <InfoHint summary="투입 자본을 '내 돈'과 '빌린 돈'으로 나눠, 각각 얼마를 남겼는지 비교해요.">
                   <p className="text-pretty break-keep"><span className="font-semibold text-foreground">모든 자산</span>: 부동산·주식·코인·현금 전부. 넣은 돈에는 대출·보증금으로 마련한 돈도 포함됩니다.</p>
-                  <p className="text-pretty break-keep"><span className="font-semibold text-foreground">실투자금</span>(내 돈)과 <span className="font-semibold text-foreground">레버리지</span>(빌린 돈)는 평가손익을 <span className="font-semibold text-foreground">자본 비중대로 나눠</span> 귀속하고, <span className="font-semibold text-foreground">이자는 전부 빌린 돈이 부담</span>합니다. 그래서 두 줄을 더하면 모든 자산과 정확히 같아집니다.</p>
+                  <p className="text-pretty break-keep"><span className="whitespace-nowrap"><span className="font-semibold text-foreground">실투자금</span>(내 돈)과</span> <span className="whitespace-nowrap"><span className="font-semibold text-foreground">레버리지</span>(빌린 돈)는</span> 평가손익을 <span className="font-semibold text-foreground">자본 비중대로 나눠</span> 귀속하고, <span className="font-semibold text-foreground">이자는 전부 빌린 돈이 부담</span>합니다. 그래서 두 줄을 더하면 모든 자산과 정확히 같아집니다.</p>
                   <p className="text-pretty break-keep">수익은 <span className="font-semibold text-foreground">매입 후 누적</span>인데 이자는 <span className="font-semibold text-foreground">연간</span>이라, 오래 보유했을수록 레버리지가 유리하게 보입니다. 계산 근거의 <span className="font-semibold text-foreground">금융자산·연간</span>은 부동산·코인의 1년 수익을 잴 수 없어 주식·코인만 담은 별점용 보조 지표입니다.</p>
                 </InfoHint>
               </SectionHeader>

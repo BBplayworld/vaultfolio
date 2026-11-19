@@ -107,6 +107,17 @@ describe("① 종합 카드", () => {
     expect(dd(render(SIX, mk({ ...chk("BBB", 200), ...chk("CCC", 200) }, 3)), "grow-summary-check")).toBe("2종목 모두 점검 차례");
     expect(dd(render(SIX, mk({ ...chk("BBB", 200), ...chk("CCC", 10) }, 3)), "grow-summary-check")).toBe("2종목 중 1종목 점검 차례");
     expect(dd(render(SIX, mk({ ...chk("BBB", 10) }, 3)), "grow-summary-check")).toBe("1종목 · 점검 차례 없음");
+    expect(dd(render(SIX, mk({ ...chk("BBB", 200) }, 3)), "grow-summary-check")).toBe("1종목 · 점검 차례"); // 1종목에는 `모두`를 쓰지 않는다(5.126 p2, 5.127 qa D3)
+  });
+  it("행 오른쪽 화살표는 첫 줄(% 줄) 칸에만 놓인다 — 두 줄을 걸치지 않는다(5.126 p2)", () => {
+    const html = render(SIX, mk({}));
+    const toggles = [...html.matchAll(/<button[^>]*data-testid="grow-row-toggle"[^>]*>(.*?)<\/button>/g)].map((m) => m[1]);
+    expect(toggles.length).toBeGreaterThan(0);
+    for (const t of toggles) {
+      const chevron = t.match(/<svg[^>]*lucide-chevron-right[^>]*>/)![0];
+      expect(chevron).not.toContain("row-span-2");
+      expect(chevron).toContain("self-center");
+    }
   });
   it("기준 4칸 균등 버튼, 기본은 모두 닫힘(패널 없음). 묶음이 1개뿐인 축은 숨긴다(P2-7)", () => {
     const html = render(SIX, mk({ AAA: { label: "keep", labeledAt: day(40), at: day(40) } }));
@@ -143,7 +154,7 @@ describe("② 내 종목", () => {
     expect(aaa).toMatch(/^종목 AAA-50\.0%2년 2개월·1점·정한 날 대비 \+25\.0%점검 차례/);
     expect(text(html.match(/<li data-testid="grow-row" data-key="t:EEE"[\s\S]*?<\/li>/)![0])).toContain("1개월·측정 중");
     expect(html.match(/data-testid="grow-row-toggle"/g)).toHaveLength(6);
-    expect(html.match(/<svg[^>]*lucide-chevron-right[^>]*row-span-2/g)).toHaveLength(6);
+    expect(html.match(/<svg[^>]*lucide-chevron-right[^>]*size-3\.5 self-center/g)).toHaveLength(6); // 5.126 p2: 두 줄 걸침(row-span-2) 제거, 첫 줄 칸
     expect(text(html)).not.toMatch(/\d\/5|재확인 차례|점수 \d(?!점)/);
   });
   it("점검 한 장은 닫혀 있다(inert), 열린 행이 없으면 내용도 그리지 않는다", () => {
