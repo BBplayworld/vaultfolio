@@ -320,16 +320,14 @@ export function profitRetryDelayMs(retryAfter: string | null): number | null {
 }
 const inFlightFetches = new Map<string, Promise<InFlightResult>>();
 
-export async function fetchProfitRef(
+// 완전한 로컬 캐시만 동기로 읽는다(없거나 불완전하면 null). fetchProfitRef 첫 단계와 같은 판정 —
+// 홈 '내 종목 오늘'(#246)이 첫 렌더에 캐시 적중 결과를 그려 자리 잡기를 없애는 데 쓴다(요청 0)
+export function readCompleteProfitCache(
   tickers: string,
   period: ProfitPeriod,
-  options: FetchProfitRefOptions = {},
-): Promise<ProfitRefResponse> {
-  const { onProgress, onComplete, signal, caller = "unknown", basis = "kstAccessDay", onKisUnavailable, onFailed } = options;
+  basis: ProfitBasis = "kstAccessDay",
+): ProfitRefResponse | null {
   const cacheKey = getProfitCacheKey(tickers, period, basis);
-  if (!signal) {
-    console.warn(`[PROFIT][${caller}] signal 미전달 — 이 호출은 abort 불가`);
-  }
   // 요청한 모든 티커가 키로 존재해야 완전한 캐시 — 점검으로 잘려 일부만 저장된
   // 과거 잔존 캐시를 "완료"로 오인하지 않도록 검증(과거 종가는 불변이라 완전하면 그대로 신뢰)
   // daily는 prevPrice/prevDate(전일 대비용, 선택 필드)가 ref와 별개 하위 작업으로 채워지므로
@@ -348,13 +346,28 @@ export async function fetchProfitRef(
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
       const cached = JSON.parse(raw) as ProfitRefResponse;
-      if (isCacheComplete(cached)) {
-        onProgress?.(cached);
-        onComplete?.(true);
-        return cached;
-      }
+      if (isCacheComplete(cached)) return cached;
     }
   } catch { /* ignore */ }
+  return null;
+}
+
+export async function fetchProfitRef(
+  tickers: string,
+  period: ProfitPeriod,
+  options: FetchProfitRefOptions = {},
+): Promise<ProfitRefResponse> {
+  const { onProgress, onComplete, signal, caller = "unknown", basis = "kstAccessDay", onKisUnavailable, onFailed } = options;
+  const cacheKey = getProfitCacheKey(tickers, period, basis);
+  if (!signal) {
+    console.warn(`[PROFIT][${caller}] signal 미전달 — 이 호출은 abort 불가`);
+  }
+  const cached = readCompleteProfitCache(tickers, period, basis);
+  if (cached) {
+    onProgress?.(cached);
+    onComplete?.(true);
+    return cached;
+  }
 
   // 동일 cacheKey로 진행 중인 fetch가 있으면 그 결과를 공유 (네트워크 중복 호출 방지)
   // dedup된 호출자는 점진 노출 없이 최종 결과만 1회 받음 (캐시 hit과 동일 취급)

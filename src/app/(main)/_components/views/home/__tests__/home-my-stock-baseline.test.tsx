@@ -39,5 +39,14 @@ describe("#246 줄 없는 홈 순자산 카드 기준 스냅샷", () => {
     it(name, () => {
       expect(renderBox(props)).toMatchSnapshot();
     });
+    // 구현 뒤: 줄 off(주식 없음·첫 저장 당일·칩 없음·전부 0.0%·체험 장중)를 넘겨도 기준과 글자 단위로 같다
+    it(`${name} — 줄 off diff 0`, () => {
+      expect(renderBox({ ...props, myStock: { state: "off", pick: null, onOpen: () => {} } })).toBe(renderBox(props));
+    });
   }
+  it("캡처 모드는 줄이 on이어도 기준과 같다", () => {
+    const props = BASELINE_CASES["캡처 모드"];
+    const pick = { name: "삼성전자", label: "오늘", rateText: "+1.0%", sign: "up", rate: 1, more: 2 };
+    expect(renderBox({ ...props, myStock: { state: "on", pick, onOpen: () => {} } })).toBe(renderBox(props));
+  });
 });
