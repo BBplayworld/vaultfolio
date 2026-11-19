@@ -533,7 +533,7 @@ export function AssetReportView() {
                 <InfoHint summary="투입 자본을 '내 돈'과 '빌린 돈'으로 나눠, 각각 얼마를 남겼는지 비교해요.">
                   <p className="text-pretty break-keep"><span className="font-semibold text-foreground">모든 자산</span>: 부동산·주식·코인·현금 전부. 넣은 돈에는 대출·보증금으로 마련한 돈도 포함됩니다.</p>
                   <p className="text-pretty break-keep"><span className="whitespace-nowrap"><span className="font-semibold text-foreground">실투자금</span>(내 돈)과</span> <span className="whitespace-nowrap"><span className="font-semibold text-foreground">레버리지</span>(빌린 돈)는</span> 평가손익을 <span className="font-semibold text-foreground">자본 비중대로 나눠</span> 귀속하고, <span className="font-semibold text-foreground">이자는 전부 빌린 돈이 부담</span>합니다. 그래서 두 줄을 더하면 모든 자산과 정확히 같아집니다.</p>
-                  <p className="text-pretty break-keep">수익은 <span className="font-semibold text-foreground">매입 후 누적</span>인데 이자는 <span className="font-semibold text-foreground">연간</span>이라, 오래 보유했을수록 레버리지가 유리하게 보입니다. 계산 근거의 <span className="font-semibold text-foreground">금융자산·연간</span>은 부동산·코인의 1년 수익을 잴 수 없어 주식·코인만 담은 별점용 보조 지표입니다.</p>
+                  <p className="text-pretty break-keep">수익은 <span className="font-semibold text-foreground">매입 후 누적</span>인데 이자는 <span className="font-semibold text-foreground">연간</span>이라, 오래 보유했을수록 레버리지가 유리하게 보입니다. 계산 근거의 <span className="font-semibold text-foreground">금융자산·연간</span>은 <span className="whitespace-nowrap">부동산·코인의</span> 1년 수익을 잴 수 없어 <span className="whitespace-nowrap">주식·코인만</span> 담은 별점용 보조 지표입니다.</p>
                 </InfoHint>
               </SectionHeader>
 

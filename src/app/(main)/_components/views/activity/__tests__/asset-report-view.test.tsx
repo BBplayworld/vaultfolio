@@ -108,5 +108,7 @@ describe("성적표 요약/펼침(5.108)", () => {
     const src = readFileSync(path.resolve(__dirname, "../asset-report-view.tsx"), "utf8");
     expect(src).toContain('<span className="whitespace-nowrap"><span className="font-semibold text-foreground">실투자금</span>(내 돈)과</span>');
     expect(src).toContain('<span className="whitespace-nowrap"><span className="font-semibold text-foreground">레버리지</span>(빌린 돈)는</span>');
+    // ui-review(C25·C114): 셋째 문단 가운뎃점 낱말이 줄 머리·줄 끝에서 갈리지 않게(1280 `부동산` / `·코인의`, 320·390 `주식·` / `코인만`)
+    expect(src).toContain('<span className="whitespace-nowrap">부동산·코인의</span> 1년 수익을 잴 수 없어 <span className="whitespace-nowrap">주식·코인만</span> 담은');
   });
 });
