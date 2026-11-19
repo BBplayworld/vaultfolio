@@ -255,6 +255,7 @@
 - 클릭 가능 요소는 `<button>`/`<a>` (onClick만 단 `<div>/<span>` 금지 — 키보드·스크린리더 불가).
 - 아이콘 전용 버튼에 `aria-label`/`title`. `<img>`에 `alt`(의미 없으면 `alt=""`). 폼 입력에 `<Label>`.
 - **최소 히트영역 40×40px**: 작은 닫기/dismiss·단계 점은 `after:absolute after:-inset-*`로 터치영역 확장(또는 측정 박스 자체를 40으로 — 홈 팁 X `-m-3 p-3`, 공용 `Sheet` X `after:-inset-2.5 sm:after:-inset-2`, 4.84. 검수 측정은 `elementFromPoint` 기준). 아이콘 버튼 `size-7.5`(≈30px) 이상, 헤더 아이콘 `h-10 sm:h-11`.
+  - **카드 맨 끝 누름 줄(#5.132 홈 내 종목 줄)**: 히트 40px를 `after:` 확장 대신 **버튼 상자 자체**로 잡고 카드 아래·좌우 끝에 붙인다 — 래퍼 `-mx-4 -mb-4`(카드 `px-4 py-4` 상쇄) + 버튼 `h-10 pt-1 pb-4 px-4 rounded-b-lg`(글줄 20px 고정, 글자 아래 ~ 카드 끝 16px 유지). 앞 줄 히트가 아래로 10px 확장돼 있으면 래퍼 `mt-2.5`로 그 끝에서 시작(겹침 0). qa는 버튼 rect로 바로 잰다.
   - **`pointer-coarse:` 변형(#4.49)**: 시각 크기를 바꾸지 않는 작은 인라인 버튼(InfoHint 14~16px)은 래퍼 없이 버튼에 `relative pointer-coarse:after:absolute pointer-coarse:after:content-[''] pointer-coarse:after:-inset-[13px] sm:pointer-coarse:after:-inset-3`로 터치 기기에서만 40×40 확장(마우스 hover 영역 불변). 확장 영역이 이웃 인터랙티브 요소를 덮으면 그 이웃에 `relative z-10`(예: 설정 InlineSelector, 배당 월 배지). 월 배지처럼 상시 노출 버튼은 `h-6 after:-inset-y-2`(=40px).
 - hover 전용 노출 금지(터치 도달 불가). 전역 `cursor: pointer`(인터랙티브)·`not-allowed`(disabled)는 globals.css base에서 처리.
 - 환경 감지는 `detectBrowserEnv()` 단일 소스(iPad 데스크톱 위장 UA는 `maxTouchPoints>1` 보정).
@@ -319,6 +320,7 @@
 - Hero(핵심 지표) 최상단·최대 → **핵심 액션 리스트(종목별 손익 등)로 시선이 빨리 닿게**. 사이를 막는 부차 정보(비교표 등)는 **접이식(기본 접힘)** 또는 압축.
 - **단, 사용자 컨트롤(토글·필터)은 접힘 밖 항상 노출** — 조작 요소를 숨기지 않는다.
 - 반올림으로 변화가 안 보이는 부가 줄 등 **저가치 정보는 덜어낸다.**
+- **한 줄 문장이 폭이 모자랄 때(#5.132)**: 꼬리(개수 `외 N종목`) → 이름 말줄임 순서로 줄이고 **값·기준(라벨·%)은 줄이지 않는다**. 구현은 JS 측정·컨테이너 쿼리 고정값 대신 꼬리 칸 `flex h-5 min-w-4 flex-1 flex-row-reverse flex-wrap content-start justify-end overflow-hidden`(DOM 순서 쉐브론 → 꼬리) — 남은 폭에 꼬리가 안 들어가면 둘째 줄로 넘어가 잘리고 쉐브론만 남는다. 이름은 `min-w-0 truncate`, 라벨·값은 `shrink-0`. (이름 길이가 고정인 원인 줄 `@max-[260px]:hidden`은 그대로)
 - **보조 설명은 짧은 명사구 한 줄로 [필수]**: 카드·허브·섹션의 부가 설명(KpiCard `description`·섹션 부제 등)은 짧은 명사구로 간결하게 둔다(예: "기간별 수익", "이자 뺀 실수익 · AI 진단"). **문장형 장문 설명이 필요하면 반드시 `InfoHint`(아이콘+Popover, §5.5)로 내리고** 보조 설명 줄에 긴 문장을 늘어놓지 않는다. **hub·신규 페이지 제작에도 공통 적용.**
 
 **지표·성적표 화면 — UI 방향 기준** (4.18 자산 성적표에서 확립, 이후 동일 방향 유지)

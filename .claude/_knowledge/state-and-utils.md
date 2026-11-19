@@ -797,6 +797,8 @@ fetchProfitRef(tickers, period, options?): Promise<ProfitRefResponse>
   // 2) miss → BATCH_SIZE=3, BATCH_DELAY_MS=1000 배치 fetch
   //    배치마다 onProgress(누적 결과), 완료 후 캐시 저장 + onComplete(false)
   // 3) inFlightFetches Map으로 동일 cacheKey 호출 dedup (네트워크 1회만)
+readCompleteProfitCache(tickers, period, basis?) → ProfitRefResponse | null
+  // #5.132: fetchProfitRef 1)단계의 '완전한 캐시' 판정을 동기 함수로 추출(동작 동일). 요청 0 — useQuery initialData용
 ```
 
 ---
@@ -913,7 +915,21 @@ todayChipLabel(chip, "row"|"header")   // 라벨 정본 TODAY_CHIP_LABELS(본안
 // #4.73 U7 숨김 규칙(computeTodayChip 한 곳): 칩 대상(국내 6자리·미국 USD 티커, 비상장·상장폐지·거래정지 아님, 수량·현재가 있음) 중
 //   응답 키가 없는 종목이 있거나, 응답 non-null 대상이 있는 시장(국내·미국)에 칩이 0이면 null. 거래정지·일본·기준가 null은 숨김을 만들지 않는다
 sortByChipRate(items, rateOf) → T[]   // #4.73 상세·주식 `등락률 순` — 표시 소수 1자리 높은 순(부호 그대로), null 맨 뒤, 동률·null끼리 입력(평가금) 순
+// #5.132 #246: computeTodayChip 결과에 krwChange(= 분자 합 − 분모 합, 원화 등락 기여) 추가 — 홈 '내 종목 오늘' 고르기 전용, 화면·서버 미사용
 ```
+
+### 홈 '내 종목 오늘' (`src/lib/finance/my-stock-today.ts`, #5.132 #246)
+
+```typescript
+myStockTickerList(stocks) → string          // stock-tab useFilteredStockData·saveSnapshots와 같은 필터·중복 제거·정렬
+myStockQueryKey(tickerList)                  // ["profit","daily","kstAccessDay",tickerList] — 상세·주식 '오늘' 칩과 같은 키(새 캐시 키 0)
+buildMyStockRows(stocks, refData, rates, now?) → { name, chip, value }[]  // 상세·주식 `전체` 행 = 평가금 순 정렬 → groupStocksByTicker → 묶음별 computeTodayChip
+pickMyStockToday(rows) → { name, label, rateText, sign, rate, more } | null
+  // 칩 있고 rateTenths ≠ 0인 행 중 |krwChange| 최대 → 동률(원 단위) |rateTenths| → 평가금. more = 칩 있는 나머지 행 수(0.0% 포함). 기여 금액은 결과에 없음
+myStockLineState({ screenshotMode?, hasHeaderChange, hasTickerStock, fetching, picked }) → "off"|"pending"|"on"  // 팁 입력 없음
+myStockText(pick) / myStockAriaLabel(pick)  // `{이름} {라벨} {+x.x%|-x.x%} · 외 N종목` / `내 종목 보기, … , 외 N종목` (formatCompareRate — ASCII -)
+```
+- 조회는 `dashboard.tsx` `useMyStockToday` 1곳: 같은 queryKey `useQuery` 1개, `staleTime` 5분, `enabled` = 첫 저장 당일 아님 + 티커 있음, 취소 effect 없음. 캐시 적중은 `initialData: readCompleteProfitCache(...)`로 첫 렌더에 결과.
 
 ### 시장과 비교 (`src/lib/finance/market-compare.ts` · `profit-dates.ts` · `hooks/use-market-compare.ts`, #4.73 #132)
 
