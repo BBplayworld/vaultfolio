@@ -42,7 +42,7 @@
 - (최근: v5.124 #237 올해 결산 운영 스모크 PASS 11/17 · 판독 12/27~1/10: 3대 이상=성공·2대=보류·1대 이하=축소)
 - [#245](https://github.com/BBplayworld/vaultfolio/issues/245) 내 결정 표시(v5.130, risk:low)·[#246](https://github.com/BBplayworld/vaultfolio/issues/246) 홈 내 종목 오늘(v5.132, medium, 머지 12/11~): D9 선정 → direction → CEO challenge 통과 → **spec 작성 중**
 - [#249](https://github.com/BBplayworld/vaultfolio/issues/249) 둘러본 사람이 그 자리에서 내 자산으로(D10, risk:medium, v5.131 예상): CEO 선정 → planning 시작
-- **머지 대기 줄(CEO 승인, 순차)**: v5.128 [PR #248](https://github.com/BBplayworld/vaultfolio/pull/248)(#241·#243·#247, 11/20 09:01 실측→진단 라우트 삭제→qa diff) → v5.129 Next.js 16.4.5 → v5.130 #245 → v5.131 #249(각각 origin/main merge→증분 qa→Vercel→squash→운영 스모크 ga-optout) · v5.132 #246 개발 중(머지 12/11~ 또는 11/25 조기 해제)
+- **머지 대기 줄(CEO 승인, 순차)**: v5.128 [PR #248](https://github.com/BBplayworld/vaultfolio/pull/248)(#241·#243·#247, 11/20 09:01 실측→진단 라우트 삭제→qa diff) → v5.129 Next.js 16.4.5 → v5.130 #245 → v5.131 #249 → v5.133 체험 보강(스와이프·해시 차단·GA 토글·원인 줄 날짜, #246보다 먼저면 [#5.132]로 재부여)(각각 origin/main merge→증분 qa→Vercel→squash→운영 스모크 ga-optout) · v5.132 #246 개발 중(머지 12/11~ 또는 11/25 조기 해제)
 - 다음 후보: 현금 잔액 맞추기 때 차액을 '넣은 돈/쓴 돈'으로 기록(B) — 대표가 승인한 맞추기 안내('입출금 기록은 따로 안 남겨도 돼요')와 방향이 반대라 v5.124 결정 후 대표 방향 확인과 함께 기획 · 11/18 GA 자료 받은 날 D 재수행 (13:53 D8 0건 — `issues/_discovery/2026-11-17-d8-selection.md`)
 
 ### ⏱ 예약된 운영 확인
