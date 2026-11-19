@@ -22,7 +22,9 @@ import { useExternalMove } from "@/hooks/use-external-move";
 import { ADD_TRIGGER_EVENTS } from "@/app/(main)/_components/layout/navigation/asset-dispatch";
 import previewData from "./welcome-preview-data.json";
 import { track, trackThenNavigate, type GaParams } from "@/lib/analytics/ga";
-import { TRIAL_ENTRY_URL, TRIAL_EXIT_KEY } from "@/lib/trial/trial-mode";
+import { TRIAL_ENTRY_URL } from "@/lib/trial/trial-mode";
+import { consumeTrialExit, resolveTrialExit, type TrialExitAsset } from "@/lib/trial/trial-exit";
+import { WIZARD_CATEGORIES, type WizardCategory } from "@/lib/onboarding-wizard-status";
 import { detectBrowserEnv, isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
 import { SECURITY_COPY, type SecurityCopyId } from "@/config/security-copy";
@@ -116,6 +118,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
   const [skipEnter] = useState(skipHeroEnter); // mount 시점 값 고정 — 이후 prop 변화로 ENTER가 재생되지 않게
   const [mounted, setMounted] = useState(false);
   const [focusCta, setFocusCta] = useState(false); // 체험 종료 복귀 시에만 등록 버튼으로 포커스·진입 모션
+  const [trialPick, setTrialPick] = useState<TrialExitAsset | null>(null); // 체험에서 보던 자산군(#249) — 이 웰컴이 떠 있는 동안만
   const [securityOpen, setSecurityOpen] = useState(false); // 보안 상세 펼침 — 메모리 상태만(저장 안 함)
   const [restoreHash, setRestoreHash] = useState(false); // #share·#sync 링크 진입이면 체험 링크 숨김(#59)
 
@@ -125,16 +128,20 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
     track("welcome_view", { source: welcomeSource(isStandaloneDisplay(), detectBrowserEnv().isInApp) });
   }, []);
 
-  // 체험 종료(#59) 복귀: 표식 1회 소비 → trial_start 전송 → 등록 버튼으로 포커스 이동
+  // 체험 종료(#59) 복귀: 표식 1회 소비(보던 화면 키와 함께 삭제, #249) → trial_start 전송(+허용 화면이면 꼬리 1건) → 등록 버튼으로 포커스 이동
   useEffect(() => {
     setRestoreHash(hasRestoreHash(window.location.hash));
+    let exit: ReturnType<typeof consumeTrialExit>;
     try {
-      if (sessionStorage.getItem(TRIAL_EXIT_KEY) !== "1") return;
-      sessionStorage.removeItem(TRIAL_EXIT_KEY);
+      exit = consumeTrialExit(sessionStorage);
     } catch {
       return;
     }
+    if (!exit.returned) return;
     track("onboarding_action", { method: WELCOME_CTA_METHODS.trialStart });
+    const target = resolveTrialExit(exit.from);
+    if (target.ga) track("onboarding_action", { method: WELCOME_CTA_METHODS.trialStart, ...target.ga });
+    setTrialPick(target.asset);
     setFocusCta(true);
   }, []);
 
@@ -209,7 +216,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
         style={{ animationDelay: "180ms" }}
       >
         {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} />}
-        {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={focusCta} />}
+        {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={focusCta} pick={trialPick} />}
       </div>
 
       {/* ⑤ 주식 미리보기 — 실제 stock-tab 과 동일하게 카드 박스 없이 노출 */}
@@ -427,23 +434,44 @@ export function WelcomeInAppCta({ isIOS }: { isIOS: boolean }) {
 const ROW_CLASS =
   "flex min-h-11 w-full items-center gap-2.5 rounded-md px-3 text-left text-sm text-popover-foreground hover:bg-accent focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset transition-[background-color,scale] motion-safe:active:scale-[0.98]";
 
-/** CTA 슬롯 asset 상태: 기존 자산 등록 CTA(스크린샷 등록 + 직접 입력·가져오기 팝오버) */
-export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalone: boolean; focusOnMount?: boolean }) {
+/** 체험 복귀 등록 칸 제목·설명(#249) — 자산군 낱말 = 팝오버 행 라벨, 조사 확정(spec 4절) */
+export const WELCOME_PICK_COPY: Record<TrialExitAsset, { title: string; desc: string }> = {
+  stock: { title: "주식부터 추가해보세요", desc: "방금 본 화면이 내 주식으로 채워져요." },
+  crypto: { title: "암호화폐부터 추가해보세요", desc: "방금 본 화면이 내 암호화폐로 채워져요." },
+  cash: { title: "현금성 자산부터 추가해보세요", desc: "방금 본 화면이 내 현금성 자산으로 채워져요." },
+  loan: { title: "대출부터 추가해보세요", desc: "방금 본 화면이 내 대출로 채워져요." },
+  "real-estate": { title: "부동산부터 추가해보세요", desc: "부동산은 직접 입력으로 넣어요." },
+};
+
+/** 체험 복귀 자산군 → 마법사 시작 단계(부동산은 마법사 단계 없음 → 현행 재개 규칙) */
+export function wizardStartOf(pick: TrialExitAsset | null | undefined): WizardCategory | undefined {
+  return pick && (WIZARD_CATEGORIES as readonly string[]).includes(pick) ? (pick as WizardCategory) : undefined;
+}
+
+/**
+ * CTA 슬롯 asset 상태: 기존 자산 등록 CTA(스크린샷 등록 + 직접 입력·가져오기 팝오버).
+ * pick(#249, 체험 복귀 자산군): 제목·설명·마법사 시작 단계·팝오버 첫 포커스·짚는 표시. 부동산만 두 버튼 variant·포커스 맞바꿈. 없으면 현행 마크업 그대로.
+ */
+export function WelcomeAssetCta({ standalone, focusOnMount = false, pick = null }: { standalone: boolean; focusOnMount?: boolean; pick?: TrialExitAsset | null }) {
   const [isStockMenuOpen, setIsStockMenuOpen] = useState(false);
   const { fileInputRef, isImporting, openFilePicker, handleFileChange } = useAssetImport();
   const cs = useCloudSync();
   const openWizard = useOnboardingWizardStore((s) => s.open);
   const wizardRef = useRef<HTMLButtonElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  const pickedRowRef = useRef<HTMLButtonElement>(null);
+  const manualFirst = pick === "real-estate"; // 부동산은 직접 입력이 강조·포커스
+  const copy = pick ? WELCOME_PICK_COPY[pick] : null;
 
-  // 체험 종료 복귀 시 자산 등록 버튼으로 포커스 이동(키보드·스크린리더 흐름 유지)
+  // 체험 종료 복귀 시 자산 등록 버튼으로 포커스 이동(키보드·스크린리더 흐름 유지). 부동산 복귀는 직접 입력 버튼
   useEffect(() => {
-    if (focusOnMount) wizardRef.current?.focus();
+    if (focusOnMount) (manualFirst ? moreRef : wizardRef).current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleWizard = () => {
     track("onboarding_action", { method: WELCOME_CTA_METHODS.wizard });
-    openWizard();
+    openWizard(wizardStartOf(pick));
   };
 
   const handleManualRow = (type: (typeof WELCOME_MANUAL_ROWS)[number]["type"]) => {
@@ -456,21 +484,21 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
     <div className={`space-y-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200 ${focusOnMount ? "motion-safe:slide-in-from-bottom-1" : ""}`}>
       <div className="text-center space-y-1">
         <h2 className="text-lg font-semibold text-balance">
-          {standalone ? "자산을 등록해보세요" : "첫 번째 자산을 추가해보세요"}
+          {copy ? copy.title : standalone ? "자산을 등록해보세요" : "첫 번째 자산을 추가해보세요"}
         </h2>
         <p className="text-sm text-muted-foreground text-pretty break-keep">
-          부동산, 주식, 암호화폐, 현금, 대출까지 — 모든 자산을 한 곳에서 관리하세요.
+          {copy ? copy.desc : "부동산, 주식, 암호화폐, 현금, 대출까지 — 모든 자산을 한 곳에서 관리하세요."}
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
-        <Button ref={wizardRef} size="lg" variant="brand" data-testid="welcome-cta-wizard" className="gap-2" onClick={handleWizard}>
+        <Button ref={wizardRef} size="lg" variant={manualFirst ? "secondary" : "brand"} data-testid="welcome-cta-wizard" className="gap-2" onClick={handleWizard}>
           <ImageUp className="size-4" />
           스크린샷으로 자산 등록
           <ArrowRight className="size-4" />
         </Button>
         <Popover open={isStockMenuOpen} onOpenChange={setIsStockMenuOpen}>
           <PopoverTrigger asChild>
-            <Button size="lg" variant="secondary" data-testid="welcome-cta-more" className="gap-2">
+            <Button ref={moreRef} size="lg" variant={manualFirst ? "brand" : "secondary"} data-testid="welcome-cta-more" className="gap-2">
               <Pencil className="size-4" />
               직접 입력 · 가져오기
             </Button>
@@ -479,21 +507,28 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false }: { standalo
             align="center"
             collisionPadding={8}
             className="w-60 p-1.5 max-h-[min(var(--radix-popover-content-available-height),26rem)] overflow-y-auto overscroll-contain"
+            {...(pick ? { onOpenAutoFocus: (e: Event) => { e.preventDefault(); pickedRowRef.current?.focus(); } } : {})}
           >
             <div role="group" aria-labelledby="welcome-manual-label">
               <p id="welcome-manual-label" data-testid="welcome-manual-label" className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">직접 입력</p>
-              {WELCOME_MANUAL_ROWS.map(({ type, label, icon: Icon }) => (
-                <button
-                  key={type}
-                  type="button"
-                  data-testid={`welcome-manual-${type}`}
-                  className={ROW_CLASS}
-                  onClick={() => handleManualRow(type)}
-                >
-                  <Icon aria-hidden className="size-4 text-muted-foreground shrink-0" />
-                  <span className="font-medium">{label}</span>
-                </button>
-              ))}
+              {WELCOME_MANUAL_ROWS.map(({ type, label, icon: Icon }) => {
+                // 짚는 표시(#249): 방금 본 자산군 행 — hover·focus-visible과 같은 bg-accent 면 + 굵은 라벨(링 없음)
+                const picked = pick === type;
+                return (
+                  <button
+                    key={type}
+                    ref={picked ? pickedRowRef : undefined}
+                    type="button"
+                    data-testid={`welcome-manual-${type}`}
+                    {...(picked ? { "data-picked": "", "aria-current": true } : {})}
+                    className={picked ? `${ROW_CLASS} bg-accent` : ROW_CLASS}
+                    onClick={() => handleManualRow(type)}
+                  >
+                    <Icon aria-hidden className={picked ? "size-4 text-foreground shrink-0" : "size-4 text-muted-foreground shrink-0"} />
+                    <span className={picked ? "font-semibold" : "font-medium"}>{label}</span>
+                  </button>
+                );
+              })}
             </div>
             <div role="separator" className="mx-3 my-1.5 h-px bg-border/40" />
             <div role="group" aria-label="가져오기">

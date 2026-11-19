@@ -83,7 +83,7 @@ export function TaxYearEndSimulator({
   return (
     <div className="flex flex-col gap-4">
       {/* 예상 세액 + 실현손익·잔여한도·합산손익 통합, 스크롤 무관 고정(부모 헤더+탭 높이만큼 아래) */}
-      <div className="sticky top-28 z-10 bg-background pb-1">
+      <div className="sticky top-[calc(7rem+var(--trial-bar-h,0px))] z-10 bg-background pb-1">
         <div className="rounded-xl border-2 border-amber-500/40 bg-amber-500/10 p-4 space-y-2">
           <div className="flex items-center gap-2">
             <Receipt className="size-5 text-amber-600 dark:text-amber-500 shrink-0" />

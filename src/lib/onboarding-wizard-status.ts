@@ -60,6 +60,21 @@ export function getResumeCategory(status: OnboardingWizardStatus): WizardCategor
   return WIZARD_CATEGORIES.find((c) => status.categories[c] === "pending") ?? null;
 }
 
+/** 단계 처리 뒤 다음 단계(#249 단위 테스트용 추출, 동작 동일) — 뒤쪽 단계 중 pending인 첫 단계. 앞 단계는 보지 않는다 */
+export function getNextCategory(status: OnboardingWizardStatus, from: WizardCategory): WizardCategory | null {
+  const idx = WIZARD_CATEGORIES.indexOf(from);
+  return WIZARD_CATEGORIES.slice(idx + 1).find((c) => status.categories[c] === "pending") ?? null;
+}
+
+/**
+ * 마법사 시작 화면(#249) — 시작 단계가 주어지고 그 단계가 pending이면 그 단계, 아니면 현행 재개 규칙(pending 첫 단계, 없으면 인트로).
+ * 앞 단계는 건드리지 않아 pending으로 남는다(다음 열기 때 거기서 재개). wizard_step 전송 없음.
+ */
+export function resolveWizardStart(status: OnboardingWizardStatus, start: WizardCategory | null | undefined): WizardCategory | "intro" {
+  if (start && status.categories[start] === "pending") return start;
+  return getResumeCategory(status) ?? "intro";
+}
+
 
 /**
  * 마법사 단계 완료 1회 가드(#99) — 스크린샷 저장은 onSaved와 건수 증가 감지가 둘 다 발화할 수 있어

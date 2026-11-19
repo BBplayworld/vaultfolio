@@ -57,7 +57,7 @@ export function TaxCalendarView() {
   return (
     <div className="flex flex-col gap-5">
       {/* 헤더+탭 고정 — 이번 달로 자동 스크롤돼도 "세금 일정관리/절세 시뮬레이션" 전환이 항상 보이도록 */}
-      <div className="sticky top-0 z-10 bg-background flex flex-col gap-3 pb-3">
+      <div className="sticky top-[var(--trial-bar-h,0px)] z-10 bg-background flex flex-col gap-3 pb-3">
         <div className="flex items-center gap-2 min-w-0 pt-1">
           <Receipt className={`size-5 shrink-0 ${ASSET_THEME.important}`} />
           <div className="min-w-0">
@@ -134,7 +134,7 @@ export function TaxCalendarView() {
           const isCurrent = month === currentMonth;
 
           return (
-            <section key={month} ref={isCurrent ? currentMonthRef : undefined} className="scroll-mt-32">
+            <section key={month} ref={isCurrent ? currentMonthRef : undefined} className="scroll-mt-[calc(8rem+var(--trial-bar-h,0px))]">
               <div className="flex items-center gap-2 mb-2 px-1">
                 <p className={`text-sm font-semibold ${isCurrent ? ASSET_THEME.primary.text : ASSET_THEME.text.muted}`}>
                   {month}월

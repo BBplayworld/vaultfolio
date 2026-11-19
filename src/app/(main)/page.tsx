@@ -19,6 +19,7 @@ import { TutorialOverlay } from "./_components/tutorial/tutorial-overlay";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { isTrialMode } from "@/lib/trial/trial-mode";
+import { viewToKey } from "@/lib/feature-usage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "./_components/layout/navigation/navigation-context";
@@ -134,8 +135,8 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 pb-5 sm:pb-9">
-      {/* 체험 모드(#59) 예시 표기 정본 1곳 — 홈에서만, in-flow */}
-      {isTrialMode() && view.type === "home" && <TrialBanner />}
+      {/* 체험 모드(#59) 예시 표기 정본 1곳 — 전 화면 공통 상단 sticky(#249). AssetPageTabs key 래퍼 밖이라 화면 전환에 재마운트 없음 */}
+      {isTrialMode() && <TrialBanner viewKey={viewToKey(view)} />}
       {/* 체험·미리보기 데모 스냅샷을 실시간 시세 수준으로(4.94) — 데모 id가 아니면 무동작 */}
       {(isTrialMode() || isPreviewEnv()) && <DemoSnapshotRebase />}
       <AssetPageTabs />

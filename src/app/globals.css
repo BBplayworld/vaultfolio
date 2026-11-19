@@ -418,6 +418,26 @@ html[data-has-assets] [data-first-paint] {
   }
 }
 
+/* 체험 공통 표시(#249) — 상단 sticky top(브라우저 0 / 모바일 설치 앱 safe-area / PC 설치 앱 상단 고정 내비 74px)과
+   표시 아랫변(--trial-bar-h = top + 가림 면 56px). 표시가 있을 때만 값이 생겨 세금 화면 sticky가 그 아래로 내려간다(비체험 0) */
+.trial-bar-sticky {
+  top: var(--trial-bar-top, 0px);
+}
+
+@media (display-mode: standalone) {
+  html {
+    --trial-bar-top: env(safe-area-inset-top, 0px);
+  }
+
+  html[data-device="pc"] {
+    --trial-bar-top: 74px;
+  }
+}
+
+html:has([data-trial-bar]) {
+  --trial-bar-h: calc(var(--trial-bar-top, 0px) + 56px);
+}
+
 /* PWA 스탠드얼론 모드: 모바일은 하단 nav, PC/윈도우는 상단 nav */
 @media (display-mode: standalone) {
 

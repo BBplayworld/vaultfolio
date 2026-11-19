@@ -85,7 +85,7 @@ export const PARAM_VALUES = {
     // 월말 결산(#32): 전월 결산(월 1회 방문자의 날짜 구간 포함) / 진행 중 구간 / 첫 달
     "settled", "in_progress", "first_month",
   ],
-  source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push"],
+  source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push", "activity"],
   category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab", "grow_pick", "grow_other_label", "home_tip_due", "stock_decision", "stock_check_tile", "stock_decision_view"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
@@ -268,6 +268,12 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
       return params.source === "inapp" ? "웰컴·인앱" : "웰컴";
     case "onboarding_action":
       // 웰컴 버튼별 분리 — 기기 단위로 어느 버튼이 눌렸는지 판독(맞춤 정의 0). 모르는 method는 "웰컴"
+      // 체험 복귀(#249) 둘째 건 — 보던 화면의 자산군·성과·상세 꼬리(`웰컴·체험·주식` 등). 꼬리 인자 없으면 `웰컴·체험` 그대로
+      if (params.method === "trial_start") {
+        if (params.asset_type) return withAsset("웰컴·체험");
+        if (params.source === "activity") return "웰컴·체험·성과";
+        if (params.source === "detail") return "웰컴·체험·상세";
+      }
       return (params.method && WELCOME_ACTION_TITLES[params.method]) || "웰컴";
     case "tutorial_begin":
     case "tutorial_step":
