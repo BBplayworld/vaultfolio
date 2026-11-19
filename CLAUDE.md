@@ -86,7 +86,7 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 | `business-pm` | 초기 사업 확장, 지표, 마케팅 (기획 디자이너와 기획 방향 공동 정의) |
 | `developer` | 프론트엔드·백엔드 구현, preview 배포 확인 |
 | `qa` | 모든 결과물의 품질 검증 |
-| `ceo` | CEO(구 cto·COO 통합, 대표 지시 2026-11-19). 반대 검토·위험 등급 판정·축소/폐기 판정, **사용자 관점 최종 점검**, decision-brief 작성, **릴리스 반영(머지) 최종 승인 판단(risk:high 포함)**. 머지 실행은 오케스트레이터가 CEO 승인 기록을 근거로 한다 |
+| `ceo` | CEO(구 cto·COO 통합, 대표 지시 2026-11-19). 반대 검토·위험 등급 판정·축소/폐기 판정, **사용자 관점 최종 점검**, decision-brief 작성, **릴리스 반영(머지) 최종 승인 판단(자동 승인은 risk:low·medium만)**. 머지 실행은 오케스트레이터가 CEO 승인 기록을 근거로 한다 |
 
 에이전트 이름이 subagent_type으로 등록되지 않은 세션이면 `general-purpose` 에이전트에 해당 `.claude/agents/<이름>.md` 본문(frontmatter 제외)과 frontmatter의 model을 넘겨 호출한다.
 
@@ -101,8 +101,8 @@ git -C .memory add -A && git -C .memory commit -m "memory: <요약>" && git -C .
 - 마케팅 문구에 구체적 금액 금지. 브랜드는 "안전한 자산 관리, 시크릿에셋".
 - 로컬 저장소 스키마를 바꾸면 마이그레이션 코드 + "이전 버전 데이터 → 새 버전" 복원 테스트 필수. 자동으로 `risk:high`.
 - `main` 직접 push 금지. **PR 머지 실행은 오케스트레이터가 CEO 승인 기록을 근거로 한다**(대표 지시 2026-11-19, 이후 과제부터. 이전 위임 머지 결정 2026-11-06·11-09의 정본은 `.memory/DECISIONS.md`):
-  - **CEO 승인 조건(2026-11-19~)**: ① 해당 커밋 기준 qa PASS ② CEO 사용자 관점 점검 PASS ③ Vercel preview success ④ `risk:high`면 데이터 하위호환·롤백 테스트를 qa가 확인 ⑤ 머지 후 즉시 운영 스모크(qa), 이상 시 revert. 충족하면 risk:high 포함 CEO가 승인하고 오케스트레이터가 squash 머지, 대표에게는 사후 결과 한 줄 알림.
-  - **대표 승인 유지 대상(2026-11-19, 최소)**: 제품 원칙(PRINCIPLES.md) 변경이 필요해 `status:needs-human`인 건, 결제, 외부 채널 실제 게시, 절대 규칙 자체(사용자 자산 데이터 서버 미전송·비밀값·투자 조언 금지) 변경. 그 밖의 반영 결정은 CEO.
+  - **CEO 승인 조건(2026-11-19~)**: ① 해당 커밋 기준 qa PASS ② CEO 사용자 관점 점검 PASS ③ Vercel preview success ④ 데이터 하위호환·롤백 테스트를 qa가 확인 ⑤ 머지 후 즉시 운영 스모크(qa), 이상 시 revert. `risk:low·medium`이 충족하면 CEO가 승인하고 오케스트레이터가 squash 머지, 대표에게는 사후 결과 한 줄 알림. `risk:high`는 CEO가 판정·권고만 하고 대표 승인을 받는다.
+  - **대표 승인 유지 대상(2026-11-19 대표 결정)**: `risk:high` 릴리스, 대표가 지적·반려한 영역의 재시도, 제품 원칙(PRINCIPLES.md) 변경이 필요해 `status:needs-human`인 건, 결제, 외부 채널 실제 게시, 절대 규칙 자체(사용자 자산 데이터 서버 미전송·비밀값·투자 조언 금지) 변경. 그 밖의 반영 결정은 CEO.
   - 아래는 2026-11-19 이전 과제에 적용한 기존 위임 머지 기록이다:
   - 아래 조건을 **모두** 만족하면 팀(오케스트레이터)이 직접 PR을 squash 머지하고 사후 보고한다: ① `risk:low·medium` ② 해당 커밋 기준 qa PASS ③ COO(cto, 현 CEO) PASS ④ 저장 스키마·저장 키·마이그레이션·동기화·공유 토큰·서버 전송 변경 0 ⑤ 보안·데이터 문구 변경 0 ⑥ 결산 화면·홈 결산 팁·첫 화면 변경은 결산 창 중에도 머지 가능(11-09 대표 결정으로 결산 창 머지 제한 폐지, 정본 `.memory/DECISIONS.md`) — 판독 경계일(머지일) 기록만 유지 ⑦ 기존 화면의 큰 UI 방향 변경이 아니며 대표가 반려한 방향의 재도입이 아님 ⑧ Vercel preview success.
   - 머지 후 즉시 운영 스모크(qa)를 수행하고, 이상 시 revert 또는 빠른 경로. 대표에게는 승인 요청이 아니라 한 줄 결과 알림.

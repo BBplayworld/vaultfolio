@@ -9,7 +9,7 @@
 2. **MCP를 쓸 수 없으면 git CLI 전용 모드**로 같은 흐름을 진행한다 (실행을 멈추지 않는다):
    - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<버전>-<번호>-<slug>/<버전>-log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
    - PR 생성 → `issue-4.NN` 브랜치 push까지. 대표 알림에 비교 링크 `https://github.com/BBplayworld/vaultfolio/compare/main...issue-4.NN?expand=1` 포함 (대표가 한 번 눌러 PR 생성·머지)
-   - **CEO 승인 머지(2026-11-19~, 대표 지시)**: `status:owner-review`(= CEO 반영 판단 대기)에서 ceo가 CLAUDE.md "CEO 승인 조건"(qa PASS·CEO 사용자 관점 PASS·preview success·risk:high는 데이터 하위호환·롤백 qa 확인)을 대조해 decision-brief에 승인 기록을 남기면 오케스트레이터가 risk 등급과 무관하게 직접 squash 머지 → 즉시 qa 운영 스모크·이상 시 revert → 대표에게는 사후 결과 한 줄 알림. 대표 승인으로 남는 것은 제품 원칙 변경(needs-human)·결제·외부 게시·절대 규칙 변경뿐
+   - **CEO 승인 머지(2026-11-19~, 대표 지시)**: `status:owner-review`(= CEO 반영 판단 대기)에서 ceo가 CLAUDE.md "CEO 승인 조건"(qa PASS·CEO 사용자 관점 PASS·preview success·데이터 하위호환·롤백 qa 확인)을 대조해 `risk:low·medium`이면 decision-brief에 승인 기록을 남기고 오케스트레이터가 직접 squash 머지(`risk:high`는 CEO 판정·권고 후 대표 승인) → 즉시 qa 운영 스모크·이상 시 revert → 대표에게는 사후 결과 한 줄 알림. 대표 승인으로 남는 것(11-19 대표 결정): `risk:high` 릴리스·대표가 지적·반려한 영역의 재시도·제품 원칙 변경(needs-human)·결제·외부 게시·절대 규칙 변경
    - (이전 방식·참고) **위임 머지**: CLAUDE.md "머지 위임(저위험)" 조건 ①~⑧을 모두 충족하면(근거: decision-brief의 조건 대조) 오케스트레이터가 PR에 `risk:low·medium`을 확인한 뒤 직접 squash 머지 → 즉시 qa 운영 스모크 → 대표에게는 승인 요청이 아니라 한 줄 결과 알림(새벽 규칙 적용). 하나라도 미충족·불확실하면 기존 owner-review 승인 요청
    - 대표 결정 읽기 → `git fetch origin main` 후 `git log origin/main`의 머지 커밋으로 반영 여부 확인
    - 실행 요약 첫 줄에 "git 전용 모드" 표시
@@ -18,7 +18,7 @@
 | 알림 | 언제 | 제목 |
 |---|---|---|
 | 🆕 새 과제 방향 확정 | 이슈의 기획+사업 방향 정의(direction.md 공동 합의)가 완료됐을 때. 운영 이상 버그는 방향 정의가 없으므로 qa 확정 직후 | `[시크릿에셋] 새 과제: #<번호> <제목>` + 유형·합의된 방향 2줄 |
-| 🔔 대표 결정 필요 | (2026-11-19~ 대표 승인 유지 항목에만 사용: 제품 원칙 변경·결제·외부 게시·절대 규칙 변경. 일반 릴리스 owner-review는 CEO 판단 대기이며 대표 알림은 머지 후 사후 결과 알림) 릴리스 owner-review 진입. **아래 3가지가 모두 같은 최종 커밋 기준일 때만**: ① qa 최종 점검 PASS ② ceo 사용자 관점 최종 점검 PASS + 최종 반영 의견(decision-brief) 완료 ③ 그 커밋이 Vercel preview에 배포 완료(PR 체크 Vercel success, head SHA 일치) | `[시크릿에셋] 반영 결정 필요: v4.NN` + **포함 이슈별 핵심 반영 내용 한 줄 요약**(`#번호 한 줄`) + 권고 한 줄 + PR·decision-brief 링크 + **preview URL(필수, 화면 확인 경로 포함: 데모는 `?demo=1`, 신규 방문자 화면은 `?demo=empty`)** |
+| 🔔 대표 결정 필요 | (2026-11-19~ 대표 승인 유지 항목에만 사용: risk:high·반려 영역 재시도·제품 원칙 변경·결제·외부 게시·절대 규칙 변경. 일반 릴리스 owner-review는 CEO 판단 대기이며 대표 알림은 머지 후 사후 결과 알림) 릴리스 owner-review 진입. **아래 3가지가 모두 같은 최종 커밋 기준일 때만**: ① qa 최종 점검 PASS ② ceo 사용자 관점 최종 점검 PASS + 최종 반영 의견(decision-brief) 완료 ③ 그 커밋이 Vercel preview에 배포 완료(PR 체크 Vercel success, head SHA 일치) | `[시크릿에셋] 반영 결정 필요: v4.NN` + **포함 이슈별 핵심 반영 내용 한 줄 요약**(`#번호 한 줄`) + 권고 한 줄 + PR·decision-brief 링크 + **preview URL(필수, 화면 확인 경로 포함: 데모는 `?demo=1`, 신규 방문자 화면은 `?demo=empty`)** |
 - 전달: `PushNotification`(가능 시) + 실행 최종 요약 **첫 줄**에 같은 문구. owner-review는 이슈 코멘트 `@BBplayworld` 멘션도 함께
 - **새벽 실행(KST 00:00~06:59, 현재 01:53 회차)은 알림을 보내지 않는다** (PushNotification·`@BBplayworld` 멘션 모두). 라벨 전환·문서·PR 코멘트 본문은 그대로 진행하고, 보낼 알림 문구는 `.memory/STATE.md` "보류 알림" 절에 적는다. 다음 비새벽 실행(09:53)이 0단계 직후 보류 알림을 묶어 보내고 절을 비운다
 - 그 밖의 단계 이동·문서 작성·검토 왕복은 알리지 않는다. 알림이 없는 실행은 최종 요약 첫 줄을 `알림 불필요: <한 줄>`
