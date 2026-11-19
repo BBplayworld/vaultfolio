@@ -41,7 +41,9 @@ const S2 = { name: "삼성전자", label: "오늘", rate: "-4.1%", n: 5 };
 const S3 = { name: "SK하이닉스", label: "오늘", rate: "-5.0%", n: 5 };
 const S5 = { name: "삼성전자", label: "오늘", rate: "+0.8%", n: 0 };
 const S7 = { name: "애플", label: "11/18 종가", rate: "-1.5%", n: 1 };
-const S11 = { name: "에코프로", label: "오늘", rate: "+20.0%", n: 6 };
+// S11(CEO 디자인 판정 ②, 2026-11-19): 고르는 기준 = 원화 등락 기여(현지 등락 × 수량 × 환율) 절대값 최대. 기여 ≈ 평가금 × r / (1 + r), 평가금은 preview 데모 상세·주식 실제 값
+const S11 = { name: "삼성전자", label: "오늘", rate: "+0.4%", n: 6 };
+const S11OLD = { name: "에코프로", label: "오늘", rate: "+20.0%", n: 6 }; // 이전 기준(등락률 절대값 최대) — 표기 비교·폐기 비교용
 const S12 = { name: "엔비디아", label: "11/18 종가", rate: "+3.2%", n: 5 };
 const S13 = { name: "삼성전자", label: "11/19 종가", rate: "+2.0%", n: 5 };
 const S14 = { name: "삼성전자", label: "11/20 종가", rate: "-1.2%", n: 5 };
@@ -66,16 +68,17 @@ if (want("01-place")) { const p = await open(390, 844); const items = [];
 
 // ② 상태 — 390 카드 조각
 if (want("02-states")) { const p = await open(390, 844); const items = [];
-  for (const [cap, s] of [["데모 실제 값(11/19 장 종료 뒤) — 상세·주식 행 칩 최대", REAL], ["S1 오른 날", S1], ["S2 내린 날(장중)", S2], ["S3 부호 혼합 — 절대값이 큰 내린 종목", S3], ["S5 1종목 — 꼬리 없음", S5], ["S7 나머지가 0.0% — 칩이 있으므로 센다", S7], ["S11 소액 종목이 뽑힘(대리 검토)", S11], ["S12 국내 장중·미국 마감 — 고른 종목의 라벨", S12], ["S13 미국 장중·국내 마감", S13], ["S14 주말·휴장", S14], ["S15 긴 종목명", S15], ["두 자리 % · 두 자리 N", WIDE], ["S16 조회 중 — 자리만", "pending"], ["S6·S8·S9·S10·S17 줄 없음 = 지금 화면 그대로", null]]) {
+  for (const [cap, s] of [["데모 실제 값(11/19 장 종료 뒤) — 원화 등락 기여 최대 행의 칩", REAL], ["S1 오른 날", S1], ["S2 내린 날(장중)", S2], ["S3 부호 혼합 — 절대값이 큰 내린 종목", S3], ["S5 1종목 — 꼬리 없음", S5], ["S7 나머지가 0.0% — 칩이 있으므로 센다", S7], ["S11 새 기준 — 소액 +20.0%가 있어도 주력 종목(원화 등락 기여 최대)", S11], ["S12 국내 장중·미국 마감 — 고른 종목의 라벨", S12], ["S13 미국 장중·국내 마감", S13], ["S14 주말·휴장", S14], ["S15 긴 종목명", S15], ["두 자리 % · 두 자리 N", WIDE], ["S16 조회 중 — 자리만", "pending"], ["S6·S8·S9·S10·S17 줄 없음 = 지금 화면 그대로", null]]) {
     const m = await set(p, s); log(`02 ${cap}`, { card: m.card, text: m.text, overlap: m.overlap }); items.push({ cap, ...(await cardShot(p, 24)) }); }
   await compose("02-states-390", "② 상태별 문장 (390, 다크) — 꼴·자리·굵기 같고 등락률 색만 다르다", items, 2); await p.context().close(); }
 
 // ③ 차례 팁이 보일 때 — 줄 숨김 / 닫은 뒤 — 줄
+// ③ 팁과 줄 — CEO 디자인 판정 ①(2026-11-19): '팁이 보이면 줄 숨김' 폐기. 차례 팁이어도 줄은 그대로 같이 보인다(03a·03b 장면은 폐기)
 if (want("03-due")) { const p = await open(390, 844);
-  await p.evaluate((s) => d1.tip(s), DUE); await settle(p); log("03 due tip, no line", await p.evaluate(() => m1.measure())); await save(p, "03a-due-tip-line-hidden-390", { fullPage: true });
-  await p.evaluate(() => d1.tip(null)); await set(p, REAL); log("03 tip closed, line", await p.evaluate(() => m1.measure())); await save(p, "03b-due-tip-closed-line-390", { fullPage: true });
+  await p.evaluate((s) => d1.tip(s), DUE); await set(p, REAL); log("03 due tip + line 390", await p.evaluate(() => m1.measure())); await save(p, "03d-due-tip-with-line-390", { fullPage: true });
   await p.context().close();
   const q = await open(390, 844); await set(q, REAL); log("03 other tip + line", await q.evaluate(() => m1.measure())); await save(q, "03c-other-tip-with-line-390", { fullPage: true }); await q.context().close(); }
+if (want("03-due")) { const p = await open(1280, 900); await p.evaluate((s) => d1.tip(s), DUE); await set(p, REAL); log("03 due tip + line 1280", await p.evaluate(() => m1.measure())); await save(p, "03e-due-tip-with-line-1280"); await p.context().close(); }
 
 // ④ 펼침 패널 — 1곳(접기 아래) / 비교안(패널 안 지수 줄 아래)
 if (want("04-open")) for (const W of [390, 1280]) { const p = await open(W, W > 1000 ? 900 : 844); const items = [];
@@ -114,6 +117,17 @@ if (want("07-light")) { const p = await open(390, 844, { scheme: "light" }); log
 
 // ⑧ 표기 비교(탈락안) — 부호 꼴·가운뎃점
 if (want("08-notation")) { const p = await open(390, 844); const items = [];
-  for (const [cap, s] of [["확정 — 지수 줄과 같은 +/- 꼴", S1], ["비교(탈락) — 상세·주식 칩 꼴 ▲", { ...S1, rate: "▲3.2%" }], ["확정 — 내린 날", S2], ["비교(탈락) — ▼", { ...S2, rate: "▼4.1%" }], ["확정 — 가운뎃점으로 사실과 개수를 나눈다", S11], ["비교(탈락) — 가운뎃점 없음(원인 줄 `외 1개` 꼴)", { ...S11, noDot: true }]]) { await set(p, s); items.push({ cap, ...(await cardShot(p, 8)) }); }
+  for (const [cap, s] of [["확정 — 지수 줄과 같은 +/- 꼴", S1], ["비교(탈락) — 상세·주식 칩 꼴 ▲", { ...S1, rate: "▲3.2%" }], ["확정 — 내린 날", S2], ["비교(탈락) — ▼", { ...S2, rate: "▼4.1%" }], ["확정 — 가운뎃점으로 사실과 개수를 나눈다", S11OLD], ["비교(탈락) — 가운뎃점 없음(원인 줄 `외 1개` 꼴)", { ...S11OLD, noDot: true }]]) { await set(p, s); items.push({ cap, ...(await cardShot(p, 8)) }); }
   await compose("08-notation-compare-390", "⑧ 표기 비교 (390, 다크)", items, 2); await p.context().close(); }
+// ⑨ 고르는 기준 — 원화 등락 기여 절대값 최대(CEO 디자인 판정 ②). 화면에 보이는 값은 그 종목의 칩 값(%)뿐, 기여 금액은 어디에도 쓰지 않는다(아래 금액은 검수용 캡션)
+if (want("09-pick")) { const p = await open(390, 844); const items = [];
+  for (const [cap, s] of [
+    ["데모 실제 값(11/19 장 종료 뒤) — SK하이닉스 +2.9% ≈ +16.7만 / 삼성전자 +0.4% ≈ +5.1만 / 엔비디아 -2.5% ≈ -4.2만 / KODEX 200 +1.0% ≈ +3.2만 / 애플 +0.3% ≈ +1.7만 / TIGER +0.3% ≈ +0.8만 → SK하이닉스(이전 기준과 같음)", REAL],
+    ["폐기(이전 기준 = 등락률 절대값 최대) — 소액 종목 +20.0%가 뽑혔다", S11OLD],
+    ["가정 ① 주력 +0.4% vs 소액 +20.0% — 삼성전자(평가금 1,279만) ≈ +5.1만 / 소액 종목(평가금 20만 가정) ≈ +3.3만 → 삼성전자", S11],
+    ["가정 ② 주력 +0.1% vs 중간 비중 -8.0% — 삼성전자 ≈ +1.3만 / KODEX 200(323만) ≈ -28.0만 → KODEX 200", { name: "KODEX 200", label: "오늘", rate: "-8.0%", n: 5 }],
+    ["가정 ③ 부호 혼합 — 삼성전자 -1.5% ≈ -19.5만 / SK하이닉스 +2.9% ≈ +16.7만 → 삼성전자(등락률은 SK하이닉스가 더 크다)", { name: "삼성전자", label: "오늘", rate: "-1.5%", n: 5 }],
+    ["가정 ④ 국내·해외 섞임(목 10:00) — 애플 11/18 종가 +3.0% ≈ +16.4만 / 삼성전자 오늘 +0.8% ≈ +10.1만 / 엔비디아 11/18 종가 +6.0% ≈ +9.2만 → 애플(등락률은 엔비디아가 더 크다)", { name: "애플", label: "11/18 종가", rate: "+3.0%", n: 5 }]]) {
+    await set(p, s); items.push({ cap, ...(await cardShot(p, 8)) }); }
+  await compose("09-pick-by-contribution-390", "⑨ 고르는 기준 = 원화 등락 기여(현지 등락 × 보유 수량 × 환율) 절대값 최대 1종목 (390, 다크) — 화면 표기는 그 종목의 칩 값(%)만", items, 2); await p.context().close(); }
 await br.close();
