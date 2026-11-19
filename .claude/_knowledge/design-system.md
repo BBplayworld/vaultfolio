@@ -361,6 +361,8 @@ function Hint({ children }: { children: ReactNode }) {
 - `pointerType === "mouse"` 필터로 터치의 mouseenter 오작동(즉시 열렸다 닫힘) 방지. 터치는 PopoverTrigger 기본 탭 토글 + 바깥 탭 닫힘.
 - 참고 구현: `profit-chart.tsx`의 `InfoHint`·`FxBreakdown`.
 
+- **줄바꿈되는 메타 줄의 가운뎃점(#5.130)**: `flex-wrap` 메타 줄에 조각을 덧붙일 때 가운뎃점은 앞 조각 뒤가 아니라 **뒤 조각의 머리**(왼쪽 여백 자리)에 두고 줄 왼쪽을 잘라, 조각이 다음 줄로 내려가도 줄 머리·줄 끝에 `·`가 남지 않게 한다(`layout/ui/dot-wrap.tsx` — 상세·주식 행 `stock-row-decision`, 종목 한 장 머리 문장, 도구 타일 값 줄). 조건·범위처럼 한 조각 안에서 값을 나열할 때는 가운뎃점 대신 낱말(`또는`)을 쓴다 — 가운뎃점은 조각 구분에만.
+
 ## 12. 공개 문서 페이지 규약 (가이드, #4.45)
 - `(main)` 밖 정적 글 페이지는 `/ratio` 껍데기(480px 컬럼·헤더 복사·홈 링크 없음)를 따른다. 단계 번호는 단색 `tabular-nums` 숫자(`aria-hidden`, 칩·아이콘 배경 금지), 단계 구분은 헤어라인(`border-border dark:border-border/40`), 카드는 "시크릿에셋으로 하면" 면 1장만. 행동 블록은 brand 주 버튼 + secondary 보조 버튼 `h-11`, 본문 링크는 `text-primary` + 밑줄 + `min-h-10`. 슬래시 어구(국내/해외)는 nowrap, 모든 한글 블록 `break-keep`.
 - 상단바 1회 안내 카드: 헤더 `overflow-x-clip`(세로 허용) 안 `absolute right-3 top-full`, `bg-card rounded-xl shadow-lg`, 확인=brand·취소=ghost. 한 줄 안내 스트립(세금 시즌)은 X-Ray 스트립과 같은 클래스 복제.
