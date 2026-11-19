@@ -109,7 +109,7 @@ export interface BoardRow {
   dueReason: DueReason | null;
   /** 차례 기준일 + 기간(ms). 기간을 정하지 않은 점검할은 null */
   nextCheckMs: number | null;
-  /** 오늘 이미 '그대로 둠'을 눌렀는지 */
+  /** 오늘 이미 '그대로 둠'을 눌렀는지 — 그 뒤 조건(±% 값·기간)을 고쳐 다시 차례가 된 행은 false(다시 누를 수 있다) */
   checkedToday: boolean;
   /** 아직 안 정함 행 2줄 — `9월 19일 점검할에서 뺌`(최근 90일 기록만). 없으면 null */
   dropNote: string | null;
@@ -251,8 +251,13 @@ export function labelFactsOf(labels: StockLabels, labelKey: string | null, rate:
     const months = checkMonthsOf(item, labels.cycle.months);
     dueReason = dueOf(item, pctPlan ? rate : null, months, baseIso, nowMs, pctPlan ? pctAckOf(labels, labelKey, item) : null);
     nextCheckMs = months === null ? null : addMonthsKst(stockLabelTime(baseIso)!, months);
-    const c = elapsedSince(cycleBaseOf({ labeledAt: "", checkedAt: item.checkedAt }, same?.at), nowMs);
-    checkedToday = !!c && c.days === 0;
+    const checkIso = cycleBaseOf({ labeledAt: "", checkedAt: item.checkedAt }, same?.at);
+    const c = elapsedSince(checkIso, nowMs);
+    // 오늘 점검한 뒤 ±% 값·기간을 고쳐(plan.at이 그 점검보다 뒤) 다시 차례가 되면 같은 날도 다시 누를 수 있다(#247) —
+    // `점검 차례`와 `오늘 점검함`이 함께 보이지 않게. 누르면 그 기록이 plan.at보다 뒤라 다시 막힌다(조건 수정 1번에 1번)
+    const planMs = stockLabelTime(item.plan?.at);
+    const reopened = dueReason !== null && planMs !== null && (stockLabelTime(checkIso) ?? Infinity) < planMs;
+    checkedToday = !!c && c.days === 0 && !reopened;
     // '점검 뒤' = 정한 뒤 마지막 '그대로 둠' 기록의 가격, 없으면 '정한 뒤' = 정한 날 가격(base.price)
     const ref = same ? { kind: "checked" as const, price: same.price, at: same.at } : item.base?.price ? { kind: "labeled" as const, price: item.base.price, at: item.labeledAt } : null;
     if (ref && nowPrice !== null) since = { kind: ref.kind, pct: (nowPrice / ref.price - 1) * 100, today: elapsedSince(ref.at, nowMs)?.days === 0 };

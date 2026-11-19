@@ -306,6 +306,26 @@ describe("#247 ±% 조건 차례 — `그대로 두기`로 확인하면 풀리�
     expect(setStockPlan(l1, "B", { down: 20, up: 50 }, later).items.B.plan!.at).toBe(later);
     expect(by(rows(setStockPlan(l1, "B", { down: 20, months: 6 }, later), NOW + 3600000), "B").due).toBe(true);
   });
+  it("같은 날 ±% 값·기간을 고쳐 다시 차례가 되면 `그대로 두기`를 다시 누를 수 있다 — `점검 차례` + `오늘 점검함` 동시 0, 조건 수정 1번에 1번만", () => {
+    const H = 3600000;
+    const l1 = press(mk({ C: chk({ up: 25 }) }, 3), "C", NOW);
+    expect(by(rows(l1, NOW + H), "C")).toMatchObject({ due: false, checkedToday: true });
+    // 같은 날 상한 25 → 20: 다시 차례, 버튼이 다시 열린다
+    const l2 = setStockPlan(l1, "C", { up: 20 }, new Date(NOW + H).toISOString());
+    expect(by(rows(l2, NOW + 2 * H), "C")).toMatchObject({ due: true, dueReason: { kind: "up", pct: 20 }, checkedToday: false });
+    // 다시 누르면 풀리고 같은 날 재누름은 다시 막힌다(같은 날 기록 2건 = 예외 1회)
+    const l3 = press(l2, "C", NOW + 2 * H);
+    expect(by(rows(l3, NOW + 3 * H), "C")).toMatchObject({ due: false, checkedToday: true });
+    expect(reviewsOf(l3, "C").map((x) => x.hit)).toEqual(["up", "up"]);
+    // 메모만 고친 경우는 예외 없음(차례가 아니고 막힌 채)
+    expect(by(rows(setStockPlan(l3, "C", { up: 20, memo: "메모" }, new Date(NOW + 4 * H).toISOString()), NOW + 5 * H), "C")).toMatchObject({ due: false, checkedToday: true });
+    // 조건을 고쳤지만 닿지 않아 차례가 아니면 막힌 채(상한 20 → 40, +30%)
+    expect(by(rows(setStockPlan(l3, "C", { up: 40 }, new Date(NOW + 4 * H).toISOString()), NOW + 5 * H), "C")).toMatchObject({ due: false, checkedToday: true });
+    // 기록 없이 checkedAt만 있는 경우(시세 없이 누름)도 같은 판정
+    const noRec = mk({ C: { ...chk({ up: 25 }), checkedAt: new Date(NOW).toISOString() } }, 3);
+    expect(by(rows(noRec, NOW + H), "C")).toMatchObject({ due: true, checkedToday: true }); // 조건을 고치지 않았으면 기존 그대로
+    expect(by(rows(setStockPlan(noRec, "C", { up: 20 }, new Date(NOW + H).toISOString()), NOW + 2 * H), "C")).toMatchObject({ due: true, checkedToday: false });
+  });
   it("plan.at이 없는 옛 조건 — 메모만 고쳐도 at을 새로 만들지 않는다", () => {
     const l = mk({ B: { label: "check", labeledAt: P0, at: P0, plan: { down: 20 } } });
     expect(setStockPlan(l, "B", { down: 20, memo: "메모" }, new Date(NOW).toISOString()).items.B.plan).toEqual({ down: 20, memo: "메모" });
