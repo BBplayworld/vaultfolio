@@ -2,8 +2,8 @@
 const { chromium } = require('playwright'); const path = require('path');
 const dir = path.resolve(__dirname); const out = path.resolve(dir, '../screenshots');
 const file = 'file://' + path.join(dir, 'mock.html');
-const all = ['a','b','b_us','load','e0','none','error','c','c_fail','c_us','c_load','f','f0','h1','h0'];
-const key = ['a','b','none','error','c','c_fail','c_us','c_load','f','h1','h0'];
+const all = ['a','b','b_us','load','e0','none','error','c','c_fail','c_us','c_load','f','d1','d1b','g','h1','h0'];
+const key = ['a','b','none','error','c','c_fail','c_us','c_load','f','d1','d1b','g','h1','h0'];
 (async () => {
   const b = await chromium.launch();
   for (const [w, list, themes] of [[390, all, ['light','dark']], [320, key, ['light','dark']]]) {
