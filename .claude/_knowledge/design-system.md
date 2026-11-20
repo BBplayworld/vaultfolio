@@ -209,7 +209,7 @@
 - **순위 목록 속 기준 줄(면 줄, #4.73)** — 종목 줄 `li flex justify-between py-2.5`(사이 헤어라인) 사이에 기준(시장) 줄을 같은 열·같은 오른쪽 끝으로 끼우고 면만 다르게: `-mx-2 my-1 rounded-md bg-muted/40 px-2 py-2`, 이름 muted. 앞뒤 헤어라인은 그리지 않는다. 줄은 `li`(버튼 아님, hover·press 없음).
 - **진입 글줄(E1) → 4.88 폐지**: 자산 변화 › 주식의 시장과 비교 입구는 Hero 카드 안 글줄이 아니라 카드 바로 아래 형제 도구 타일(`MarketTile`, `ToolTile` 재사용, gap-3, `sm:max-w-md`). 다크에서 타일 면(`bg-card`)이 Hero 카드 면과 같아 카드 안에 두지 않는다.
   - **상세·주식의 E1(요약 안 글줄)은 4.83에서 삭제** — 아래 '도구 타일'로 대체. E1은 자산 변화 › 주식 Hero 아래(hero)에만 남는다.
-- **도구 타일(#4.83 `StockToolTiles`)** — 요약 박스 바로 아래 입구 묶음: `grid grid-cols-2 gap-2`(`lg:grid-cols-{개수}`, 3개면 마지막 `col-span-2`, 1개 전폭), 타일 = `min-h-16 rounded-lg dark:rounded-xl bg-muted/50 dark:bg-card dark:shadow-sm px-3 py-3`(옛 X-Ray 스트립과 같은 면 토큰 — 새 색·토큰 0). 1줄 = 단색 아이콘 `size-4 text-primary` + 이름 `text-sm font-semibold` + `ChevronRight size-4 muted`(`ml-auto`), 2줄 = 미리보기 `text-sm muted`(값 `font-semibold text-foreground tabular-nums`, 숫자는 그 기능 화면의 정본 1개, 금액·투자 판단 없음). 타일 전체가 버튼, hover `bg-muted/70`, press `scale-[0.98]`(카드류). 도구가 4개를 넘으면 목록 카드(행 3+)로 전환 검토.
+- **도구 타일(#4.83 `StockToolTiles`)** — 요약 박스 바로 아래 입구 묶음: `grid grid-cols-2 gap-2`(`lg:grid-cols-{개수}`, 3개면 마지막 `col-span-2`, 1개 전폭, **4개면 PC도 2×2** `lg:grid-cols-2` — #245), 타일 = `min-h-16 rounded-lg dark:rounded-xl bg-muted/50 dark:bg-card dark:shadow-sm px-3 py-3`(옛 X-Ray 스트립과 같은 면 토큰 — 새 색·토큰 0). 1줄 = 단색 아이콘 `size-4 text-primary` + 이름 `text-sm font-semibold` + `ChevronRight size-4 muted`(`ml-auto`), 2줄 = 미리보기 `text-sm muted`(값 `font-semibold text-foreground tabular-nums`, 숫자는 그 기능 화면의 정본 1개, 금액·투자 판단 없음). 타일 전체가 버튼, hover `bg-muted/70`, press `scale-[0.98]`(카드류). 도구가 4개를 넘으면 목록 카드(행 3+)로 전환 검토.
 - **이름 줄 입구(#4.83 `StockPageEntry`)** — 리스트 행 안에서 행 전체를 입구로 만들 때: 줄 전체 `button`(`min-h-14`), 왼쪽 이름 줄 + 둘째 줄 숫자 1개, `›` + (4.84) 아래 전폭 밴드 `h-20`(80px, 1년 종가 손익색 1.75px + 평단 점선 `stroke-foreground/40` 4-3 대시 + 눈금·현재가 태그 — 아래 `차트 가격 눈금`). **줄 전체 버튼은 press scale 금지**(hover/active 배경만, 월별 기록 줄과 같음). 로딩·실패에서 높이 불변(둘째 줄 `min-h-5`·밴드 80px 칸 예약).
 - **카드 안 행 목록(#4.83 `KpiCard rows`/`HubChangeRows`)** — 허브 카드 머리(제목·금액) 아래 `border-t` 헤어라인 목록: 행 `min-h-11` = 이름 `text-sm font-medium`(왼쪽) + 값 `ml-auto text-sm muted tabular-nums`(손익 값만 손익색 semibold) + `ChevronRight size-4`. 머리 버튼과 행은 형제(중첩 금지), 행은 hover/active 배경만(scale 없음), 값 로딩 `h-4 w-16 rounded` + `SKELETON_FILL`. 1280은 `자산 변화`를 `lg:row-span-2`로 둔다. 행 버튼은 `-mx`로 넓히지 않고(구분선·쉐브론 4px 어긋남) 히트영역만 `after:-inset-x-1`로 넓힌다(4.85).
 - **0건 카드(#4.85 `DetailHub`)** — 눌러도 반응 없는 카드 금지: 0건 보조 줄은 `추가하기`(`text-brand dark:text-indigo-300`)로, 누르면 `open-add-asset-sheet {category}`(실물은 0건 숨김 유지).
@@ -360,6 +360,8 @@ function Hint({ children }: { children: ReactNode }) {
 ```
 - `pointerType === "mouse"` 필터로 터치의 mouseenter 오작동(즉시 열렸다 닫힘) 방지. 터치는 PopoverTrigger 기본 탭 토글 + 바깥 탭 닫힘.
 - 참고 구현: `profit-chart.tsx`의 `InfoHint`·`FxBreakdown`.
+
+- **줄바꿈되는 메타 줄의 가운뎃점(#5.130)**: `flex-wrap` 메타 줄에 조각을 덧붙일 때 가운뎃점은 앞 조각 뒤가 아니라 **뒤 조각의 머리**(왼쪽 여백 자리)에 두고 줄 왼쪽을 잘라, 조각이 다음 줄로 내려가도 줄 머리·줄 끝에 `·`가 남지 않게 한다(`layout/ui/dot-wrap.tsx` — 상세·주식 행 `stock-row-decision`, 종목 한 장 머리 문장, 도구 타일 값 줄). 조건·범위처럼 한 조각 안에서 값을 나열할 때는 가운뎃점 대신 낱말(`또는`)을 쓴다 — 가운뎃점은 조각 구분에만.
 
 ## 12. 공개 문서 페이지 규약 (가이드, #4.45)
 - `(main)` 밖 정적 글 페이지는 `/ratio` 껍데기(480px 컬럼·헤더 복사·홈 링크 없음)를 따른다. 단계 번호는 단색 `tabular-nums` 숫자(`aria-hidden`, 칩·아이콘 배경 금지), 단계 구분은 헤어라인(`border-border dark:border-border/40`), 카드는 "시크릿에셋으로 하면" 면 1장만. 행동 블록은 brand 주 버튼 + secondary 보조 버튼 `h-11`, 본문 링크는 `text-primary` + 밑줄 + `min-h-10`. 슬래시 어구(국내/해외)는 nowrap, 모든 한글 블록 `break-keep`.

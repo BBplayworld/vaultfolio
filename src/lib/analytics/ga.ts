@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push"],
-  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab", "grow_pick", "grow_other_label"],
+  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab", "grow_pick", "grow_other_label", "home_tip_due", "stock_decision", "stock_check_tile", "stock_decision_view"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -226,6 +226,11 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   // #242(5.127) — 앞의 4개(정함·점검·다시 봄·조건)는 주식 키만으로 판정한다. 주식 외는 아래 1개로만 잰다
   grow_pick: "내 자산 불리기·내 선택", // 값이 있는 `내 선택` 패널(건수·매수 문장)을 열 때 로드당 1회(주 지표). 종류·건수·종목 미전송
   grow_other_label: "내 자산 불리기·주식 외 정함", // 이 기기의 저장으로 코인·부동산·실물 유효 이름표가 0 → 1이 될 때 1회(동기화 수신은 0)
+  // #245(5.130) 내 종목 화면이 내 결정을 안다 — 종목·값·건수 미전송. 판정 지표는 타일 title뿐, 나머지 3개는 관찰용
+  home_tip_due: "홈 팁·점검 차례", // 홈 `점검 차례` 팁을 누를 때(기존 `홈 팁·누름`도 함께 나간다)
+  stock_decision: "상세·주식·내 결정", // 점검 한 장 진입(종목 한 장 머리·차례 행 펼침 공통)을 누를 때
+  stock_check_tile: "상세·주식·내 자산 점검", // 상세·주식 `내 자산 점검` 타일을 누를 때
+  stock_decision_view: "상세·주식·내 결정 보임", // 상세·주식 목록에 정한 종목 행이 1개 이상일 때 페이지 수명당 1회(저장 키 0)
   grow_grade_tab: "내 자산 불리기·성적표 탭", // 6차 통합 화면에서 세그먼트 `자산 성적표`를 누를 때(로드당 1회) — 통합이 성적표를 묻었는지 판독
 };
 

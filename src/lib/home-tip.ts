@@ -15,6 +15,7 @@ export type HomeTip =
   | { kind: "backup"; days: number | null }
   | { kind: "tax"; matches: TaxEventMatch[] }
   | { kind: "settlement"; window: SettlementWindow; today: string } // today = 판정에 쓴 KST 날짜(문구 N월 계산도 같은 값)
+  | { kind: "due"; count: number; unit: "종목" | "개"; reason: string } // 점검 차례(#245) — 호출부가 dueTipOf로 만든 값 그대로(여기서 차례를 다시 판정하지 않는다)
   | { kind: "relink" } // 끊긴 거래 다시 잇기(#147)
   | { kind: "refresh"; staleCategories: RefreshCategory[] }
   | { kind: "whats_new"; count: number; title: string } // 새 소식(#159) — count = 안 본 항목 수, title = 맨 위 안 본 항목 제목
@@ -36,11 +37,13 @@ export interface HomeTipInputs {
   suppressFeatureIds?: readonly string[];
   /** 알림 팁 노출 허용 — 설치 앱·ready·권한 default·로컬 off·닫은 적 없음·체험/잠금 아님(5.115, 호출부가 판정) */
   notifyOk?: boolean;
+  /** 점검 차례 팁 내용(#245) — 차례 수 ≥ 1 + 이름표 읽기 완료 + 체험·앱 잠금 아님일 때만 호출부가 넘긴다(grow-decision.dueTipOf). 없으면 기존 순위 그대로 */
+  due?: { count: number; unit: "종목" | "개"; reason: string } | null;
 }
 
-// 우선순위(#4.36 cto 판정, #159): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 새 소식 > 끊긴 거래 잇기(#147) > 그 외 세금 > 자산 최신화 > 알림 받기(5.115) > 저방문 기능
+// 우선순위(#4.36 cto 판정, #159, #245): 백업 > 임박 세금(이번 달 마감 0~6일) > 월 결산 창 > 점검 차례 > 새 소식 > 끊긴 거래 잇기(#147) > 그 외 세금 > 자산 최신화 > 알림 받기(5.115) > 저방문 기능
 // 세금을 무조건 위에 두면 이번 달·다음 달 일정이 결산 창 내내 결산을 가린다 — 급한 마감만 결산보다 위
-export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown, hasRelink, whatsNewOk, suppressFeatureIds, notifyOk }: HomeTipInputs): HomeTip | null {
+export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(), keepShown, hasRelink, whatsNewOk, suppressFeatureIds, notifyOk, due }: HomeTipInputs): HomeTip | null {
   if (shouldShowBackupNudge({ hasAssets, syncArmed, assetLastUpdated: assetData.lastUpdated, keepShown: keepShown === "backup" })) {
     return { kind: "backup", days: daysSinceBackup() };
   }
@@ -53,6 +56,9 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
     const win = pickSettlementCard(readMonthlySnapshots(), today, pickFirstRecordStart(readDailySnapshots(), assetData, today));
     if (win) return { kind: "settlement", window: win, today };
   }
+
+  // 점검 차례(#245): 결산 아래·새 소식 위 — 내가 정한 조건·기간에 닿은 것이 있을 때만(확인하면 차례가 풀려 함께 사라진다, #247)
+  if (due && due.count >= 1 && hasAssets) return { kind: "due", count: due.count, unit: due.unit, reason: due.reason };
 
   // 새 소식(#159): 결산 아래·relink 위 — 자산이 있고, 안 본 항목이 있으며 마지막으로 읽은 지 7일 이상(또는 기록 없음)일 때
   if (whatsNewOk && hasAssets) {

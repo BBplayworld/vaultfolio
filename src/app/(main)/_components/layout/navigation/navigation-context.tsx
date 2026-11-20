@@ -62,6 +62,15 @@ let marketCompareEnteredInApp = false;
 export function marketCompareBackAction(enteredInApp: boolean, historyLength: number): "pop" | "change" {
   return enteredInApp && historyLength > 1 ? "pop" : "change";
 }
+// 자산 성적표·불리기에 상세(상세·주식·종목 한 장)에서 들어왔는지(#245, 모듈 메모리·새로고침하면 false) —
+// 참이면 뒤로 = 들어온 화면으로 pop(라벨 `뒤로`), 아니면 지금처럼 성과 허브. 허브·홈 팁·새 소식 진입은 직전 화면이 상세가 아니다
+let reportEnteredFromDetail = false;
+export const isReportEnteredFromDetail = (): boolean => reportEnteredFromDetail;
+export const reportEntryFromDetail = (prev: AssetView, next: AssetView, current: boolean): boolean =>
+  next.type === "activity" && next.tab === "report" ? prev.type === "detail" : current;
+export function reportBackAction(enteredFromDetail: boolean, historyLength: number): "pop" | "hub" {
+  return enteredFromDetail && historyLength > 1 ? "pop" : "hub";
+}
 // 종목 한 장(#157) — 대상은 메모리 store에만 있다. 새로고침·직접 URL로 store가 비어 있으면 상세·주식으로 보낸다
 export function guardStockPageView(view: AssetView, hasTarget: boolean): AssetView {
   if (view.type === "detail" && view.tab === "stocks-item" && !hasTarget) return { type: "detail", tab: "stocks" };
@@ -123,7 +132,7 @@ export function toHash(view: AssetView): string {
 // 뒤로가기 버튼에 표시할 라벨 — 현재 view가 아니라 "돌아갈 view"를 표시
 // - 허브(detail/activity)에서 뒤로 → 홈
 // - 하위 페이지(stocks/change 등)에서 뒤로 → 해당 허브("상세"/"성과")
-export function getBackLabel(view: AssetView, stockPageOrigin?: "stocks" | "market-compare"): string {
+export function getBackLabel(view: AssetView, stockPageOrigin?: "stocks" | "market-compare", reportFromDetail = false): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "홈";
   if (view.type === "settings") return "더보기";
@@ -132,6 +141,8 @@ export function getBackLabel(view: AssetView, stockPageOrigin?: "stocks" | "mark
   // 시장과 비교는 상세·주식·자산 변화 두 곳에서 진입 → 중립 라벨(#132)
   if (view.type === "activity" && view.tab === "change-market") return "뒤로";
   if (view.tab === "hub") return "홈";
+  // 자산 성적표·불리기 — 상세·주식·종목 한 장에서 들어왔으면 중립 라벨(#245, 실제 복귀는 history.back)
+  if (view.type === "activity" && view.tab === "report" && reportFromDetail) return "뒤로";
   // 종목 한 장(#157) — 시장 비교에서 들어왔으면 중립 라벨
   if (view.type === "detail" && view.tab === "stocks-item") return stockPageOrigin === "market-compare" ? "뒤로" : "주식";
   if (view.type === "detail" && (view.tab === "stocks-xray" || view.tab === "stocks-trades")) return "주식";
@@ -260,6 +271,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback((v: AssetView) => {
     const hash = toHash(v);
     if (v.type === "activity" && v.tab === "change-market") marketCompareEnteredInApp = true;
+    reportEnteredFromDetail = reportEntryFromDetail(viewRef.current, v, reportEnteredFromDetail);
     const target = hash || window.location.pathname + window.location.search;
     if (window.location.hash !== hash) {
       window.history.pushState(null, "", target);
@@ -381,6 +393,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         return;
       }
       navigate({ type: "activity", tab: "change", init: { scope: "stock", period: "week" } });
+      return;
+    }
+    // 자산 성적표·불리기: 상세에서 들어왔으면 들어온 화면으로 pop(#245), 그 밖은 성과 허브
+    if (view.type === "activity" && view.tab === "report" && typeof window !== "undefined" && reportBackAction(reportEnteredFromDetail, window.history.length) === "pop") {
+      window.history.back();
       return;
     }
     if (view.type === "activity" && view.tab !== "hub") {

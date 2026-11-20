@@ -205,7 +205,7 @@ describe("재설계 3차 금지어·금지 형식", () => {
     expect(block).toContain("boardRowRank(rows)");
     expect(block.match(/\.sort\(/g)).toHaveLength(1); // 순번 정렬 1곳
   });
-  it("정한 날 지표 중 비중·수량(base.weight·qty)은 어느 화면에도 그리지 않는다(5차: base.price는 행 2줄 `정한 뒤 %` 한 곳). 홈·알림·AI 프롬프트는 이름표를 읽지 않는다", () => {
+  it("정한 날 지표 중 비중·수량(base.weight·qty)은 어느 화면에도 그리지 않는다(5차: base.price는 행 2줄 `정한 뒤 %` 한 곳). 알림·AI 프롬프트는 이름표를 읽지 않는다(#245부터 홈 팁·상세·주식·종목 한 장은 읽기 전용으로 읽는다)", () => {
     expect(block + rowsLib.replace(/buildLabelBase[\s\S]*?\n}\n/, "") + boardLib).not.toMatch(/base\.(weight|qty)|priceAt/);
     expect(block).not.toMatch(/base\.price/);
     expect(boardLib.match(/base\?\.price/g)).toHaveLength(1); // 정한 뒤 % 기준 가격 1곳
@@ -217,9 +217,13 @@ describe("재설계 3차 금지어·금지 형식", () => {
       "app/(main)/_components/views/activity/asset-report-view.tsx", // 6차 세그먼트 둘째 줄(블록과 같은 저장소 값)
       "app/(main)/_components/views/activity/performance-hub.tsx",
       "app/(main)/_components/views/activity/stock-label-block.tsx",
+      "app/(main)/_components/views/detail/stock-page/stock-page-view.tsx", // #245 머리의 내 결정 문장(읽기 전용)
+      "app/(main)/_components/views/detail/tabs/stock-tab.tsx", // #245 행 표시·차례 진입·타일 값(읽기 전용)
+      "app/(main)/_components/views/home/home-tip-box.tsx", // #245 점검 차례 팁(읽기 전용 — 수·단위·이유만)
       "hooks/use-stock-labels.ts",
       "lib/asset/asset-storage.ts",
       "lib/asset/grow-board.ts",
+      "lib/asset/grow-decision.ts", // #245 행 표시·머리 문장·팁·타일 값(순수 함수, 새 판정 0)
       "lib/asset/grow-kinds.ts", // #242 주식 외 행·전 종류 합
       "lib/asset/grow-pick.ts", // #242 내 선택 계산
       "lib/asset/grow-rows.ts",

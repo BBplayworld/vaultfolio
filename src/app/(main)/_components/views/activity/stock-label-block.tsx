@@ -21,7 +21,7 @@ import { buildCryptoLabelBase, buildGrowBoards, cryptoTotal, firstGrowView, held
 import { computePick, cryptoPickInput, pickAfterOf, stockPickInput } from "@/lib/asset/grow-pick";
 import {
   BOARD_AXES, BOARD_BUCKETS, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, addMonthsKst, boardRowRank, boardScale, boardSummary, boardTotal, bucketOf,
-  buildAxisGroups, checkMonthsOf, dueReasonText, hitOf, monthDayText, nextCheckDateText, scalePos,
+  buildAxisGroups, checkMonthsOf, dueReasonText, hitOf, monthDayText, nextCheckDateText, pctText, scalePos,
   type BoardAxis, type BoardBucket, type BoardGroup, type BoardRow, type BoardSummary,
 } from "@/lib/asset/grow-board";
 import {
@@ -35,7 +35,8 @@ import { getProfitLossColor } from "@/config/theme";
 import { useStockPageStore } from "@/stores/stock-page-store";
 import { useCryptoTxViewStore } from "@/stores/crypto-tx-view-store";
 import { GrowKindTabs, OwnValueBox, PICK_FILTER_LABEL, PickLine, PickPanel, type PickFilter } from "./grow-pick-panel";
-import { getGrowView, setGrowView } from "./report-tab";
+import { clearGrowOpenKey, getGrowView, peekGrowOpenKey, setGrowView } from "./report-tab";
+import { DUE_TEXT } from "./grow-due-entry";
 import { useDividendAnnualTotals } from "./performance-hub";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { InlineSelector } from "../../layout/ui/inline-selector";
@@ -53,13 +54,6 @@ const VISIBLE_GROUPS = 3;
 // 접힘·펼침 공용: 항상 마운트 + grid-rows 0fr↔1fr(연타해도 현재 높이에서 되돌아간다)
 const FOLD = "grid ease-out motion-safe:transition-[grid-template-rows]";
 const fillTone = (v: number) => (v >= 0 ? "bg-rose-500 dark:bg-rose-400" : "bg-blue-500 dark:bg-blue-400");
-const DUE_TEXT = "font-semibold text-indigo-600 dark:text-indigo-200";
-
-/** `+16.7%` / `-3.1%` — 표시 기준(소수 1자리 반올림)이 0이면 부호 없음 */
-const pctText = (v: number) => {
-  const r = Math.round(v * 10) / 10;
-  return `${r > 0 ? "+" : ""}${(r === 0 ? 0 : r).toFixed(1)}%`;
-};
 const pctTone = (v: number) => (Math.round(v * 10) === 0 ? "text-muted-foreground" : getProfitLossColor(v));
 /** `+231만원` — 축약 금액에 부호 */
 const wonText = (v: number) => `${Math.round(v) > 0 ? "+" : ""}${formatShortCurrency(Math.round(v))}`;
@@ -560,7 +554,27 @@ function GrowViewPanel({ view, rows, store, now, onPickOpen }: {
   const [filter, setFilter] = useState<{ axis: BoardAxis; key: string } | null>(null);
   const [pickOpen, setPickOpen] = useState(false);
   const [pickFilter, setPickFilter] = useState<PickFilter | null>(null);
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  // 상세·주식 차례 행·종목 한 장 머리의 진입으로 왔으면(#245) 그 종목 한 장을 처음부터 연 채로 그린다(열리는 전환을 보이지 않는다).
+  // 대상은 1회용 — 읽기는 초기값, 비우기는 마운트 effect(개발 모드 이중 호출에도 안전). 마운트 때는 거름이 없어 행이 늘 목록에 있다
+  const [openKey, setOpenKey] = useState<string | null>(() => {
+    const aimed = view === "stock" ? peekGrowOpenKey() : null;
+    return aimed ? rows.find((r) => r.labelKey === aimed)?.key ?? null : null;
+  });
+  const aimedKey = useRef(openKey);
+  useEffect(() => {
+    if (view === "stock" && peekGrowOpenKey() !== null) clearGrowOpenKey();
+    const key = aimedKey.current;
+    if (!key) return;
+    aimedKey.current = null;
+    // 화면 이동이 먼저 맨 위로 올리므로 그린 다음 프레임에 그 행을 화면 위쪽(상단 바 아래)으로 가져온다
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const el = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="grow-row"]')).find((n) => n.dataset.key === key);
+      if (!el) return;
+      const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - 80), behavior: smooth ? "smooth" : "auto" });
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 때 1번
+  }, []);
   const [planOpenKey, setPlanOpenKey] = useState<string | null>(null);
   const [cycleOpen, setCycleOpen] = useState(false);
   const text = VIEW_TEXT[view];

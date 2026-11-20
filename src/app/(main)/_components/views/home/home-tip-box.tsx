@@ -3,12 +3,12 @@
 // 홈 알림/팁 통합 박스 — 백업 안내(backup-nudge.tsx)·세금 안내(tax-notice-box.tsx)·
 // 자산 최신화 안내(refresh-nudge.tsx)·기능 활용 팁(feature-tip-box.tsx) 4종을 이 박스 1개로 흡수(S-4.32 후속).
 // 새 소식(whats_new, #159)은 공지(notice)를 대체 — 세션 숨김을 무시하는 강제 노출 없이 다른 팁과 같은 규칙(X = 읽음 처리 + 그 세션 박스 숨김).
-// 판정은 home-tip.ts의 pickHomeTip이 백업>임박 세금>결산(#4.36)>새 소식>끊긴 거래 잇기(#147)>세금>최신화>기능 순으로 1개만 고른다.
+// 판정은 home-tip.ts의 pickHomeTip이 백업>임박 세금>결산(#4.36)>점검 차례(#245)>새 소식>끊긴 거래 잇기(#147)>세금>최신화>기능 순으로 1개만 고른다.
 // 인터랙션은 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { track } from "@/lib/analytics/ga";
-import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, Link2, Bell, X } from "lucide-react";
+import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, Link2, Bell, ListChecks, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { useCloudSync } from "@/lib/cloud-sync/cloud-sync-provider";
@@ -24,6 +24,11 @@ import { isTrialMode } from "@/lib/trial/trial-mode";
 import { isPwaLocked } from "@/lib/pwa/app-lock";
 import { pickHomeTip, type HomeTip } from "@/lib/home-tip";
 import { markWhatsNewSeen } from "@/lib/whats-new";
+import { useStockLabelsRead } from "@/hooks/use-stock-labels";
+import { buildGrowBoards } from "@/lib/asset/grow-kinds";
+import { dueTipOf } from "@/lib/asset/grow-decision";
+import { isPreviewEnv } from "@/lib/cloud-sync/config";
+import { resetReportTab } from "../activity/report-tab";
 import { dispatchOpenRelink, dispatchOpenWhatsNew } from "../../layout/navigation/asset-dispatch";
 import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
@@ -53,7 +58,7 @@ export function homeTipViewKey(tip: HomeTip): string {
 
 // marketLine = 홈 지수 종가 줄 상태(marketLineState 단일 판정) — on·pending이면 기능 팁 '시장과 비교'를 후보에서 뺀다(4.90, 분류 전에도 억제해 떴다 사라짐 방지)
 export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineState }) {
-  const { assetData, getAssetSummary, isDataLoaded } = useAssetData();
+  const { assetData, exchangeRates, getAssetSummary, isDataLoaded } = useAssetData();
   const cs = useCloudSync();
   const { navigate } = useAssetNavigation();
   const [tip, setTip] = useState<HomeTip | null>(null);
@@ -62,9 +67,20 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
 
   const hasAssets = getAssetSummary().totalValue > 0 || assetData.loans.length > 0;
 
+  // 점검 차례 팁(#245) — 허브 셋째 카드와 같은 행(buildGrowBoards)에서 수·단위·이유만 읽는다. 차례를 여기서 다시 판정하지 않는다
+  const { labels, ready: labelsReady } = useStockLabelsRead();
+  const [growNow] = useState(() => Date.now());
+  const dueTip = useMemo(
+    () => (labelsReady ? dueTipOf(buildGrowBoards(assetData, exchangeRates, labels, growNow)) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 행에 쓰는 자산 배열만 본다(점검 블록과 같은 기준)
+    [labelsReady, assetData.stocks, assetData.crypto, assetData.realEstate, assetData.physicalAssets, assetData.transactions, assetData.cryptoTransactions, exchangeRates, labels, growNow],
+  );
+
   useEffect(() => {
     // 자산 불러오기가 끝나기 전엔 판정·기록을 하지 않는다(#159 S7) — 로드 전 빈 상태를 '첫 실행'으로 오인해 기존 사용자를 전원 읽음 처리하는 것 방지
     if (!isDataLoaded) return;
+    // 이름표를 읽은 뒤 1번만 정한다(#245) — 읽기 전에 정하면 아래 순위 팁이 먼저 떠 '오늘 노출'·노출 집계를 쓰고 차례 팁으로 바뀐다
+    if (!labelsReady) return;
     const eligible = !isTrialMode() && !isPwaLocked();
     // 첫 실행 조용한 기록은 항상 마운트되는 WhatsNewHost가 맡는다(HomeTipBox는 자산이 있을 때만 마운트 — 4.82 qa D2)
     try {
@@ -72,7 +88,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
     } catch { /* 무시 */ }
     // 끊긴 거래 후보(#147) — 체험·앱잠금 중이거나 '그대로 두기'를 눌렀으면 감지하지 않는다
     const hasRelink = eligible && !isTipDismissed(RELINK_OFFER_ID) && detectRelink(assetData).length > 0;
-    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current, hasRelink, whatsNewOk: eligible, notifyOk: eligible && !isTipDismissed(NOTIFY_OFFER_ID) && isNotifyTipEligible(), suppressFeatureIds: marketLine !== "off" ? ["market-compare"] : undefined });
+    const picked = pickHomeTip({ assetData, hasAssets, syncArmed: cs.status === "armed", keepShown: keepShownRef.current, hasRelink, whatsNewOk: eligible, notifyOk: eligible && !isTipDismissed(NOTIFY_OFFER_ID) && isNotifyTipEligible(), suppressFeatureIds: marketLine !== "off" ? ["market-compare"] : undefined, due: eligible ? dueTip : null });
     keepShownRef.current = picked?.kind === "backup" || picked?.kind === "refresh" ? picked.kind : undefined;
     // 승자만 "오늘 떴다" flag를 찍는다 — 안 뜬 하위 종류까지 flag를 찍으면 실제로 못 본 채로 소비된다.
     if (picked?.kind === "backup") markNudgeShown();
@@ -85,7 +101,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
         track("feature_use", { category: picked.kind === "notify" ? "home_tip_notify" : "home_tip", method: "view" });
       }
     }
-  }, [assetData, hasAssets, cs.status, isDataLoaded, marketLine]);
+  }, [assetData, hasAssets, cs.status, isDataLoaded, marketLine, labelsReady, dueTip]);
 
   // '그대로 두기' 직후 — 같은 세션 홈에서 relink 팁을 즉시 내린다(#147)
   useEffect(() => {
@@ -137,6 +153,13 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
     if (tip.kind === "settlement") {
       // 허브 결산 카드와 같은 진입 형태 — source만 home_tip
       navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", month: tip.window.month, source: "home_tip" } });
+      return;
+    }
+    if (tip.kind === "due") {
+      // 허브 카드와 같은 진입 — 내 자산 점검 칸, 차례가 있는 첫 보기(firstGrowView). 종목 지정 없음
+      if (!isPreviewEnv()) track("feature_use", { category: "home_tip_due" });
+      resetReportTab();
+      navigate({ type: "activity", tab: "report" });
       return;
     }
     if (tip.kind === "relink") {
@@ -242,6 +265,14 @@ function contentOf(tip: HomeTip) {
       badgeLabel: "결산",
       title: settlementTipTitle(tip.window, tip.today),
       description: "순자산이 무엇 때문에 바뀌었는지 볼 수 있어요.",
+    };
+  }
+  if (tip.kind === "due") {
+    return {
+      Icon: ListChecks,
+      badgeLabel: "내 조건", // 홈에는 '내가 정했다'는 맥락이 없다 — 배지가 주체를 말한다
+      title: <>점검 차례 <span className="tabular-nums">{tip.count}{tip.unit}</span></>,
+      description: tip.reason,
     };
   }
   if (tip.kind === "relink") {
