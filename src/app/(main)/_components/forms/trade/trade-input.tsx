@@ -35,6 +35,7 @@ import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
+import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effective-target";
 import { LinkAccountRow } from "./link-account-row";
 import { trackLinkedTrade } from "@/lib/trade/link-track";
 import { evaluateLink, LINK_NONE, linkSavedToast, parseLinkValue, type LinkEval } from "@/lib/trade/link-text";
@@ -123,9 +124,14 @@ export function TradeInput() {
     return Array.from(groupStocksByTicker(stocks).values()).find((g) => g.some((s) => s.id === groupRep.id)) ?? [];
   }, [groupRep, stocks]);
 
+  // 같은 증권사·종류 보유 항목이 있으면 그 기존 항목이 실효 대상(#259) — 신규 칸은 열린 채 안내만 보인다
+  const sameComboStock = useMemo(() => findSameComboStock(target, groupCandidates), [target, groupCandidates]);
+  const effTarget = useMemo(() => resolveEffectiveTarget(target, groupCandidates), [target, groupCandidates]);
+  const isNewSelected = target?.kind === "new"; // 신규 칸이 선택된 동안 즉시 반영 잠금
+
   // 신규 자산 초안 — 같은 종목 메타(티커·통화 등) 복제 + 선택한 증권사·주식 타입, 포지션 0
   const newStockDraft = useMemo<Stock | undefined>(() => {
-    if (target?.kind !== "new" || !groupRep) return undefined;
+    if (target?.kind !== "new" || !groupRep || sameComboStock) return undefined;
     return {
       ...groupRep,
       id: NEW_STOCK_ID,
@@ -137,7 +143,7 @@ export function TradeInput() {
       positionSource: undefined,
       positionEffectiveDate: undefined,
     };
-  }, [target, groupRep]);
+  }, [target, groupRep, sameComboStock]);
   const isNewTarget = !!newStockDraft;
 
   const resolveStock = (id: string) => (id === NEW_STOCK_ID ? newStockDraft : stocks.find((s) => s.id === id));
@@ -154,7 +160,7 @@ export function TradeInput() {
 
   // 반영 후 예상 포지션 인라인 미리보기 (팝업 대체)
   const reflectionPreview = useMemo(() => {
-    if (!(reflected || isNewTarget) || !selectedStock || !(watchedQty > 0) || !(watchedPrice > 0)) return null;
+    if (!(reflected || isNewSelected) || !selectedStock || !(watchedQty > 0) || !(watchedPrice > 0)) return null;
     // 유효 체결 단가 — USD 원화 입력 시 달러 환산(저장 로직과 동일)
     let price = watchedPrice;
     if (selectedStock.currency === "USD" && priceInKrw) {
@@ -165,10 +171,10 @@ export function TradeInput() {
     if (tradeType === "sell" && watchedQty > pos.quantity) return { oversell: true as const };
     const tentativeTx = { type: tradeType, quantity: watchedQty, price, exchangeRate: watchedExRate } as Transaction;
     return { before: pos, after: computeNewPosition(pos, tentativeTx) };
-  }, [reflected, isNewTarget, selectedStock, watchedQty, watchedPrice, watchedExRate, priceInKrw, tradeType, exchangeRates.USD]);
+  }, [reflected, isNewSelected, selectedStock, watchedQty, watchedPrice, watchedExRate, priceInKrw, tradeType, exchangeRates.USD]);
 
   // 연결 계좌 평가 — 화면 표시(미리보기·오류)와 제출 차단이 같은 값을 쓴다
-  const effReflected = reflected || isNewTarget;
+  const effReflected = reflected || isNewSelected;
   const effectivePrice = useMemo(() => {
     if (selectedStock?.currency === "USD" && priceInKrw) {
       const rate = watchedExRate || exchangeRates.USD;
@@ -205,14 +211,14 @@ export function TradeInput() {
   }, [tradeType, target]);
 
   // 대상 → form.stockId 반영(신규는 자리표시 id, 증권사 미선택이면 미확정). 상세 진입(locked)은 stockId 직접 사용.
+  const formStockId = effTarget?.kind === "existing" ? effTarget.stockId
+    : effTarget?.kind === "new" && effTarget.broker ? NEW_STOCK_ID
+      : "";
   useEffect(() => {
     if (lockedStock) return;
-    const id = target?.kind === "existing" ? target.stockId
-      : target?.kind === "new" && target.broker ? NEW_STOCK_ID
-        : "";
-    form.setValue("stockId", id);
+    form.setValue("stockId", formStockId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, lockedStock]);
+  }, [formStockId, lockedStock]);
 
   // 체결일 입력 제한 — 미래 금지(max=오늘), 보존기간 밖 금지(min=오늘-N년)
   const todayStr = todayKst(); // 상한도 KST 오늘(현금 입력과 동일 기준)
@@ -315,7 +321,9 @@ export function TradeInput() {
     };
   };
 
-  const onSubmit = (data: TradeFormValues) => {
+  const onSubmit = (formData: TradeFormValues) => {
+    // 신규 칸이 선택된 동안은 항상 반영(같은 증권사·종류로 기존 항목에 붙는 경우 포함)
+    const data = isNewSelected ? { ...formData, reflected: true } : formData;
     const stock = resolveStock(data.stockId);
     if (!stock) return;
 
@@ -487,6 +495,11 @@ export function TradeInput() {
                   {!target && <p className="text-sm text-muted-foreground">거래를 반영할 자산 항목을 선택하세요.</p>}
                   {target?.kind === "new" && !target.broker && (
                     <p className="text-sm text-amber-600 dark:text-amber-400">신규 자산의 증권사를 선택하세요.</p>
+                  )}
+                  {sameComboStock && (
+                    <p role="status" data-testid="trade-switched-existing-note" data-reason="account" className="text-sm text-muted-foreground break-keep text-pretty">
+                      같은 증권사·종류의 항목이 있어서 그 항목에 이어서 기록해요
+                    </p>
                   )}
                   {form.formState.errors.stockId && (
                     <p className="text-sm text-destructive">{form.formState.errors.stockId.message}</p>
@@ -685,9 +698,9 @@ export function TradeInput() {
                   <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
                     <FormControl>
                       <Checkbox
-                        checked={field.value || isNewTarget}
+                        checked={field.value || isNewSelected}
                         onCheckedChange={field.onChange}
-                        disabled={isNewTarget}
+                        disabled={isNewSelected}
                       />
                     </FormControl>
                     <div className="leading-none">
@@ -695,7 +708,7 @@ export function TradeInput() {
                         보유 수량에 즉시 반영
                       </FormLabel>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {isNewTarget
+                        {isNewSelected
                           ? "신규 자산은 보유 반영 설정과 무관하게 항상 반영됩니다"
                           : "해제 시 거래 기록만 남기고 포지션은 변경하지 않습니다"}
                       </p>

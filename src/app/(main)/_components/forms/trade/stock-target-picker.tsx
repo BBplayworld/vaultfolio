@@ -85,7 +85,7 @@ export function StockTargetPicker({ candidates, value, onChange, allowNew, defau
             {isNew && <Check className="size-4 shrink-0 text-brand" />}
           </button>
           {value?.kind === "new" && (
-            <div className="grid grid-cols-2 gap-2 px-3 pb-3">
+            <div className="grid grid-cols-2 gap-2 px-3 pb-3 max-[359px]:grid-cols-1">
               <Select value={value.broker} onValueChange={(v) => onChange({ ...value, broker: v })}>
                 <SelectTrigger className="h-9 w-full min-w-0 text-sm"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
                 <SelectContent>
