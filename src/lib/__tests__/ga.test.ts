@@ -173,6 +173,8 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "grow_revisit" }, "내 자산 불리기·다시 봄"], // 인사이트 보조 지표 — 붙인 날과 다른 날 다시 열 때
     ["feature_use", { category: "grow_plan" }, "내 자산 불리기·조건"], // 5차 — 다시 볼 조건·메모 첫 저장
     ["feature_use", { category: "grow_grade_tab" }, "내 자산 불리기·성적표 탭"], // 6차 — 통합 화면 성적표 칸 진입
+    ["feature_use", { category: "trade_new_stock" }, "거래 입력·주식·새 종목"], // #258
+    ["feature_use", { category: "trade_new_stock_linked" }, "거래 입력·주식·새 종목·계좌 반영"], // #258
     ["feature_use", { category: "profit_basis_settings" }, "종가 기준·변경·설정"],
     ["feature_use", { category: "profit_basis_chart" }, "종가 기준·변경·성과"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
