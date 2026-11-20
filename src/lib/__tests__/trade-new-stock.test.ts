@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { MARKET_CATEGORIES, buildPickedStockDraft, findHeldByPicked, marketDefaultCategory, withInitialPrice } from "@/lib/trade/new-stock";
-import { nextSearchKey } from "@/lib/ticker-search-nav";
+import { nextSearchKey, shouldBlockEnter } from "@/lib/ticker-search-nav";
 import { trackTradeNewStock } from "@/lib/trade/link-track";
 import { stockSchema } from "@/types/asset";
 import type { Stock } from "@/types/asset";
@@ -102,6 +102,12 @@ describe("키보드 — ↑↓ 순환·Enter 선택·Esc 닫기 (주식 추가·
   it("Enter는 활성 칸이 있을 때만 선택", () => {
     expect(nextSearchKey("Enter", 1, 3)).toEqual({ type: "select", index: 1 });
     expect(nextSearchKey("Enter", -1, 3)).toEqual({ type: "none" });
+  });
+  it("인라인은 결과 없음(0건·로딩) Enter를 막고, 결과가 있거나 popover(주식 추가)면 막지 않는다", () => {
+    expect(shouldBlockEnter("Enter", false, true)).toBe(true);
+    expect(shouldBlockEnter("Enter", true, true)).toBe(false);
+    expect(shouldBlockEnter("Enter", false, false)).toBe(false);
+    expect(shouldBlockEnter("a", false, true)).toBe(false);
   });
   it("Esc는 닫기, 결과 0건·그 밖의 키는 무시", () => {
     expect(nextSearchKey("Escape", 0, 3)).toEqual({ type: "close" });

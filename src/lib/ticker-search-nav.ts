@@ -13,3 +13,9 @@ export function nextSearchKey(key: string, activeIndex: number, length: number):
   if (key === "Escape") return { type: "close" };
   return { type: "none" };
 }
+
+// 인라인 검색(거래 입력)은 폼 안에 있어 결과가 없을 때(0건·로딩) Enter가 폼 제출로 번진다 — 막는다.
+// 팝오버(주식 추가)는 기존 동작 그대로(막지 않음)
+export function shouldBlockEnter(key: string, listOpen: boolean, inline: boolean): boolean {
+  return inline && key === "Enter" && !listOpen;
+}

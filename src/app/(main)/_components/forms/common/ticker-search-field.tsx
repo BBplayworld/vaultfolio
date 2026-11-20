@@ -7,7 +7,7 @@ import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type Ref 
 import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { nextSearchKey } from "@/lib/ticker-search-nav";
+import { nextSearchKey, shouldBlockEnter } from "@/lib/ticker-search-nav";
 import type { TickerMarket } from "@/lib/trade/new-stock";
 
 export interface TickerSearchResult {
@@ -165,6 +165,7 @@ export function TickerSearchField({
           }}
           onFocus={() => { if (!inline && results.length > 0) setShowDropdown(true); }}
           onKeyDown={(e) => {
+            if (shouldBlockEnter(e.key, listOpen, inline)) { e.preventDefault(); return; }
             if (!listOpen) return;
             const action = nextSearchKey(e.key, activeIndex, results.length);
             if (action.type === "move") {
