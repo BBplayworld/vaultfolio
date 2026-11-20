@@ -762,7 +762,7 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
                     날짜는 767 이하에서 지금처럼 2줄(`10-18`/`(일)`)로 접힌다 — nowrap은 md부터 */}
                 <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 max-[375px]:inline">{formatNarrowKRW(snap.netAsset, { tiny: true })}</span>
                 <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 min-[375px]:max-sm:inline">{formatNarrowKRW(snap.netAsset)}</span>
-                <span className="hidden text-sm md:text-xs font-bold whitespace-nowrap text-foreground leading-none mb-1 sm:inline">{formatShortCurrencyDecimal(snap.netAsset)}</span>
+                <span className="hidden text-sm md:text-xs font-bold whitespace-nowrap text-foreground leading-none mb-1 sm:inline">{/* 1억 미만은 앱 표준 `3,172만원`(formatShortCurrency) — 백만원 단위 표기 불일치 해소(#254) */}{Math.abs(snap.netAsset) < 100000000 ? formatShortCurrency(snap.netAsset) : formatShortCurrencyDecimal(snap.netAsset)}</span>
                 <div className="w-full rounded-t-sm" style={{ height: heightPx, backgroundColor: barColor }} />
               </div>
               <span className="text-sm md:text-xs md:whitespace-nowrap text-muted-foreground">{label}</span>
