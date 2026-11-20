@@ -91,8 +91,8 @@ export function StockPageDecision({ value }: { value: HeadDecision }) {
         <span className="whitespace-nowrap"><DotLead />{s.label} <span className={`font-semibold ${Math.round(s.pct * 10) === 0 ? "text-muted-foreground" : getProfitLossColor(s.pct)}`}>{s.text}</span></span>
       )}
       {value.plan && (
-        <span data-testid="stock-page-decision-plan" className={`min-w-0${value.plan.both ? " max-[359px]:hidden" : ""}`}>
-          <span className="whitespace-nowrap"><DotLead />{value.plan.prefix} <span className="font-medium text-foreground">{planHead}</span></span>
+        <span data-testid="stock-page-decision-plan" className={`ml-2 min-w-0${value.plan.both ? " max-[360px]:hidden" : ""}`}>
+          <span className="whitespace-nowrap"><DotLead inset />{value.plan.prefix} <span className="font-medium text-foreground">{planHead}</span></span>
           {planTail && <>{" "}<span className="whitespace-nowrap font-medium text-foreground">또는 {planTail}</span></>}
         </span>
       )}
