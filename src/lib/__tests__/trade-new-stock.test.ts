@@ -109,3 +109,24 @@ describe("키보드 — ↑↓ 순환·Enter 선택·Esc 닫기 (주식 추가·
     expect(nextSearchKey("a", 0, 3)).toEqual({ type: "none" });
   });
 });
+
+describe("검색 공용 컴포넌트 (AC-12 주식 추가 화면 diff 0)", () => {
+  const read = (rel: string) => readFileSync(path.resolve(__dirname, "../..", rel), "utf8");
+  it("주식 추가는 popover 모드 공용 컴포넌트를 쓰고 자체 검색 상태·바깥 클릭 effect가 없다", () => {
+    const src = read("app/(main)/_components/forms/asset-update/input/stock-input.tsx");
+    expect(src).toContain("<TickerSearchField");
+    expect(src).not.toContain("setShowDropdown");
+    expect(src).not.toContain("searchAbortRef");
+    // 시세 조회·재조회·토스트는 주식 추가 쪽에 그대로(공용 컴포넌트는 조회하지 않는다)
+    expect(src).toContain("void fetchPrice(r.ticker, form.getValues(\"category\"));");
+    expect(read("app/(main)/_components/forms/common/ticker-search-field.tsx")).not.toContain("/api/finance");
+  });
+  it("popover 기존 문구·키·카테고리 전환 초기화(resetKey)를 유지한다", () => {
+    const src = read("app/(main)/_components/forms/common/ticker-search-field.tsx");
+    expect(src).toContain("검색 결과가 없습니다. 티커(종목코드)를 직접 입력한 뒤 &lsquo;조회&rsquo;를 눌러주세요.");
+    expect(src).toContain("nextSearchKey(e.key, activeIndex, results.length)");
+    expect(src).toContain("[market, resetKey]");
+    // 인라인은 Esc를 가로채지 않는다
+    expect(src).toMatch(/action\.type === "close" && !inline/);
+  });
+});

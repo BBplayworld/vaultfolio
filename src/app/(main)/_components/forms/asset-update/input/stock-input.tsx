@@ -2,7 +2,7 @@
 
 import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { countAssets, trackAssetSave } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,7 @@ import { MAIN_PALETTE } from "@/config/theme";
 import { stockCategories, quickButtonPresets, securitiesFirms } from "@/config/asset-options";
 import { StockScreenshotImport } from "../screenshot/stock-screenshot-import";
 import { HoldingsResyncDialog } from "../screenshot/holdings-resync-dialog";
+import { TickerSearchField } from "../../common/ticker-search-field";
 
 interface StockFormProps {
   editData?: Stock;
@@ -208,70 +209,15 @@ function StockForm({ editData, onClose }: StockFormProps) {
     }
   };
 
-  // ─── 종목명·코드 자동완성 검색 ───
+  // ─── 종목명·코드 자동완성 검색(공용 TickerSearchField) — 선택하면 폼 값을 채우고 현재가를 조회 ───
   const searchMarket: "kr" | "us" | null =
     selectedCategory === "foreign" ? "us" : selectedCategory === "unlisted" ? null : "kr";
-  const [searchResults, setSearchResults] = useState<{ ticker: string; name: string; market?: string }[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const [noResult, setNoResult] = useState(false);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchAbortRef = useRef<AbortController | null>(null);
-  const searchWrapRef = useRef<HTMLDivElement | null>(null);
-
-  const runSearch = (q: string) => {
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    if (!searchMarket || !!editData || !q.trim()) {
-      setSearchResults([]);
-      setShowDropdown(false);
-      setNoResult(false);
-      return;
-    }
-    searchDebounceRef.current = setTimeout(async () => {
-      searchAbortRef.current?.abort();
-      const ctrl = new AbortController();
-      searchAbortRef.current = ctrl;
-      try {
-        const res = await fetch(`/api/ticker-search?q=${encodeURIComponent(q.trim())}&market=${searchMarket}`, { signal: ctrl.signal });
-        if (!res.ok) return;
-        const data = await res.json();
-        const results = (data.results ?? []) as { ticker: string; name: string; market?: string }[];
-        setSearchResults(results);
-        setShowDropdown(results.length > 0);
-        setNoResult(results.length === 0);
-        setActiveIndex(-1);
-      } catch {
-        /* aborted/ignore */
-      }
-    }, 250);
-  };
 
   const selectResult = (r: { ticker: string; name: string }) => {
     form.setValue("ticker", r.ticker);
     form.setValue("name", r.name);
-    setShowDropdown(false);
-    setSearchResults([]);
-    setNoResult(false);
     void fetchPrice(r.ticker, form.getValues("category"));
   };
-
-  // 카테고리 변경 시 검색 상태 초기화 (market 전환)
-  useEffect(() => {
-    setSearchResults([]);
-    setShowDropdown(false);
-    setActiveIndex(-1);
-    setNoResult(false);
-  }, [selectedCategory]);
-
-  // 바깥 클릭 시 드롭다운 닫기
-  useEffect(() => {
-    if (!showDropdown) return;
-    const onDown = (e: MouseEvent) => {
-      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) setShowDropdown(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [showDropdown]);
 
   return (
     <Form {...form}>
@@ -323,64 +269,24 @@ function StockForm({ editData, onClose }: StockFormProps) {
                 <FormItem>
                   <FormLabel>{isUnlisted ? "티커 (종목코드) *" : "종목코드 · 종목명 검색 *"}</FormLabel>
                   <FormControl>
-                    <div className="relative" ref={searchWrapRef}>
-                      <Input
-                        placeholder={getTickerPlaceholder()}
-                        maxLength={isUnlisted ? 20 : 40}
-                        inputMode="text"
-                        autoComplete="off"
-                        {...field}
-                        onChange={(e) => {
-                          // 검색 겸용: 종목코드·종목명 모두 허용. 비상장은 자유 입력.
-                          const val = isUnlisted ? e.target.value : e.target.value.slice(0, 40);
-                          field.onChange(val);
-                          runSearch(val);
-                        }}
-                        onFocus={() => { if (searchResults.length > 0) setShowDropdown(true); }}
-                        onKeyDown={(e) => {
-                          if (!showDropdown || searchResults.length === 0) return;
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault();
-                            setActiveIndex((i) => (i + 1) % searchResults.length);
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault();
-                            setActiveIndex((i) => (i - 1 + searchResults.length) % searchResults.length);
-                          } else if (e.key === "Enter") {
-                            if (activeIndex >= 0 && activeIndex < searchResults.length) {
-                              e.preventDefault();
-                              selectResult(searchResults[activeIndex]);
-                            }
-                          } else if (e.key === "Escape") {
-                            setShowDropdown(false);
-                          }
-                        }}
-                      />
-                      {noResult && !editData && searchMarket && field.value?.trim() && !showDropdown && (
-                        <div className="absolute z-50 mt-1 w-full rounded-md bg-popover p-3 text-sm text-muted-foreground shadow-2xl">
-                          검색 결과가 없습니다. 티커(종목코드)를 직접 입력한 뒤 &lsquo;조회&rsquo;를 눌러주세요.
-                        </div>
-                      )}
-                      {showDropdown && searchResults.length > 0 && (
-                        <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md bg-popover p-1 shadow-2xl scrollbar-themed">
-                          {searchResults.map((r, i) => (
-                            <li key={`${r.ticker}-${i}`}>
-                              <button
-                                type="button"
-                                onMouseDown={(e) => { e.preventDefault(); selectResult(r); }}
-                                onMouseEnter={() => setActiveIndex(i)}
-                                className={`flex w-full items-center justify-between gap-2 rounded-sm px-2 py-2 text-left text-sm ${i === activeIndex ? "bg-muted" : "hover:bg-muted/60"}`}
-                              >
-                                <span className="truncate text-foreground">{r.name}</span>
-                                <span className="flex items-center gap-1.5 shrink-0">
-                                  <span className="font-mono text-xs tabular-nums text-muted-foreground">{r.ticker}</span>
-                                  {r.market && <span className="text-2xs text-muted-foreground">{r.market}</span>}
-                                </span>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
+                    <TickerSearchField
+                      market={searchMarket}
+                      searchDisabled={!!editData}
+                      resetKey={selectedCategory}
+                      value={field.value ?? ""}
+                      onValueChange={(val) => {
+                        // 검색 겸용: 종목코드·종목명 모두 허용. 비상장은 자유 입력.
+                        field.onChange(isUnlisted ? val : val.slice(0, 40));
+                      }}
+                      onSelect={selectResult}
+                      inputRef={field.ref}
+                      inputProps={{
+                        name: field.name,
+                        onBlur: field.onBlur,
+                        placeholder: getTickerPlaceholder(),
+                        maxLength: isUnlisted ? 20 : 40,
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -24,8 +24,10 @@ interface TickerSearchFieldProps {
   value: string;
   onValueChange: (value: string) => void;
   onSelect: (result: TickerSearchResult) => void;
-  /** 검색 비활성(수정 모드) */
-  disabled?: boolean;
+  /** 검색만 끈다(수정 모드) — 입력 자체는 계속 쓸 수 있다 */
+  searchDisabled?: boolean;
+  /** 값이 바뀌면 검색 상태를 초기화(주식 추가의 카테고리 전환 등, market이 같아도) */
+  resetKey?: string;
   resultsMode?: "popover" | "inline";
   inputRef?: Ref<HTMLInputElement>;
   /** name·onBlur·placeholder·maxLength 등 입력 속성(폼 필드 연결용) */
@@ -41,7 +43,8 @@ export function TickerSearchField({
   value,
   onValueChange,
   onSelect,
-  disabled = false,
+  searchDisabled = false,
+  resetKey,
   resultsMode = "popover",
   inputRef,
   inputProps,
@@ -61,7 +64,7 @@ export function TickerSearchField({
   const runSearch = (q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     abortRef.current?.abort();
-    if (!market || disabled || !q.trim()) {
+    if (!market || searchDisabled || !q.trim()) {
       setResults([]);
       setShowDropdown(false);
       setNoResult(false);
@@ -100,7 +103,7 @@ export function TickerSearchField({
     }, DEBOUNCE_MS);
   };
 
-  // 시장 변경 시 검색 상태 초기화 — inline은 같은 검색어로 재검색
+  // 시장(또는 resetKey) 변경 시 검색 상태 초기화 — inline은 같은 검색어로 재검색
   useEffect(() => {
     setResults([]);
     setShowDropdown(false);
@@ -109,7 +112,7 @@ export function TickerSearchField({
     setState("idle");
     if (inline && value.trim()) runSearch(value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [market]);
+  }, [market, resetKey]);
 
   // 언마운트 시 대기 중 요청 정리
   useEffect(() => () => {
@@ -149,7 +152,6 @@ export function TickerSearchField({
           {...inputProps}
           ref={inputRef}
           value={value}
-          disabled={disabled}
           data-testid={inline ? `${testIdPrefix}-input` : undefined}
           className={inline ? `pl-9 ${inputProps?.className ?? ""}` : inputProps?.className}
           role="combobox"
@@ -180,7 +182,7 @@ export function TickerSearchField({
       </div>
 
       {/* popover — 주식 추가(기존 마크업 그대로) */}
-      {!inline && noResult && !disabled && market && value.trim() && !showDropdown && (
+      {!inline && noResult && !searchDisabled && market && value.trim() && !showDropdown && (
         <div className="absolute z-50 mt-1 w-full rounded-md bg-popover p-3 text-sm text-muted-foreground shadow-2xl">
           검색 결과가 없습니다. 티커(종목코드)를 직접 입력한 뒤 &lsquo;조회&rsquo;를 눌러주세요.
         </div>
