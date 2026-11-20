@@ -1,0 +1,31 @@
+import { chromium } from "/opt/node-tools/node_modules/playwright/index.mjs";
+const U = "https://www.secretasset.xyz";
+const OUT = "/home/user/vaultfolio/.memory/issues/5.133-trial-hardening/screenshots/qa/";
+const b = await chromium.launch();
+let collect = 0; const post = [], err = [];
+const c = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+await c.addCookies([{ name: "theme_mode", value: "dark", url: U }]);
+const p = await c.newPage();
+p.on("request", (r) => { const u = r.url(); if (/\/g\/collect|google-analytics\.com\/.*collect/.test(u)) collect++; if (r.method() !== "GET" && /\/api\//.test(u)) post.push(r.method() + " " + u); });
+p.on("pageerror", (e) => err.push(e.message.slice(0, 100)));
+console.log("시작", new Date().toISOString());
+await p.goto(U + "/?ga-optout=1"); await p.waitForTimeout(1500);
+await p.getByText("직접 입력 · 가져오기").first().click(); await p.waitForTimeout(1200);
+await p.locator('[role="dialog"] button', { hasText: "현금성 자산" }).first().click(); await p.waitForTimeout(1500);
+const dl = p.locator('[role="dialog"]').last();
+await dl.locator('input[name="name"]').fill("QA 스모크 통장");
+await dl.locator("input").nth(1).fill("1000000");
+await dl.locator("button", { hasText: /^추가$/ }).click(); await p.waitForTimeout(4000);
+await p.keyboard.press("Escape"); await p.waitForTimeout(800);
+await p.goto(U + "/"); await p.waitForTimeout(6000);
+const st = () => p.evaluate(() => ({ url: location.pathname + location.hash, settings: [...document.querySelectorAll("p")].some((e) => e.textContent === "화면"), moreRow: !!document.querySelector('[data-testid="more-row-settings"]'), ver: (document.body.innerText.match(/v\d\.\d+/g) || []).join(","), gaDisable: Object.entries(window).filter(([k]) => k.startsWith("ga-disable-")).map(([k, v]) => v).join(","), optout: localStorage.getItem("ga-optout") }));
+console.log("N0", JSON.stringify(await st()));
+async function swipe(dir, y) { const s = await c.newCDPSession(p); const x0 = dir < 0 ? 320 : 70, x1 = dir < 0 ? 70 : 320; await s.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: x0, y }] }); for (let i = 1; i <= 5; i++) { await s.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x0 + (x1 - x0) * i / 5, y }] }); await p.waitForTimeout(20); } await s.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await p.waitForTimeout(1300); }
+for (const t of ["N1", "N2", "N3(#more)"]) { await swipe(-1, 150); console.log(t, JSON.stringify(await st())); }
+await p.evaluate(() => { location.hash = "#settings"; }); await p.waitForTimeout(2000);
+await p.evaluate(() => window.scrollTo(0, 99999)); await p.waitForTimeout(600);
+console.log("N4 #settings", JSON.stringify(await st()));
+await p.screenshot({ path: OUT + "prod-390-settings-version.png" });
+await p.goto(U + "/#settings"); await p.waitForTimeout(5000); console.log("N5 첫로드 #settings", JSON.stringify(await st()));
+console.log("끝", new Date().toISOString(), "collect", collect, "post", JSON.stringify(post), "pageerror", JSON.stringify(err));
+await b.close();
