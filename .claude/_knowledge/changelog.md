@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-20 (v5.134 #258·#259)
+
+### 처음 사는 종목도 거래로 기록 + 같은 증권사·종류 중복 stock 방지 (#5.134, 이슈 #258·#259, risk:medium)
+- **왜**: 처음 사는 종목은 연결 계좌를 고를 경로가 없어 산 돈이 현금·대출에 반영되지 않았다(순자산 부풀림·`기록 안 된 변화`). 또 `신규 자산 등록`에서 보유와 같은 증권사·종류를 고르면 같은 ticker·broker·category stock이 2개 생겼다(#259, qa 운영 실측).
+- **#259**(`lib/trade/effective-target.ts`): 두 호출부(거래 입력·스크린샷 가져오기)가 같은 조합이면 실효 대상을 기존 항목으로 보고(newStocks 0건) 신규 칸은 열어 둔 채 안내 1줄 `trade-switched-existing-note[data-reason=account]`. fuzzy 후보만 있는 행은 판정 제외. picker 신규 2칸 359px 이하 1열.
+- **#258**(`trade-input.tsx`): 매수에서 `다른 종목 찾기`·보유 0개면 검색이 처음부터. 검색 종목이 보유와 같으면(normalizeTicker 양쪽) 보유 종목 선택으로 전환+안내(`data-reason=ticker`), 아니면 요약 카드+`StockTargetPicker`(시장별 종류, 국내 4종/해외 1종). 현재가 조회 실패 시 체결 단가로 저장하고 `baseDate` 비움+안내 줄. 저장은 `addTransactionsBatch([tx],[],[newStock],link)` 그대로. GA `trade_new_stock`(`거래 입력·주식·새 종목`)·`trade_new_stock_linked`. 코인 폼은 안내 1줄(보유 0개면 안내+닫기).
+- **공용 `TickerSearchField`**(`forms/common/`): 주식 추가 검색부를 추출(popover, 화면 diff 0). 저장 스키마·키·마이그레이션·동기화·서버 전송·결산 엔진(effects) 변경 0.
+
 ## 2026-11-20 (v5.134)
 
 ### 예측 구간에 새로 등록한 현금·대출이 '시세'로 보이지 않는다 (#5.134, 이슈 #251, risk:medium)
