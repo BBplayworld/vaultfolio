@@ -81,6 +81,8 @@ export function SettingsPage({ focus }: { focus?: "notify" }) {
   // GA 수집 제외 숨김 트리거: '화면' 라벨 7회 연속 탭 → ga-optout 토글 (본인 전용)
   const gaTapRef = useRef({ count: 0, timer: 0 });
   const handleGaOptoutTap = () => {
+    // 체험 중에는 무시 — 메모리 ga-optout으로 체험 GA 차단(ga-disable)을 덮어쓰지 않게
+    if (isTrialMode()) return;
     const s = gaTapRef.current;
     window.clearTimeout(s.timer);
     s.count += 1;
