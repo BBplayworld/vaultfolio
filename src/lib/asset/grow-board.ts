@@ -7,6 +7,7 @@
  *  - 내 종목: 오래 둘 → 점검할 → 아직 안 정함 묶음. 묶음 안은 점검 차례 → 오래 가진 순(값 순 정렬 없음).
  *    오래 둘 점검 차례 안에서만 산 날보다 낮은 행을 먼저 두는 이분 규칙(크기 순위 아님). 순서는 화면에 들어올 때 한 번 정한다
  *  - 점검 차례: 점검할 = 내가 정한 조건(−하한·+상한)에 닿거나 기준일 + (조건 기간 ‖ 기본 주기), 오래 둘 = 기준일 + 12개월.
+ *    ±% 조건은 같은 방향을 `그대로 둠`으로 확인하면 풀린다(#247, pctAckOf) — 다음 점검일·조건 수정·반대 방향에서 다시 차례
  *    기준일 = max(정한 날, 점검한 날, 그 티커의 마지막 '그대로 둠' 기록)
  *  - 묶음·막대 순서는 값과 무관한 고정 순서다. 앱은 종목을 고르거나 권하지 않는다 — 여기서 만드는 값은 내 기록에서 나온 사실뿐이다
  */
@@ -17,7 +18,7 @@ import { normalizeTicker } from "@/lib/finance/finance-service";
 import { computeStockMetrics, computeStockTotals, groupStocksByTicker, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { classifyStock } from "@/lib/xray/stock-xray";
 import { GRADE_THRESHOLDS } from "@/lib/report/asset-grade";
-import { isStockLabelKey, lastSameReview, reviewsOf, stockLabelTime, type StockLabelItem, type StockLabels, type StockReviewHit } from "@/lib/asset/stock-labels";
+import { STOCK_LABEL_CYCLES, isStockLabelKey, lastSameReview, reviewsOf, stockLabelTime, type StockLabelItem, type StockLabels, type StockReviewHit } from "@/lib/asset/stock-labels";
 import { elapsedSince, formatSince, kstDayText, tradeCountsByLabelKey, type GrowLabelState } from "@/lib/asset/grow-rows";
 
 type Rates = { USD: number; JPY: number };
@@ -108,7 +109,7 @@ export interface BoardRow {
   dueReason: DueReason | null;
   /** 차례 기준일 + 기간(ms). 기간을 정하지 않은 점검할은 null */
   nextCheckMs: number | null;
-  /** 오늘 이미 '그대로 둠'을 눌렀는지 */
+  /** 오늘 이미 '그대로 둠'을 눌렀는지 — 그 뒤 조건(±% 값·기간)을 고쳐 다시 차례가 된 행은 false(다시 누를 수 있다) */
   checkedToday: boolean;
   /** 아직 안 정함 행 2줄 — `9월 19일 점검할에서 뺌`(최근 90일 기록만). 없으면 null */
   dropNote: string | null;
@@ -167,17 +168,42 @@ export function checkMonthsOf(item: StockLabelItem | undefined, cycleMonths: num
 
 const ROUND1 = (v: number) => Math.round(v * 10) / 10;
 
-/** 점검 차례 판정 — 조건 하한 → 상한 → 기간 순으로 첫 사유 1개 */
-function dueOf(item: StockLabelItem, rate: number | null, months: number | null, baseIso: string, nowMs: number): DueReason | null {
+/** 주기·기간이 없는 종목의 ±% 확인이 유지되는 기간(개월) — 점검 주기 선택지의 가장 짧은 값(3개월) */
+export const PCT_ACK_MONTHS = STOCK_LABEL_CYCLES[0];
+
+/**
+ * ±% 조건 차례를 이미 확인했는지(#247) — 지금 이름표·지금 조건을 정한 뒤의 `그대로 둠` 기록 가운데
+ * ±% 차례에서 누른 것(hit = down·up) 중 가장 최근 것의 방향과 시각. 없으면 null.
+ *  - ±% 값·기간을 고치면(plan.at이 기록보다 뒤) 새 조건이라 확인하지 않은 것으로 본다. 메모만 고치면 plan.at이 그대로다(setStockPlan)
+ *  - 차례가 아닐 때 누른 기록·기간 차례 기록(hit 없음·plan·cycle·keep)은 건너뛴다 — 확인 뒤 다시 눌러도 확인이 지워지지 않는다
+ *  - 5.125에서 누른 기록은 hit이 없어 어느 조건을 보고 눌렀는지 알 수 없다 → 확인으로 치지 않는다(다음 누름부터 hit이 남는다)
+ * 저장된 값(기록·plan.at)만 읽는다. 기기 경합으로 checkedAt이 져도 기록이 남아 있으면 같다
+ */
+export function pctAckOf(labels: StockLabels, labelKey: string, item: StockLabelItem): { hit: "down" | "up"; at: string } | null {
+  const floor = Math.max(stockLabelTime(item.labeledAt) ?? -Infinity, stockLabelTime(item.plan?.at) ?? -Infinity);
+  // 정규화된 목록은 티커 안에서 최신 먼저
+  const last = reviewsOf(labels, labelKey).find((r) => r.choice === "same" && (r.hit === "down" || r.hit === "up") && stockLabelTime(r.at)! >= floor);
+  return last ? { hit: last.hit as "down" | "up", at: last.at } : null;
+}
+
+/**
+ * 점검 차례 판정 — 조건 하한 → 상한 → 기간 순으로 첫 사유 1개.
+ * ±% 조건은 같은 방향을 이미 확인했으면(ack) 차례가 아니다. 다시 차례가 되는 때: 약속한 다음 점검일(기준일 + 기간)이 되었을 때,
+ * 확인 뒤 조건을 고쳤을 때, 반대 방향 조건에 닿았을 때(#247). 기간이 없는 종목은 약속한 날이 없으므로
+ * 확인 기록 + PCT_ACK_MONTHS(3개월)가 지나고 여전히 닿아 있으면 다시 차례다(영구 확인 아님)
+ */
+function dueOf(item: StockLabelItem, rate: number | null, months: number | null, baseIso: string, nowMs: number, ack: { hit: "down" | "up"; at: string } | null = null): DueReason | null {
+  const e = months === null ? null : elapsedSince(baseIso, nowMs);
+  const dateDue = months !== null && !!e && e.months >= months;
   if (item.label === "check" && item.plan && rate !== null) {
     const r = ROUND1(rate);
-    if (item.plan.down !== undefined && r <= -item.plan.down) return { kind: "down", pct: item.plan.down };
-    if (item.plan.up !== undefined && r >= item.plan.up) return { kind: "up", pct: item.plan.up };
+    const hit = item.plan.down !== undefined && r <= -item.plan.down ? "down" : item.plan.up !== undefined && r >= item.plan.up ? "up" : null;
+    const acked = ack?.hit === hit && !dateDue && (months !== null || (elapsedSince(ack.at, nowMs)?.months ?? 0) < PCT_ACK_MONTHS);
+    if (hit && !acked) return { kind: hit, pct: item.plan[hit]! };
   }
-  if (months === null) return null;
-  const e = elapsedSince(baseIso, nowMs);
+  if (!dateDue) return null;
   const source = item.label === "keep" ? "keep" : item.plan?.months !== undefined ? "plan" : "cycle";
-  return e && e.months >= months ? { kind: "date", months, source } : null;
+  return { kind: "date", months: months!, source };
 }
 
 /** 차례 이유 문장(사실형) — `+25% 이상에 닿았어요` / `정한 기간 3개월이 지났어요` */
@@ -223,10 +249,15 @@ export function labelFactsOf(labels: StockLabels, labelKey: string | null, rate:
     const same = lastSameReview(labels, labelKey, item.labeledAt);
     const baseIso = cycleBaseOf(item, same?.at);
     const months = checkMonthsOf(item, labels.cycle.months);
-    dueReason = dueOf(item, pctPlan ? rate : null, months, baseIso, nowMs);
+    dueReason = dueOf(item, pctPlan ? rate : null, months, baseIso, nowMs, pctPlan ? pctAckOf(labels, labelKey, item) : null);
     nextCheckMs = months === null ? null : addMonthsKst(stockLabelTime(baseIso)!, months);
-    const c = elapsedSince(cycleBaseOf({ labeledAt: "", checkedAt: item.checkedAt }, same?.at), nowMs);
-    checkedToday = !!c && c.days === 0;
+    const checkIso = cycleBaseOf({ labeledAt: "", checkedAt: item.checkedAt }, same?.at);
+    const c = elapsedSince(checkIso, nowMs);
+    // 오늘 점검한 뒤 ±% 값·기간을 고쳐(plan.at이 그 점검보다 뒤) 다시 차례가 되면 같은 날도 다시 누를 수 있다(#247) —
+    // `점검 차례`와 `오늘 점검함`이 함께 보이지 않게. 누르면 그 기록이 plan.at보다 뒤라 다시 막힌다(조건 수정 1번에 1번)
+    const planMs = stockLabelTime(item.plan?.at);
+    const reopened = dueReason !== null && planMs !== null && (stockLabelTime(checkIso) ?? Infinity) < planMs;
+    checkedToday = !!c && c.days === 0 && !reopened;
     // '점검 뒤' = 정한 뒤 마지막 '그대로 둠' 기록의 가격, 없으면 '정한 뒤' = 정한 날 가격(base.price)
     const ref = same ? { kind: "checked" as const, price: same.price, at: same.at } : item.base?.price ? { kind: "labeled" as const, price: item.base.price, at: item.labeledAt } : null;
     if (ref && nowPrice !== null) since = { kind: ref.kind, pct: (nowPrice / ref.price - 1) * 100, today: elapsedSince(ref.at, nowMs)?.days === 0 };

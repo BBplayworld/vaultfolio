@@ -1,7 +1,7 @@
 // 알림 문구·발송일 판정(#179, 4.91) — 순수 함수. 날짜표·공개 시세만 쓰고 사용자 정보는 보지 않는다. 평가어·조언·뉴스·AI 문장 0.
 // 문구는 상태 안내('열렸어요')만 — 요청형·조언·금액·'내'·'보유' 0. 결산 창 첫날은 앱의 결산 창 로직(isSettlementWindowOpenDay)을 재사용한다.
 import { formatCompareRate, rateTenths } from "@/lib/finance/market-compare";
-import { isKrHoliday, rollbackToBusinessDay } from "@/lib/finance/kr-holidays";
+import { isKrHoliday } from "@/lib/finance/kr-holidays";
 import { isUsHoliday, rollbackToUsBusinessDay } from "@/lib/finance/us-holidays";
 import { CARD_UNTIL_DAY, isSettlementWindowOpenDay } from "@/lib/report/settlement";
 import type { PushCond, PushKind, PushPayload } from "./types";
@@ -83,43 +83,41 @@ const shiftDay = (date: string, days: number): string => {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 };
-/** 아침 회차(월~금)의 기대 거래일 — 전날 기준 직전 영업일 */
-const expectedCloseDate = (today: string, market: "us" | "kr"): string => {
-  const y = new Date(`${shiftDay(today, -1)}T00:00:00Z`);
-  return (market === "us" ? rollbackToUsBusinessDay(y) : rollbackToBusinessDay(y)).toISOString().slice(0, 10);
-};
-/** 직전 발송일(월~금 직전 평일)의 아침 요약이 이미 쓴 거래일과 오늘 기대 거래일이 같으면 true — 같은 종가 반복 방지. 날짜 계산만 사용 */
-export function isRepeatedClose(today: string, market: "us" | "kr"): boolean {
+/** 아침 회차(월~금)의 미국 기대 거래일 — 전날(KST) 기준 직전 미국 영업일. 조회 날짜와 본문 머리 `미국 M/D 종가`가 이 한 곳을 쓴다 */
+export const expectedCloseDate = (today: string): string => rollbackToUsBusinessDay(new Date(`${shiftDay(today, -1)}T00:00:00Z`)).toISOString().slice(0, 10);
+/** 직전 발송일(월~금 직전 평일)의 아침 요약이 이미 쓴 미국 거래일과 오늘 기대 거래일이 같으면 true — 같은 종가 반복 방지. 날짜 계산만 사용 */
+export function isRepeatedClose(today: string): boolean {
   let prev = shiftDay(today, -1);
   while ([0, 6].includes(new Date(`${prev}T00:00:00Z`).getUTCDay())) prev = shiftDay(prev, -1);
-  return expectedCloseDate(today, market) === expectedCloseDate(prev, market);
+  return expectedCloseDate(today) === expectedCloseDate(prev);
 }
 
-/** 오늘 직전에 쉰 평일(주말 제외) 중 가장 최근 날짜 — 최대 10일 전까지 */
-function lastRestDate(today: string, market: "us" | "kr"): string | null {
-  const isHoliday = market === "us" ? isUsHoliday : isKrHoliday;
+/** 오늘 직전에 미국 장이 쉰 평일(주말 제외) 중 가장 최근 날짜 — 최대 10일 전까지 */
+function lastRestDate(today: string): string | null {
   for (let i = 1; i <= 10; i++) {
     const d = shiftDay(today, -i);
-    if (![0, 6].includes(new Date(`${d}T00:00:00Z`).getUTCDay()) && isHoliday(d)) return d;
+    if (![0, 6].includes(new Date(`${d}T00:00:00Z`).getUTCDay()) && isUsHoliday(d)) return d;
   }
   return null;
 }
 
-/** 아침 시장 요약 — `미국 … | 국내 … | 오늘 미국 휴장`. 날짜 검증에 실패한 구간은 호출부가 빈 배열로 넘기고, 둘 다 비면 null */
-export function buildMorningMessage(today: string, us: readonly PushQuote[], kr: readonly PushQuote[], cond: PushCond): PushPayload | null {
-  if (us.length === 0 && kr.length === 0) return null;
-  if (cond === "pm2" && !hasBig(us) && !hasBig(kr)) return null;
+/**
+ * 아침 시장 요약(#241, 5.126) — `미국 11/23 종가 S&P 500 +0.8% · 나스닥 +1.1% | 환율 1,385원(+0.4%) | 오늘 미국 휴장`.
+ * 국내 지수는 싣지 않는다(16시 '국내 장 마감' 담당). us = 직전 미국 장 종가, fx = 오늘 행 환율. 검증에 실패한 쪽은 호출부가 빈 배열로 넘기고, 둘 다 비면 null
+ */
+export function buildMorningMessage(today: string, us: readonly PushQuote[], fx: readonly PushQuote[], cond: PushCond): PushPayload | null {
+  if (us.length === 0 && fx.length === 0) return null;
+  if (cond === "pm2" && !hasBig(us) && !hasBig(fx)) return null;
   const segs: { text: string; big: boolean }[] = [];
-  if (us.length > 0) segs.push({ text: `미국 ${bigFirst(us).map(formatQuote).join(" · ")}`, big: us.some(isBig) });
-  if (kr.length > 0) segs.push({ text: `국내 ${bigFirst(kr).map(formatQuote).join(" · ")}`, big: kr.some(isBig) });
+  if (us.length > 0) segs.push({ text: `미국 ${formatMonthDay(expectedCloseDate(today))} 종가 ${bigFirst(us).map(formatQuote).join(" · ")}`, big: us.some(isBig) });
+  if (fx.length > 0) segs.push({ text: fx.map(formatQuote).join(" · "), big: fx.some(isBig) });
   const ordered = [...segs.filter((x) => x.big), ...segs.filter((x) => !x.big)].map((x) => x.text);
-  // 직전 아침 요약과 같은 거래일이라 시세를 비운 구간은 같은 수치를 반복하지 않고 표시만
-  // 쉰 날짜를 적는다(예: '미국 11/26 휴장'). 같은 시장이 오늘도 휴장이면 '오늘 ○ 휴장'만 남겨 중복을 피한다
+  // 미국이 직전 아침 요약과 같은 거래일이라 시세를 비운 날은 같은 수치를 반복하지 않고 쉰 날짜만 적는다(예: '미국 11/26 휴장').
+  // 오늘도 미국 휴장이면 '오늘 ○ 휴장'만 남겨 중복을 피한다. 조회 실패는 휴장으로 쓰지 않는다(반복 거래일일 때만 표기)
   const holidays = holidayMarketsOn(today);
-  for (const [market, name, list] of [["us", "미국", us], ["kr", "국내", kr]] as const) {
-    if (list.length > 0 || holidays.includes(name) || !isRepeatedClose(today, market)) continue;
-    const rest = lastRestDate(today, market);
-    if (rest) ordered.push(`${name} ${formatMonthDay(rest)} 휴장`);
+  if (us.length === 0 && !holidays.includes("미국") && isRepeatedClose(today)) {
+    const rest = lastRestDate(today);
+    if (rest) ordered.push(`미국 ${formatMonthDay(rest)} 휴장`);
   }
   if (holidays.length > 0) ordered.push(`오늘 ${holidays.join("·")} 휴장`);
   return { m: "morning", t: `${formatMonthDay(today)} 아침 시장`, b: ordered.join(" | ") };

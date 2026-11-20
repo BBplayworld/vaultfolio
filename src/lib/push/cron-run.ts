@@ -4,14 +4,14 @@ import { NextResponse } from "next/server";
 import { getCacheStorage } from "@/lib/cache-storage";
 import { getKisAccessToken, recordKisFailure, recordKisSuccess } from "@/lib/finance/kis-token";
 import { isKrBusinessDay, rollbackToBusinessDay } from "@/lib/finance/kr-holidays";
-import { rollbackToUsBusinessDay } from "@/lib/finance/us-holidays";
 import { withinUpstreamBudget } from "@/server/api-guard";
-import { buildKrCloseMessage, buildMorningMessage, isRepeatedClose, mergePushPayloads, pushDueOn } from "./message";
-import { estimateKisCalls, fetchKrQuotes, fetchUsQuotes, shiftDate, type PushQuote } from "./quotes";
+import { buildKrCloseMessage, buildMorningMessage, expectedCloseDate, isRepeatedClose, mergePushPayloads, pushDueOn } from "./message";
+import { estimateKisCalls, fetchFxQuote, fetchKrQuotes, fetchUsQuotes, shiftDate, type PushQuote } from "./quotes";
 import { isPushConfigured, sendPush } from "./send";
 import type { PushKind, PushPayload, PushSubRecord } from "./types";
 
 // 알림 발송(#179, 4.91, 운영 Cron 전용). Cron 2개: morning(00:00 UTC = KST 09:00) · kr(07:00 UTC = KST 16:00).
+// 아침(#241, 5.126) = 직전 미국 장 종가 + 오늘 환율(국내 지수 없음), 16시 = 오늘 코스피·코스닥·환율 — 두 알림이 같은 거래일·같은 값을 싣지 않는다.
 // 중복 알림 금지 우선 — 종류·날짜 플래그를 보내기 직전에 잡고 실패해도 풀지 않는다(시세 조회 실패로 못 보낸 종류는 플래그를 잡지 않는다).
 // 응답·로그는 건수·항목 상태만(구독·endpoint 정보 0). 중단 스위치: Vercel 대시보드 Cron Jobs의 Disable(재배포 불필요).
 
@@ -38,34 +38,49 @@ export function kstToday(nowMs: number): string {
   return new Date(nowMs + KST_MS).toISOString().slice(0, 10);
 }
 
-/** 시세 조회(운영 Cron·preview 테스트 공용) — 직전 거래일 종가(미국·국내), kr 회차는 오늘 국내 종가. 토큰·예산 실패면 빈 배열 + status */
-export async function loadPushQuotes(today: string, needUs: boolean, needKr: boolean, round: CronRound): Promise<{ us: PushQuote[]; kr: PushQuote[]; status: Record<string, string> }> {
+/**
+ * 시세 조회(운영 Cron·preview 테스트 공용) — us = 직전 미국 거래일 종가, fx = 오늘 행 환율(아침 전용), kr = 국내 3종(kr 회차는 오늘, 그 밖(preview 미리보기)은 직전 영업일).
+ * 토큰·예산 실패면 빈 배열 + status
+ */
+export async function loadPushQuotes(
+  today: string,
+  need: { us: boolean; fx: boolean; kr: boolean },
+  round: CronRound,
+): Promise<{ us: PushQuote[]; fx: PushQuote[]; kr: PushQuote[]; status: Record<string, string> }> {
   let us: PushQuote[] = [];
+  let fx: PushQuote[] = [];
   let kr: PushQuote[] = [];
   const status: Record<string, string> = {};
-  if (!needUs && !needKr) return { us, kr, status };
+  if (!need.us && !need.fx && !need.kr) return { us, fx, kr, status };
   const { token } = await getKisAccessToken(today);
-  if (!token || !(await withinUpstreamBudget("kis", estimateKisCalls(needUs, needKr)))) {
+  if (!token || !(await withinUpstreamBudget("kis", estimateKisCalls(need.us, need.fx, need.kr)))) {
     status.kis = token ? "budget" : "no-token";
-    return { us, kr, status };
+    return { us, fx, kr, status };
   }
   const ctx = { accessToken: token, appKey: process.env.KIS_APP_KEY ?? "", appSecret: process.env.KIS_APP_SECRET ?? "" };
   const first = { first: true };
-  const yesterday = new Date(`${shiftDate(today, -1)}T00:00:00Z`);
-  if (needUs) {
-    const seg = await fetchUsQuotes(rollbackToUsBusinessDay(yesterday).toISOString().slice(0, 10), ctx, first);
+  if (need.us) {
+    // 기대 거래일은 본문 머리 `미국 M/D 종가`와 같은 함수로 계산한다(본문 날짜 = 조회 날짜)
+    const seg = await fetchUsQuotes(expectedCloseDate(today), ctx, first);
     us = seg.quotes;
     for (const [k, v] of Object.entries(seg.status)) status[`us.${k}`] = v;
   }
-  if (needKr) {
-    const krDate = round === "kr" ? today : rollbackToBusinessDay(yesterday).toISOString().slice(0, 10);
+  if (need.fx) {
+    const seg = await fetchFxQuote(today, ctx, first);
+    fx = seg.quotes;
+    Object.assign(status, seg.status); // 로그 키 `fx` = ok|stale|flat|fail
+  }
+  if (need.kr) {
+    const krDate = round === "kr" ? today : rollbackToBusinessDay(new Date(`${shiftDate(today, -1)}T00:00:00Z`)).toISOString().slice(0, 10);
     const seg = await fetchKrQuotes(krDate, ctx, first);
     kr = seg.quotes;
     for (const [k, v] of Object.entries(seg.status)) status[`kr.${k}`] = v;
   }
-  if (us.length + kr.length === 0) await recordKisFailure();
+  // 아침 환율이 stale·flat이면 KIS는 응답했고 오늘 행만 쓸 수 없는 날(휴장·개장 전)이라 장애로 세지 않는다. 그 밖은 기존과 같다(값 0 = 실패)
+  const fxAnswered = status.fx === "stale" || status.fx === "flat";
+  if (us.length + fx.length + kr.length === 0 && !fxAnswered) await recordKisFailure();
   else await recordKisSuccess();
-  return { us, kr, status };
+  return { us, fx, kr, status };
 }
 
 export async function runPushCron(req: Request, round: CronRound = "morning"): Promise<NextResponse> {
@@ -101,17 +116,18 @@ export async function runPushCron(req: Request, round: CronRound = "morning"): P
   if (subs.length === 0) return json({ skipped: "no-subscribers" });
   const needed = new Set(dueKinds.filter((k) => subs.some((s) => s.rec.topics.includes(k))));
 
-  // 시세 — 아침(미국·국내 직전 거래일 종가)·국내(오늘 종가). 실패해도 결산·세금은 그대로 보낸다
-  // 직전 아침 요약과 같은 거래일이면 조회하지 않는다(같은 종가 반복 방지, 날짜 계산만)
-  const needUs = needed.has("morning") && !isRepeatedClose(today, "us");
-  const needKr = (needed.has("morning") && !isRepeatedClose(today, "kr")) || needed.has("kr");
-  const { us, kr, status } = await loadPushQuotes(today, needUs, needKr, round);
+  // 시세 — 아침(직전 미국 거래일 종가 + 오늘 환율)·국내(오늘 코스피·코스닥·환율). 실패해도 결산·세금은 그대로 보낸다
+  // 미국이 직전 아침 요약과 같은 거래일이면 조회하지 않는다(같은 종가 반복 방지, 날짜 계산만). 환율은 기대일이 매일 달라 반복 판정이 없다
+  const needUs = needed.has("morning") && !isRepeatedClose(today);
+  const needFx = needed.has("morning");
+  const needKr = needed.has("kr");
+  const { us, fx, kr, status } = await loadPushQuotes(today, { us: needUs, fx: needFx, kr: needKr }, round);
 
   // 종류·날짜 중복 방지 플래그 — 보낼 내용이 있는 종류만 잡는다(시세가 전부 없으면 시장 종류는 잡지 않음)
   const alive = new Set<PushKind>();
   let duplicate = 0;
   for (const kind of needed) {
-    const hasContent = kind === "morning" ? us.length + kr.length > 0 : kind === "kr" ? kr.length > 0 : true;
+    const hasContent = kind === "morning" ? us.length + fx.length > 0 : kind === "kr" ? kr.length > 0 : true;
     if (!hasContent) continue;
     if (await storage.markPushSent(kind, today)) alive.add(kind);
     else duplicate++;
@@ -123,7 +139,7 @@ export async function runPushCron(req: Request, round: CronRound = "morning"): P
     for (const k of rec.topics) {
       if (!alive.has(k as PushKind)) continue;
       const p =
-        k === "morning" ? buildMorningMessage(today, us, kr, rec.cond) : k === "kr" ? buildKrCloseMessage(today, kr, rec.cond) : staticByKind.get(k as PushKind);
+        k === "morning" ? buildMorningMessage(today, us, fx, rec.cond) : k === "kr" ? buildKrCloseMessage(today, kr, rec.cond) : staticByKind.get(k as PushKind);
       if (p) list.push(p);
     }
     return mergePushPayloads(list);
@@ -152,6 +168,8 @@ export async function runPushCron(req: Request, round: CronRound = "morning"): P
     }
   }
   // 운영 첫 실행 확인(C96) — 대상별 성공·제외 상태와 건수. endpoint·키 0
-  console.info(`[push-cron] round=${round} date=${today} kinds=${[...alive].join(",") || "-"} quotes=${JSON.stringify(status)} sent=${sent} failed=${failed} removed=${removed} skipped=${skipped} duplicate=${duplicate}`);
+  // subs = 이 회차 시장 종류(09시 morning·16시 kr)를 켠 구독 수 — 이미 읽은 구독 배열에서 센 집계 숫자뿐(추가 조회·저장 0). 그 종류가 오늘 대상이 아니면 '-'
+  const subsField = dueKinds.includes(round) ? `${round}:${subs.filter((s) => s.rec.topics.includes(round)).length}` : "-";
+  console.info(`[push-cron] round=${round} date=${today} kinds=${[...alive].join(",") || "-"} quotes=${JSON.stringify(status)} subs=${subsField} sent=${sent} failed=${failed} removed=${removed} skipped=${skipped} duplicate=${duplicate}`);
   return json({ sent, failed, removed, skipped, duplicate, quotes: status });
 }

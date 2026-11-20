@@ -7,6 +7,7 @@ import type { PushCond, PushPayload } from "./types";
 
 // preview 테스트 발송(4.91) — 운영 Cron과 같은 시세 조회·메시지 생성 함수를 호출한다.
 // 테스트 전용 분기는 '날짜 판정(발송일·직전 종가 반복 방지)을 건너뛰고 즉시 생성' 하나뿐.
+// 아침(#241) = 직전 미국 장 종가 + 오늘 환율(오늘 행이 없는 주말·휴장일엔 환율 생략), 국내 장 마감 = 직전 영업일 종가.
 // 조건 pm2 미충족이면 운영에선 안 가므로 제목 앞에 표시를 붙여 1건 보낸다. 시세 실패·검증 실패 구간은 운영처럼 생략.
 export const PUSH_PREVIEW_UNMET = "[미리보기·오늘은 조건 미충족]";
 
@@ -14,10 +15,10 @@ export async function buildTestPayloads(topics: readonly string[], cond: PushCon
   const today = kstToday(nowMs);
   const needMorning = topics.includes("morning");
   const needKr = topics.includes("kr");
-  // 테스트는 morning 회차로 조회하므로 국내 값은 직전 영업일 종가 — 국내 장 마감 제목도 그 날짜로(운영 16시 회차의 today와 같은 의미)
+  // 테스트는 morning 회차로 조회하므로 국내 장 마감 값은 직전 영업일 종가 — 제목도 그 날짜로(운영 16시 회차의 today와 같은 의미)
   const krCloseDate = rollbackToBusinessDay(new Date(`${shiftDate(today, -1)}T00:00:00Z`)).toISOString().slice(0, 10);
   const out: PushPayload[] = [];
-  const quotes = needMorning || needKr ? await loadPushQuotes(today, needMorning, needMorning || needKr, "morning") : { us: [], kr: [] };
+  const quotes = needMorning || needKr ? await loadPushQuotes(today, { us: needMorning, fx: needMorning, kr: needKr }, "morning") : { us: [], fx: [], kr: [] };
   const withCond = (build: (c: PushCond) => PushPayload | null) => {
     const p = build(cond);
     if (p) return p;
@@ -27,7 +28,7 @@ export async function buildTestPayloads(topics: readonly string[], cond: PushCon
   for (const kind of ["morning", "kr", "settle", "tax"] as const) {
     if (!topics.includes(kind)) continue;
     const p =
-      kind === "morning" ? withCond((c) => buildMorningMessage(today, quotes.us, quotes.kr, c))
+      kind === "morning" ? withCond((c) => buildMorningMessage(today, quotes.us, quotes.fx, c))
       : kind === "kr" ? withCond((c) => buildKrCloseMessage(krCloseDate, quotes.kr, c))
       : kind === "settle" ? buildSettleMessage(today)
       : nearestTaxMessage(today);

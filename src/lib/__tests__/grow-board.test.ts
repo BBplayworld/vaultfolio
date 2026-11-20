@@ -8,10 +8,12 @@ import { computeStockTotals } from "@/app/(main)/_components/views/detail/asset-
 import { GRADE_THRESHOLDS } from "../report/asset-grade";
 import { materializeDemo } from "../preview/demo-payload";
 import { demoClassificationPatches } from "../preview/demo-inject";
-import { parseStockLabels, type StockLabels } from "../asset/stock-labels";
+import { parseStockLabels, recordReview, reviewsOf, setStockPlan, type StockLabels } from "../asset/stock-labels";
+import type { Crypto } from "@/types/asset";
+import { buildCryptoRows, buildGrowBoards, growStatus } from "../asset/grow-kinds";
 import {
   BOARD_AXES, HOLD_SCORE_BANDS, SCORE_MIN_DAYS, annualizedPct, boardScale, boardTotal, buildAxisGroups, buildBoardRows, holdScore, scalePos,
-  addMonthsKst, boardRowRank, boardSummary, countDueRows, dueReasonText, monthDayText, nextCheckDateText,
+  addMonthsKst, boardRowRank, boardSummary, countDueRows, dueReasonText, hitOf, monthDayText, nextCheckDateText, pctAckOf, PCT_ACK_MONTHS,
 } from "../asset/grow-board";
 
 const RATES = { USD: 1400, JPY: 925 };
@@ -85,6 +87,13 @@ describe("종목 행 buildBoardRows", () => {
     expect(Math.round(total.profit)).toBe(Math.round(t.totalProfit));
     expect(total.rate).toBeCloseTo(t.totalProfitRate, 10);
     expect(total.count).toBe(rows.length);
+  });
+  it("전량 매도로 수량 0만 남은 보유 건은 행·합계·종목 수에서 빠진다(#243)", () => {
+    const sold = st({ id: "s0", ticker: "SOLD", quantity: 0, averagePrice: 0, currentPrice: 280, purchaseDate: "2025-01-02" });
+    const r = buildBoardRows([...STOCKS, sold], RATES, mk(), NOW);
+    expect(r.map((x) => x.key)).toEqual(rows.map((x) => x.key));
+    expect(r.some((x) => x.key === "t:SOLD")).toBe(false);
+    expect(boardTotal([...STOCKS, sold], RATES, r).count).toBe(rows.length);
   });
   it("시세 없는 종목이 있으면 합계 priced=false, 그 행 rate null", () => {
     const r = buildBoardRows([...STOCKS, st({ id: "z", currentPrice: 0 })], RATES, mk(), NOW);
@@ -204,6 +213,176 @@ describe("점검 차례(5차) — 점검할 조건·기간, 오래 둘 12개월,
     expect(by(rows(none("2026-09-19T03:00:00Z")), "A").dropNote).toBe("9월 19일 점검 대상에서 뺌");
     expect(by(rows(none("2026-08-20T03:00:00Z")), "A").dropNote).toBe("8월 20일 점검 대상에서 뺌"); // 90일
     expect(by(rows(none("2026-08-19T03:00:00Z")), "A").dropNote).toBeNull(); // 91일
+  });
+});
+
+describe("#247 ±% 조건 차례 — `그대로 두기`로 확인하면 풀리고, 다음 점검일·조건 수정·반대 방향에서만 다시 차례", () => {
+  // A +10%, B −20%, C +30%
+  const STOCKS = [st({ id: "a" }), st({ id: "b", currentPrice: 80 }), st({ id: "c", currentPrice: 130 })];
+  const rows = (l: StockLabels, now = NOW, stocks = STOCKS) => buildBoardRows(stocks, RATES, l, now);
+  const by = (rs: ReturnType<typeof rows>, t: string) => rs.find((r) => r.labelKey === t)!;
+  const P0 = "2026-10-01T00:00:00Z";
+  const chk = (plan: NonNullable<StockLabels["items"][string]["plan"]>) => ({ label: "check" as const, labeledAt: P0, at: P0, plan: { ...plan, at: P0 } });
+  const DAY = 86400000;
+  /** 화면의 `그대로 두기`와 같은 쓰기 — 그 순간 행의 차례 이유를 hit으로 남긴다 */
+  const press = (l: StockLabels, t: string, now: number, stocks = STOCKS): StockLabels => {
+    const r = by(rows(l, now, stocks), t);
+    return recordReview(l, t, "same", new Date(now).toISOString(), { price: r.nowPrice!, rate: r.rate! }, undefined, hitOf(r.dueReason));
+  };
+  const hits = (l: StockLabels, t: string) => reviewsOf(l, t).filter((x) => x.hit === "up" || x.hit === "down").length;
+
+  it("상한 + 기본 주기 3개월 — 누르면 풀리고 약속한 다음 점검일에 다시 차례(문구 `그대로 두면 다음 점검은 2월 18일`과 같은 날)", () => {
+    const l0 = mk({ C: chk({ up: 25 }) }, 3);
+    expect(by(rows(l0), "C").dueReason).toEqual({ kind: "up", pct: 25 });
+    expect(monthDayText(addMonthsKst(NOW, 3))).toBe("2월 18일"); // 버튼 아래 약속 줄의 날짜
+    const l1 = press(l0, "C", NOW);
+    const r = by(rows(l1), "C");
+    expect([r.due, r.dueReason, r.checkedToday, monthDayText(r.nextCheckMs!)]).toEqual([false, null, true, "2월 18일"]);
+    expect(countDueRows(rows(l1))).toBe(0);
+    // 약속한 날 전날까지 차례 아님, 그날부터 다시 차례(조건에 여전히 닿아 있으면 그 이유)
+    expect(by(rows(l1, Date.parse("2027-02-17T03:00:00Z")), "C").due).toBe(false);
+    expect(by(rows(l1, Date.parse("2027-02-18T03:00:00Z")), "C").dueReason).toEqual({ kind: "up", pct: 25 });
+    // 그날 다시 누르면 또 풀린다
+    const l2 = press(l1, "C", Date.parse("2027-02-18T03:00:00Z"));
+    expect(by(rows(l2, Date.parse("2027-02-19T03:00:00Z")), "C").due).toBe(false);
+    expect(hits(l2, "C")).toBe(2);
+  });
+  it("날짜를 넘겨도 차례가 아니라 hit 기록이 늘지 않는다 — 다음 날 누른 기록은 hit 없음, 확인은 그대로", () => {
+    let l = press(mk({ C: chk({ up: 25 }) }, 3), "C", NOW);
+    for (const d of [1, 2, 3]) {
+      const r = by(rows(l, NOW + d * DAY), "C");
+      expect([r.due, r.checkedToday, hitOf(r.dueReason)]).toEqual([false, false, undefined]);
+      l = press(l, "C", NOW + d * DAY);
+      expect(by(rows(l, NOW + d * DAY), "C").due).toBe(false);
+    }
+    expect([reviewsOf(l, "C").length, hits(l, "C")]).toEqual([4, 1]);
+    expect(pctAckOf(l, "C", l.items.C)).toMatchObject({ hit: "up", at: new Date(NOW).toISOString() }); // hit 없는 뒤 기록은 건너뛴다
+    expect(by(rows(l, NOW + 40 * DAY), "C").due).toBe(false);
+  });
+  it("같은 날 다시 누름은 기존처럼 화면이 막는다(checkedToday) — 차례가 풀려도 값은 유지", () => {
+    const l = press(mk({ C: chk({ up: 25 }) }, 3), "C", NOW);
+    expect(by(rows(l, NOW + 3600000), "C")).toMatchObject({ due: false, checkedToday: true });
+  });
+  it("하한 + 주기·기간 없음 — 누르면 풀리고, 확인 기록 + 3개월이 지나 여전히 닿아 있으면 다시 차례(영구 확인 아님, 다음 점검일 표시는 없음)", () => {
+    const l0 = mk({ B: chk({ down: 20 }) });
+    expect(by(rows(l0), "B").dueReason).toEqual({ kind: "down", pct: 20 });
+    const l1 = press(l0, "B", NOW); // 2026-11-18 확인
+    expect(by(rows(l1), "B")).toMatchObject({ due: false, nextCheckMs: null });
+    expect(PCT_ACK_MONTHS).toBe(3);
+    // 3개월 경계 — 2027-02-17까지 풀린 채, 2027-02-18부터 다시 차례
+    expect(by(rows(l1, Date.parse("2027-02-17T03:00:00Z")), "B").due).toBe(false);
+    expect(by(rows(l1, Date.parse("2027-02-18T03:00:00Z")), "B").dueReason).toEqual({ kind: "down", pct: 20 });
+    // 그 사이 차례가 아닌 날 누른 기록(hit 없음)은 3개월을 미루지 않는다
+    const mid = press(l1, "B", NOW + 30 * DAY);
+    expect(reviewsOf(mid, "B").map((x) => x.hit)).toEqual([undefined, "down"]);
+    expect(by(rows(mid, Date.parse("2027-02-18T03:00:00Z")), "B").due).toBe(true);
+    // 3개월 뒤 조건에서 벗어나 있으면 차례 아님
+    expect(by(rows(l1, Date.parse("2027-02-18T03:00:00Z"), [st({ id: "b", currentPrice: 95 })]), "B").due).toBe(false);
+    // 다시 누르면 그날부터 3개월 풀린다
+    const l3 = press(l1, "B", Date.parse("2027-02-18T03:00:00Z"));
+    expect(by(rows(l3, Date.parse("2027-05-17T03:00:00Z")), "B").due).toBe(false);
+    expect(by(rows(l3, Date.parse("2027-05-18T03:00:00Z")), "B").due).toBe(true);
+  });
+  it("확인 뒤 조건 — 메모만 고치면 plan.at이 그대로라 풀린 채(D-5, 같은 날 `오늘 점검함` + `점검 차례` 모순 없음), ±% 값·기간을 고치면 다시 차례", () => {
+    const l1 = press(mk({ B: chk({ down: 20 }) }), "B", NOW);
+    const later = new Date(NOW + 3600000).toISOString(); // 같은 날 1시간 뒤
+    // 같은 값으로 저장하면 그대로
+    expect(setStockPlan(l1, "B", { down: 20 }, later)).toBe(l1);
+    // 메모만 입력 — 저장은 되지만 plan.at 유지
+    const memo = setStockPlan(l1, "B", { down: 20, memo: "실적 발표 뒤 다시 보기" }, later);
+    expect(memo.items.B.plan).toEqual({ down: 20, memo: "실적 발표 뒤 다시 보기", at: P0 });
+    expect(memo.items.B.at).toBe(later); // 병합 기준 시각은 움직인다
+    expect(by(rows(memo, NOW + 3600000), "B")).toMatchObject({ due: false, checkedToday: true });
+    // 메모 고치기·지우기도 같다
+    const memo2 = setStockPlan(memo, "B", { down: 20 }, later);
+    expect(memo2.items.B.plan).toEqual({ down: 20, at: P0 });
+    expect(by(rows(memo2, NOW + 3600000), "B").due).toBe(false);
+    // ±% 값을 고치면 새 조건 — 다시 차례, 누르면 다시 풀린다
+    const l2 = setStockPlan(memo, "B", { down: 15, memo: "실적 발표 뒤 다시 보기" }, new Date(NOW + DAY).toISOString());
+    expect(l2.items.B.plan!.at).toBe(new Date(NOW + DAY).toISOString());
+    expect(by(rows(l2, NOW + DAY), "B").dueReason).toEqual({ kind: "down", pct: 15 });
+    expect(by(rows(press(l2, "B", NOW + DAY), NOW + 2 * DAY), "B").due).toBe(false);
+    // 반대쪽 조건 추가·기간 변경도 조건 수정이다
+    expect(setStockPlan(l1, "B", { down: 20, up: 50 }, later).items.B.plan!.at).toBe(later);
+    expect(by(rows(setStockPlan(l1, "B", { down: 20, months: 6 }, later), NOW + 3600000), "B").due).toBe(true);
+  });
+  it("같은 날 ±% 값·기간을 고쳐 다시 차례가 되면 `그대로 두기`를 다시 누를 수 있다 — `점검 차례` + `오늘 점검함` 동시 0, 조건 수정 1번에 1번만", () => {
+    const H = 3600000;
+    const l1 = press(mk({ C: chk({ up: 25 }) }, 3), "C", NOW);
+    expect(by(rows(l1, NOW + H), "C")).toMatchObject({ due: false, checkedToday: true });
+    // 같은 날 상한 25 → 20: 다시 차례, 버튼이 다시 열린다
+    const l2 = setStockPlan(l1, "C", { up: 20 }, new Date(NOW + H).toISOString());
+    expect(by(rows(l2, NOW + 2 * H), "C")).toMatchObject({ due: true, dueReason: { kind: "up", pct: 20 }, checkedToday: false });
+    // 다시 누르면 풀리고 같은 날 재누름은 다시 막힌다(같은 날 기록 2건 = 예외 1회)
+    const l3 = press(l2, "C", NOW + 2 * H);
+    expect(by(rows(l3, NOW + 3 * H), "C")).toMatchObject({ due: false, checkedToday: true });
+    expect(reviewsOf(l3, "C").map((x) => x.hit)).toEqual(["up", "up"]);
+    // 메모만 고친 경우는 예외 없음(차례가 아니고 막힌 채)
+    expect(by(rows(setStockPlan(l3, "C", { up: 20, memo: "메모" }, new Date(NOW + 4 * H).toISOString()), NOW + 5 * H), "C")).toMatchObject({ due: false, checkedToday: true });
+    // 조건을 고쳤지만 닿지 않아 차례가 아니면 막힌 채(상한 20 → 40, +30%)
+    expect(by(rows(setStockPlan(l3, "C", { up: 40 }, new Date(NOW + 4 * H).toISOString()), NOW + 5 * H), "C")).toMatchObject({ due: false, checkedToday: true });
+    // 기록 없이 checkedAt만 있는 경우(시세 없이 누름)도 같은 판정
+    const noRec = mk({ C: { ...chk({ up: 25 }), checkedAt: new Date(NOW).toISOString() } }, 3);
+    expect(by(rows(noRec, NOW + H), "C")).toMatchObject({ due: true, checkedToday: true }); // 조건을 고치지 않았으면 기존 그대로
+    expect(by(rows(setStockPlan(noRec, "C", { up: 20 }, new Date(NOW + H).toISOString()), NOW + 2 * H), "C")).toMatchObject({ due: true, checkedToday: false });
+  });
+  it("plan.at이 없는 옛 조건 — 메모만 고쳐도 at을 새로 만들지 않는다", () => {
+    const l = mk({ B: { label: "check", labeledAt: P0, at: P0, plan: { down: 20 } } });
+    expect(setStockPlan(l, "B", { down: 20, memo: "메모" }, new Date(NOW).toISOString()).items.B.plan).toEqual({ down: 20, memo: "메모" });
+  });
+  it("조건 기간(plan.months)이 있으면 그 기간 뒤에 다시 차례 — 기본 주기보다 먼저", () => {
+    const l = press(mk({ B: chk({ down: 20, months: 6 }) }, 3), "B", NOW);
+    expect(by(rows(l, Date.parse("2027-05-17T03:00:00Z")), "B").due).toBe(false);
+    expect(by(rows(l, Date.parse("2027-05-18T03:00:00Z")), "B").dueReason).toEqual({ kind: "down", pct: 20 });
+  });
+  it("반대 방향 조건에 닿으면 다시 차례 — 확인은 가장 최근 ±% 기록의 방향만", () => {
+    const up = [st({ id: "c", currentPrice: 130 })];
+    const down = [st({ id: "c", currentPrice: 80 })];
+    const l1 = press(mk({ C: chk({ up: 25, down: 15 }) }), "C", NOW, up);
+    expect(by(rows(l1, NOW + DAY, up), "C").due).toBe(false);
+    expect(by(rows(l1, NOW + DAY, down), "C").dueReason).toEqual({ kind: "down", pct: 15 });
+    const l2 = press(l1, "C", NOW + DAY, down);
+    expect(by(rows(l2, NOW + 2 * DAY, down), "C").due).toBe(false);
+    expect(by(rows(l2, NOW + 2 * DAY, up), "C").dueReason).toEqual({ kind: "up", pct: 25 }); // 다시 상한에 닿음
+  });
+  it("5.125에서 누른 기록(hit 없음)은 어느 조건을 보고 눌렀는지 알 수 없어 확인으로 치지 않는다 — 다음 누름부터 풀린다", () => {
+    const old: StockLabels = { ...mk({ C: { ...chk({ up: 25 }), checkedAt: "2026-11-10T03:00:00Z" } }, 3),
+      reviews: [{ t: "C", at: "2026-11-10T03:00:00Z", from: "check", choice: "same", price: 130, rate: 30 }] };
+    expect(pctAckOf(old, "C", old.items.C)).toBeNull();
+    expect(by(rows(old), "C").dueReason).toEqual({ kind: "up", pct: 25 });
+    const next = press(old, "C", NOW);
+    expect(reviewsOf(next, "C").map((x) => x.hit)).toEqual(["up", undefined]); // 옛 기록은 그대로 남는다
+    expect(by(rows(next, NOW + DAY), "C").due).toBe(false);
+  });
+  it("확인으로 치지 않는 기록 — 조건을 고치기 전·지금 이름표를 정하기 전 기록, 바꾸기 기록, 기간 차례 기록", () => {
+    const rv = (at: string, o: Record<string, unknown> = {}) => ({ t: "C", at, from: "check" as const, choice: "same" as const, price: 130, rate: 30, hit: "up" as const, ...o });
+    const base = mk({ C: chk({ up: 25 }) });
+    const due = (reviews: StockLabels["reviews"], items = base.items) => by(rows({ ...base, items, reviews }), "C").due;
+    expect(due([rv("2026-10-20T00:00:00Z")])).toBe(false);
+    expect(due([rv("2026-10-20T00:00:00Z")], { C: { ...base.items.C, plan: { up: 25, at: "2026-10-25T00:00:00Z" } } })).toBe(true); // 기록 뒤 조건 수정
+    expect(due([rv("2026-09-20T00:00:00Z")])).toBe(true); // 이름표를 정하기 전
+    expect(due([rv("2026-10-20T00:00:00Z", { choice: "keep" })])).toBe(true);
+    expect(due([rv("2026-10-20T00:00:00Z", { hit: "cycle" })])).toBe(true);
+    expect(due([rv("2026-10-20T00:00:00Z", { hit: "down" })])).toBe(true); // 방향 다름
+  });
+  it("기기 경합으로 checkedAt이 져도 기록이 남아 있으면 풀린 채다", () => {
+    const l = press(mk({ C: chk({ up: 25 }) }, 3), "C", NOW);
+    const { checkedAt: _c, ...item } = l.items.C;
+    expect(by(rows({ ...l, items: { C: item } }, NOW + DAY), "C").due).toBe(false);
+  });
+  it("코인 키(c:)도 같은 판정 — 허브·세그먼트 수(growStatus)와 행 수가 함께 준다", () => {
+    const btc = { id: "c1", name: "비트코인", symbol: "BTC", quantity: 0.05, averagePrice: 120_000_000, currentPrice: 140_000_000, purchaseDate: "2025-10-01" } as Crypto;
+    const l0 = mk({ "c:BTC": chk({ up: 10 }), C: chk({ up: 25 }) }, 3);
+    const boards = (l: StockLabels, now = NOW) => buildGrowBoards({ stocks: STOCKS, crypto: [btc], realEstate: [], physicalAssets: [], transactions: [], cryptoTransactions: [] }, RATES, l, now);
+    const coin = buildCryptoRows([btc], l0, NOW)[0];
+    expect(coin.dueReason).toEqual({ kind: "up", pct: 10 });
+    expect(growStatus(boards(l0)).due).toBe(2);
+    const l1 = recordReview(l0, "c:BTC", "same", new Date(NOW).toISOString(), { price: coin.nowPrice!, rate: coin.rate! }, undefined, hitOf(coin.dueReason));
+    expect(buildCryptoRows([btc], l1, NOW + DAY)[0].due).toBe(false);
+    const b = boards(l1, NOW + DAY);
+    expect(growStatus(b).due).toBe(1);
+    expect(growStatus(b).due).toBe(countDueRows(b.stock) + countDueRows(b.crypto) + countDueRows(b.own));
+    expect(buildCryptoRows([btc], l1, Date.parse("2027-02-18T03:00:00Z"))[0].dueReason).toEqual({ kind: "up", pct: 10 });
   });
 });
 
