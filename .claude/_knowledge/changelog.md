@@ -19,6 +19,12 @@
 - **고르기**(`lib/finance/my-stock-today.ts`, 신규·순수): 상세·주식 `전체` 행 칩 중 0.0% 제외, 원화 등락 기여 절대값 최대(동률 → 등락률 → 평가금). `computeTodayChip`에 `krwChange`(분자 합 − 분모 합)만 추가 — 새 계산·새 반올림 0, 기여 금액은 화면·GA·서버 미사용.
 - **조회**: 상세·주식과 같은 queryKey `useQuery` 1개(데이터 훅·취소 effect 없음 — 요청 +1 경합 회피), 캐시 적중은 `readCompleteProfitCache`(fetchProfitRef 첫 단계 추출) `initialData`로 첫 렌더 결과. 자리 잡기(스켈레톤)는 조회가 실제로 도는 동안만. preview 실측 요청 수 줄 없는 빌드와 같음.
 - 차례 팁(#245)과 무관하게 항상 뜬다(`home-tip*` diff 0). 주식 없음·첫 저장 당일·캡처·칩 없음 마크업은 선커밋 스냅샷과 같다. GA `home_my_stock` → `홈·내 종목 오늘`. 새 소식 `20261120-01`. 저장 키·스키마·동기화·서버 전송 변경 0.
+## 2026-11-20 (v5.133)
+
+### 체험 경계 보강·홈 원인 줄 지수 날짜 (#5.133, risk:low)
+- **왜**: 체험은 더보기·설정을 뺐는데 스와이프·주소 해시로는 닿았고, 숨은 GA 제외 토글이 체험 GA 차단을 덮어쓸 수 있었다. 320 복귀 웰컴(현금)이 `현금성 / 자산으로`로 갈렸다. 홈 1280 원인 줄 `코스피 종가 +2.0%`는 날짜가 없어 다른 날짜 값 옆에서 같은 날로 읽혔다(C142).
+- `navigation-context.tsx` `swipeOrderOf`·`guardTrialView`(체험 중 스와이프 순서에서 more 제외, `#more`·`#settings` → 홈 `replaceState`), `settings-page.tsx` `handleGaOptoutTap` 체험 중 무시, `welcome-guide.tsx` 현금 설명 U+00A0, `market-entry-line.tsx` `causeMarketText`·`CauseMarketSegment` = 지수 줄과 같은 `M/D 종가 코스피 +x.x%`(기준일 계산 4.90 그대로). 구간이 +35~40px 넓어져 숨김 경계 W<440→W<480(qa D-1, 라벨 말줄임 방지).
+- 비체험 경로·저장 키·스키마·동기화·서버 전송 diff 0. `trial-boot.ts`·`trial-gate.tsx`·`ga.ts`·`layout.tsx`·`TRIAL_BLOCKED_PATHS` 무변경.
 
 ## 2026-11-19 (v5.131)
 
@@ -42,6 +48,14 @@
 - **`내 자산 점검` 타일**(`stock-tools.tsx`): 셋째 자리(X-Ray 뒤·세금 앞). 값 줄(주식 행 기준) `주식 점검 차례 N종목` / `주식 장기 보유 N · 점검 대상 N` / `장기 보유 · 점검 대상 정하기 전`. 격자: 홀수면 마지막 2칸, 4개 `lg:grid-cols-4`, 360 미만 4개는 아래 둘 한 줄씩.
 - **뒤로가기**(`navigation-context.tsx`): 성과 › 자산 성적표·불리기에 상세에서 들어왔으면(`reportEnteredFromDetail`) `history.back()` + 라벨 `뒤로`, 그 밖은 성과 허브 그대로.
 - **줄바꿈 가운뎃점**(`layout/ui/dot-wrap.tsx`): 가운뎃점을 뒤 조각의 머리에 두고 줄 왼쪽 8px를 잘라, 조각이 다음 줄로 내려가도 줄 머리·줄 끝에 `·`가 남지 않는다(행 메타 줄·머리 문장·타일 값 줄 공용).
+- **상세·주식 행**(`stock-tab.tsx`): 메타 줄에 `· 장기 보유` / `· 점검 대상` / 차례면 `· 점검 차례`(인디고, 하나만). 정한 종목에만 그린다(미정·티커 없음·상장폐지·수량 0·증권사별 하위 항목·인증카드 = 마크업 그대로). 390 미만은 차례 행에만(360~389 행 높이 +0). `StockTab`이 `buildBoardRows` 1회 → 행 표시·차례 진입·타일 값 공유.
+- **진입 1개**(`activity/grow-due-entry.tsx` `GrowDueEntry`): `점검 차례 · {이유} ›` 한 줄 버튼. 종목 한 장 머리와 차례 행 펼침 맨 위가 같은 컴포넌트. 누르면 `aimGrowStockView(labelKey)` → 주식 보기에서 그 종목 점검 한 장이 열린 채 도착(`report-tab.ts` 1회용 `growOpenKey`, 블록이 초기값으로 읽고 effect로 비움 + 그 행으로 스크롤).
+- **종목 한 장 머리**(`stock-page-view.tsx` `StockPageDecision`): 내 수익 줄 아래 `{내 결정} · {정한 날 대비|점검일 대비} {%} · {조건 절}`. 조건 절 = `다시 볼 조건 평단 대비 −15% 이하 또는 +25% 이상`(조건 안쪽은 `또는` — 가운뎃점은 조각 구분에만) 또는 `다음 점검 {날짜}`. 값 없는 조각은 통째로 없다. 360 미만 + 하한·상한 둘 다면 조건 절 생략.
+- **홈 팁 `due`**(`home-tip.ts`·`home-tip-box.tsx`): 순위 결산 아래·새 소식 위. 호출부가 `dueTipOf`(허브 카드와 같은 `growStatus` 수·단위 + 이유 1줄)로 만든 값을 넘기고 `pickHomeTip`은 순위만 정한다. 배지 `내 조건`, 이름표를 읽은 뒤(`labelsReady`)에만 판정(아래 순위 팁이 먼저 떴다 바뀌지 않게). 체험·앱 잠금 제외.
+- **`내 자산 점검` 타일**(`stock-tools.tsx`): 셋째 자리(X-Ray 뒤·세금 앞). 값 줄(주식 행 기준) `주식 점검 차례 N종목` / `주식 장기 보유 N · 점검 대상 N` / `장기 보유 · 점검 대상 정하기 전`. 격자: 홀수면 마지막 2칸, 4개는 PC도 2×2(`lg:grid-cols-2`), 360 미만 4개는 아래 둘 한 줄씩.
+- **뒤로가기**(`navigation-context.tsx`): 성과 › 자산 성적표·불리기에 상세에서 들어왔으면(`reportEnteredFromDetail`) `history.back()` + 라벨 `뒤로`, 그 밖은 성과 허브 그대로.
+- **줄바꿈 가운뎃점**(`layout/ui/dot-wrap.tsx`): 가운뎃점을 뒤 조각의 머리에 두고 줄 왼쪽 8px를 잘라, 조각이 다음 줄로 내려가도 줄 머리·줄 끝에 `·`가 남지 않는다(행 메타 줄·머리 문장·타일 값 줄 공용).
+- 새 소식 `20261119-02`(`주식 목록에서 내가 정한 장기 보유·점검 대상이 보여요`, 바로 가기 = 상세·주식). 머리 조건 절이 360~389에서 3줄로 접힐 때 첫 글자가 잘리던 것을 `DotLead inset`으로 고침(ui p1-1).
 - `hooks/use-stock-labels.ts` `useStockLabelsRead()` 신설(읽기 전용 — 쓰기·GA 결선 없음), `pctText`는 `grow-board.ts`로 옮겨 불리기 화면과 같은 글자.
 - GA title 4개(`feature_use`, 종목·값·건수 미전송, preview·체험 미전송): `홈 팁·점검 차례`·`상세·주식·내 결정`·`상세·주식·내 자산 점검`(판정 지표)·`상세·주식·내 결정 보임`.
 - 미정 기기: 기준 스냅샷(코드 변경 전 선커밋 b10c4fc) 4개 중 타일 묶음 1개만 바뀜. 가드 테스트 2곳(`asset-grade-copy`·`stock-labels-5125-compat`)의 '홈은 이름표를 읽지 않는다'는 이 과제 범위(홈 팁 상자 1곳·읽기 전용)에 맞춰 허용 목록을 고쳤다.

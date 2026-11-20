@@ -9,7 +9,7 @@ export const DOT_WRAP_ROW = "-ml-2 [clip-path:inset(-2px_-100vw_-2px_0.5rem)]";
 /** 첫 조각 — 당긴 8px만큼 되돌린다 */
 export const DOT_WRAP_FIRST = "ml-2";
 
-/** 둘째 조각부터 맨 앞에 두는 가운뎃점 */
-export function DotLead() {
-  return <span aria-hidden className="-ml-1 inline-block w-3 text-center font-normal text-muted-foreground">{" · "}</span>;
+/** 둘째 조각부터 맨 앞에 두는 가운뎃점. inset = 조각 안에서 줄이 접히는 조각용 — 조각에 ml-2를 주고 점을 8px 더 왼쪽(-ml-3)에 둔다(접힌 줄이 보이는 가장자리에서 시작, 같은 줄 간격은 그대로) */
+export function DotLead({ inset = false }: { inset?: boolean } = {}) {
+  return <span aria-hidden className={`${inset ? "-ml-3" : "-ml-1"} inline-block w-3 text-center font-normal text-muted-foreground`}>{" · "}</span>;
 }

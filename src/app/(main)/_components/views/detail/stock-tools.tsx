@@ -26,7 +26,7 @@ import { DUE_TEXT } from "../activity/grow-due-entry";
 import { aimGrowStockView } from "../activity/report-tab";
 import { MarketTileValue, useMarketEntryValue } from "../activity/market-entry-line";
 
-const LG_COLS: Record<number, string> = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4" };
+const LG_COLS: Record<number, string> = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-2" };
 const NUM = "font-semibold text-foreground";
 
 /** `내 자산 점검` 타일 값 줄(#245) — 조각은 grow-decision.growTileValueOf의 parts와 글자가 같다. 줄은 가운뎃점 자리에서만 바뀌고 줄 끝에 가운뎃점이 남지 않는다 */
@@ -85,10 +85,10 @@ export function StockToolTiles({ stocks, exchangeRates, grow }: { stocks: Stock[
 
   const showGrow = grow !== undefined;
   const count = 1 + (showMarket ? 1 : 0) + (showGrow ? 1 : 0) + (showTax ? 1 : 0);
-  // 격자: 모바일 2열. 홀수 개면 마지막 타일이 2칸, 4개면 2×2(360 미만은 아래 두 타일을 한 줄씩 — 반 칸에 값 줄이 들어가지 않는다)
+  // 격자: 모바일 2열. 홀수 개면 마지막 타일이 2칸, 4개면 PC도 2×2(360 미만은 아래 두 타일을 한 줄씩 — 반 칸에 값 줄이 들어가지 않는다)
   const last = showTax ? "tax" : showGrow ? "grow" : "xray";
   const span = (id: "market" | "xray" | "grow" | "tax") =>
-    count % 2 === 1 && id === last ? "col-span-2 lg:col-span-1" : count === 4 && (id === "grow" || id === "tax") ? "max-[359px]:col-span-2" : undefined;
+    count % 2 === 1 && id === last ? "col-span-2 lg:col-span-1" : count === 4 && (id === "grow" || id === "tax") ? "max-[360px]:col-span-2" : undefined;
   return (
     <div
       data-testid="stock-tools"
