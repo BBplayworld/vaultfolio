@@ -1,0 +1,114 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>#258 거래 입력 목업(토큰 근사, 데모 값)</title>
+<style>
+:root{--bg:#F0F2F4;--pop:#F0F2F4;--fg:#111317;--mf:#5f646d;--mut:#dfe2e6;--card:#fff;--inp:#8a8e96;--brand:#5b6fbf;--sec:#e3e6ea;--amber:#d97706;--red:#ef4444;--sky:#0284c7;--dest:#dc2626;--ov:rgba(0,0,0,.45)}
+.dark{--bg:#0B0D12;--pop:#24282F;--fg:#f1f2f4;--mf:#aeb3bd;--mut:#353a43;--card:#191C22;--inp:#5a606b;--sec:#353a43;--amber:#fbbf24;--sky:#38bdf8;--dest:#f87171;--ov:rgba(0,0,0,.6)}
+*{box-sizing:border-box;margin:0}button{border:0;font:inherit;color:inherit;cursor:pointer}
+body{background:var(--ov);font:14px/1.5 -apple-system,"Apple SD Gothic Neo","Noto Sans KR","WenQuanYi Zen Hei",sans-serif;color:var(--fg);padding:16px;word-break:keep-all}
+body.dark{background:#000}
+.dlg>*,.f>*,.box>*{min-width:0}.dlg{background:var(--pop);border-radius:20px;padding:24px;width:calc(100vw - 32px);margin:0 auto;display:grid;gap:16px}
+h2{font-size:18px;font-weight:600}
+.f{display:grid;gap:8px}.f>.lb{font-weight:500;font-size:14px}
+.sel{height:36px;border-radius:12px;background:color-mix(in oklab,var(--mut) 60%,transparent);padding:0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dark .sel{border:1px solid var(--inp)}
+.sel span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mf{color:var(--mf)}
+.btn{height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;background:var(--sec);width:100%}
+.btn.brand{background:var(--brand);color:#fff}
+.btn.ghost{background:none;width:auto;padding:0 12px;color:var(--mf)}
+.inp{height:40px;border-radius:12px;border:1px solid var(--inp);background:transparent;padding:0 12px 0 36px;display:flex;align-items:center;position:relative}
+.dark .inp{border:0;background:color-mix(in oklab,var(--mut) 50%,transparent)}
+.inp svg{position:absolute;left:12px;color:var(--mf)}
+.caret{display:inline-block;width:1px;height:18px;background:var(--fg);margin-left:1px;vertical-align:middle}
+.box{background:color-mix(in oklab,var(--mut) 40%,transparent);border-radius:12px;padding:12px;display:grid;gap:12px}
+.dark .box{background:color-mix(in oklab,var(--mut) 25%,transparent)}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px}
+.hd b{font-weight:600}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:color-mix(in oklab,var(--mut) 60%,transparent);border-radius:12px;padding:4px;gap:0}
+.seg>div{min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.seg>.on{background:var(--card);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.dark .seg>.on{background:rgba(255,255,255,.15)}
+.list{display:grid;gap:2px;max-height:240px;overflow:hidden}
+.row{min-height:48px;border-radius:8px;padding:6px 12px;display:grid;align-content:center}
+.row.act{background:color-mix(in oklab,var(--mut) 80%,transparent)}
+.row b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row small{font-size:12px;color:var(--mf);font-variant-numeric:tabular-nums}
+.sk{height:48px;border-radius:8px;background:color-mix(in oklab,var(--mut) 70%,transparent);opacity:.7}
+.sum{background:color-mix(in oklab,var(--mut) 50%,transparent);border-radius:12px;padding:8px 8px 8px 12px;display:flex;align-items:center;gap:8px}
+.sum .t{min-width:0;flex:1}.sum b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sum small{display:block;font-size:12px;line-height:1.5;color:var(--mf);font-variant-numeric:tabular-nums}
+.note{display:flex;gap:8px;align-items:flex-start;color:var(--mf);line-height:1.6;text-wrap:pretty}
+.note svg{flex:none;margin-top:3px;color:var(--sky)}
+.amber{color:var(--amber)}
+.card{display:flex;align-items:center;gap:8px;min-height:40px;border-radius:12px;padding:8px 12px;background:color-mix(in oklab,var(--mut) 40%,transparent)}
+.dark .card{background:color-mix(in oklab,var(--mut) 25%,transparent)}
+.card.on{background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.12),0 0 0 2px var(--brand)}
+.chip{font-size:12px;font-weight:500;padding:2px 6px;border-radius:4px;background:color-mix(in oklab,var(--brand) 14%,transparent);color:var(--brand);flex:none}
+.dark .chip{color:#aab6ee}
+.grid2>*{min-width:0}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 12px}
+.sel.s{height:36px;font-size:14px}
+.pre{background:color-mix(in oklab,var(--mut) 40%,transparent);border-radius:12px;padding:12px;display:grid;gap:6px}
+.dark .pre{background:color-mix(in oklab,var(--mut) 25%,transparent)}
+.pre .r{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.pre .r span:first-child{min-width:0;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;color:var(--mf)}
+.nw{white-space:nowrap}
+.foot{display:grid;gap:8px}
+.lbl{font-size:12px;color:var(--mf)}
+.tgl{display:flex;gap:8px}.tgl .btn{flex:1}
+.buy{background:var(--red)!important;color:#fff}
+@media(max-width:359px){.grid2{grid-template-columns:1fr}}
+</style></head><body>
+<div id="app"></div>
+<script>
+const I={
+search:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+chev:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".6"><path d="m6 9 6 6 6-6"/></svg>',
+check:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6fbf" stroke-width="2.5" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>',
+plus:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".6"><path d="M12 5v14M5 12h14"/></svg>',
+info:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+load:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>'};
+const sel=(t,ph)=>`<div class="sel"><span class="${ph?'mf':''}">${t}</span>${I.chev}</div>`;
+const field=(l,body,tid)=>`<div class="f" ${tid?`data-testid="${tid}"`:''}><div class="lb">${l}</div>${body}</div>`;
+const find=`<button class="btn" data-testid="trade-find-other-stock">${I.search}다른 종목 찾기</button>`;
+const holdSel=(v)=>sel(v||'종목 선택',!v);
+const seg=(m)=>`<div class="seg" data-testid="trade-stock-search-market"><div class="${m==='kr'?'on':''}">국내</div><div class="${m==='us'?'on':''}">해외</div></div>`;
+const inp=(q,ph)=>`<div class="inp" data-testid="trade-stock-search-input">${I.search}${q?`<span>${q}</span><i class="caret"></i>`:`<span class="mf">${ph||'종목명 또는 종목코드'}</span>`}</div>`;
+const rows=(a,act)=>`<div class="list" role="listbox">${a.map((r,i)=>`<div class="row ${i===act?'act':''}" data-testid="trade-stock-search-result"><b>${r[0]}</b><small>${r[1]} · ${r[2]}</small></div>`).join('')}</div>`;
+const kr=[['삼성전자','005930','코스피'],['삼성전자우','005935','코스피'],['삼성중공업','010140','코스피']];
+const us=[['애플','AAPL','나스닥'],['애플 하이스피탈리티 리츠','APLE','뉴욕']];
+const empty=`<p class="mf" data-testid="trade-stock-search-empty" style="padding:4px 4px 8px;line-height:1.6;text-wrap:pretty">찾는 종목이 없어요. 이름이나 종목코드를 다시 확인해 주세요.</p>`;
+const err=`<p class="mf" data-testid="trade-stock-search-empty" style="padding:4px 4px 8px;line-height:1.6;text-wrap:pretty" role="status">검색하지 못했어요. 연결을 확인해 주세요.</p>`;
+const panel=(inner,back)=>`<div class="box" data-testid="trade-stock-search">${inner}${back?'<button class="btn ghost nw" style="justify-content:flex-start;padding:0 4px;margin-top:-4px" data-testid="trade-stock-search-back">보유 종목에서 고르기</button>':''}</div>`;
+const summary=(n,sub,price)=>`<div class="sum" data-testid="trade-new-stock-summary"><div class="t"><b>${n}</b>${(()=>{const a=sub.split(' · ');const pr=a[a.length-1].startsWith('현재가')?a.pop():'';return `<small>${a.join(' · ')}</small>`+(pr?`<small>${pr.startsWith('현재가 확인')?'<span style="display:inline-flex;gap:6px;align-items:center">'+I.load+pr+'</span>':pr}</small>`:'')})()}</div><button class="btn ghost" style="height:40px;padding:0 12px">바꾸기</button></div>`;
+const priceNote=`<p class="note" data-testid="trade-new-stock-price-note" role="status">${I.info}<span>현재가를 못 가져와서 체결 단가로 먼저 표시해요</span></p>`;
+const picker=(o)=>`<div style="display:grid;gap:6px">${(o.cands||[]).map((c,i)=>`<div class="card ${o.sel===i?'on':''}"><span class="chip">${c[0]}</span><span style="min-width:0;flex:1"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b style="font-weight:500">${c[1].split(' · ')[0]}</b><span class="mf"> · ${c[1].split(' · ')[1]}</span></span><span class="lbl nw" style="display:block;font-variant-numeric:tabular-nums">${c[2]}</span></span>${o.sel===i?I.check:''}</div>`).join('')}
+<div style="border-radius:12px;${o.sel==='new'?'background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.12),0 0 0 2px var(--brand)':''}"><div class="card ${o.sel==='new'?'':''}" style="${o.sel==='new'?'background:none':''}">${I.plus}<b style="font-weight:500;flex:1">신규 자산 등록</b>${o.sel==='new'?I.check:''}</div>
+${o.sel==='new'?`<div class="grid2">${sel(o.broker||'증권사 선택',!o.broker).replace('class="sel"','class="sel s"')}${sel(o.kinds).replace('class="sel"','class="sel s"')}</div>`:''}</div></div>`;
+const item=(body,extra)=>field('자산 항목 *',body+(extra||''));
+const brokerPrompt=`<p class="amber">신규 자산의 증권사를 선택하세요.</p>`;
+const link=(t)=>`<div class="box" data-testid="account-link-row"><div class="f"><div class="lb">연결 계좌</div>${sel(t)}</div><div class="pre" data-testid="cash-link-preview"><div class="r"><span>주거래 통장</span><span><span class="mf">1,250,000원</span> → <b>1,036,000원</b></span></div><p class="mf">214,000원만큼 현금이 줄어요</p></div></div>`;
+const qty=`<div class="f"><div class="lb">수량</div><div class="inp" style="padding-left:12px"><span>3</span></div></div>`;
+const dlg=(h,b)=>`<div class="dlg"><h2>${h||'거래 입력'}</h2>${b}</div>`;
+const S={
+ a:()=>dlg('',field('종목',holdSel()+find)),
+ a2:()=>dlg('',field('종목',holdSel('삼성전자 (005930.KS)')+find)),
+ b:()=>dlg('',field('종목',panel(seg('kr')+inp('삼성')+rows(kr,0),true))),
+ b_us:()=>dlg('',field('종목',panel(seg('us')+inp('apple')+rows(us,-1),true))),
+ load:()=>dlg('',field('종목',panel(seg('kr')+inp('삼성')+`<div data-testid="trade-stock-search-loading" aria-busy="true" style="display:grid;gap:2px"><div class="sk"></div><div class="sk"></div><div class="sk" style="opacity:.4"></div></div>`,true))),
+ e0:()=>dlg('',field('종목',seg('kr')+inp('')+'' ,'trade-stock-search')),
+ e0_hint:()=>dlg('',field('종목',seg('kr')+inp('')+empty.replace('찾는 종목이 없어요. 이름이나 종목코드를 다시 확인해 주세요.','').replace(/<p.*<\/p>/,''),'trade-stock-search')),
+ none:()=>dlg('',field('종목',panel(seg('kr')+inp('zzzx')+empty,true))),
+ error:()=>dlg('',field('종목',panel(seg('kr')+inp('삼성')+err,true))),
+ c:()=>dlg('',field('종목',summary('삼성전자','005930 · 국내 · 현재가 71,200원'))+item(picker({sel:'new',kinds:'국내주식'}),brokerPrompt)+qty),
+ c_fail:()=>dlg('',field('종목',summary('삼성전자','005930 · 국내')+priceNote)+item(picker({sel:'new',broker:'키움증권',kinds:'국내주식'}))+qty),
+ c_us:()=>dlg('',field('종목',summary('Apple Inc.','AAPL · 해외 · 현재가 $228.52'))+item(picker({sel:'new',broker:'토스증권',kinds:'해외주식'}))+qty+link('주거래 통장')),
+ c_load:()=>dlg('',field('종목',summary('삼성전자','005930 · 국내 · 현재가 확인하는 중'))+item(picker({sel:'new',kinds:'국내주식'}),brokerPrompt)),
+ f:()=>dlg('',field('종목',holdSel('삼성전자 (005930.KS)')+find)+item(picker({cands:[['국내','키움증권 · 삼성전자','120주 · 평단 68,400원'],['IRP','미래에셋 · 삼성전자','8주 · 평단 70,100원']],sel:0}),`<p class="mf" data-testid="trade-switched-existing-note" role="status" style="line-height:1.6;text-wrap:pretty">같은 증권사·종류의 항목이 있어서 그 항목에 이어서 기록해요</p>`)),
+ f0:()=>dlg('',field('종목',holdSel('삼성전자 (005930.KS)'))+item(picker({cands:[['국내','키움증권 · 삼성전자','120주 · 평단 68,400원']],sel:'new',broker:'키움증권',kinds:'국내주식'}))),
+ h1:()=>dlg('코인 거래 입력',field('코인',sel('비트코인 (BTC) · 업비트')+`<p class="note" data-testid="crypto-tx-new-coin-note"><span>새 코인은 암호화폐 추가에서 등록해요. 현금은 직접 줄여 주세요</span></p>`)),
+ h0:()=>dlg('코인 거래 입력',field('코인',`<p class="note" data-testid="crypto-tx-new-coin-note"><span>새 코인은 암호화폐 추가에서 등록해요. 현금은 직접 줄여 주세요</span></p>`)+`<div class="foot"><button class="btn">닫기</button></div>`),
+};
+const q=new URLSearchParams(location.search);
+if(q.get('t')==='dark')document.body.classList.add('dark');
+document.getElementById('app').innerHTML=S[q.get('s')]();
+</script></body></html>
