@@ -298,7 +298,7 @@ pickNewSpot(order, today, lastVisited): NewSpot | null   // 한 화면 1개 — 
 - `lib/number-utils.ts` `formatPriceByCurrency(value, currency)` — USD `$`·JPY `¥`·그 외 원. 기존 `formatPrice` 3벌(`stock-trades-view`·`stock-target-picker`·`delete-rollback-dialog`) 삭제·통합.
 - `lib/finance/profit-utils.ts` `fetchProfitRef` — 배치가 429·5xx면 불완전(캐시 저장·`onComplete` 생략, 남은 배치 중단), `Retry-After`(1~5초, 10초 초과면 재시도 안 함)로 **실행당 1회**만 재시도(요청 상한 = 배치 수 + 1). `profitRetryDelayMs`. 점검(`X-KIS-Unavailable`)은 기존 경로.
 - `lib/pwa/first-save-signal.ts` `setNudgeVisible`·`getNudgeVisible` — 설치 안내 카드 표시 중 신호(튜토리얼 양보용). `install-nudge-policy`는 튜토리얼 조건 없음.
-- `lib/analytics/ga.ts` `featureTitleOf`: `onboarding_action` method별 `웰컴·스크린샷 등록|직접 입력|가져오기|동기화 연결|웹에서 시작|체험`, `first_asset_saved`는 `첫 자산 저장·*`(`asset_save`는 `자산 저장·*`).
+- `lib/analytics/ga.ts` `featureTitleOf`: `onboarding_action` method별 `웰컴·스크린샷 등록|직접 입력|가져오기|동기화 연결|웹에서 시작|체험`(+ #249 `trial_start`에 `asset_type` → `웰컴·체험·<자산군>`, `source` activity|detail → `웰컴·체험·성과|상세`), `first_asset_saved`는 `첫 자산 저장·*`(`asset_save`는 `자산 저장·*`).
 - `lib/finance/stock-page.ts` `chipWidth`(한글 10.5·숫자 6.2 폭 추정)·`placeAvgChip({..., grid?})` 격자선 회피(없으면 무시).
 
 ### hooks — use-box-size.ts · use-loading-phase.ts (#4.84)
@@ -558,6 +558,9 @@ isMixedSections(raw)  // 국내(또는 기타)와 해외 section 공존
 - **동기화 암호화 설명 5문장은 `DEVICE_ENCRYPTION_COPY` 한 블록**(대표 지시로 실제 방식 기준 명칭 확정: "기기에서 암호화하는 동기화", 본문은 "기기에서 암호화…(종단간 암호화)"). 바꿀 때 블록만 교체. 옛 표현 재유입은 테스트가 `src/` 전체에서 막는다. "관리자도 알 수 없어요"는 동기화 자산 한정. "저장·전송"은 `\u2060` 묶음
 - 근거 1줄: 자산 암호화는 AES-256-GCM 1겹(기기 종단) + 전송 구간 HTTPS = "기기 종단 암호화 + 전송 구간 암호화". 새 안내 문구에 "서버"를 주어로 한 역할 나열 금지
 
+### 온보딩 마법사 시작 단계 (#5.131 #249)
+- `onboarding-wizard-store.ts` `open(start?: WizardCategory)` → `startCategory`(메모리만, `close()`에서 null). `onboarding-wizard-status.ts` `resolveWizardStart(status, start)` = start가 pending이면 그 단계, 아니면 `getResumeCategory ?? "intro"`. `getNextCategory(status, from)` = 뒤쪽 pending 첫 단계(flow `goToNextCategory`가 사용). 저장 형식·`wizard_step` 전송 무변경
+
 ### trial/ — 체험 모드 (#4.38 #59, risk high)
 - `trial-mode.ts`(정적·의존 0): `isTrialMode()`, `markTrialActive()`(게이트 전용, 되돌리는 경로 없음), `TRIAL_QUERY_KEY`·`TRIAL_ENTRY_URL`·`TRIAL_EXIT_KEY`(sessionStorage)·`TRIAL_BLOCKED_PATHS`(`/api/parse-screenshot`·`/api/share`·`/api/sync`·`/api/feedback` 및 하위)·`TRIAL_BLOCKED_MESSAGE`("체험 중에는 사용할 수 없어요")
 - `trial-boot.ts`(**동적 import 전용**, 정적 import 0건 테스트):
@@ -568,6 +571,7 @@ isMixedSections(raw)  // 국내(또는 기타)와 해외 section 공존
   - `runTrialBoot()` — 실제 주입은 `injectDemoPayload({ nickname: "" })`(Hero "순자산") + `skipDemoTutorial()`, 결과와 무관하게 `?trial` 제거
 - 가드(1줄씩): `isCloudSyncEnabled() && !isTrialMode()`, `isBackgroundWorkBlocked() … || isTrialMode()`, `resolveInAppGate({ isTrial })` 맨 앞 none, ga.ts `track`·`trackScreen`·`trackThenNavigate` no-op, 루트 layout 인라인 GA `trial=1 → ga-disable-<ID>`
 - sessionStorage는 격리하지 않음(알려진 한계)
+- `trial-exit.ts`(#5.131 #249, 순수 + Storage 주입): `resolveTrialExit(viewKey)` → `{ asset: stock|crypto|cash|loan|real-estate|null, ga: {asset_type}|{source: activity|detail}|null }` — 허용 목록 `Map`(프로토타입 키 통과 0), 모르는 값·빈 값 = 없음(현행). `writeTrialExit(storage, viewKey)`(둘째 키 → `trial_exit` 순), `consumeTrialExit(storage)` → `{returned, from}`(`trial_exit=1`일 때만 둘째 값 읽고 두 키 삭제, 아니면 둘째 키만 삭제, 예외 = 복귀 아님). 상수 `TRIAL_EXIT_FROM_KEY = "trial_exit_from"`은 `trial-mode.ts`(STORAGE_KEYS 밖, 탭 한정 1회용 — 저장 키 변경 아님)
 
 ### preview/demo-inject.ts (#4.38) — 데모 주입 공용 절차(preview `?demo=1`·체험)
 ```typescript

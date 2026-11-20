@@ -40,33 +40,41 @@ describe("TrialGate — 쿼리 없을 때 main과 동일(완료 기준 5)", () =
   });
 });
 
-describe("TrialBanner", () => {
+describe("TrialBanner — 전 화면 공통 상단 표시(#249)", () => {
   const html = renderToStaticMarkup(<TrialBanner />);
-  it("문구·testid·brand 버튼 1개·스크린샷 숨김", () => {
+  it("문구·testid·brand 버튼 1개·스크린샷 숨김·상단 sticky", () => {
     expect(html).toContain('data-testid="trial-banner"');
     expect(html).toContain("data-screenshot-hide");
-    expect(html).toContain("예시 데이터로 둘러보는 중이에요");
-    expect(html).toContain("저장되지 않아요");
+    expect(html).toContain("data-trial-bar");
+    expect(html).toMatch(/data-testid="trial-tag"[^>]*>예시 자산</);
+    expect(html).toMatch(/data-testid="trial-note"[^>]*>저장되지 않아요</);
+    expect(html).not.toContain("예시 데이터로 둘러보는 중이에요");
     expect(html).toContain("내 자산으로 시작");
     expect(html.match(/data-testid="trial-start-btn"/g)?.length).toBe(1);
     expect(html.match(/<button/g)?.length).toBe(1);
     expect(html).toMatch(/<button[^>]*class="[^"]*\bbg-brand\b/);
-    expect(html).not.toMatch(/\b(fixed|sticky)\b/);
+    // 가림 면 = 하단 탭과 같은 토큰, z = Z_LAYER.raised(20), 버튼 h-9 + 누름 48px(after -inset-y-1.5)
+    expect(html).toMatch(/data-testid="trial-banner"[^>]*class="[^"]*\bsticky\b[^"]*\bz-20\b[^"]*bg-background\/95[^"]*backdrop-blur-md/);
+    expect(html).toContain("after:-inset-y-1.5");
+    expect(html).toContain("h-9");
   });
   it("일반 웹(인앱 아님): iOS 가이드 영역 없음", () => {
     expect(html).not.toContain("trial-inapp-guide");
   });
-  it("page.tsx: 홈 뷰 + 체험 중에만, AssetPageTabs 앞", () => {
+  it("page.tsx: 체험 중이면 화면 종류와 무관하게 1곳, AssetPageTabs 앞(key 래퍼 밖), 화면 키 전달", () => {
     const src = read("app/(main)/page.tsx");
-    const banner = src.indexOf('{isTrialMode() && view.type === "home" && <TrialBanner />}');
+    const banner = src.indexOf("{isTrialMode() && <TrialBanner viewKey={viewToKey(view)} />}");
     expect(banner).toBeGreaterThan(0);
     expect(banner).toBeLessThan(src.indexOf("<AssetPageTabs />"));
+    expect(src.match(/<TrialBanner/g)?.length).toBe(1);
   });
-  it("종료: 표식 기록 후 / 이동, 원본 복구 코드 없음", () => {
+  it("종료: 화면 키 + 표식 기록 후 / 이동(인앱은 기록 전 return), 원본 복구 코드 없음", () => {
     const src = read("app/(main)/_components/views/home/trial-banner.tsx");
-    expect(src).toContain("sessionStorage.setItem(TRIAL_EXIT_KEY, \"1\")");
+    expect(src).toContain("writeTrialExit(sessionStorage, viewKey)");
     expect(src).toContain('window.location.assign("/")');
+    expect(src).toMatch(/if \(inApp\) \{[\s\S]*?return;\s*\}\s*try \{ writeTrialExit\(sessionStorage, viewKey\);/);
     expect(src).not.toMatch(/localStorage/);
+    expect(src).not.toMatch(/\btrack\(/);
   });
 });
 
@@ -84,8 +92,9 @@ describe("웰컴 진입 링크·복귀", () => {
     // 5.122(#234): 칩·인앱 보조 버튼이 같은 진입 훅을 쓴다 — 일반 칩 인자는 { category: "demo" } 그대로
     expect(src).toContain('trackThenNavigate("feature_use", params, TRIAL_ENTRY_URL);');
     expect(src).toContain('chip: { category: "demo" },');
-    expect(src.match(/WELCOME_CTA_METHODS\.trialStart/g)?.length).toBe(1);
-    expect(src).toMatch(/sessionStorage\.removeItem\(TRIAL_EXIT_KEY\);[\s\S]{0,200}track\("onboarding_action", \{ method: WELCOME_CTA_METHODS\.trialStart \}\);\s*setFocusCta\(true\);/);
+    // #249: 소비는 consumeTrialExit 1곳(두 키 동시 삭제) → trial_start 1건 + 허용 화면이면 꼬리 1건 → 포커스
+    expect(src.match(/WELCOME_CTA_METHODS\.trialStart/g)?.length).toBe(2);
+    expect(src).toMatch(/consumeTrialExit\(sessionStorage\)[\s\S]{0,200}track\("onboarding_action", \{ method: WELCOME_CTA_METHODS\.trialStart \}\);\s*const target = resolveTrialExit\(exit\.from\);\s*if \(target\.ga\) track\("onboarding_action", \{ method: WELCOME_CTA_METHODS\.trialStart, \.\.\.target\.ga \}\);/);
     // 링크는 마운트 후 + 공유 대기 아님 + 복원 해시 없음일 때만
     expect(src).toContain('action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink inApp={ctaState === "inapp"} /> : undefined}');
     expect(read("app/(main)/page.tsx")).toContain("<WelcomeGuide allowTrial={!isSharePending} skipHeroEnter={skipHeroEnterRef.current} />");

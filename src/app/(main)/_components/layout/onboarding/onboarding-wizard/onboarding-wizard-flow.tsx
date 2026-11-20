@@ -22,7 +22,8 @@ import {
   readOnboardingWizardStatus,
   markCategoryStatus,
   markWizardDismissed,
-  getResumeCategory,
+  resolveWizardStart,
+  getNextCategory,
   createStepCompleter,
   type WizardCategory,
 } from "@/lib/onboarding-wizard-status";
@@ -133,11 +134,10 @@ function CompleteScreen({ onFinish }: { onFinish: () => void }) {
 export function OnboardingWizardFlow() {
   const { assetData } = useAssetData();
   const close = useOnboardingWizardStore((s) => s.close);
+  const startCategory = useOnboardingWizardStore((s) => s.startCategory);
   // 재개(AC6) — 마지막 완료 단계 다음 미완료 카테고리부터 시작. 전부 처리됐으면 시작 화면부터.
-  const [phase, setPhase] = useState<Phase>(() => {
-    const status = readOnboardingWizardStatus();
-    return getResumeCategory(status) ?? "intro";
-  });
+  // 체험 복귀(#249): 넘겨받은 시작 단계가 pending이면 그 단계부터(resolveWizardStart)
+  const [phase, setPhase] = useState<Phase>(() => resolveWizardStart(readOnboardingWizardStatus(), startCategory));
 
   const finish = () => {
     // 완료 화면 이후 닫기는 이탈이 아니므로 exit은 그 전 단계에서 닫을 때만 기록
@@ -147,9 +147,7 @@ export function OnboardingWizardFlow() {
   };
 
   const goToNextCategory = (from: WizardCategory) => {
-    const status = readOnboardingWizardStatus();
-    const idx = WIZARD_CATEGORIES.indexOf(from);
-    const next = WIZARD_CATEGORIES.slice(idx + 1).find((c) => status.categories[c] === "pending");
+    const next = getNextCategory(readOnboardingWizardStatus(), from);
     if (next) { setPhase(next); return; }
     // 4개 카테고리 모두 처리됨. 아무것도 등록 안 됐으면(전부 건너뜀) 가짜 완료 화면 대신 그냥 닫아
     // 기존 WelcomeGuide(자산 0건 화면)로 돌아가게 한다(AC10) — 별도 안내 화면을 새로 만들지 않는다.

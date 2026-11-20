@@ -23,6 +23,9 @@ export const TRIAL_ENTRY_URL = "/?trial=1";
 /** 체험 종료 → 실제 웰컴 복귀 표식(sessionStorage). 복귀한 웰컴이 읽고 지운다 */
 export const TRIAL_EXIT_KEY = "trial_exit";
 
+/** 체험 종료 시 보던 화면 키(sessionStorage, #249) — 값은 viewToKey 결과 문자열뿐. trial_exit와 함께 1회 읽고 지운다(STORAGE_KEYS 밖, 탭 한정 1회용) */
+export const TRIAL_EXIT_FROM_KEY = "trial_exit_from";
+
 /** 체험 중 거부하는 같은 출처 API(외부 전송) — 경로 자체 또는 그 하위 */
 export const TRIAL_BLOCKED_PATHS = ["/api/parse-screenshot", "/api/share", "/api/sync", "/api/feedback"] as const;
 
