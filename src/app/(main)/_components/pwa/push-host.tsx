@@ -11,6 +11,7 @@ import { useAssetNavigation } from "../layout/navigation/navigation-context";
  * 알림(#179, 4.91) 앱 로드 처리 — 렌더 없음.
  * ① 알림 클릭으로 열린 경우(`?from=push&t=morning|kr|settle|tax`) GA `알림·누름·아침|국내|결산|세금` 1회 + 주소에서 플래그 제거(replaceState)
  *    + 종류에 맞는 화면으로 바로 이동(아침·국내→홈 '오늘' 카드, 결산→월 결산, 세금→세금 관리). 홈 팁에 가려지지 않게 홈을 거치지 않는다(C80)
+ *    아침 알림(직전 미국 장 종가·오늘 환율, #241)은 알림에서 완결 — 홈 시장 줄(코스피·S&P 500)과 항목·날짜가 같다고 전제하지 않는다
  * ② 구독 만료·교체 보정(로컬 on인데 기기 구독이 없으면 재구독·서버 갱신, 구버전 설정 구독 정리)
  * 체험 모드에서는 아무것도 하지 않는다(서버 구독을 만들지 않게).
  */
@@ -26,7 +27,7 @@ export function PushHost() {
         // 내비게이션 Provider의 초기 해시 복원(부모 effect)이 끝난 뒤 이동한다
         setTimeout(() => {
           if (target === "tax") navigate({ type: "tax" });
-          else if (target === "morning" || target === "kr") navigate({ type: "home" }); // 홈 '오늘' 카드(같은 종가일, C80)
+          else if (target === "morning" || target === "kr") navigate({ type: "home" }); // 홈 '오늘' 카드(C80) — 홈 시장 줄은 코스피·S&P 500 종가, 아침 알림의 나스닥·환율은 알림에서 완결(#241)
           else navigate({ type: "activity", tab: "change", init: { scope: "all", period: "month", source: "push" } });
         }, 0);
       }

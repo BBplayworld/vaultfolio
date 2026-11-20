@@ -75,6 +75,7 @@ self.addEventListener("fetch", (event) => {
 
 // 알림(#179, 4.91) — 페이로드 {m,t,b} 3필드만. 파싱 실패·형식 이상이면 중립 폴백 문구.
 // 종류별 같은 tag로 교체(쌓이지 않음). 누르면 종류에 맞는 화면으로 바로 연다(아침·국내→홈 '오늘' 카드, 결산→월 결산, 세금→세금 관리, C80).
+// 아침 알림(직전 미국 장 종가·오늘 환율, #241)은 알림에서 완결 — 홈 시장 줄과 항목·날짜가 같다고 전제하지 않는다.
 // 알림 안에 보유 정보는 없다(서버가 모름).
 const PUSH_FALLBACK = { t: "시크릿에셋", b: "새 알림이 도착했어요" };
 const PUSH_TAGS = { morning: "push-morning", kr: "push-kr", settle: "push-settle", tax: "push-tax", test: "push-test", misc: "push-misc" };

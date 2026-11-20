@@ -93,6 +93,7 @@ function KeepLine({ s }: { s: BoardSummary["keep"] }) {
 function CheckLine({ s }: { s: BoardSummary["check"] }) {
   if (s.count === 0) return <span className="text-muted-foreground">아직 없어요</span>;
   if (s.due === 0) return <>{s.count}종목 · 점검 차례 없음</>;
+  if (s.count === 1) return <>1종목 · 점검 차례</>; // 1종목에 `모두`는 어색하다(5.127 qa D3) — `1종목 · 점검 차례 없음`과 같은 꼴
   if (s.due === s.count) return <>{s.count}종목 <b className="font-bold">모두</b> 점검 차례</>;
   return <>{s.count}종목 중 <b className="font-bold">{s.due}종목</b> 점검 차례</>;
 }
@@ -234,10 +235,10 @@ function PlanEditor({ row, plan, cycleMonths, open, onOpen, onSave, pct = true }
     const { draft: d, plan: saved, onSave: save } = latest.current;
     if (planDraftDirty(d, saved)) save(planFromDraft(d));
   };
-  useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => flush(), []);
   // 폼이 접힐 때(헤더·다른 선택·다른 행) — 열림 → 닫힘 전환마다 한 번
   const wasOpen = useRef(open);
-  useEffect(() => { if (wasOpen.current && !open) flush(); wasOpen.current = open; }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (wasOpen.current && !open) flush(); wasOpen.current = open; }, [open]);
   const months = plan?.months ?? cycleMonths;
   const summary = [
     pct && plan?.down !== undefined ? `−${plan.down}% 이하` : null,
@@ -468,7 +469,7 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
         <span data-testid="grow-row-rate" data-rate={row.rate === null ? "" : pctText(row.rate)} className={`text-right text-base font-bold tabular-nums ${row.rate === null ? "text-muted-foreground" : pctTone(row.rate)}`}>
           {row.rate === null ? (own ? "" : "—") : pctText(row.rate)}
         </span>
-        <ChevronRight aria-hidden className={`row-span-2 size-3.5 self-center text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-90" : ""}`} />
+        <ChevronRight aria-hidden className={`size-3.5 self-center text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-90" : ""}`} />
         <span className={`flex min-w-0 flex-wrap items-center gap-x-1 text-xs text-muted-foreground tabular-nums ${row.due ? "col-span-2" : "col-span-3"}`}>
           {meta.map((p, i) => <span key={p.key} className="contents">{i > 0 && <span aria-hidden>·</span>}<span className="whitespace-nowrap">{p.node}</span></span>)}
         </span>

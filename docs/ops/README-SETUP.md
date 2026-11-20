@@ -12,10 +12,10 @@
 [오케스트레이터]  status 라벨을 보고 단계 담당자 호출
    ├─ business-pm ┐ 방향 공동 정의 (direction.md)
    ├─ planner-designer ┘
-   ├─ cto              반대 검토 (challenge.md: 통과/축소/폐기)
+   ├─ ceo              반대 검토 (challenge.md: 통과/축소/폐기)
    ├─ developer        구현 → issue-4.NN 브랜치 → Vercel preview
    ├─ qa               자동 테스트 + preview 실제 점검(Playwright·스크린샷). FAIL이면 자동 재개발
-   └─ cto              반영 여부 결정 보고서 (권고·근거·위험)
+   └─ ceo              반영 여부 결정 보고서·승인 판단 (근거·위험)
    │ 마지막 단계: 팀 메모리 갱신 → memory 브랜치 push
    ▼
 [대표]  멘션 알림 → decision-brief 읽기 → PR 머지(반영) / 닫기(미반영)
@@ -65,7 +65,7 @@
 실행당 진행 이슈 2건, 개발 동시 1건, 대표 결정 대기 3건 이상이면 새 개발 중단.
 
 ## 5. 나중에: 결정 권한 위임
-대표 결정이 반복적으로 권고와 같아지면, `risk:low` 이슈부터 cto 에이전트에게 머지 권한을 넘기는 단계(레벨 2)를 추가할 수 있다. 근거는 memory의 DECISIONS(권고 대비 실제 결정 일치율).
+대표 결정이 반복적으로 권고와 같아지면, `risk:low` 이슈부터 ceo 에이전트에게 머지 권한을 넘기는 단계(레벨 2)를 추가할 수 있다. (2026-11-19 대표 지시로 반영 승인 판단은 이미 CEO에게 이관됨.) 근거는 memory의 DECISIONS(권고 대비 실제 결정 일치율).
 
 ## 파일 목록
 ```

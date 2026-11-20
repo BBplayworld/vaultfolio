@@ -7,6 +7,7 @@ import {
 } from "@/lib/finance/finance-service";
 
 // 시장 알림 시세 조회(#179, 4.91 v3) — 지수 4개(S&P 500·나스닥 종합·코스피·코스닥)와 원/달러 일봉.
+// 아침 회차(#241, 5.126)는 미국 2개 + 환율(오늘 행)만 조회한다. 코스피·코스닥은 16시 회차 전용.
 // 모든 항목은 같은 날짜 검증(changeFromSeries: 마지막 행 날짜 = 기대 거래일)을 통과해야 한다. 실패·stale은 그 항목만 생략(조용한 생략 + 로그).
 // 구독자와 무관한 공통 계산 — 서버는 구독자의 보유 정보를 쓰지 않는다.
 
@@ -21,8 +22,8 @@ export interface PushQuote {
   price: number; // 마지막 종가(환율 표시용)
 }
 
-/** 항목별 결과 — 운영 확인(C96)용. ok·stale(날짜 불일치)·fail(조회 실패) */
-export type QuoteStatus = "ok" | "stale" | "fail";
+/** 항목별 결과 — 운영 확인(C96)용. ok·stale(날짜 불일치)·fail(조회 실패)·flat(아침 환율 전용: 오늘 행 값 = 전일 행 값이라 생략) */
+export type QuoteStatus = "ok" | "stale" | "fail" | "flat";
 
 export function shiftDate(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00Z`);
@@ -56,10 +57,11 @@ const US_TARGETS: Target[] = [
   { id: "spx", label: "S&P 500", kind: "index", load: (s, e, c) => fetchOverseasIndexDailySeries("SPX", s, e, c.accessToken, c.appKey, c.appSecret) },
   { id: "comp", label: "나스닥", kind: "index", load: (s, e, c) => fetchOverseasIndexDailySeries("COMP", s, e, c.accessToken, c.appKey, c.appSecret) },
 ];
+const FX_TARGET: Target = { id: "fx", label: "환율", kind: "fx", load: (s, e, c) => fetchFxKrwDailySeries(s, e, c.accessToken, c.appKey, c.appSecret) };
 const KR_TARGETS: Target[] = [
   { id: "kospi", label: "코스피", kind: "index", load: (s, e, c) => fetchKospiDailySeries(s, e, c.accessToken, c.appKey, c.appSecret, "0001") },
   { id: "kosdaq", label: "코스닥", kind: "index", load: (s, e, c) => fetchKospiDailySeries(s, e, c.accessToken, c.appKey, c.appSecret, "1001") },
-  { id: "fx", label: "환율", kind: "fx", load: (s, e, c) => fetchFxKrwDailySeries(s, e, c.accessToken, c.appKey, c.appSecret) },
+  FX_TARGET,
 ];
 
 async function fetchTargets(targets: Target[], expectedDate: string, ctx: QuoteCtx, withSleep: { first: boolean }): Promise<QuoteSegment> {
@@ -90,5 +92,16 @@ export function fetchKrQuotes(expectedDate: string, ctx: QuoteCtx, first = { fir
   return fetchTargets(KR_TARGETS, expectedDate, ctx, first);
 }
 
-/** KIS 호출 수 추정 — 예산 차감용(항목당 1호출) */
-export const estimateKisCalls = (us: boolean, kr: boolean): number => (us ? US_TARGETS.length : 0) + (kr ? KR_TARGETS.length : 0);
+/**
+ * 아침 환율(#241) — expectedDate = 오늘(KST). 오늘 행이 없으면 stale, 조회 실패면 fail로 환율만 빠진다.
+ * 오늘 행 값이 전일 행과 완전히 같으면(개장 전·휴장일에 자리만 잡힌 행) `0.0%`를 사실처럼 싣지 않도록 생략하고 flat으로 남긴다.
+ * 16시 회차(fetchKrQuotes)에는 이 보호를 적용하지 않는다.
+ */
+export async function fetchFxQuote(expectedDate: string, ctx: QuoteCtx, first = { first: true }): Promise<QuoteSegment> {
+  const seg = await fetchTargets([FX_TARGET], expectedDate, ctx, first);
+  if (seg.quotes.some((q) => q.rate === 0)) return { quotes: [], status: { [FX_TARGET.id]: "flat" } };
+  return seg;
+}
+
+/** KIS 호출 수 추정 — 예산 차감용(항목당 1호출). 아침 최대 3(미국 2 + 환율 1), 미국 반복일 1, 16시 3 */
+export const estimateKisCalls = (us: boolean, fx: boolean, kr: boolean): number => (us ? US_TARGETS.length : 0) + (fx ? 1 : 0) + (kr ? KR_TARGETS.length : 0);

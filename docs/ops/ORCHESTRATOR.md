@@ -9,7 +9,8 @@
 2. **MCP를 쓸 수 없으면 git CLI 전용 모드**로 같은 흐름을 진행한다 (실행을 멈추지 않는다):
    - 이슈 단계·라벨·코멘트 → `.memory/STATE.md` 진행 표와 `.memory/issues/<버전>-<번호>-<slug>/<버전>-log.md`(코멘트 형식 그대로)에 기록. 다음 MCP 가능 실행에서 GitHub에 일괄 반영
    - PR 생성 → `issue-4.NN` 브랜치 push까지. 대표 알림에 비교 링크 `https://github.com/BBplayworld/vaultfolio/compare/main...issue-4.NN?expand=1` 포함 (대표가 한 번 눌러 PR 생성·머지)
-   - **위임 머지**: CLAUDE.md "머지 위임(저위험)" 조건 ①~⑧을 모두 충족하면(근거: COO decision-brief의 조건 대조) 오케스트레이터가 PR에 `risk:low·medium`을 확인한 뒤 직접 squash 머지 → 즉시 qa 운영 스모크 → 대표에게는 승인 요청이 아니라 한 줄 결과 알림(새벽 규칙 적용). 하나라도 미충족·불확실하면 기존 owner-review 승인 요청
+   - **CEO 승인 머지(2026-11-19~, 대표 지시)**: `status:owner-review`(= CEO 반영 판단 대기)에서 ceo가 CLAUDE.md "CEO 승인 조건"(qa PASS·CEO 사용자 관점 PASS·preview success·데이터 하위호환·롤백 qa 확인)을 대조해 `risk:low·medium`이면 decision-brief에 승인 기록을 남기고 오케스트레이터가 직접 squash 머지(`risk:high`는 CEO 판정·권고 후 대표 승인) → 즉시 qa 운영 스모크·이상 시 revert → 대표에게는 사후 결과 한 줄 알림. 대표 승인으로 남는 것(11-19 대표 결정): `risk:high` 릴리스·대표가 지적·반려한 영역의 재시도·제품 원칙 변경(needs-human)·결제·외부 게시·절대 규칙 변경
+   - (이전 방식·참고) **위임 머지**: CLAUDE.md "머지 위임(저위험)" 조건 ①~⑧을 모두 충족하면(근거: decision-brief의 조건 대조) 오케스트레이터가 PR에 `risk:low·medium`을 확인한 뒤 직접 squash 머지 → 즉시 qa 운영 스모크 → 대표에게는 승인 요청이 아니라 한 줄 결과 알림(새벽 규칙 적용). 하나라도 미충족·불확실하면 기존 owner-review 승인 요청
    - 대표 결정 읽기 → `git fetch origin main` 후 `git log origin/main`의 머지 커밋으로 반영 여부 확인
    - 실행 요약 첫 줄에 "git 전용 모드" 표시
 
@@ -17,7 +18,7 @@
 | 알림 | 언제 | 제목 |
 |---|---|---|
 | 🆕 새 과제 방향 확정 | 이슈의 기획+사업 방향 정의(direction.md 공동 합의)가 완료됐을 때. 운영 이상 버그는 방향 정의가 없으므로 qa 확정 직후 | `[시크릿에셋] 새 과제: #<번호> <제목>` + 유형·합의된 방향 2줄 |
-| 🔔 대표 결정 필요 | 릴리스 owner-review 진입. **아래 3가지가 모두 같은 최종 커밋 기준일 때만**: ① qa 최종 점검 PASS ② cto(COO 겸임) 사용자 관점 최종 점검 PASS + 최종 반영 의견(decision-brief) 완료 ③ 그 커밋이 Vercel preview에 배포 완료(PR 체크 Vercel success, head SHA 일치) | `[시크릿에셋] 반영 결정 필요: v4.NN` + **포함 이슈별 핵심 반영 내용 한 줄 요약**(`#번호 한 줄`) + 권고 한 줄 + PR·decision-brief 링크 + **preview URL(필수, 화면 확인 경로 포함: 데모는 `?demo=1`, 신규 방문자 화면은 `?demo=empty`)** |
+| 🔔 대표 결정 필요 | (2026-11-19~ 대표 승인 유지 항목에만 사용: risk:high·반려 영역 재시도·제품 원칙 변경·결제·외부 게시·절대 규칙 변경. 일반 릴리스 owner-review는 CEO 판단 대기이며 대표 알림은 머지 후 사후 결과 알림) 릴리스 owner-review 진입. **아래 3가지가 모두 같은 최종 커밋 기준일 때만**: ① qa 최종 점검 PASS ② ceo 사용자 관점 최종 점검 PASS + 최종 반영 의견(decision-brief) 완료 ③ 그 커밋이 Vercel preview에 배포 완료(PR 체크 Vercel success, head SHA 일치) | `[시크릿에셋] 반영 결정 필요: v4.NN` + **포함 이슈별 핵심 반영 내용 한 줄 요약**(`#번호 한 줄`) + 권고 한 줄 + PR·decision-brief 링크 + **preview URL(필수, 화면 확인 경로 포함: 데모는 `?demo=1`, 신규 방문자 화면은 `?demo=empty`)** |
 - 전달: `PushNotification`(가능 시) + 실행 최종 요약 **첫 줄**에 같은 문구. owner-review는 이슈 코멘트 `@BBplayworld` 멘션도 함께
 - **새벽 실행(KST 00:00~06:59, 현재 01:53 회차)은 알림을 보내지 않는다** (PushNotification·`@BBplayworld` 멘션 모두). 라벨 전환·문서·PR 코멘트 본문은 그대로 진행하고, 보낼 알림 문구는 `.memory/STATE.md` "보류 알림" 절에 적는다. 다음 비새벽 실행(09:53)이 0단계 직후 보류 알림을 묶어 보내고 절을 비운다
 - 그 밖의 단계 이동·문서 작성·검토 왕복은 알리지 않는다. 알림이 없는 실행은 최종 요약 첫 줄을 `알림 불필요: <한 줄>`
@@ -37,7 +38,7 @@
    • #a — 한 줄
    • #b — 한 줄
 🔗 preview(필수): <URL>?demo=1 / ?demo=empty — 무엇을 보면 되는지 한 줄
-🧪 최종 확인: qa PASS · UI 승인 · COO PASS · preview·CI 완료 @<커밋 7자>
+🧪 최종 확인: qa PASS · UI 승인 · CEO PASS · preview·CI 완료 @<커밋 7자>
 ⚠️ 위험·롤백: low/medium/high — 롤백 방법 한 줄
 ⏰ 기한: (있을 때만) 예) 11/26 이전 머지 시 11월 지표 측정
 👉 결정: PR #n 머지 = 반영 / 닫기 = 미반영
@@ -74,12 +75,12 @@
    | 상태 | 호출 |
    |---|---|
    | planning, direction.md 미합의 | WORKFLOW.md 2장 ① 순서대로 `business-pm` → `planner-designer` → `business-pm` (필요 시 1회 더 왕복) |
-   | planning, direction.md 합의됨 · challenge.md 없음 | `cto` 반대 검토 |
+   | planning, direction.md 합의됨 · challenge.md 없음 | `ceo` 반대 검토 |
    | planning, challenge.md 통과 | `planner-designer`(spec.md) + `business-pm`(business.md) 병렬 → 교차 검토 |
    | design-review | `developer`(tech-review.md) + `ui-designer`(ui.md) 병렬 → 교차 검토(planner-designer는 ui.md 흐름 검토) |
    | development | `developer` (PR + preview URL 확인까지) → `ui-designer` UI 검수(ui-review.md) — `UI 승인` 전에는 qa로 넘기지 않음 |
    | qa | `qa` (CHECKLIST.md 전 항목 + 데이터 안전 점검 필수) → FAIL이면 `developer` 수정 후 같은 실행에서 `qa` 1회 재검증 가능 |
-   | qa PASS 직후 | `cto` → decision-brief.md 작성 후 `status:owner-review` |
+   | qa PASS 직후 | `ceo` → decision-brief.md 작성 후 `status:owner-review`(CEO 반영 판단 대기) → 같은 실행에서 CEO 승인 판단 |
 4. **단계 전환**: 완료 조건 충족 시에만 `issue_write`로 라벨 변경. 미충족이면 막힌 이유 코멘트. 막힘은 WORKFLOW.md 5장대로 팀 안에서 해결
 5. **owner-review 진입 시**: 위 "대표 알림" ①②③ 조건을 PR head SHA로 확인한 뒤 수행 (포함 이슈별 한 줄 요약 + 권고 한 줄 + decision-brief·PR 링크 + preview URL 필수 — 알림·PR 코멘트·최종 요약 모두, "반영하려면 PR 머지, 아니면 닫기"). 하나라도 미충족이면 `status:owner-review`로 바꾸지 않고 알리지 않는다. 결정 요청 뒤 커밋이 추가되면 ①②③을 새 커밋 기준으로 다시 거친다
 6. **마지막 단계 — 메모리 저장** (아래)
@@ -97,9 +98,9 @@
    - `planner-designer`: 사용자 경험 관점 후보 (헷갈리는 메뉴, 통합·축소할 화면)
    - `ui-designer`: UI 품질이 낮은 화면·컨트롤 후보 (스크린샷 근거)
 3. **선정**: 후보 전체를 `type:feature / improvement / bug / simplify`로 분류, 목표 기여·비용으로 순위. 같은 기여도면 줄이기·고치기 우선. **최대 1건** 선정 (근거 없으면 "이번 주 없음")
-4. `cto` 반대 검토 (WORKFLOW.md 2장 ② 기준) → 통과 시 이슈 생성 + **바로 `status:planning`** + 우선순위. 탈락 후보는 STATE.md "후보 목록"에 이유와 함께 남긴다 (다음 주 재검토 가능)
+4. `ceo` 반대 검토 (WORKFLOW.md 2장 ② 기준) → 통과 시 이슈 생성 + **바로 `status:planning`** + 우선순위. 탈락 후보는 STATE.md "후보 목록"에 이유와 함께 남긴다 (다음 주 재검토 가능)
 5. `qa`: 마케팅 초안 규칙 검사
-6. `cto`: 2주 이상 움직임 없는 이슈 on-hold 또는 폐기 판정 (대표에게 묻지 않음)
+6. `ceo`: 2주 이상 움직임 없는 이슈 on-hold 또는 폐기 판정 (대표에게 묻지 않음)
 7. **마지막 단계 — 메모리 저장**
 
 ---
@@ -112,9 +113,9 @@
    - `developer`: 코드 기준 버그 의심, 중복·죽은 코드, 성능·안정성 위험, 기술 부채 정리 후보 (근거: 파일 경로)
    - `ui-designer`: 품질이 낮은 화면·컨트롤 (preview 스크린샷 근거)
    - 함께 볼 것: STATE.md "후보 목록", LEARNINGS(반려 방향 제외), DECISIONS, 직전 릴리스의 알려진 한계·범위 밖 후보
-2. **선정** — `cto`(COO 겸임)가 후보 전체를 `type:feature / improvement / bug / simplify`로 분류하고 순위를 매긴다. **1순위 기준은 장기 목표 "월 활성 사용자 100명"에 직접 기여하는 서비스 과제**(신규 유입·첫 사용 경험·재방문·핵심 가치 체감). 소규모 버그·정리·내부 신뢰성 수정은 사용자 체감 영향이 크지 않으면 자율 과제로 선정하지 않고 `priority:p2`로 두어 다음 릴리스에 함께 싣는다. 같은 서비스 기여도면 줄이기·고치기 우선. 1건 선정 + 반대 검토(WORKFLOW.md 2장 ② 기준). 탈락 후보는 이유와 함께 STATE "후보 목록"
+2. **선정** — `ceo`가 후보 전체를 `type:feature / improvement / bug / simplify`로 분류하고 순위를 매긴다. **1순위 기준은 장기 목표 "월 활성 사용자 100명"에 직접 기여하는 서비스 과제**(신규 유입·첫 사용 경험·재방문·핵심 가치 체감). 소규모 버그·정리·내부 신뢰성 수정은 사용자 체감 영향이 크지 않으면 자율 과제로 선정하지 않고 `priority:p2`로 두어 다음 릴리스에 함께 싣는다. 같은 서비스 기여도면 줄이기·고치기 우선. 1건 선정 + 반대 검토(WORKFLOW.md 2장 ② 기준). 탈락 후보는 이유와 함께 STATE "후보 목록"
 3. **이슈 생성** — 통과 시 GitHub 이슈 생성(`status:planning`, 유형·우선순위 라벨, 본문에 근거·기대 지표), 같은 실행에서 A의 planning ① 방향 정의(`business-pm` → `planner-designer` → `business-pm`)까지 진행. 합의되면 "🆕 새 과제 방향 확정" 알림(새벽 규칙 적용)
-4. 방향의 질 기준: 서비스 성장(사용자 수·재방문)으로 이어지는 근거가 있어야 하고, 단순 기능 추가가 아니라 **누구의 어떤 문제를, 어떤 지표로, 왜 지금** 해결하는지가 direction.md에 있어야 한다. 사업 절(성공 지표·측정 방법)과 경험 절(바뀌는 화면·줄이는 것)이 모두 없으면 cto가 반려한다
+4. 방향의 질 기준: 서비스 성장(사용자 수·재방문)으로 이어지는 근거가 있어야 하고, 단순 기능 추가가 아니라 **누구의 어떤 문제를, 어떤 지표로, 왜 지금** 해결하는지가 direction.md에 있어야 한다. 사업 절(성공 지표·측정 방법)과 경험 절(바뀌는 화면·줄이는 것)이 모두 없으면 ceo가 반려한다
 5. 정말로 근거 있는 후보가 0건이면 그 이유(어떤 근거를 봤는지)를 run-log에 남긴다 — "할 일 없음"만 적는 것은 금지
 
 ## C. 배포 후 점검 (정기 실행 1-1에서 수행)
@@ -123,7 +124,7 @@
    - `type:bug` + `priority:p0` 이슈 생성
    - `qa`가 재현·확정 → 원인 파일 특정 → "🆕 새 과제 방향 확정" 알림
    - planning·design-review 생략: `developer`가 같은 실행에서 바로 수정 — 열린 릴리스 `issue-4.NN`이 있으면 거기에, 없으면 다음 버전 → PR → preview
-   - `qa` 검증 PASS → `cto` decision-brief → owner-review ("🔔 대표 결정 필요"). 수정 범위는 버그 원인에 한정
+   - `qa` 검증 PASS → `ceo` decision-brief → owner-review(CEO 판단 대기, 승인 시 머지). 수정 범위는 버그 원인에 한정
    - 확정 결함이 아니면(재현 안 됨) 이슈를 닫고 LEARNINGS 기록
    - 롤백이 더 빠르면 decision-brief에 Vercel Instant Rollback 권고를 함께 적는다
 3. **마지막 단계 — 메모리 저장**
@@ -131,7 +132,7 @@
 ---
 
 ## 자기 개선 — 회고 (해당 시 마지막 단계 전에 수행)
-다음 중 하나가 생기면 `cto`가 회고를 하고 `.memory/CHECKLIST.md`에 항목을 **추가**한다 (같은 실수를 두 번 하지 않는다):
+다음 중 하나가 생기면 `ceo`가 회고를 하고 `.memory/CHECKLIST.md`에 항목을 **추가**한다 (같은 실수를 두 번 하지 않는다):
 - 대표가 PR을 닫거나 `수정:`/직접 피드백으로 팀이 놓친 문제를 지적했을 때
 - qa FAIL, 운영 이상, 머지 후 결함 발견
 - 결함 의심이 확정됐을 때(그 결함을 더 일찍 잡을 수 있었던 단계)

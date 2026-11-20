@@ -92,47 +92,117 @@ describe("문구", () => {
 });
 
 // ── 시장 알림 문구 ──
-import { PUSH_MERGE_ORDER, buildKrCloseMessage, buildMorningMessage, holidayMarketsOn, isRepeatedClose, mergePushPayloads } from "../message";
+import { PUSH_MERGE_ORDER, buildKrCloseMessage, buildMorningMessage, expectedCloseDate, holidayMarketsOn, isRepeatedClose, mergePushPayloads } from "../message";
 import type { PushQuote } from "../quotes";
 
 const idx = (label: string, rate: number): PushQuote => ({ label, kind: "index", rate, price: 100 });
 const fx = (rate: number, price = 1385.4): PushQuote => ({ label: "환율", kind: "fx", rate, price });
 
-describe("아침 시장 요약", () => {
+// #241(5.126) spec 5절 단독 문자열 표 — 아침 = 직전 미국 장 종가(장 날짜 표기) + 오늘 환율. 국내 지수 0
+describe("아침 시장 요약 — spec 표 1~19행(글자 단위)", () => {
   const us = [idx("S&P 500", 0.8), idx("나스닥", 1.1)];
-  const kr = [idx("코스피", 0.5), idx("코스닥", -0.3), fx(0.4)];
-  it("제목·본문 틀 — 미국 | 국내(환율은 국내 구간 안) | 휴장 없으면 생략", () => {
-    expect(buildMorningMessage("2026-11-24", us, kr, "daily")).toEqual({
+  const US_TEXT = "S&P 500 +0.8% · 나스닥 +1.1%";
+  const FX_TEXT = "환율 1,385원(+0.4%)";
+  const body = (today: string, u: PushQuote[], f: PushQuote[], cond: "daily" | "pm2" = "daily") => buildMorningMessage(today, u, f, cond)?.b ?? null;
+  // 운영 Cron과 같은 규칙: 미국 반복 거래일이면 미국 값은 조회하지 않아 빈 배열로 넘어온다
+  const usFor = (today: string) => (isRepeatedClose(today) ? [] : us);
+
+  it("1 평일 11/24(화) — 제목은 받은 날, 미국 머리는 미국 거래일", () => {
+    expect(buildMorningMessage("2026-11-24", us, [fx(0.4)], "daily")).toEqual({
       m: "morning",
       t: "11/24 아침 시장",
-      b: "미국 S&P 500 +0.8% · 나스닥 +1.1% | 국내 코스피 +0.5% · 코스닥 -0.3% · 환율 1,385원(+0.4%)",
+      b: "미국 11/23 종가 S&P 500 +0.8% · 나스닥 +1.1% | 환율 1,385원(+0.4%)",
     });
   });
-  it("오늘 휴장은 kr/us-holidays 상수로 — 11/26 미국, 12/25 둘 다, 평일은 없음", () => {
-    expect(buildMorningMessage("2026-11-26", us, [], "daily")?.b).toBe("미국 S&P 500 +0.8% · 나스닥 +1.1% | 오늘 미국 휴장");
+  it("2 월요일 11/23 — 금요일 장", () => {
+    expect(body("2026-11-23", us, [fx(0.4)])).toBe("미국 11/20 종가 S&P 500 +0.8% · 나스닥 +1.1% | 환율 1,385원(+0.4%)");
+  });
+  it("3 하락·혼합 부호", () => {
+    expect(body("2026-11-24", [idx("S&P 500", -2.3), idx("나스닥", 0.1)], [fx(-0.6, 1371)])).toBe("미국 11/23 종가 S&P 500 -2.3% · 나스닥 +0.1% | 환율 1,371원(-0.6%)");
+  });
+  it("4 환율 큰 움직임(±1%)이면 환율 묶음이 앞", () => {
+    expect(body("2026-11-24", [idx("S&P 500", 0.4), idx("나스닥", 0.6)], [fx(1.2, 1402)])).toBe("환율 1,402원(+1.2%) | 미국 11/23 종가 S&P 500 +0.4% · 나스닥 +0.6%");
+  });
+  it("5 미국 휴장 당일 11/26(목)", () => {
+    expect(body("2026-11-26", usFor("2026-11-26"), [fx(0.4)])).toBe(`미국 11/25 종가 ${US_TEXT} | ${FX_TEXT} | 오늘 미국 휴장`);
+  });
+  it("6 미국 휴장 다음 날 11/27(금) — 같은 종가를 반복하지 않고 쉰 날짜만", () => {
+    expect(isRepeatedClose("2026-11-27")).toBe(true);
+    expect(body("2026-11-27", usFor("2026-11-27"), [fx(0.4)])).toBe(`${FX_TEXT} | 미국 11/26 휴장`);
+  });
+  it("7 휴장 뒤 첫 장 다음 아침 11/30(월)", () => {
+    expect(body("2026-11-30", usFor("2026-11-30"), [fx(0.4)])).toBe(`미국 11/27 종가 ${US_TEXT} | ${FX_TEXT}`);
+  });
+  it("8 미국 월요일 휴장 주 — 2027-01-18(월)·01-19(화)", () => {
+    expect(body("2027-01-18", usFor("2027-01-18"), [fx(0.4)])).toBe(`미국 1/15 종가 ${US_TEXT} | ${FX_TEXT} | 오늘 미국 휴장`);
+    expect(body("2027-01-19", usFor("2027-01-19"), [fx(0.4)])).toBe(`${FX_TEXT} | 미국 1/18 휴장`);
+  });
+  it("9 미국 금요일 휴장 뒤 월요일 — 2027-03-26(금)·03-29(월)", () => {
+    expect(body("2027-03-26", usFor("2027-03-26"), [fx(0.4)])).toBe(`미국 3/25 종가 ${US_TEXT} | ${FX_TEXT} | 오늘 미국 휴장`);
+    expect(body("2027-03-29", usFor("2027-03-29"), [fx(0.4)])).toBe(`${FX_TEXT} | 미국 3/26 휴장`);
+  });
+  it("10 한국 휴장일 12/31(목) — 환율 오늘 행이 없으면 미국만, 있으면 환율 포함", () => {
+    expect(body("2026-12-31", usFor("2026-12-31"), [])).toBe(`미국 12/30 종가 ${US_TEXT} | 오늘 국내 휴장`);
+    expect(body("2026-12-31", usFor("2026-12-31"), [fx(0.4)])).toBe(`미국 12/30 종가 ${US_TEXT} | ${FX_TEXT} | 오늘 국내 휴장`);
+  });
+  it("11 양쪽 휴장 12/25(금)", () => {
     expect(holidayMarketsOn("2026-12-25")).toEqual(["미국", "국내"]);
-    expect(holidayMarketsOn("2026-11-24")).toEqual([]);
+    expect(body("2026-12-25", usFor("2026-12-25"), [])).toBe(`미국 12/24 종가 ${US_TEXT} | 오늘 미국·국내 휴장`);
   });
-  it("검증 실패 구간은 생략, 둘 다 비면 발송 안 함", () => {
-    expect(buildMorningMessage("2026-11-24", [], kr, "daily")?.b.startsWith("국내")).toBe(true);
-    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.5)], "daily")?.b).not.toContain("환율");
+  it("12 12/28(월) — 미국 12/25 휴장 반복, 한국 영업일", () => {
+    expect(body("2026-12-28", usFor("2026-12-28"), [fx(0.4)])).toBe(`${FX_TEXT} | 미국 12/25 휴장`);
+  });
+  it("13 국내 연휴 2027-02-08·09 — 날마다 미국은 새 거래일, 연휴 뒤 2/10은 1행과 같은 꼴", () => {
+    expect(body("2027-02-08", usFor("2027-02-08"), [])).toBe(`미국 2/5 종가 ${US_TEXT} | 오늘 국내 휴장`);
+    expect(body("2027-02-09", usFor("2027-02-09"), [])).toBe(`미국 2/8 종가 ${US_TEXT} | 오늘 국내 휴장`);
+    expect(body("2027-02-10", usFor("2027-02-10"), [fx(0.4)])).toBe(`미국 2/9 종가 ${US_TEXT} | ${FX_TEXT}`);
+  });
+  it("14 미국 조회 실패(휴장 아님) + 환율 정상 — 실패를 휴장으로 쓰지 않는다", () => {
+    expect(isRepeatedClose("2026-11-24")).toBe(false);
+    expect(body("2026-11-24", [], [fx(0.4)])).toBe(FX_TEXT);
+  });
+  it("15 환율 없음 + 미국 정상", () => {
+    expect(body("2026-11-24", us, [])).toBe(`미국 11/23 종가 ${US_TEXT}`);
+  });
+  it("16 지수 1개만 실패", () => {
+    expect(body("2026-11-24", [idx("나스닥", 1.1)], [fx(0.4)])).toBe(`미국 11/23 종가 나스닥 +1.1% | ${FX_TEXT}`);
+  });
+  it("17 값 0(전부 실패, 또는 미국 반복 + 환율 없음)이면 보내지 않는다 — 휴장 표시만 있는 알림 0", () => {
     expect(buildMorningMessage("2026-11-24", [], [], "daily")).toBeNull();
+    expect(buildMorningMessage("2026-11-27", usFor("2026-11-27"), [], "daily")).toBeNull();
+    expect(buildMorningMessage("2026-12-25", [], [], "daily")).toBeNull();
   });
-  it("큰 움직임 항목(지수 ±2%·환율 ±1%)은 본문 맨 앞으로", () => {
-    const m = buildMorningMessage("2026-11-24", us, [idx("코스피", 0.5), idx("코스닥", -2.4), fx(1.2)], "daily");
-    expect(m?.b).toBe("국내 코스닥 -2.4% · 환율 1,385원(+1.2%) · 코스피 +0.5% | 미국 S&P 500 +0.8% · 나스닥 +1.1%");
+  it("18 '큰 움직임만' — 미국 ±2.0% 또는 환율 ±1.0%일 때만", () => {
+    expect(buildMorningMessage("2026-11-24", us, [fx(0.4)], "pm2")).toBeNull();
+    expect(buildMorningMessage("2026-11-24", [idx("S&P 500", 1.9), idx("나스닥", -1.9)], [fx(0.9)], "pm2")).toBeNull();
+    expect(body("2026-11-24", us, [fx(-1.0)], "pm2")).toBe(`환율 1,385원(-1.0%) | 미국 11/23 종가 ${US_TEXT}`);
+    expect(body("2026-11-24", [idx("S&P 500", 0.3), idx("나스닥", -2.0)], [fx(0.4)], "pm2")).toBe(`미국 11/23 종가 나스닥 -2.0% · S&P 500 +0.3% | ${FX_TEXT}`);
+    expect(body("2026-11-24", [idx("S&P 500", -2.0)], [], "pm2")).toBe("미국 11/23 종가 S&P 500 -2.0%");
+    expect(buildMorningMessage("2026-11-24", us, [], "pm2")).toBeNull(); // 환율이 검증 탈락으로 빠지면 판정에 안 들어감
   });
-  it("조건 pm2 — 지수 ±2% 또는 환율 ±1%가 없으면 null, 있으면 발송(환율은 quotes에 있을 때=날짜 검증 통과 때만)", () => {
-    expect(buildMorningMessage("2026-11-24", us, kr, "pm2")).toBeNull();
-    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.1), fx(0.9)], "pm2")).toBeNull();
-    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.1), fx(-1.0)], "pm2")?.b).toBe("국내 환율 1,385원(-1.0%) · 코스피 +0.1% | 미국 S&P 500 +0.8% · 나스닥 +1.1%");
-    expect(buildMorningMessage("2026-11-24", us, [idx("코스피", 0.1)], "pm2")).toBeNull(); // 환율이 검증 탈락으로 빠지면 판정에 안 들어감
-    expect(buildMorningMessage("2026-11-24", [idx("S&P 500", -2.0)], [], "pm2")?.b).toBe("미국 S&P 500 -2.0%");
+  it("19 토·일은 아침 회차가 없다(발송 판정은 cron.test) — 미국 기대 거래일은 한 곳에서 계산", () => {
+    expect(expectedCloseDate("2026-11-24")).toBe("2026-11-23");
+    expect(expectedCloseDate("2026-11-23")).toBe("2026-11-20");
+    expect(expectedCloseDate("2026-11-27")).toBe("2026-11-25");
+  });
+  it("2026-11 ~ 2027-12 모든 평일 — 본문에 코스피·코스닥·'국내 ' 묶음·'국내 M/D 휴장' 0, 미국 머리 날짜는 받은 날보다 앞", () => {
+    for (let t = Date.UTC(2026, 10, 1); t < Date.UTC(2028, 0, 1); t += 86400000) {
+      const day = new Date(t).toISOString().slice(0, 10);
+      if ([0, 6].includes(new Date(t).getUTCDay())) continue;
+      for (const f of [[fx(0.4)], []]) {
+        const b = body(day, usFor(day), f);
+        if (b === null) continue;
+        expect(b, day).not.toMatch(/코스피|코스닥|국내 \d|국내 [^휴]|국내 \d+\/\d+ 휴장/);
+        expect(b.replace(/오늘 [^|]*휴장$/, ""), day).not.toContain("국내");
+        const head = b.match(/미국 (\d+)\/(\d+) 종가/);
+        if (head) expect(expectedCloseDate(day) < day && `${Number(expectedCloseDate(day).slice(5, 7))}/${Number(expectedCloseDate(day).slice(8))}` === `${head[1]}/${head[2]}`, day).toBe(true);
+      }
+    }
   });
   it("금지어·평가어·조언 0", () => {
-    const m = buildMorningMessage("2026-11-26", us, kr, "daily");
+    const m = buildMorningMessage("2026-11-26", us, [fx(0.4)], "daily");
     const text = `${m?.t} ${m?.b}`;
-    for (const w of ["보유", "평가", "하세요", "급락", "급등", "매수", "매도", "추천"]) expect(text).not.toContain(w);
+    for (const w of ["보유", "평가", "하세요", "급락", "급등", "매수", "매도", "추천", "밤사이"]) expect(text).not.toContain(w);
   });
 });
 
@@ -192,30 +262,48 @@ describe("휴장표 — 2027 설날", () => {
   });
 });
 
-describe("휴장 다음 날 같은 종가 반복 방지", () => {
-  const q: PushQuote[] = [{ label: "코스피", kind: "index", rate: 0.5, price: 2500 }];
-  it("추수감사절 다음 날(금 11/27) 미국은 반복, 국내는 새 종가", () => {
-    expect(isRepeatedClose("2026-11-27", "us")).toBe(true);
-    expect(isRepeatedClose("2026-11-27", "kr")).toBe(false);
+describe("미국 휴장 다음 날 같은 종가 반복 방지", () => {
+  it("추수감사절 다음 날(금 11/27)은 반복, 평범한 화요일·월요일은 반복 아님", () => {
+    expect(isRepeatedClose("2026-11-27")).toBe(true);
+    expect(isRepeatedClose("2026-11-17")).toBe(false);
+    expect(isRepeatedClose("2026-11-16")).toBe(false);
   });
-  it("평범한 화요일·월요일은 반복 아님", () => {
-    expect(isRepeatedClose("2026-11-17", "us")).toBe(false);
-    expect(isRepeatedClose("2026-11-16", "kr")).toBe(false);
+  it("국내 연휴는 반복 판정과 무관 — 설날 연휴 다음 영업일(2027-02-10)도 미국은 새 거래일", () => {
+    expect(isRepeatedClose("2027-02-10")).toBe(false);
   });
-  it("설날 연휴 다음 영업일(2027-02-10) 국내는 반복", () => {
-    expect(isRepeatedClose("2027-02-10", "kr")).toBe(true);
+});
+
+describe("합침 — 둘째 줄은 같은 날 단독 본문과 같은 값(C117·C118)", () => {
+  const us = [idx("S&P 500", 0.8), idx("나스닥", 1.1)];
+  it("결산 11/27 — 미국 반복일", () => {
+    const single = buildMorningMessage("2026-11-27", [], [fx(0.4)], "daily")!;
+    expect(single.b).toBe("환율 1,385원(+0.4%) | 미국 11/26 휴장");
+    expect(mergePushPayloads([single, buildSettleMessage("2026-11-27")])).toEqual({
+      m: "settle",
+      t: "11월 결산이 열렸어요",
+      b: "12월 10일까지 이번 달 자산 변화를 볼 수 있어요\n아침 시장 · 환율 1,385원(+0.4%) | 미국 11/26 휴장",
+    });
   });
-  it("반복 구간은 수치 없이 쉰 날짜로 표시, 나머지는 그대로", () => {
-    expect(buildMorningMessage("2026-11-27", [], q, "daily")?.b).toBe("국내 코스피 +0.5% | 미국 11/26 휴장");
-    expect(buildMorningMessage("2027-02-10", [{ label: "S&P500", kind: "index", rate: 0.2, price: 1 }], [], "daily")?.b).toBe("미국 S&P500 +0.2% | 국내 2/9 휴장");
+  it("세금 12/1", () => {
+    const single = buildMorningMessage("2026-12-01", us, [fx(0.4)], "daily")!;
+    const tax = pushDueOn("2026-12-01")[0].payload;
+    expect(mergePushPayloads([single, tax])).toEqual({
+      m: "tax",
+      t: "12월 세금 일정",
+      b: `${TAX_PUSH_DATES["12-01"].b}\n아침 시장 · 미국 11/30 종가 S&P 500 +0.8% · 나스닥 +1.1% | 환율 1,385원(+0.4%)`,
+    });
+    expect(mergePushPayloads([single, tax])?.b.endsWith(`아침 시장 · ${single.b}`)).toBe(true);
   });
-  it("같은 시장이 오늘도 휴장이면 '오늘 ○ 휴장'만 남긴다", () => {
-    expect(buildMorningMessage("2027-02-09", [{ label: "S&P500", kind: "index", rate: 0.2, price: 1 }], [], "daily")?.b).toBe("미국 S&P500 +0.2% | 오늘 국내 휴장");
+  it("값 0인 날은 결산·세금만 — 빈 둘째 줄 없음", () => {
+    const none = buildMorningMessage("2026-11-27", [], [], "daily");
+    expect(none).toBeNull();
+    expect(mergePushPayloads([buildSettleMessage("2026-11-27")])?.b).not.toContain("\n");
   });
-  it("월요일 아침, 직전 금요일(성금요일) 휴장 날짜 표시", () => {
-    expect(buildMorningMessage("2027-03-29", [], q, "daily")?.b).toBe("국내 코스피 +0.5% | 미국 3/26 휴장");
-  });
-  it("보낼 새 수치가 없으면 미발송", () => {
-    expect(buildMorningMessage("2026-11-27", [], [], "daily")).toBeNull();
+});
+
+describe("설정 설명(#241)", () => {
+  it("아침 = 직전 미국 장 종가·환율, 국내 장 마감 = 오늘 코스피·코스닥·환율", () => {
+    expect(PUSH_CATALOG[0].desc).toBe("월~금 아침 9시, 직전 미국 장 종가·환율");
+    expect(PUSH_CATALOG[1].desc).toBe("월~금 오후 4시, 오늘 코스피·코스닥·환율");
   });
 });
