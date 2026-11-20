@@ -599,7 +599,7 @@ export function TradeInput() {
 
               {/* 종목(티커) 선택 — 상세 진입 시 읽기 전용 요약으로 대체. 매수는 보유 Select 외에 검색으로 처음 사는 종목도 고른다(#258) */}
               {!lockedStock && (
-                <FormItem className="space-y-0">
+                <FormItem className="gap-0">
                   <FormLabel>종목</FormLabel>
                   {/* 요약·보유 Select·검색 패널은 항상 마운트하고 grid-rows로 접는다(조건부 렌더 시 높이가 튄다). 닫힌 슬롯은 높이·간격 0 */}
                   <CollapseSlot open={!!pickedNew} testId="trade-new-stock-slot">
