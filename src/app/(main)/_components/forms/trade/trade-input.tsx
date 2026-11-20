@@ -81,6 +81,21 @@ const NEW_STOCK_ID = "__new_stock__";
 const getPositionSnapshot = (stock: Stock): PositionSnapshot =>
   getBasePositionSnapshot(stock, stock.positionSource === "manual" || !stock.positionSource);
 
+// 접힘 슬롯 — 항상 마운트, grid-rows 0fr↔1fr + opacity 전환, 닫히면 inert(포커스·읽기 제외). 간격(pt-2)은 안쪽이라 닫히면 0
+function CollapseSlot({ open, testId, children }: { open: boolean; testId: string; children: React.ReactNode }) {
+  return (
+    <div
+      data-testid={testId}
+      {...(open ? {} : { inert: true, "aria-hidden": true })}
+      className={`grid ease-out motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-200 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div className="pt-2">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function TradeInput() {
   const { assetData, addTransaction, addTransactionWithPosition, addTransactionsBatch, exchangeRates } = useAssetData();
   const [isOpen, setIsOpen] = useState(false);
@@ -177,6 +192,11 @@ export function TradeInput() {
   const reflected = form.watch("reflected");
   // 검색 패널 표시 — 매수에서만, 보유 0개면 처음부터. 고른 새 종목이 있으면 요약 카드로 대체
   const showSearchPanel = tradeType === "buy" && !lockedStock && !pickedNew && (searchOpen || stocks.length === 0);
+  const showSelect = !pickedNew && !showSearchPanel;
+  // 요약 슬롯이 접히는 동안에도 마지막 내용을 보여 준다(사라질 때 내용이 먼저 비지 않게)
+  const lastPickedRef = useRef(pickedNew);
+  if (pickedNew) lastPickedRef.current = pickedNew;
+  const shownPicked = pickedNew ?? lastPickedRef.current;
   const quoteLoading = pickedNew?.quote.state === "loading"; // 시세 확인 중에는 저장을 잠깐 막는다(실패 폴백과 엇갈리지 않게)
 
   // 반영 후 예상 포지션 인라인 미리보기 (팝업 대체)
@@ -579,28 +599,30 @@ export function TradeInput() {
 
               {/* 종목(티커) 선택 — 상세 진입 시 읽기 전용 요약으로 대체. 매수는 보유 Select 외에 검색으로 처음 사는 종목도 고른다(#258) */}
               {!lockedStock && (
-                <FormItem className="space-y-2">
+                <FormItem className="space-y-0">
                   <FormLabel>종목</FormLabel>
-                  {pickedNew && (
+                  {/* 요약·보유 Select·검색 패널은 항상 마운트하고 grid-rows로 접는다(조건부 렌더 시 높이가 튄다). 닫힌 슬롯은 높이·간격 0 */}
+                  <CollapseSlot open={!!pickedNew} testId="trade-new-stock-slot">
+                  {shownPicked && (
                     <>
                       <div data-testid="trade-new-stock-summary" className="flex items-center gap-2 rounded-lg bg-muted/50 dark:bg-muted/40 py-2 pl-3 pr-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 duration-200">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold" title={pickedNew.name}>{pickedNew.name}</p>
-                          <p className="truncate text-xs tabular-nums text-muted-foreground">{pickedNew.ticker} · {pickedNew.exchange || (pickedNew.market === "us" ? "해외" : "국내")}</p>
-                          {pickedNew.quote.state === "loading" && (
+                          <p className="truncate text-sm font-semibold" title={shownPicked.name}>{shownPicked.name}</p>
+                          <p className="truncate text-xs tabular-nums text-muted-foreground">{shownPicked.ticker} · {shownPicked.exchange || (shownPicked.market === "us" ? "해외" : "국내")}</p>
+                          {shownPicked.quote.state === "loading" && (
                             <p className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
                               현재가 확인하는 중 <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden />
                             </p>
                           )}
-                          {pickedNew.quote.state === "ok" && (
+                          {shownPicked.quote.state === "ok" && (
                             <p className="truncate text-xs tabular-nums text-muted-foreground">
-                              현재가 {formatPriceByCurrency(pickedNew.quote.price!, pickedNew.market === "us" ? "USD" : "KRW")}
+                              현재가 {formatPriceByCurrency(shownPicked.quote.price!, shownPicked.market === "us" ? "USD" : "KRW")}
                             </p>
                           )}
                         </div>
                         <Button type="button" variant="ghost" className="h-10 shrink-0 px-3 text-sm text-muted-foreground" onClick={changePicked}>바꾸기</Button>
                       </div>
-                      {pickedNew.quote.state === "fail" && (
+                      {shownPicked.quote.state === "fail" && (
                         <p role="status" data-testid="trade-new-stock-price-note" className="mt-2 flex gap-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
                           <Info className="mt-[3px] size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
                           현재가를 못 가져와서 체결 단가로 먼저 표시해요
@@ -608,8 +630,10 @@ export function TradeInput() {
                       )}
                     </>
                   )}
+                  </CollapseSlot>
 
-                  {!pickedNew && !showSearchPanel && (
+                  <CollapseSlot open={showSelect} testId="trade-stock-select-slot">
+                  <div className="space-y-2">
                     <Select value={selectedGroupId} onValueChange={(v) => { clearSearch(); setSelectedGroupId(v); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="종목 선택" />
@@ -622,26 +646,23 @@ export function TradeInput() {
                         ))}
                       </SelectContent>
                     </Select>
-                  )}
-                  {!pickedNew && !showSearchPanel && tradeType === "buy" && stocks.length > 0 && (
+                  {tradeType === "buy" && stocks.length > 0 && (
                     <Button type="button" variant="secondary" data-testid="trade-find-other-stock" className="h-10 w-full gap-1.5 rounded-lg text-sm font-medium" onClick={openSearch}>
                       <Search className="size-4" aria-hidden />
                       다른 종목 찾기
                     </Button>
                   )}
-                  {!pickedNew && !showSearchPanel && tickerNote && (
+                  {tickerNote && target?.kind !== "new" && (
                     <p role="status" data-testid="trade-switched-existing-note" data-reason="ticker" className="text-sm text-muted-foreground break-keep text-pretty">
                       이미 가진 종목이라 보유 종목에서 골랐어요
                     </p>
                   )}
 
-                  {/* 검색 패널 — 항상 마운트하고 접힘 전환(닫히면 inert). 보유 0개면 박스 없이 처음부터 열림 */}
-                  <div
-                    data-testid="trade-stock-search"
-                    {...(showSearchPanel ? {} : { inert: true, "aria-hidden": true })}
-                    className={`grid ease-out motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-200 ${showSearchPanel ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-                  >
-                    <div className="min-h-0 overflow-hidden">
+                  </div>
+                  </CollapseSlot>
+
+                  {/* 검색 패널 — 보유 0개면 박스 없이 처음부터 열림 */}
+                  <CollapseSlot open={showSearchPanel} testId="trade-stock-search">
                       <div className={stocks.length > 0 ? "space-y-3 rounded-lg bg-muted/40 p-3 dark:bg-muted/25" : "space-y-3"}>
                         <div data-testid="trade-stock-search-market" data-value={searchMarket}>
                           <InlineSelector
@@ -673,8 +694,7 @@ export function TradeInput() {
                           </Button>
                         )}
                       </div>
-                    </div>
-                  </div>
+                  </CollapseSlot>
                 </FormItem>
               )}
 
