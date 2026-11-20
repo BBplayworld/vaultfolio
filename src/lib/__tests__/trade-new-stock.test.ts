@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { MARKET_CATEGORIES, buildPickedStockDraft, findHeldByPicked, marketDefaultCategory, withInitialPrice } from "@/lib/trade/new-stock";
+import { MARKET_CATEGORIES, buildPickedStockDraft, findHeldByPicked, marketDefaultCategory, resolveQuotedName, withInitialPrice } from "@/lib/trade/new-stock";
 import { nextSearchKey, shouldBlockEnter } from "@/lib/ticker-search-nav";
 import { trackTradeNewStock } from "@/lib/trade/link-track";
 import { stockSchema } from "@/types/asset";
@@ -134,5 +134,17 @@ describe("검색 공용 컴포넌트 (AC-12 주식 추가 화면 diff 0)", () =>
     expect(src).toContain("[market, resetKey]");
     // 인라인은 Esc를 가로채지 않는다
     expect(src).toMatch(/action\.type === "close" && !inline/);
+  });
+});
+
+describe("resolveQuotedName — 시세 응답 이름 규칙(직접 추가와 공용)", () => {
+  it("해외는 응답 이름 그대로, 국내는 코드·심볼 형식이면 무시, 빈 값은 undefined", () => {
+    expect(resolveQuotedName("테슬라", "foreign")).toBe("테슬라");
+    expect(resolveQuotedName("005930.KS", "foreign")).toBe("005930.KS");
+    expect(resolveQuotedName("삼성전자", "domestic")).toBe("삼성전자");
+    expect(resolveQuotedName("005930", "domestic")).toBeUndefined();
+    expect(resolveQuotedName("005930.KS", "isa")).toBeUndefined();
+    expect(resolveQuotedName("", "foreign")).toBeUndefined();
+    expect(resolveQuotedName(undefined, "domestic")).toBeUndefined();
   });
 });

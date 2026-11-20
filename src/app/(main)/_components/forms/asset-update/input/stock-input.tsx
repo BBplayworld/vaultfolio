@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveQuotedName } from "@/lib/trade/new-stock";
 import { useReturnFocusOnClose } from "@/lib/restore-focus";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import { useState, useEffect } from "react";
@@ -182,13 +183,9 @@ function StockForm({ editData, onClose }: StockFormProps) {
       const data = await res.json();
       if (data && data[normalized]) {
         form.setValue("currentPrice", data[normalized].price);
-        // 해외주식: API 반환 name 그대로 사용 / 국내 등: 종목코드·심볼 형식이면 무시
-        const fetchedName = data[normalized].name || "";
-        const isForeign = category === "foreign";
-        const isCodeLike = /^\d{6}/.test(fetchedName) || /\.\w{2,}$/.test(fetchedName);
-        if (fetchedName && (isForeign || !isCodeLike)) {
-          form.setValue("name", fetchedName);
-        }
+        // 해외주식: API 반환 name 그대로 사용 / 국내 등: 종목코드·심볼 형식이면 무시(공용 규칙)
+        const resolvedName = resolveQuotedName(data[normalized].name, category);
+        if (resolvedName) form.setValue("name", resolvedName);
         if (data[normalized].updated_at) {
           form.setValue("baseDate", data[normalized].updated_at);
         }

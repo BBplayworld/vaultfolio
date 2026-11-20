@@ -60,3 +60,11 @@ export function withInitialPrice(stock: Stock, quote: InitialQuote | undefined, 
   if (quote && quote.price > 0) return { ...rest, currentPrice: quote.price, ...(quote.baseDate ? { baseDate: quote.baseDate } : {}) } as Stock;
   return { ...rest, currentPrice: effectiveTxPrice } as Stock;
 }
+
+// 시세 응답 이름 적용 규칙(직접 추가·거래 입력 공용): 해외는 응답 이름 그대로, 그 밖은 종목코드·심볼 형식이면 무시. 적용할 이름이 없으면 undefined
+export function resolveQuotedName(fetchedName: string | undefined | null, category: Stock["category"] | string): string | undefined {
+  const name = fetchedName || "";
+  if (!name) return undefined;
+  const isCodeLike = /^\d{6}/.test(name) || /\.\w{2,}$/.test(name);
+  return category === "foreign" || !isCodeLike ? name : undefined;
+}

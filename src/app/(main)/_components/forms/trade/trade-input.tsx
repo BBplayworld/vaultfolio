@@ -39,7 +39,7 @@ import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effectiv
 import { LinkAccountRow } from "./link-account-row";
 import { trackLinkedTrade, trackTradeNewStock } from "@/lib/trade/link-track";
 import {
-  MARKET_CATEGORIES, marketDefaultCategory, findHeldByPicked, buildPickedStockDraft, withInitialPrice,
+  MARKET_CATEGORIES, marketDefaultCategory, findHeldByPicked, buildPickedStockDraft, withInitialPrice, resolveQuotedName,
   type PickedTicker, type TickerMarket,
 } from "@/lib/trade/new-stock";
 import { normalizeTicker } from "@/lib/finance/finance-service";
@@ -112,7 +112,7 @@ export function TradeInput() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchMarket, setSearchMarket] = useState<TickerMarket>("kr");
   const [query, setQuery] = useState("");
-  const [pickedNew, setPickedNew] = useState<(PickedTicker & { quote: { state: "loading" | "ok" | "fail"; price?: number; baseDate?: string } }) | null>(null);
+  const [pickedNew, setPickedNew] = useState<(PickedTicker & { quote: { state: "loading" | "ok" | "fail"; price?: number; baseDate?: string; name?: string } }) | null>(null);
   const [tickerNote, setTickerNote] = useState(false); // AC-4 — 검색 종목이 이미 보유라 보유 종목으로 바꿨다는 안내
   const quoteSeq = useRef(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -343,9 +343,9 @@ export function TradeInput() {
   // 현재가 조회 — 카운터 키는 읽기만(성공해도 지우지 않는다, 주식 추가와 달리 쓰기 금지). 실패해도 저장은 된다(AC-9)
   const fetchPickedQuote = async (picked: PickedTicker) => {
     const seq = ++quoteSeq.current;
-    const settle = (quote: { state: "ok" | "fail"; price?: number; baseDate?: string }) => {
+    const settle = (quote: { state: "ok" | "fail"; price?: number; baseDate?: string; name?: string }) => {
       if (seq !== quoteSeq.current) return;
-      setPickedNew((p) => (p && p.ticker === picked.ticker ? { ...p, quote } : p));
+      setPickedNew((p) => (p && p.ticker === picked.ticker ? { ...p, quote, ...(quote.name ? { name: quote.name } : {}) } : p));
     };
     const errorCount = parseInt(localStorage.getItem(STORAGE_KEYS.financeApiErrorCount) || "0");
     const normalized = normalizeTicker({ ticker: picked.ticker, category: marketDefaultCategory(picked.market) });
@@ -355,7 +355,7 @@ export function TradeInput() {
       if (!res.ok) return settle({ state: "fail" });
       const data = await res.json();
       const q = data?.[normalized];
-      if (q && typeof q.price === "number" && q.price > 0) settle({ state: "ok", price: q.price, baseDate: q.updated_at || undefined });
+      if (q && typeof q.price === "number" && q.price > 0) settle({ state: "ok", price: q.price, baseDate: q.updated_at || undefined, name: resolveQuotedName(q.name, marketDefaultCategory(picked.market)) }); // 직접 추가와 같은 이름 규칙, 실패 시 검색 이름 유지
       else settle({ state: "fail" });
     } catch {
       settle({ state: "fail" });
