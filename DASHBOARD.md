@@ -1,22 +1,18 @@
 # 📋 시크릿에셋 대표 대시보드
 
-> 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
+> 대표는 이 페이지만 보고 승인·진행을 판단합니다. 반영 승인은 CEO 에이전트가 하고(11/19), 대표는 risk:high·대표 반려 영역 재시도·원칙 변경·결제·외부 게시만 결정합니다. 팀이 단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-20 20:xx KST (v5.128~5.132 머지·운영 스모크 PASS · 열린 릴리스 issue-5.134에 #251·#254·백로그 2건 qa PASS, #259·#258 개발 착수 · #246 [#5.133] 12/11~ · #250 11/25 뒤)** · 운영 최신 **v5.132**(체험 보강, 브랜치 issue-5.133)
+> **마지막 갱신: 2026-11-20 22:xx KST** · 운영 최신 **v5.132** · 머지 대기 릴리스 1개([PR #260](https://github.com/BBplayworld/vaultfolio/pull/260), draft) · 다음 릴리스 5.135(#250) · 운영 결함 p0 없음
 
-## 🟥 대표님 결정 필요 — 없음 (11/19부터 반영 승인 판단은 CEO 에이전트, 대표는 사후 알림만 — 원칙 변경·결제·외부 게시 제외)
+## 🟥 대표님 결정 필요 — 없음
 
-## 🟨 다음 대표 결정 (팀 준비 중 — 지금 할 일 없음)
-| 언제 | 무엇 | 대표 할 일 |
-|---|---|---|
-| — | 없음 (위 🟥 1건) | — |
-| v5.128 머지 직후 | Next.js 16.4.5 보안 패치 단독 v5.129(CEO 판정: 실제 영향 없음, risk:low) | 없음 |
+## 🧹 대표님 정리 부탁 (선택, 운영 영향 없음)
+- 측정 전용 브랜치 `diag-kis-close` 삭제 — 팀 권한으로는 원격 브랜치 삭제가 403으로 막힘. 머지 금지 브랜치이며 진단 API 하나만 담고 있음
 
 ## 📅 예정된 자료 요청 (날짜 되면 다시 알림)
 - 11/25 · 12/9 전후: GA **'페이지 및 화면' 보고서를 차원 '페이지 제목'으로 바꿔** 1장(보조 차원 '페이지 경로' 가능) + 홈 × 날짜 1장 (경로 기준 자료로는 화면 안 동작 지표를 판독할 수 없음, CEO 11/19)
   - 페이지 제목 1장은 행 수 50 이상으로(`홈`·`웰컴`·`웰컴·인앱`·`체험 모드`·`웰컴·체험`·`첫 자산 저장·*` 행이 잘리지 않게). 가능하면 홈×날짜는 '`welcome_view` 이벤트가 없는 사용자' 조건으로 1장 더(어려우면 생략)
   - **(추가 1장, 선택)** 탐색 › 코호트 탐색 1장: 포함 조건 이벤트 `first_asset_saved`, 재방문 조건 모든 이벤트, 단위 주, 측정항목 활성 사용자, 기간 2026-10-11~11-21(6주). CSV 또는 캡처. 대표 기기 제외 어려우면 그대로. 시간 없으면 생략
-- 11/18에 1장 추가(선택, #234 규모 확인용): 탐색 자유 형식 — 기간 11/07~11/17, 대표 기기 제외, 행 '브라우저'+'세션 소스/매체', 값 활성 사용자·새 사용자·평균 참여 시간, 필터 없음
 - 12/11 전후: GA '홈' × 날짜 CSV 1장(결산 창 구간)
 
 <details>
@@ -36,22 +32,20 @@
 ## 🔴 운영 결함 (p0)
 - 없음 (최근: #230 자산 변화 없는 날 홈 시장 요약 카드 밖 노출 → v5.120 핫픽스 운영 스모크 PASS · #228 알림 합침 → v5.119)
 
-## 🔄 진행 중
-- **열린 릴리스 v5.134**(issue-5.134): [#251](https://github.com/BBplayworld/vaultfolio/issues/251) 예측 분리·[#254](https://github.com/BBplayworld/vaultfolio/issues/254) 열 겹침 qa PASS · 백로그 2건(체험 중 /api/push 차단 risk:medium, 7일 카드 `백만원`→`만원`) 증분 qa PASS @1707b6b · [#259](https://github.com/BBplayworld/vaultfolio/issues/259) 신규 자산 등록 중복 종목(운영 결함 P2 확정) + [#258](https://github.com/BBplayworld/vaultfolio/issues/258) 처음 사는 종목도 거래로 기록(risk:medium): direction·business·challenge(C1~C9)·spec·tech-review·ui(390/320 목업)·design-review 완료 → 구현·ui-review(R-1~R-4)·qa D1 수정 → **증분 qa PASS @2584db3 · CEO 승인(#258·#259·/api/push)** · #250은 다음 릴리스 issue-5.135로 이동
-- **v5.127** [#242](https://github.com/BBplayworld/vaultfolio/issues/242): 대리 검토(COO·사업) 2회 → spec·ui 개정·목업 재캡처 → 구현 → UI·qa 수정 2라운드 → COO 되돌림 1건(1280 날짜 겹침) aa5f7c4 → **대표 승인 머지 [PR #244](https://github.com/BBplayworld/vaultfolio/pull/244) → e4253da · 운영 스모크 PASS(11/19)** · 판독 M+28 `·주식 외 정함` 2기기, M+56 `·내 선택` 3기기
-- #239 내 자산 불리기 — Plus 기능 종합 정리(대표 지시 11/17, Fable): 방향 합의·cto 축소 통과(원칙 변경 불필요, risk:high·대표 승인 머지, 5.125 단독) → spec·business·tech-review·ui 교차 검토 완료 → v5.125 [PR #240](https://github.com/BBplayworld/vaultfolio/pull/240) 구현 완료 @cb88209·Vercel success → UI 승인 @0caff17 → qa FAIL(D-1 새 소식 팁 23 vs 시트 20) → 수정 080cccf → qa·COO PASS @080cccf → 대표 결정 'Plus 빼자'(배지 0곳) a2fb703 → UI·qa·COO PASS @a2fb703(이름표·Plus 폐지) → 대표 지시: 이름표 이후 연결·인사이트 핵심 방향을 함께 반영 → 승인 요청 철회 → **인사이트 방향 확정**(① 내 결정의 무게 ② 정한 날과 지금 수량 나란히, 기준값 저장·모르는 필드 보존) → spec·tech-review·ui 증분 완료 → 인사이트 구현 @60d1b1c(vitest 3,098) → UI 수정 요청 R-I1(320 수량 잘림) → 1f9578e UI 승인 → qa·COO PASS @1f9578e → 대표 지시 '인사이트 후보 1~4 실제 화면 제공, 보유·점검 체크만은 의미 없음' → 🟥 철회 → spec(대표 약속 대조표 C131)·tech-review·ui·cto 판정 완료 → 인사이트 4종 구현 @ed23590(vitest 3,162, Opus 이어받기) → UI 승인 @53ba53b → 데모 % 현실화 15b3f8f → qa PASS @15b3f8f(대조표 10행 화면 확인) → COO 수정 요청 R-C1 배당 문장 라벨·R-C2 데모 시드 정합 → R-C1·R-C2 eb7316a → 데모 평단 재기준 d72e5ec(qa D-2 FAIL) → 원가 정합 a985322 → UI·qa·COO PASS → 🟥 → 대표 피드백(문구·데이터 노출 과다, 실질 요약 없음, 효과를 종목별·종합 한눈에 못 봄) → 🟥 철회 → 재설계 1~3차(대표 목업 확인 3회) → 3차 시각안 확정 + 보유 기간 대비 성과 점수 → 구현 c43d375 → UI·qa·COO PASS @cb36907 → 🟥 → 대표 '결과 좋아' + 이름표별 확실한 기능·선택의 결과 종합 코멘트·방향 검토 화면 같이 → 4차 목업 확정 → 대표 추가 피드백(점검할 플랜·마이너스 오래 둘 판단·이름표 제거·더 축약) → 5차 통합안 → 대리 검토(C137) → 개선판 5b 확정 → 구현 fb0192d → qa·UI·COO PASS @edafc3e → 🟥 → 대표 지시 4건 → 6차 대리 검토 확정 → 구현 32bf4aa → UI 승인·qa·COO PASS @4ce2a46 → **🟥 대표 승인 대기** → 검수·qa·COO → 🟥 → COO → 🟥 → 개발·검수 → 🟥 → 🟥 대표 승인(risk:high)
-- (최근: v5.124 #237 올해 결산 운영 스모크 PASS 11/17 · 판독 12/27~1/10: 3대 이상=성공·2대=보류·1대 이하=축소)
-- [#245](https://github.com/BBplayworld/vaultfolio/issues/245) 내 결정 표시(v5.130, risk:low)·[#246](https://github.com/BBplayworld/vaultfolio/issues/246) 홈 내 종목 오늘(v5.132, medium, 머지 12/11~): D9 선정 → direction → CEO challenge 통과 → **spec 작성 중**
-- [#249](https://github.com/BBplayworld/vaultfolio/issues/249) 둘러본 사람이 그 자리에서 내 자산으로(D10, risk:medium, v5.131 예상): CEO 선정 → planning 시작
-- **v5.128 머지 완료** [PR #248](https://github.com/BBplayworld/vaultfolio/pull/248) → 2f05f3a (11/20 09:1x, 운영 스모크 PASS; 아침 알림 실발송 확인 11/23 09시)
-- **v5.129 머지 완료** [PR #253](https://github.com/BBplayworld/vaultfolio/pull/253) → 53d23d4 (11/20 09:39, 운영 스모크 PASS)
-- **v5.130 머지 완료** [PR #255](https://github.com/BBplayworld/vaultfolio/pull/255) → 156d72b (#245, 운영 스모크 PASS)
-- **v5.131 머지 완료** [PR #256](https://github.com/BBplayworld/vaultfolio/pull/256) → 3ecf474 (#249, 운영 스모크 PASS)
-- **머지 대기 줄**: issue-5.134 한 PR(#246·#251·#254·#258·#259·백로그 2건, squash `[#5.133]`) — 11/25 CSV로 #246 조기 해제면 11/25~26, 아니면 12/11~ · 머지 전 HEAD 전체 qa·decision-brief · 다음: issue-5.135(#250)
-- [#250](https://github.com/BBplayworld/vaultfolio/issues/250) 홈 '지금 순자산은 무엇을 더한 값인지'(D11, risk:medium, v5.134): spec·ui·tech-review·대리 검토 완료 → 11/25 GA CSV 중단 조건 판독 뒤 개발
-- 다음 후보: 현금 잔액 맞추기 때 차액을 '넣은 돈/쓴 돈'으로 기록(B) — 대표가 승인한 맞추기 안내('입출금 기록은 따로 안 남겨도 돼요')와 방향이 반대라 v5.124 결정 후 대표 방향 확인과 함께 기획 · 11/18 GA 자료 받은 날 D 재수행 (13:53 D8 0건 — `issues/_discovery/2026-11-17-d8-selection.md`)
+## 🔄 진행 중 (한눈에)
+| 릴리스 | 이슈 | 상태 | 다음 |
+|---|---|---|---|
+| **5.134** [PR #260](https://github.com/BBplayworld/vaultfolio/pull/260) (squash `[#5.133]`) | [#246](https://github.com/BBplayworld/vaultfolio/issues/246) 홈 내 종목 오늘 · [#251](https://github.com/BBplayworld/vaultfolio/issues/251) 예측 원인 분리 · [#254](https://github.com/BBplayworld/vaultfolio/issues/254) 수익률 열 겹침 · [#258](https://github.com/BBplayworld/vaultfolio/issues/258) 처음 사는 종목 거래 기록 · [#259](https://github.com/BBplayworld/vaultfolio/issues/259) 중복 종목 버그(운영 P2) · 체험 중 /api/push 차단 · 7일 카드 만원 표기 | 이슈별 qa PASS · CEO 승인 완료 | **11/25 GA CSV**로 #246 조기 해제 판정 → 해제면 11/25~26, 아니면 12/11~ 머지. 머지 전 HEAD 전체 qa·CEO decision-brief·Vercel 확인 |
+| **5.135** (브랜치 미생성) | [#250](https://github.com/BBplayworld/vaultfolio/issues/250) 홈 순자산 구성 설명 | 기획·디자인·기술 검토 완료 | 11/25 CSV 중단 조건 판독 → 개발 |
+| 보류 | [#252](https://github.com/BBplayworld/vaultfolio/issues/252) 신규 현금 원인 하루 더 표시 | risk:high | 대표 승인 대상 — 우선순위 낮아 대기 |
+| 보류 | [#57](https://github.com/BBplayworld/vaultfolio/issues/57) 가족 금고 공유 | on-hold | — |
+
+- #259 단독 선반영 조건: 실사용자 중복 신고 1건, 또는 5.134 머지가 12/11 뒤로 밀릴 때(수정 커밋만 main에 반영)
+- 후속(p3): 해외 종목명이 검색 결과 영문명으로 저장됨(Tesla Inc.) · 활동 달력 sm 이상 `백만원` 표기
+- 오늘(11/20) 정리: KIS 종가 측정 종료(16시 알림 시각 유지) · 발굴 후보 C 폐기(이미 수정됨) · 후보 B `/asset` 리다이렉트 보류(iOS 실기기 확인 불가)
 
 ### ⏱ 예약된 운영 확인
+- **11/23(월) 09시**: 아침 알림 실발송이 미국 종가+오늘 환율만인지(코스피·코스닥 없음) 확인 (v5.128)
 - ~11/30·~12/14: v5.122(#234) 판독 — '웰컴·인앱'(상한) 대비 '체험 모드·인앱'(칩 1개 진입, 5.122 운영 구간 '·버튼' 행은 더하기만). 1/3 미만이면 진입 늘리지 않는 후보만
 - 12/3·12/17 전후: v5.116(#222) 판독 — '종가 기준·변경' 기기 수(설정/성과), 4주 0기기면 설정 축소 후보
 - 12/06·12/11·12/20: v5.115(#219) 판독 — 알림 팁 본 기기 중 알림 켬 · 결산 알림으로 돌아온 기기 · 저장 보호 허용 기기(기기 단위)
@@ -65,7 +59,17 @@
 ## ✅ 위임 머지 완료 (risk:low·medium, 사후 보고 — 히스토리)
 > 팀이 자체 승인·머지한 릴리스를 **묶음 단위**로 모읍니다. 최신 묶음은 펼쳐 두고 지난 묶음은 접습니다. 새 머지가 생길 때마다 최신 묶음에 추가하고, 묶음이 5건 이상이 되거나 날짜가 바뀌면 다음 묶음을 엽니다(묶음 머리줄에 한 줄 요약 갱신).
 
-### 📦 묶음 8 · 11/15~ · v5.114~ (진행 중)
+### 📦 묶음 9 · 11/20 · v5.128~v5.132
+**요약**: 아침 알림 개편, 보안 패치, 내 결정 표시, 체험→내 자산, 체험 보강 (전부 운영 스모크 PASS)
+| 버전 | PR | 내용 |
+|---|---|---|
+| v5.128 | [#248](https://github.com/BBplayworld/vaultfolio/pull/248) | 아침 알림 = 미국 종가+오늘 환율(국내 지수 제외, #241)·전량 매도 종목 제외(#243)·점검 차례 반복 수정(#247) |
+| v5.129 | [#253](https://github.com/BBplayworld/vaultfolio/pull/253) | Next.js 16.4.5 보안 패치 |
+| v5.130 | [#255](https://github.com/BBplayworld/vaultfolio/pull/255) | 내 결정 표시(#245) |
+| v5.131 | [#256](https://github.com/BBplayworld/vaultfolio/pull/256) | 둘러본 사람이 그 자리에서 내 자산으로(#249) |
+| v5.132 | [#257](https://github.com/BBplayworld/vaultfolio/pull/257) | 체험 보강(스와이프·해시 차단, GA 토글, 원인 줄 날짜) |
+
+### 📦 묶음 8 · 11/15~ · v5.114~
 **요약**: 전 화면 글자 크기 체계, 첫 결산 재방문 준비
 
 | 릴리스 | 머지일 | 내용 | 운영 스모크 |
@@ -194,6 +198,7 @@
 | 4.44 [PR #76](https://github.com/BBplayworld/vaultfolio/pull/76) | 11/06 | 상세 다크 BOX·구분선 정리 |
 
 ## 🔍 발굴·기획 중 (병렬)
+- 11/20 자율 발굴: A(#258) 선정·개발 완료, B 보류, C 폐기 — `issues/_discovery/2026-11-20-next-candidates.md`. 다음 발굴은 11/25 CSV 판독과 함께
 - 관찰 후보: 홈 최신화 팁이 약 1.2초 뒤 다음 팁으로 바뀜(v4.59 운영 스모크, 기존 동작·실사용자 재현 미확인)
 - 보류: 첫 결산 공백(12/11 판독 뒤), 미사용 기능 판독(12/4), 기존 고아 거래 일괄 정리(1월 이후, high)
 
@@ -204,4 +209,4 @@
 - 결산 창 전 머지 컷 11/26 23:59 (#83·#93) / 12/19~12/27 머지 없음
 - #54 2차 판독 경계·GA `activity:change:composition` 판독 시작 = 11/08 (#83 머지일)
 - 12/11: #51·#54 지표 판독 / ~12/25: #48 판독 / ~2/5: #93 판독
-- 운영: 이상 없음 (최근 스모크 v5.125 PASS, 11/18)
+- 운영: 이상 없음 (최근 스모크 v5.132 PASS, 11/20)
