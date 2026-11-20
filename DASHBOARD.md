@@ -2,7 +2,7 @@
 
 > 대표는 이 페이지만 보고 승인·진행을 판단합니다. **버그·기획 누락 수정은 COO 자체 승인으로 진행되며 사후 보고는 이 페이지 목록으로만 합니다(11/09 대표 결정).** 팀이 매 실행·단계 변화마다 이 파일 전체를 갱신합니다.
 > 고정 주소: https://github.com/BBplayworld/vaultfolio/blob/memory/DASHBOARD.md
-> **마지막 갱신: 2026-11-20 10:xx KST (v5.128·v5.129 머지·운영 스모크 PASS · v5.130 PR #255 머지 직전 qa 중 · 이어서 5.131·5.133)** · 운영 최신 **v5.129**
+> **마지막 갱신: 2026-11-20 10:xx KST (v5.128·5.129·5.130 머지·운영 스모크 PASS · v5.131 PR #256 머지 직전 qa 중 · 다음 5.133)** · 운영 최신 **v5.130**
 
 ## 🟥 대표님 결정 필요 — 없음 (11/19부터 반영 승인 판단은 CEO 에이전트, 대표는 사후 알림만 — 원칙 변경·결제·외부 게시 제외)
 
@@ -45,7 +45,8 @@
 - [#249](https://github.com/BBplayworld/vaultfolio/issues/249) 둘러본 사람이 그 자리에서 내 자산으로(D10, risk:medium, v5.131 예상): CEO 선정 → planning 시작
 - **v5.128 머지 완료** [PR #248](https://github.com/BBplayworld/vaultfolio/pull/248) → 2f05f3a (11/20 09:1x, 운영 스모크 PASS; 아침 알림 실발송 확인 11/23 09시)
 - **v5.129 머지 완료** [PR #253](https://github.com/BBplayworld/vaultfolio/pull/253) → 53d23d4 (11/20 09:39, 운영 스모크 PASS)
-- **머지 대기 줄(CEO 승인, 순차)**: v5.130 [PR #255](https://github.com/BBplayworld/vaultfolio/pull/255) Next.js 16.4.5 → v5.130 #245 → v5.131 #249 → v5.133 체험 보강(스와이프·해시 차단·GA 토글·원인 줄 날짜, #246보다 먼저면 [#5.132]로 재부여)(각각 origin/main merge→증분 qa→Vercel→squash→운영 스모크 ga-optout) · v5.132 #246 개발 중(머지 12/11~ 또는 11/25 조기 해제)
+- **v5.130 머지 완료** [PR #255](https://github.com/BBplayworld/vaultfolio/pull/255) → 156d72b (#245, 운영 스모크 PASS)
+- **머지 대기 줄(CEO 승인, 순차)**: v5.131 [PR #256](https://github.com/BBplayworld/vaultfolio/pull/256) Next.js 16.4.5 → v5.130 #245 → v5.131 #249 → v5.133 체험 보강(스와이프·해시 차단·GA 토글·원인 줄 날짜, #246보다 먼저면 [#5.132]로 재부여)(각각 origin/main merge→증분 qa→Vercel→squash→운영 스모크 ga-optout) · v5.132 #246 개발 중(머지 12/11~ 또는 11/25 조기 해제)
 - [#250](https://github.com/BBplayworld/vaultfolio/issues/250) 홈 '지금 순자산은 무엇을 더한 값인지'(D11, risk:medium, v5.134, 머지 12/11~): CEO 선정 → spec·390 목업 진행
 - 다음 후보: 현금 잔액 맞추기 때 차액을 '넣은 돈/쓴 돈'으로 기록(B) — 대표가 승인한 맞추기 안내('입출금 기록은 따로 안 남겨도 돼요')와 방향이 반대라 v5.124 결정 후 대표 방향 확인과 함께 기획 · 11/18 GA 자료 받은 날 D 재수행 (13:53 D8 0건 — `issues/_discovery/2026-11-17-d8-selection.md`)
 
