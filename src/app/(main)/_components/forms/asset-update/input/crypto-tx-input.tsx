@@ -56,6 +56,9 @@ function getCryptoPosition(coin: Crypto): CryptoPosition {
   };
 }
 
+// 처음 사는 코인은 거래 입력이 아니라 `암호화폐` 등록으로 — 실제 진입 이름(FAB 보유 현황 업데이트 › 암호화폐)과 현금 결과를 적는다(#258)
+const NEW_COIN_NOTE = "새 코인은 보유 현황 업데이트 › 암호화폐에서 등록해요. 산 만큼 현금을 직접 줄여 주세요";
+
 export function CryptoTxInput() {
   const { assetData, addCryptoTransaction, addCryptoTransactionWithPosition } = useAssetData();
   const [isOpen, setIsOpen] = useState(false);
@@ -66,6 +69,7 @@ export function CryptoTxInput() {
   const [linkValue, setLinkValue] = useState(LINK_NONE); // 연결 계좌 — 매번 '연결 안 함'으로 열림
 
   const cryptoAssets = assetData.crypto;
+  const noCoins = !lockedCrypto && cryptoAssets.length === 0; // 보유 코인 0개 — 빈 Select 대신 안내만(#258)
 
   const form = useForm<CryptoTxFormValues>({
     resolver: zodResolver(cryptoTxFormSchema),
@@ -258,7 +262,18 @@ export function CryptoTxInput() {
           </div>
         )}
 
-        {mode === "manual" && !dupPending && (
+        {mode === "manual" && !dupPending && noCoins && (
+          <div className="space-y-4">
+            <p data-testid="crypto-tx-new-coin-note" className="text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
+              {NEW_COIN_NOTE}
+            </p>
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="secondary" onClick={resetAndClose}>닫기</Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {mode === "manual" && !dupPending && !noCoins && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* 코인 선택 (사전선택 진입 시 숨김) */}
@@ -275,6 +290,9 @@ export function CryptoTxInput() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p data-testid="crypto-tx-new-coin-note" className="text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
+                    {NEW_COIN_NOTE}
+                  </p>
                 </FormItem>
               )}
 

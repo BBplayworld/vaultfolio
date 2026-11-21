@@ -29,6 +29,13 @@ import { pickTopCause, weekTrendTitle } from "@/lib/report/home-today";
 import { marketLineState, type MarketLineState } from "@/lib/finance/market-compare";
 import { CauseMarketSegment, MarketLine, causeMarketText, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
 import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
+import { useQuery } from "@tanstack/react-query";
+import { SKELETON_FILL } from "@/components/ui/skeleton";
+import { fetchProfitRef, readCompleteProfitCache } from "@/lib/finance/profit-utils";
+import {
+  buildMyStockRows, myStockAriaLabel, myStockLineState, myStockQueryKey, myStockTickerList, pickMyStockToday,
+  type MyStockLineState, type MyStockPick,
+} from "@/lib/finance/my-stock-today";
 
 const LIABILITY_COLORS = { loans: MAIN_PALETTE[1], tenant: MAIN_PALETTE[2] } as const;
 export { LIABILITY_COLORS };
@@ -228,6 +235,74 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
   );
 }
 
+export type MyStockLineValue = { state: MyStockLineState; pick: MyStockPick | null; onOpen: () => void };
+
+// 홈 '내 종목 오늘' 줄(#246) — 카드 아래 끝에 붙는 40px 히트(래퍼 -mx-4 -mb-4), 글줄 상자 20px 고정(h-10 − pt-1 − pb-4).
+// off로 시작하면 DOM 0(줄 없는 홈 diff 0). 한 번 자리를 잡은 뒤 off가 되면 같은 노드가 위로만 접힌다(grid-rows·margin 200ms)
+function MyStockLine({ value, underFold }: { value: MyStockLineValue; underFold: boolean }) {
+  const { state, pick, onOpen } = value;
+  const [mounted, setMounted] = useState(state !== "off");
+  if (state !== "off" && !mounted) setMounted(true);
+  if (!mounted) return null;
+  const on = state === "on" && !!pick;
+  const shown = state !== "off";
+  return (
+    <div
+      data-testid="home-my-stock-slot"
+      data-state={state}
+      data-screenshot-hide
+      inert={!on}
+      aria-hidden={on ? undefined : true}
+      className={`-mx-4 grid motion-safe:transition-[grid-template-rows,opacity,margin] motion-safe:duration-200 ease-out ${shown ? `${underFold ? "mt-0" : "mt-2.5"} -mb-4 grid-rows-[1fr] opacity-100` : "mt-0 mb-0 grid-rows-[0fr] opacity-0"}`}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <button
+          type="button"
+          data-testid="home-my-stock"
+          aria-label={on ? myStockAriaLabel(pick) : undefined}
+          onClick={on ? onOpen : undefined}
+          className="flex h-10 w-full items-center gap-1.5 whitespace-nowrap rounded-b-lg px-4 pt-1 pb-4 text-left text-sm text-muted-foreground hover:text-foreground active:text-foreground motion-safe:transition-colors motion-safe:duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        >
+          {on ? (
+            <>
+              <span className="min-w-0 truncate text-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">{pick.name}</span>
+              <span className="shrink-0 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">{pick.label}</span>
+              <span data-testid="home-my-stock-rate" data-sign={pick.sign} className={`shrink-0 font-semibold tabular-nums motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 ${getProfitLossColor(pick.sign === "up" ? 1 : -1)}`}>{pick.rateText}</span>
+              {/* 꼬리 칸 — 남은 폭에 `외 N종목`이 안 들어가면 둘째 줄로 넘겨 잘라 쉐브론만 남긴다(꼬리 먼저 숨김 → 그다음 이름 말줄임, JS 측정 0) */}
+              <span className="-ml-1 flex h-5 min-w-4 flex-1 flex-row-reverse flex-wrap content-start justify-end overflow-hidden">
+                <ChevronRight aria-hidden className="my-0.5 size-4 shrink-0" />
+                {pick.more > 0 && (
+                  <span data-testid="home-my-stock-more" className="shrink-0 pr-0.5 leading-5"><span aria-hidden className="ml-1 mr-1.5 opacity-60">·</span>외 {pick.more}종목</span>
+                )}
+              </span>
+            </>
+          ) : (
+            <span aria-hidden className={`inline-block h-4 w-44 rounded ${SKELETON_FILL}`} />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 홈 '내 종목 오늘' 조회(#246) — 상세·주식과 같은 queryKey의 useQuery 1개만. 상세·주식 데이터 훅·조회 취소 effect는 달지 않는다
+// (요청 +1 경합 원인). 캐시 적중이면 initialData로 첫 렌더에 결과(자리 잡기 0). 조회 조건: 주식 있음·첫 저장 당일 아님
+function useMyStockToday(hasHeaderChange: boolean, onOpen: () => void): MyStockLineValue {
+  const { assetData, exchangeRates } = useAssetData();
+  const tickerList = useMemo(() => myStockTickerList(assetData.stocks), [assetData.stocks]);
+  const enabled = hasHeaderChange && tickerList.length > 0;
+  const { data: refData, isFetching } = useQuery({
+    queryKey: myStockQueryKey(tickerList),
+    queryFn: ({ signal }) => fetchProfitRef(tickerList, "daily", { signal, caller: "home:my-stock", basis: "kstAccessDay" }),
+    staleTime: 5 * 60 * 1000,
+    enabled,
+    initialData: () => readCompleteProfitCache(tickerList, "daily", "kstAccessDay") ?? undefined,
+  });
+  const pick = enabled && refData ? pickMyStockToday(buildMyStockRows(assetData.stocks, refData, exchangeRates)) : null;
+  const state = myStockLineState({ hasHeaderChange, hasTickerStock: tickerList.length > 0, fetching: enabled && isFetching && !refData, picked: pick });
+  return { state, pick, onOpen };
+}
+
 export function NetAssetSummaryBox({
   netAsset,
   totalAsset,
@@ -245,6 +320,7 @@ export function NetAssetSummaryBox({
   market,
   marketLine = "off",
   onMarketOpen,
+  myStock,
 }: {
   netAsset: number;
   totalAsset?: number;
@@ -264,6 +340,8 @@ export function NetAssetSummaryBox({
   market?: MarketEntryValue;
   marketLine?: MarketLineState;
   onMarketOpen?: () => void;
+  /** 내 종목 오늘 줄(#246) — 홈 Dashboard만 넘긴다. 인증카드·웰컴 미리보기는 넘기지 않아 DOM 0 */
+  myStock?: MyStockLineValue;
 }) {
   // Hero·총액은 전액 표기(formatPriceByMode) — 도넛 라벨·범례·막대는 폭 제약상 축약 유지
   const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
@@ -469,6 +547,8 @@ export function NetAssetSummaryBox({
             <MarketLine market={market} onOpen={onMarketOpen} variant="card" />
           </div>
         )}
+        {/* 내 종목 오늘(#246) — 카드 맨 끝 1곳. 원인 없는 날·접힘·펼침(`접기` 아래) 모두 같은 노드 */}
+        {myStock && !screenshotMode && <MyStockLine value={myStock} underFold={showLine && open} />}
       </div>
 
       {visibleTabs.length > 1 && onSegmentClick && (
@@ -682,7 +762,7 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
                     날짜는 767 이하에서 지금처럼 2줄(`10-18`/`(일)`)로 접힌다 — nowrap은 md부터 */}
                 <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 max-[375px]:inline">{formatNarrowKRW(snap.netAsset, { tiny: true })}</span>
                 <span className="hidden text-2xs font-bold tabular-nums whitespace-nowrap tracking-tighter text-foreground leading-none mb-1 min-[375px]:max-sm:inline">{formatNarrowKRW(snap.netAsset)}</span>
-                <span className="hidden text-sm md:text-xs font-bold whitespace-nowrap text-foreground leading-none mb-1 sm:inline">{formatShortCurrencyDecimal(snap.netAsset)}</span>
+                <span className="hidden text-sm md:text-xs font-bold whitespace-nowrap text-foreground leading-none mb-1 sm:inline">{/* 1억 미만은 앱 표준 `3,172만원`(formatShortCurrency) — 백만원 단위 표기 불일치 해소(#254) */}{Math.abs(snap.netAsset) < 100000000 ? formatShortCurrency(snap.netAsset) : formatShortCurrencyDecimal(snap.netAsset)}</span>
                 <div className="w-full rounded-t-sm" style={{ height: heightPx, backgroundColor: barColor }} />
               </div>
               <span className="text-sm md:text-xs md:whitespace-nowrap text-muted-foreground">{label}</span>
@@ -791,6 +871,11 @@ export function Dashboard() {
   // 지수 종가 줄(4.90 A) — 지수 조회·종목 마스터는 첫 저장 당일(headerChange null)·주식 없음이면 건너뛴다. 줄과 팁 억제가 같은 판정 1곳
   const market = useMarketEntryValue("daily", true, headerChange !== null);
   const marketLine = marketLineState({ hasHeaderChange: headerChange !== null, hasTickerStock: market.hasTickerStock, markets: market.markets });
+  // 내 종목 오늘 줄(#246) — 누르면 상세·주식 목록(정렬 그대로)
+  const myStock = useMyStockToday(headerChange !== null, () => {
+    track("feature_use", { category: "home_my_stock" });
+    navigate({ type: "detail", tab: "stocks" });
+  });
 
   const totalAsset = summary.realEstateValue + summary.physicalValue + summary.stockValue + summary.cryptoValue + summary.cashValue;
   const totalLiability = summary.loanBalance + summary.tenantDepositTotal;
@@ -864,6 +949,7 @@ export function Dashboard() {
                     track("feature_use", { category: "home_market" });
                     navigate({ type: "activity", tab: "change-market", init: { period: "day" } });
                   }}
+                  myStock={myStock}
                 />
 
                 {/* col-2: 세부 분포 탭 콘텐츠 */}

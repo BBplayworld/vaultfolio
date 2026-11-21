@@ -22,6 +22,7 @@ import { normalizeStockName, findClosestNames } from "@/lib/name-match";
 import type { Stock } from "@/types/asset";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
 import { computeNewPosition, findDuplicateTransaction } from "@/lib/trade/trade-utils";
+import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effective-target";
 import {
   StockTargetPicker,
   PositionChangePreview,
@@ -103,6 +104,17 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trades, assetData.stocks]);
 
+  // 실효 대상(#259) — 신규 자산의 증권사·종류가 같은 종목 보유 항목과 같으면 그 기존 항목으로 본다.
+  // 유사(fuzzy) 후보만 있는 행은 다른 종목일 수 있어 판정하지 않는다. 화면 선택값(targets)은 그대로 둔다
+  const effTargets = useMemo(() => {
+    const m: Record<string, TradeTarget | undefined> = {};
+    for (const t of trades) {
+      const c = candidateMap.get(t.id);
+      m[t.id] = resolveEffectiveTarget(targets[t.id], c && !c.fuzzy ? c.list : []);
+    }
+    return m;
+  }, [trades, targets, candidateMap]);
+
   // 보유 없는 매도는 팔 자산이 없어 제외
   const isExcluded = (t: ImportTrade) => t.type === "sell" && (candidateMap.get(t.id)?.list.length ?? 0) === 0;
   // 반영 대상 확정 여부(신규는 증권사 필수)
@@ -120,21 +132,21 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     const m = new Map<string, boolean>();
     const existing = assetData.transactions || [];
     for (const t of trades) {
-      const target = targets[t.id];
+      const target = effTargets[t.id];
       const stockId = target?.kind === "existing" ? target.stockId : "";
       m.set(t.id, stockId ? !!findDuplicateTransaction(existing, "stockId", {
         assetId: stockId, date: t.date, quantity: t.quantity, price: t.price, type: t.type,
       }) : false);
     }
     return m;
-  }, [trades, targets, assetData.transactions]);
+  }, [trades, effTargets, assetData.transactions]);
 
   // 중복 행의 처리: 기본 overwrite
   const dupActionOf = (id: string): "overwrite" | "add" => dupActions[id] ?? "overwrite";
 
   // 선택됨 + 제외 아님
   const registerList = trades.filter((t) => t.selected && !isExcluded(t));
-  const unresolvedCount = registerList.filter((t) => !isTargetReady(targets[t.id])).length;
+  const unresolvedCount = registerList.filter((t) => !isTargetReady(effTargets[t.id])).length;
   // 실제 추가 대상 = 위 중 (중복+덮어쓰기) 제외
   const addList = registerList.filter((t) => !(dupMap.get(t.id) && dupActionOf(t.id) === "overwrite"));
   const overwriteSkipCount = registerList.length - addList.length;
@@ -147,10 +159,10 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     const results = new Map<string, SimResult>();
     const finalPos = new Map<string, PositionSnapshot>();
     const ordered = addList
-      .filter((t) => isTargetReady(targets[t.id]))
+      .filter((t) => isTargetReady(effTargets[t.id]))
       .sort((a, b) => a.date.localeCompare(b.date));
     for (const t of ordered) {
-      const target = targets[t.id]!;
+      const target = effTargets[t.id]!;
       // 신규 자산은 참조할 기존 보유가 없어 항상 반영(반영 OFF와 양립 불가)
       if (target.kind === "existing" && !reflectToHoldings) {
         results.set(t.id, { kind: "record" });
@@ -172,7 +184,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     }
     return { results, finalPos, ordered };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addList.map((t) => t.id).join(","), targets, reflectToHoldings, assetData.stocks, exchangeRates.USD, exchangeRates.JPY]);
+  }, [addList.map((t) => t.id).join(","), effTargets, reflectToHoldings, assetData.stocks, exchangeRates.USD, exchangeRates.JPY]);
 
   const oversellCount = [...simulation.results.values()].filter((r) => r.kind === "oversell").length;
 
@@ -269,7 +281,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
     const now = new Date().toISOString();
 
     simulation.ordered.forEach((t, i) => {
-      const target = targets[t.id]!;
+      const target = effTargets[t.id]!;
       const key = targetKey(t, target);
       let stockId: string;
       if (target.kind === "existing") {
@@ -413,7 +425,7 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               </div>
             </label>
 
-            {trades.some((t) => t.selected && targets[t.id]?.kind === "new") && (
+            {trades.some((t) => t.selected && effTargets[t.id]?.kind === "new") && (
               <p className="text-xs text-muted-foreground">
                 신규 자산 거래는 보유 반영 설정과 무관하게 항상 등록됩니다.
               </p>
@@ -432,11 +444,12 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                 const excluded = isExcluded(t);
                 const active = !excluded && t.selected;
                 const target = targets[t.id];
+                const effTarget = effTargets[t.id];
                 const { list: candidates, fuzzy: fuzzyCandidates } = candidateMap.get(t.id) ?? { list: [], fuzzy: false };
                 const sim = simulation.results.get(t.id);
                 const isDup = dupMap.get(t.id);
-                const previewCurrency = target?.kind === "existing"
-                  ? (stocks.find((s) => s.id === target.stockId)?.currency || "KRW")
+                const previewCurrency = effTarget?.kind === "existing"
+                  ? (stocks.find((s) => s.id === effTarget.stockId)?.currency || "KRW")
                   : t.currency;
                 return (
                   <div
@@ -491,6 +504,12 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
                           )}
                           {target?.kind === "new" && !target.broker && (
                             <p className="text-2xs text-amber-600 dark:text-amber-400">신규 자산의 증권사를 선택하세요</p>
+                          )}
+                          {/* 같은 증권사·종류 보유 항목이 있으면 그 항목에 이어서 기록(#259) — 신규 칸은 열어 둔다 */}
+                          {!fuzzyCandidates && findSameComboStock(target, candidates) && (
+                            <p role="status" data-testid="trade-switched-existing-note" data-reason="account" className="text-2xs text-muted-foreground break-keep text-pretty">
+                              같은 증권사·종류의 항목이 있어서 그 항목에 이어서 기록해요
+                            </p>
                           )}
 
                           {isDup && (

@@ -119,6 +119,13 @@ describe("① 종합 카드", () => {
       expect(chevron).toContain("self-center");
     }
   });
+  it("수익률 열은 내용 폭에 맞게 늘어난다 — 고정 폭 아님, 글자는 줄바꿈 없음(#254, +645.3%·+1,234.5%가 ›와 겹침 0)", () => {
+    const html = render(SIX, mk({}));
+    const btn = html.match(/<button[^>]*data-testid="grow-row-toggle"[^>]*>/)![0];
+    expect(btn).toContain("minmax(3.625rem,auto)");
+    expect(btn).not.toMatch(/_3\.625rem_/);
+    expect(html.match(/data-testid="grow-row-rate"[^>]*class="[^"]*whitespace-nowrap/)).not.toBeNull();
+  });
   it("기준 4칸 균등 버튼, 기본은 모두 닫힘(패널 없음). 묶음이 1개뿐인 축은 숨긴다(P2-7)", () => {
     const html = render(SIX, mk({ AAA: { label: "keep", labeledAt: day(40), at: day(40) } }));
     const axes = [...html.matchAll(/data-testid="grow-axis-(\w+)" aria-expanded="(\w+)"/g)].map((m) => [m[1], m[2]]);

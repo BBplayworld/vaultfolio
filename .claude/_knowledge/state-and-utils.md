@@ -797,6 +797,8 @@ fetchProfitRef(tickers, period, options?): Promise<ProfitRefResponse>
   // 2) miss → BATCH_SIZE=3, BATCH_DELAY_MS=1000 배치 fetch
   //    배치마다 onProgress(누적 결과), 완료 후 캐시 저장 + onComplete(false)
   // 3) inFlightFetches Map으로 동일 cacheKey 호출 dedup (네트워크 1회만)
+readCompleteProfitCache(tickers, period, basis?) → ProfitRefResponse | null
+  // #5.134: fetchProfitRef 1)단계의 '완전한 캐시' 판정을 동기 함수로 추출(동작 동일). 요청 0 — useQuery initialData용
 ```
 
 ---
@@ -913,7 +915,21 @@ todayChipLabel(chip, "row"|"header")   // 라벨 정본 TODAY_CHIP_LABELS(본안
 // #4.73 U7 숨김 규칙(computeTodayChip 한 곳): 칩 대상(국내 6자리·미국 USD 티커, 비상장·상장폐지·거래정지 아님, 수량·현재가 있음) 중
 //   응답 키가 없는 종목이 있거나, 응답 non-null 대상이 있는 시장(국내·미국)에 칩이 0이면 null. 거래정지·일본·기준가 null은 숨김을 만들지 않는다
 sortByChipRate(items, rateOf) → T[]   // #4.73 상세·주식 `등락률 순` — 표시 소수 1자리 높은 순(부호 그대로), null 맨 뒤, 동률·null끼리 입력(평가금) 순
+// #5.134 #246: computeTodayChip 결과에 krwChange(= 분자 합 − 분모 합, 원화 등락 기여) 추가 — 홈 '내 종목 오늘' 고르기 전용, 화면·서버 미사용
 ```
+
+### 홈 '내 종목 오늘' (`src/lib/finance/my-stock-today.ts`, #5.134 #246)
+
+```typescript
+myStockTickerList(stocks) → string          // stock-tab useFilteredStockData·saveSnapshots와 같은 필터·중복 제거·정렬
+myStockQueryKey(tickerList)                  // ["profit","daily","kstAccessDay",tickerList] — 상세·주식 '오늘' 칩과 같은 키(새 캐시 키 0)
+buildMyStockRows(stocks, refData, rates, now?) → { name, chip, value }[]  // 상세·주식 `전체` 행 = 평가금 순 정렬 → groupStocksByTicker → 묶음별 computeTodayChip
+pickMyStockToday(rows) → { name, label, rateText, sign, rate, more } | null
+  // 칩 있고 rateTenths ≠ 0인 행 중 |krwChange| 최대 → 동률(원 단위) |rateTenths| → 평가금. more = 칩 있는 나머지 행 수(0.0% 포함). 기여 금액은 결과에 없음
+myStockLineState({ screenshotMode?, hasHeaderChange, hasTickerStock, fetching, picked }) → "off"|"pending"|"on"  // 팁 입력 없음
+myStockText(pick) / myStockAriaLabel(pick)  // `{이름} {라벨} {+x.x%|-x.x%} · 외 N종목` / `내 종목 보기, … , 외 N종목` (formatCompareRate — ASCII -)
+```
+- 조회는 `dashboard.tsx` `useMyStockToday` 1곳: 같은 queryKey `useQuery` 1개, `staleTime` 5분, `enabled` = 첫 저장 당일 아님 + 티커 있음, 취소 effect 없음. 캐시 적중은 `initialData: readCompleteProfitCache(...)`로 첫 렌더에 결과.
 
 ### 시장과 비교 (`src/lib/finance/market-compare.ts` · `profit-dates.ts` · `hooks/use-market-compare.ts`, #4.73 #132)
 
@@ -1017,6 +1033,12 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 ### 동기화 덮임 감지 (`src/lib/cloud-sync/overwrite-guard.ts`, #4.47 #84)
 - 메모리 전용(저장 키·sync 상태 필드 0). `beginPush`/`commitPush`(push 성공 시 기준 갱신), `beginPull(data, auto)`/`commitPull(before, data)`(자동 pull 직전·직후 비교 → 덮인 내 항목 목록 합치기, 기준 갱신), `refreshEntries`(R1), `resetOverwriteGuard`(연결 끊기·다른 금고 연결). 순수: `captureSnapshot`·`detectOverwrites`·`planRevert`·`applyRevert`. 비교는 사용자 입력 필드만 — 앱이 자동으로 쓰는 필드는 제외: stocks(`currentPrice`·`baseDate`·`name` 자동 보정·`inactive*`), crypto(`currentPrice`·`baseDate`), realEstate(`marketEstimate*`, `currentValue`는 사용자 입력이라 비교), 올해 연도별 순자산(note "자동"). 새 자동 갱신 경로를 추가하면 `overwrite-guard.ts` 표에 함께 등록
 - 규약: 감지 함수에서 save·push·notify 호출 금지(C16). 되돌리기 저장은 호출측이 `saveData` 경로로만 한다(`applyImportedPayload`·`clearAssetData` 금지). 기준 없는 폴백 알림 금지(남의 변경을 내 변경으로 오탐)
+
+### 거래 입력 처음 사는 종목·같은 조합 전환 (`src/lib/trade/effective-target.ts`·`new-stock.ts`, #5.134 #258·#259)
+
+- `effective-target.ts`(순수): `findSameComboStock(target, candidates)`·`resolveEffectiveTarget(target, candidates)` — 신규 자산 등록의 증권사·종류가 같은 종목 보유 항목과 같으면 그 기존 항목(existing)이 실효 대상(증권사 빈 값은 비교 안 함). 거래 입력은 `groupCandidates`, 스크린샷 가져오기는 비유사(fuzzy 아님) 후보만 넘긴다. 저장 함수(`addTransactionsBatch`)·picker props 의미 무변경, 화면 선택값(target)은 그대로 두고 저장·미리보기·중복 검사만 실효 대상을 쓴다
+- `new-stock.ts`(순수): `MARKET_CATEGORIES`(kr 4종/us 1종)·`findHeldByPicked`(AC-4, 양쪽 `normalizeTicker`·시장 군 비교)·`buildPickedStockDraft`·`withInitialPrice`(조회 실패 → 현재가 = 유효 체결 단가, `baseDate` 비움 — 오늘 날짜를 넣으면 시세 갱신이 건너뛴다). `link-track.ts` `trackTradeNewStock(link)`: 새 종목 저장 성공 뒤 `trade_new_stock`(+연결이면 `_linked`) 1회
+- `ticker-search-nav.ts`: `nextSearchKey(key, activeIndex, length)` 검색 키보드 이동(공용 `TickerSearchField`)
 
 ### 거래 연결 계좌 (`src/lib/trade/linked-record.ts`·`link-text.ts`, #4.58 #103)
 - `linked-record.ts`(순수, 정본): `cashLinkId`/`loanLinkId`(`ctx_link_<거래id>`·`ltx_link_<거래id>`)·`linkedTradeIdOf`·`findLinkedRecord`·`linkAmount`(수량×단가±수수료, 통화 최소 단위 반올림)·`isLinkDateAllowed`(거래일이 오늘 KST와 같은 달)·`linkCandidates`(같은 통화 현금 → 외화 거래면 원화 현금 → 대출, 0원 대출은 매도 후보 제외, #4.63 #119)·`linkAmountIn`(계좌 통화 기준 금액: 원화 환산 = `roundMoney((수량×단가±수수료)×tradeKrwRate, "KRW")` 한 번만 반올림, 환율 없으면 `"rate"`)·`needsKrwConversion`·`linkAccountCurrency`·`buildLink`(기록+잔액 patch 생성, 가드 실패 시 `{ok:false, reason}`)·`planRemoveLink`/`removeLink`(짝 기록 현재 값 기준 되돌림, `cashBalanceFloor`(cash-tx-utils, 하한 정본))·`stockLinkTrade`/`cryptoLinkTrade`. 접두어 문자열은 이 파일 밖에서 쓰지 않는다(`linked-record.test.ts` grep 단언).

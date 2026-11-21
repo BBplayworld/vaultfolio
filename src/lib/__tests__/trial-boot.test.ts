@@ -95,6 +95,8 @@ describe("fetch 거부 래퍼", () => {
     "/api/sync?meta=1",
     "/api/sync/abc",
     "/api/feedback",
+    "/api/push/subscribe",
+    "/api/push/test",
     "https://secretasset.test/api/share",
   ])("거부: %s", (url) => {
     expect(isTrialBlockedRequest(url, BASE)).toBe(true);
@@ -107,6 +109,7 @@ describe("fetch 거부 래퍼", () => {
     "/api/xray-classify",
     "/api/shared",
     "/api/syncx",
+    "/api/pushx",
     "https://other.test/api/share",
   ])("통과: %s", (url) => {
     expect(isTrialBlockedRequest(url, BASE)).toBe(false);

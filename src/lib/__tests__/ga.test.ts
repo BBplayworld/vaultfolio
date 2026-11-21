@@ -142,6 +142,7 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "change_week_all" }, "성과·자산 변화·최근 7일"], // source 없음(자산 변화 탭·허브 행) 불변
     ["feature_use", { category: "change_week_all", source: "home_week" }, "홈·7일"], // 4.90 홈 7일 카드
     ["feature_use", { category: "home_market" }, "홈·오늘 시장"], // 4.90 홈 지수 종가 줄(내부 판독명)
+    ["feature_use", { category: "home_my_stock" }, "홈·내 종목 오늘"], // #246 홈 내 종목 줄 누름
     ["feature_use", { category: "feedback" }, "의견 보내기"],
     ["feature_use", { category: "theme" }, "테마 변경"],
     ["feature_use", { category: "ai_prompt" }, "AI 프롬프트 복사"],
@@ -172,6 +173,8 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "grow_revisit" }, "내 자산 불리기·다시 봄"], // 인사이트 보조 지표 — 붙인 날과 다른 날 다시 열 때
     ["feature_use", { category: "grow_plan" }, "내 자산 불리기·조건"], // 5차 — 다시 볼 조건·메모 첫 저장
     ["feature_use", { category: "grow_grade_tab" }, "내 자산 불리기·성적표 탭"], // 6차 — 통합 화면 성적표 칸 진입
+    ["feature_use", { category: "trade_new_stock" }, "거래 입력·주식·새 종목"], // #258
+    ["feature_use", { category: "trade_new_stock_linked" }, "거래 입력·주식·새 종목·계좌 반영"], // #258
     ["feature_use", { category: "profit_basis_settings" }, "종가 기준·변경·설정"],
     ["feature_use", { category: "profit_basis_chart" }, "종가 기준·변경·성과"],
     ["theme_mode", { theme: "dark" }, "다크 모드 사용"],
