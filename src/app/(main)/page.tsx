@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { WelcomeGuide } from "./_components/layout/onboarding/welcome-guide";
+import { RootGuideLinks } from "./_components/layout/onboarding/root-guide-links";
 import { RootFirstPaint, WELCOME_PAGE_WRAP, shouldSkipHeroEnter } from "./_components/layout/onboarding/welcome-intro";
 import { RealEstateInput } from "./_components/forms/asset-update/input/real-estate-input";
 import { StockInput } from "./_components/forms/asset-update/input/stock-input";
@@ -119,6 +120,7 @@ export default function Page() {
           <LoanInput />
           <TradeInput />
         </div>
+        <RootGuideLinks />
         <CopyrightFooter />
         <TutorialOverlay isWelcomeGuide={isWelcomeGuide} isSharePending={isSharePending} />
       </div>

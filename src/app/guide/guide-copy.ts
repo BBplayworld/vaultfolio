@@ -1,9 +1,11 @@
 import { RATIO_PREVIEW_UPLOAD_NOTICE, SECURITY_COPY } from "@/config/security-copy";
+import { CARD_UNTIL_DAY, FIRST_RECORD_MIN_DAYS } from "@/lib/report/settlement";
+import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 
-// 가이드 2편 문구 정본(#77). 금액·예시 %·종목명·권유어·세금 0, 새 보안 문장 0(보안 문장은 security-copy 원문 import).
+// 가이드 3편 문구 정본(#77). 금액·예시 %·종목명·권유어·세금 0, 새 보안 문장 0(보안 문장은 security-copy 원문 import).
 // 글을 고치면 lastModified도 함께 갱신한다(sitemap이 이 값을 그대로 쓴다).
 
-export const GUIDE_SLUGS = ["stock-ratio", "net-worth"] as const;
+export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end"] as const;
 export type GuideSlug = (typeof GUIDE_SLUGS)[number];
 
 export interface GuideCta {
@@ -24,7 +26,10 @@ export interface GuideDoc {
   facts: string[];
   primary: GuideCta;
   secondary: GuideCta;
-  other: GuideSlug;
+  /** 루트 링크 줄(RootGuideLinks) 글자 — 짧게(320px 2줄 이하) */
+  linkLabel: string;
+  /** 본문 안에서 줄 중간에 끊기면 안 되는 어구(새 편만 지정 — 기존 편 출력 diff 0) */
+  nowrapPhrases?: string[];
   lastModified: string;
 }
 
@@ -72,8 +77,8 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     ],
     primary: RATIO_CTA,
     secondary: TRIAL_CTA,
-    other: "net-worth",
-    lastModified: "2026-11-06",
+    linkLabel: "주식 비중 한 번에 보기",
+    lastModified: "2026-11-27",
   },
   "net-worth": {
     slug: "net-worth",
@@ -110,7 +115,57 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     ],
     primary: TRIAL_CTA,
     secondary: RATIO_CTA,
-    other: "stock-ratio",
-    lastModified: "2026-11-06",
+    linkLabel: "월말 순자산 정리",
+    lastModified: "2026-11-27",
+  },
+  "year-end": {
+    slug: "year-end",
+    title: "올해 자산 결산하는 법",
+    description: "작년 말과 지금 순자산을 비교하고, 그 차이를 내가 넣은 돈과 시세·환율 등으로 움직인 돈으로 나눠 보는 순서예요.",
+    h1: "올해 자산 결산하는 법",
+    summary:
+      "한 해 동안 달라진 순자산에는 내가 넣은 돈과 시세·환율 등으로 움직인 돈이 섞여 있어요. 둘을 나누면 무엇으로 달라졌는지 보여요.",
+    steps: [
+      {
+        title: "기준 정하기",
+        body: "출발점은 작년 말 순자산이에요. 작년 말 값이 없다면 올해 처음 기록한 날을 출발점으로 삼고 '그날 이후 결산'으로 봐요.",
+      },
+      {
+        title: "지금 순자산 구하기",
+        body: "같은 날 모은 자산 합계에서 대출 잔액을 빼요. 해외 자산은 같은 날 환율로 바꿔 더해요. 적는 순서는 아래 글에 있어요.",
+        inlineLink: { label: "월말 순자산 정리하는 법", href: "/guide/net-worth" },
+      },
+      {
+        title: "올해 넣은 돈 더하기",
+        body: "올해 계좌에 넣은 돈에서 꺼낸 돈을 뺀 값을 넣은 돈 하나로 써요. 주식 매수·매도와 대출 상환은 자산 사이의 이동이라 넣은 돈에 넣지 않아요.",
+      },
+      {
+        title: "나머지 보기",
+        body: "지금 순자산에서 기준을 뺀 값이 올해 달라진 금액이에요. 여기서 넣은 돈을 빼면 나머지가 남아요. 나머지는 시세·환율과 그 밖의 변화예요. 대출 이자와 받은 배당·이자, 적지 못한 입출금도 여기에 섞여요. 잘잘못이나 성과를 가리는 숫자는 아니에요.",
+      },
+    ],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [
+      "지난 연도 순자산을 직접 넣으면 성과 > 자산 변화의 '연' 탭에서 올해 전체 변화를 바로 비교해요.",
+      `${YEAR_SETTLE_COPY.income}과 ${YEAR_SETTLE_COPY.growth}은 월 기록이 쌓인 달부터 나눠져요. 그 전 기간은 '${YEAR_SETTLE_COPY.periodSub}' 한 줄로 합쳐 보여 줘요.`,
+      `${YEAR_SETTLE_COPY.income}은 입금에서 출금을 뺀 금액, ${YEAR_SETTLE_COPY.growth}은 시세 변동·평가 갱신·환율 효과예요. ${YEAR_SETTLE_COPY.loan}은 ${YEAR_SETTLE_COPY.loanHint}.`,
+      `${YEAR_SETTLE_COPY.help}. 설명되지 않는 부분은 '기록 안 된 변화'로 따로 보여 줘요.`,
+      `작년 말 값이 없으면 처음 기록한 날 이후로 결산하고, ${FIRST_RECORD_MIN_DAYS}일이 지나야 보여요.`,
+      `지난해 순자산이 기록돼 있으면 1월 ${CARD_UNTIL_DAY}일까지는 지난해 결산을 보여 줘요.`,
+      LOCAL_SAVE_COPY,
+    ],
+    primary: TRIAL_CTA,
+    secondary: RATIO_CTA,
+    linkLabel: "올해 자산 결산",
+    nowrapPhrases: [
+      "1월 " + CARD_UNTIL_DAY + "일",
+      FIRST_RECORD_MIN_DAYS + "일이",
+      "성과 > 자산 변화",
+      "'연' 탭에서",
+      "'그날 이후 결산'으로",
+      "'기록 안 된 변화'로",
+      `'${YEAR_SETTLE_COPY.periodSub}'`,
+    ],
+    lastModified: "2026-11-27",
   },
 };

@@ -30,9 +30,9 @@ describe("루트 사전 조각 ↔ WelcomeGuide 공용 조각", () => {
     expect(shell).toContain(renderToStaticMarkup(<WelcomeHero enter={false} />));
     expect(shell).toContain(renderToStaticMarkup(<WelcomeTrustLine />));
   });
-  it("조각 textContent = h1·부제·신뢰 줄만(보안 펼침·CTA·미리보기 없음)", () => {
+  it("조각 textContent = h1·부제·신뢰 줄·가이드 링크 줄만(보안 펼침·CTA·미리보기 없음)", () => {
     expect(text(shell)).toBe(
-      "나만의 비밀 자산 금고흩어진 자산을 한 화면에서 정리해 보세요.로그인 없음·자산은 내 기기에 저장·원하면 암호화 동기화",
+      "나만의 비밀 자산 금고흩어진 자산을 한 화면에서 정리해 보세요.로그인 없음·자산은 내 기기에 저장·원하면 암호화 동기화가이드올해 자산 결산월말 순자산 정리주식 비중 한 번에 보기",
     );
     expect(shell).not.toContain("welcome-cta-slot");
     expect(shell).not.toContain("welcome-security-toggle");

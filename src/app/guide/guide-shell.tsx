@@ -7,7 +7,9 @@ import { MAIN_PALETTE } from "@/config/theme";
 
 import { GuideArticle } from "./_components/guide-article";
 import { GuideScreenTracker } from "./guide-actions";
-import { GUIDE_BRAND_LINE, GUIDES, type GuideSlug } from "./guide-copy";
+import { ChevronRight } from "lucide-react";
+
+import { GUIDE_BRAND_LINE, GUIDES, GUIDE_SLUGS, type GuideSlug } from "./guide-copy";
 
 /** 가이드 metadata — 자식 openGraph/twitter가 부모를 통째로 대체하므로 images까지 재선언한다(/ratio와 동일 규칙) */
 export function guideMetadata(slug: GuideSlug): Metadata {
@@ -34,7 +36,7 @@ export function guideMetadata(slug: GuideSlug): Metadata {
 // (main) 밖 공개 정적 문서 — /ratio와 같은 껍데기(헤더 복사, 홈 링크 없음)
 export function GuideShell({ slug }: { slug: GuideSlug }) {
   const doc = GUIDES[slug];
-  const other = GUIDES[doc.other];
+  const others = GUIDE_SLUGS.filter((s) => s !== slug);
   return (
     <main id="guide-page" data-testid="guide-page" className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-[480px] flex-col gap-5 px-3 pb-10 pt-4 sm:pt-12">
@@ -44,14 +46,21 @@ export function GuideShell({ slug }: { slug: GuideSlug }) {
         </header>
         <GuideScreenTracker slug={slug} />
         <GuideArticle doc={doc} />
-        <nav aria-label="다른 가이드">
-          <Link
-            data-testid="guide-other-link"
-            href={`/guide/${other.slug}`}
-            className="inline-flex min-h-10 items-center text-sm font-medium text-foreground underline underline-offset-4 dark:text-primary break-keep"
-          >
-            {other.title} →
-          </Link>
+        <nav aria-labelledby="guide-other-title" data-testid="guide-other-list" className="flex flex-col">
+          <h2 id="guide-other-title" className="mb-1 text-sm font-semibold">
+            다른 가이드
+          </h2>
+          {others.map((o) => (
+            <Link
+              key={o}
+              data-testid={`guide-other-link-${o}`}
+              href={`/guide/${o}`}
+              className="flex min-h-11 items-center justify-between gap-3 border-t border-border py-2.5 text-sm font-medium text-foreground break-keep transition-colors hover:text-primary dark:border-border/40"
+            >
+              <span>{GUIDES[o].title}</span>
+              <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            </Link>
+          ))}
         </nav>
         <p data-testid="guide-brand" className="mt-2 text-center text-sm text-muted-foreground">
           {GUIDE_BRAND_LINE}
