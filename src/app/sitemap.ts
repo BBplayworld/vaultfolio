@@ -8,7 +8,7 @@ import { GUIDES, GUIDE_SLUGS } from "./guide/guide-copy";
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = APP_CONFIG.siteUrl;
   return [
-    { url: base, lastModified: new Date("2026-11-06"), changeFrequency: "weekly", priority: 1.0 },
+    { url: base, lastModified: new Date("2026-11-21"), changeFrequency: "weekly", priority: 1.0 },
     { url: `${base}/ratio`, lastModified: new Date("2026-11-06"), changeFrequency: "monthly", priority: 0.8 },
     ...GUIDE_SLUGS.map((slug) => ({
       url: `${base}/guide/${slug}`,

@@ -1,5 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 
+import { RootGuideLinks } from "./root-guide-links";
+
 // 웰컴 첫 부분(히어로·신뢰 한 줄) 공용 조각 — 훅·window 없음, 서버/클라이언트 첫 렌더 동일(#113).
 // WelcomeGuide와 루트 첫 화면 사전 조각(RootFirstPaint)이 같은 코드를 렌더해 위치·글자가 구조적으로 일치한다.
 
@@ -54,6 +56,7 @@ export function RootFirstPaint() {
           <WelcomeTrustLine />
         </div>
       </div>
+      <RootGuideLinks />
     </div>
   );
 }

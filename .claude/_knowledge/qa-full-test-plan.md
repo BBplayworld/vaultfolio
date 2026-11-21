@@ -976,3 +976,8 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - 👤 실기기(iOS Safari 탭·Chrome) `persist()` 반환값 확인은 팀이 할 수 없어 미확인(dev-notes).
 
 - 👤 **국내·해외 날짜 맞춤(#5.116, 이슈 #222)**: 더보기 표시 `settings-profit-basis-selector`와 성과 `기준 종가 비교` 펼침 `profit-basis-selector-chart`가 같은 이름·2칸(`같은 거래일`/`시장별 최신`, 칸 40px)·같은 설명 3줄(성과만 일별 환율 줄 추가). Switch 0, 옛 문자열(`동일 영업일`·`KST 접속일`·`종가 기준 옵션`) 0. 한 곳에서 바꾸면 다른 곳·성적표·시장 비교·홈·상세 시장 줄 동기. 저장 키 `secretasset_profit_basis` 값 불변. GA `feature_use{profit_basis_settings|profit_basis_chart}`는 값이 바뀔 때만 1건. 테스트 `profit-basis-copy.test.ts`
+
+## F-GUIDE-YE (#5.136 #261) 연말 가이드·루트 링크 줄
+- `/guide/year-end` 200·h1 1·단계 4·fact 7(앱 상수 import)·CTA 2. 하단 `guide-other-list`에 자기 제외 2행(3편 공통)
+- `curl /` `first-paint-shell` 안 `root-guide-links`와 링크 3(`year-end`·`net-worth`·`stock-ratio`) href. 웰컴 분기는 `CopyrightFooter` 직전, 보유자·체험·마법사 0
+- 링크 누름 = `웰컴·가이드 열기` 1건(연타 1회), sitemap 5행, 320px 링크 줄 2줄 이하·어구 끊김 0

@@ -12,11 +12,13 @@ import { featureTitleOf, screenPath, trackScreen, trackThenNavigate, __resetGaSt
 vi.mock("@/components/logo", () => ({ Logo: () => null })); // next/font 의존 제거(node 환경)
 
 import { GUIDES, GUIDE_SLUGS, GUIDE_BRAND_LINE } from "../guide-copy";
+import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
+import { CARD_UNTIL_DAY, FIRST_RECORD_MIN_DAYS } from "@/lib/report/settlement";
 import { GuideShell, guideMetadata } from "../guide-shell";
 
 // 가이드(#77) 정적 규칙 — node 환경, 서버 렌더 마크업·문구 상수·메타 대상
 const WWW = "https://www.secretasset.xyz";
-const FORBIDDEN = /[0-9]\s*(원|만|억|%)|줄이세요|늘리세요|리밸런싱|사세요|파세요|추천|절대|완벽|원천|서버로 아무것도|세금/;
+const FORBIDDEN = /[0-9]\s*(원|만|억|%)|줄이세요|늘리세요|리밸런싱|사세요|파세요|추천|절대|완벽|원천|서버로 아무것도|세금|엑셀|시트|노션|절세/;
 
 describe("정본 호스트", () => {
   it("siteUrl 기본값은 www로 시작한다", () => {
@@ -30,9 +32,9 @@ describe("정본 호스트", () => {
 
 describe("sitemap", () => {
   const a = sitemap();
-  it("4건, 모두 www 접두", () => {
-    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`]);
-    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6]);
+  it("5건, 모두 www 접두", () => {
+    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`, `${WWW}/guide/year-end`]);
+    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6, 0.6]);
   });
   it("lastModified는 호출마다 같은 고정 날짜", () => {
     vi.useFakeTimers();
@@ -40,7 +42,7 @@ describe("sitemap", () => {
     const b = sitemap();
     vi.useRealTimers();
     expect(b.map((e) => e.lastModified)).toEqual(a.map((e) => e.lastModified));
-    expect(String(a[0].lastModified instanceof Date ? a[0].lastModified.toISOString() : "")).toContain("2026-11-06");
+    expect(String(a[0].lastModified instanceof Date ? a[0].lastModified.toISOString() : "")).toContain("2026-11-21");
   });
 });
 
@@ -67,15 +69,18 @@ describe("JS 없는 본문", () => {
     const doc = GUIDES[slug];
     const html = renderToStaticMarkup(<GuideShell slug={slug} />);
     expect(html.match(/<h1/g)).toHaveLength(1);
-    expect(html.match(/<h2/g)).toHaveLength(doc.steps.length + 1);
+    expect(html.match(/<h2/g)).toHaveLength(doc.steps.length + 2);
     expect(html).toContain('href="/ratio"');
     expect(html).toContain('href="/?trial=1"');
     expect(html).toContain(GUIDE_BRAND_LINE);
-    expect(html).toContain(`href="/guide/${doc.other}"`);
-    for (const id of ["guide-page", "guide-title", "guide-summary", "guide-steps", "guide-step-1", "guide-fact-box", "guide-cta-primary", "guide-cta-secondary", "guide-other-link", "guide-brand"]) {
+    const others = GUIDE_SLUGS.filter((x) => x !== slug);
+    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(2);
+    others.forEach((o) => expect(html).toContain(`data-testid="guide-other-link-${o}"`));
+    expect(html.indexOf(`guide-other-link-${others[0]}`)).toBeLessThan(html.indexOf(`guide-other-link-${others[1]}`));
+    for (const id of ["guide-page", "guide-title", "guide-summary", "guide-steps", "guide-step-1", "guide-fact-box", "guide-cta-primary", "guide-cta-secondary", "guide-other-list", "guide-brand"]) {
       expect(html).toContain(`data-testid="${id}"`);
     }
-    expect(html).toContain('aria-label="다른 가이드"');
+    expect(html).toContain('aria-labelledby="guide-other-title"');
     expect(html).not.toMatch(/utm_/);
   });
 });
@@ -97,6 +102,41 @@ describe("문구 규칙", () => {
     expect(GUIDES["stock-ratio"].facts).toContain(RATIO_PREVIEW_UPLOAD_NOTICE);
     for (const slug of GUIDE_SLUGS) expect(GUIDES[slug].facts).toContain(local);
     expect(local).toBe("자산 데이터는 동기화를 켜지 않는 한 이 기기의 브라우저에만 저장돼요.");
+  });
+  it("year-end: 앱 상수와 같은 글자·fact 순서·보안 문장", () => {
+    const f = GUIDES["year-end"].facts;
+    expect(f).toHaveLength(7);
+    expect(f[1]).toContain(YEAR_SETTLE_COPY.periodSub);
+    expect(f[2]).toContain(YEAR_SETTLE_COPY.loanHint);
+    expect(f[3]).toContain(YEAR_SETTLE_COPY.help);
+    expect(f[4]).toContain(`${FIRST_RECORD_MIN_DAYS}일`);
+    expect(f[5]).toContain(`1월 ${CARD_UNTIL_DAY}일`);
+    expect(f.at(-1)).toBe(local);
+    expect(FIRST_RECORD_MIN_DAYS).toBe(7);
+    expect(CARD_UNTIL_DAY).toBe(10);
+    // 앱 cause label 원문 대조(asset-report 값 import 없이 소스 문자열로)
+    const src = readFileSync(join(__dirname, "../../../lib/report/asset-report.ts"), "utf8");
+    expect(src).toContain('label: "기록 안 된 변화"');
+    expect(f[3]).toContain("'기록 안 된 변화'");
+    expect(f[0]).toContain("성과 > 자산 변화");
+    expect(src.includes("바로 나눠")).toBe(false);
+  });
+  it("year-end: 빠져나간 돈은 fact F3에서만, 약속 문장 0, net-worth와 같은 문장 0", () => {
+    const d = GUIDES["year-end"];
+    expect(text("year-end").split(YEAR_SETTLE_COPY.loan).length - 1).toBe(1);
+    expect(d.facts[2]).toContain(YEAR_SETTLE_COPY.loan);
+    expect(text("year-end")).not.toMatch(/바로 나눠/);
+    const sentences = (slug: (typeof GUIDE_SLUGS)[number]) =>
+      text(slug).split(/[.\n]/).map((x) => x.trim()).filter((x) => x.length > 8);
+    const nw = new Set(sentences("net-worth"));
+    for (const x of sentences("year-end")) if (x !== local.replace(/\.$/, "") && x !== GUIDES["net-worth"].title && x !== GUIDES["year-end"].primary.label && x !== GUIDES["year-end"].secondary.label) expect(nw.has(x), x).toBe(false);
+    expect(d.steps[1].inlineLink).toEqual({ label: "월말 순자산 정리하는 법", href: "/guide/net-worth" });
+  });
+  it("linkLabel 3종·GUIDE_SLUGS 순서", () => {
+    expect(GUIDE_SLUGS).toEqual(["stock-ratio", "net-worth", "year-end"]);
+    expect(GUIDES["year-end"].linkLabel).toBe("올해 자산 결산");
+    expect(GUIDES["net-worth"].linkLabel).toBe("월말 순자산 정리");
+    expect(GUIDES["stock-ratio"].linkLabel).toBe("주식 비중 한 번에 보기");
   });
   it("본문 중간 행동 링크는 편당 최대 1곳", () => {
     for (const slug of GUIDE_SLUGS) expect(GUIDES[slug].steps.filter((s) => s.inlineLink).length).toBeLessThanOrEqual(1);
@@ -124,6 +164,11 @@ describe("GA·UTM", () => {
     const payload = gtag.mock.calls.at(-1)![2];
     expect(payload.page_title).toBe("가이드·주식 비중");
     expect(payload.page_location).toBe(`${WWW}/v/guide/stock-ratio?utm_source=threads&utm_campaign=guide_v1`);
+  });
+  it("year-end 화면 제목·guide_open 제목", () => {
+    expect(featureTitleOf("page_view", {}, "guide:year-end")).toBe("가이드·올해 결산");
+    expect(screenPath("guide:year-end")).toBe("/v/guide/year-end");
+    expect(featureTitleOf("feature_use", { category: "guide_open" }, "home")).toBe("웰컴·가이드 열기");
   });
   it("체험 이동: feature_use demo(4.88 title 가이드·체험), 가상 경로 /v/guide/<slug>", () => {
     trackScreen("guide:net-worth");
