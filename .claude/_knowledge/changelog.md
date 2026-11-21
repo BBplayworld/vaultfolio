@@ -4,9 +4,9 @@
 
 ---
 
-## 2026-11-21 (v5.136)
+## 2026-11-21 (v5.133, 브랜치 issue-5.136)
 
-### 연말 검색 입구 — 올해 자산 결산 가이드 + 루트 가이드 링크 (#5.136, 이슈 #261, risk:low)
+### 연말 검색 입구 — 올해 자산 결산 가이드 + 루트 가이드 링크 (#5.133, 이슈 #261, risk:low)
 - **왜**: 공개 문서 3개가 28일간 도착 0기기였고 루트에서 문서로 가는 href가 0개였다.
 - `/guide/year-end` 신설(앱 '올해 결산' 상수 import), `RootGuideLinks`(사전 조각·웰컴 분기), 가이드 하단 `다른 가이드` 목록, sitemap 5행, GA `guide_open`·`가이드·올해 결산`, FORBIDDEN에 `엑셀|시트|노션|절세`.
 - 저장 키·스키마·동기화·서버 전송·`WelcomeGuide`·체험·`/ratio` diff 0.
@@ -27,18 +27,18 @@
 - **수정**(`asset-report.ts` `estimatePeriodInflows`·예측 분기만): 4.94 `assetIdRegisteredDate`(id 13자리 ms) 재사용. 구간 안 등록 현금 → `cash`(등록 당시 잔액 = 현재 잔액 − 이후 반영 입출금, 첫 구간은 시작일 당일 포함, 외화는 현재 환율, estimated), 대출은 `startDate` 또는 등록일이 구간 안이면 `debt`(−잔액, `loanTxLoanIds` 제외 유지). 같은 금액을 `price` 잔차에서 빼고 `savingEffect`에 더해 합계 = Δ순자산 불변. 등록일 못 읽는 id = 현행.
 - 정밀 분기·월/연 결산 매핑(`estimatedPriceAsUnrecorded`)·`weekLineOf` 코드 diff 0, 기존 테스트 값 변경 0. 홈 Hero: 시세 → 신규 현금·추가 대출(예측). 주·월 결산: 신규 현금은 종전대로 `기록 안 된 변화`, 신규 대출은 `기록 안 된 변화`에서 `대출 · 예측`으로 분리, 합계 불변(CEO D-2 범위 안). 연 화면 변화 0(예측 구간은 별도 줄). 한계: 기존 계좌 잔액 직접 수정은 예측 구간에서 여전히 `시세`(CEO 수용). 저장 키·스키마·동기화·서버 전송 변경 0.
 
-## 2026-11-19 (v5.132)
+## 2026-11-19 (v5.134)
 
-### 홈에서 내 자산을 크게 움직인 내 종목 1개를 한 줄로 본다 (#5.132, 이슈 #246, risk:medium)
+### 홈에서 내 자산을 크게 움직인 내 종목 1개를 한 줄로 본다 (#5.134, 이슈 #246, risk:medium)
 - **왜**: 주식 보유 재방문자는 홈에서 지수와 순자산 원인(원화)까지만 보고, 내 종목 등락은 상세·주식에 가서 직접 훑었다.
 - **줄**(`dashboard.tsx` `MyStockLine`): 순자산 카드 맨 끝 1곳에 `{종목명} {오늘|M/D 종가} {+x.x%|-x.x%} · 외 N종목 ›`. 머리말·순위 낱말·기여 금액 0, 부호 ASCII(지수 줄 꼴), 손익색은 등락률에만. 누르면 상세·주식 목록(정렬 그대로). 히트 40px = 버튼 상자, 카드 +34px(펼침 +24px), 폭이 모자라면 `외 N종목` 먼저 숨김 → 이름 말줄임(CSS만).
 - **고르기**(`lib/finance/my-stock-today.ts`, 신규·순수): 상세·주식 `전체` 행 칩 중 0.0% 제외, 원화 등락 기여 절대값 최대(동률 → 등락률 → 평가금). `computeTodayChip`에 `krwChange`(분자 합 − 분모 합)만 추가 — 새 계산·새 반올림 0, 기여 금액은 화면·GA·서버 미사용.
 - **조회**: 상세·주식과 같은 queryKey `useQuery` 1개(데이터 훅·취소 effect 없음 — 요청 +1 경합 회피), 캐시 적중은 `readCompleteProfitCache`(fetchProfitRef 첫 단계 추출) `initialData`로 첫 렌더 결과. 자리 잡기(스켈레톤)는 조회가 실제로 도는 동안만. preview 실측 요청 수 줄 없는 빌드와 같음.
 - 차례 팁(#245)과 무관하게 항상 뜬다(`home-tip*` diff 0). 주식 없음·첫 저장 당일·캡처·칩 없음 마크업은 선커밋 스냅샷과 같다. GA `home_my_stock` → `홈·내 종목 오늘`. 새 소식 `20261120-01`. 저장 키·스키마·동기화·서버 전송 변경 0.
 
-## 2026-11-20 (v5.133)
+## 2026-11-20 (v5.134)
 
-### 체험 경계 보강·홈 원인 줄 지수 날짜 (#5.133, risk:low)
+### 체험 경계 보강·홈 원인 줄 지수 날짜 (#5.134, risk:low)
 - **왜**: 체험은 더보기·설정을 뺐는데 스와이프·주소 해시로는 닿았고, 숨은 GA 제외 토글이 체험 GA 차단을 덮어쓸 수 있었다. 320 복귀 웰컴(현금)이 `현금성 / 자산으로`로 갈렸다. 홈 1280 원인 줄 `코스피 종가 +2.0%`는 날짜가 없어 다른 날짜 값 옆에서 같은 날로 읽혔다(C142).
 - `navigation-context.tsx` `swipeOrderOf`·`guardTrialView`(체험 중 스와이프 순서에서 more 제외, `#more`·`#settings` → 홈 `replaceState`), `settings-page.tsx` `handleGaOptoutTap` 체험 중 무시, `welcome-guide.tsx` 현금 설명 U+00A0, `market-entry-line.tsx` `causeMarketText`·`CauseMarketSegment` = 지수 줄과 같은 `M/D 종가 코스피 +x.x%`(기준일 계산 4.90 그대로). 구간이 +35~40px 넓어져 숨김 경계 W<440→W<480(qa D-1, 라벨 말줄임 방지).
 - 비체험 경로·저장 키·스키마·동기화·서버 전송 diff 0. `trial-boot.ts`·`trial-gate.tsx`·`ga.ts`·`layout.tsx`·`TRIAL_BLOCKED_PATHS` 무변경.

@@ -78,7 +78,7 @@ _components/
 
 ### NavigationProvider (`layout/navigation/navigation-context.tsx`)
 - (#4.81) `DetailTab`에 `stocks-item`. 순수 함수 `guardStockPageView`(store 비면 stocks)·`tradesBackAction`·`stockPageBackAction`, `getBackLabel(view, stockPageOrigin?)`(시장 비교 진입 `뒤로`).
-- (#5.133) 체험 가드 순수 함수 `swipeOrderOf(trial)`(체험이면 `home·detail·activity`, 아니면 `PAGE_ORDER`)·`guardTrialView(view, trial)`(체험 중 `more`·`settings` → home, 그 밖·비체험은 같은 참조). 초기 해시·popstate에 `guardStockPageView` 뒤 적용, 바뀌면 `replaceState`.
+- (#5.134) 체험 가드 순수 함수 `swipeOrderOf(trial)`(체험이면 `home·detail·activity`, 아니면 `PAGE_ORDER`)·`guardTrialView(view, trial)`(체험 중 `more`·`settings` → home, 그 밖·비체험은 같은 참조). 초기 해시·popstate에 `guardStockPageView` 뒤 적용, 바뀌면 `replaceState`.
 
 - `AssetView = home | detail/{tab} | activity/{tab, init?}` 상태 + hash 동기화 + popstate 리스너. `ActivityTab = hub|change|dividend|report`, `ChangeInit {scope?, period?, month?, source?}`는 해시에 싣지 않는 자산 변화 초기 탭 지정(옛 `#activity/netasset`·`profit` 리다이렉트·결산 카드·FAB·성적표 링크, #4.34)
 - `navigate(view)`: pushState + scrollTo(0,0)
