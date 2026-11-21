@@ -798,7 +798,7 @@ fetchProfitRef(tickers, period, options?): Promise<ProfitRefResponse>
   //    배치마다 onProgress(누적 결과), 완료 후 캐시 저장 + onComplete(false)
   // 3) inFlightFetches Map으로 동일 cacheKey 호출 dedup (네트워크 1회만)
 readCompleteProfitCache(tickers, period, basis?) → ProfitRefResponse | null
-  // #5.132: fetchProfitRef 1)단계의 '완전한 캐시' 판정을 동기 함수로 추출(동작 동일). 요청 0 — useQuery initialData용
+  // #5.134: fetchProfitRef 1)단계의 '완전한 캐시' 판정을 동기 함수로 추출(동작 동일). 요청 0 — useQuery initialData용
 ```
 
 ---
@@ -915,10 +915,10 @@ todayChipLabel(chip, "row"|"header")   // 라벨 정본 TODAY_CHIP_LABELS(본안
 // #4.73 U7 숨김 규칙(computeTodayChip 한 곳): 칩 대상(국내 6자리·미국 USD 티커, 비상장·상장폐지·거래정지 아님, 수량·현재가 있음) 중
 //   응답 키가 없는 종목이 있거나, 응답 non-null 대상이 있는 시장(국내·미국)에 칩이 0이면 null. 거래정지·일본·기준가 null은 숨김을 만들지 않는다
 sortByChipRate(items, rateOf) → T[]   // #4.73 상세·주식 `등락률 순` — 표시 소수 1자리 높은 순(부호 그대로), null 맨 뒤, 동률·null끼리 입력(평가금) 순
-// #5.132 #246: computeTodayChip 결과에 krwChange(= 분자 합 − 분모 합, 원화 등락 기여) 추가 — 홈 '내 종목 오늘' 고르기 전용, 화면·서버 미사용
+// #5.134 #246: computeTodayChip 결과에 krwChange(= 분자 합 − 분모 합, 원화 등락 기여) 추가 — 홈 '내 종목 오늘' 고르기 전용, 화면·서버 미사용
 ```
 
-### 홈 '내 종목 오늘' (`src/lib/finance/my-stock-today.ts`, #5.132 #246)
+### 홈 '내 종목 오늘' (`src/lib/finance/my-stock-today.ts`, #5.134 #246)
 
 ```typescript
 myStockTickerList(stocks) → string          // stock-tab useFilteredStockData·saveSnapshots와 같은 필터·중복 제거·정렬
