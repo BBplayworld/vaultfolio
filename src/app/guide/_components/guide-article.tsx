@@ -6,7 +6,23 @@ import { GuideActions } from "../guide-actions";
 
 // '·'·'/'로 이어진 어구(국내/해외, 증권사·은행·거래소 등)는 줄바꿈 기회가 되므로 통째로 nowrap으로 묶는다(C25)
 const JOINED_PHRASE = /[가-힣·/]+/g;
-function withNowrap(text: string): ReactNode {
+function withNowrap(text: string, phrases: string[] = []): ReactNode {
+  if (phrases.length) {
+    // 지정 어구(숫자+단위·'>'·따옴표+조사)는 통째로 nowrap — 나머지는 기본 규칙
+    const esc = phrases.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const parts = text.split(new RegExp(`(${esc.join("|")})`));
+    if (parts.length > 1) {
+      return parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="whitespace-nowrap">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{withNowrap(part)}</span>
+        ),
+      );
+    }
+  }
   const out: ReactNode[] = [];
   let last = 0;
   for (const m of text.matchAll(JOINED_PHRASE)) {
@@ -40,7 +56,7 @@ export function GuideArticle({ doc }: { doc: GuideDoc }) {
           data-testid="guide-summary"
           className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep"
         >
-          {withNowrap(doc.summary)}
+          {withNowrap(doc.summary, doc.nowrapPhrases)}
         </p>
       </div>
       <ol data-testid="guide-steps" className="flex flex-col gap-5">
@@ -53,8 +69,8 @@ export function GuideArticle({ doc }: { doc: GuideDoc }) {
             <span aria-hidden className="text-2xs font-semibold tabular-nums text-primary">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <h2 className={`${H2} mt-1`}>{withNowrap(step.title)}</h2>
-            <p className={`${BODY} mt-1.5`}>{withNowrap(step.body)}</p>
+            <h2 className={`${H2} mt-1`}>{withNowrap(step.title, doc.nowrapPhrases)}</h2>
+            <p className={`${BODY} mt-1.5`}>{withNowrap(step.body, doc.nowrapPhrases)}</p>
             {step.inlineLink && (
               <Link data-testid="guide-inline-link" href={step.inlineLink.href} className={INLINE_LINK}>
                 {step.inlineLink.label}
@@ -68,7 +84,7 @@ export function GuideArticle({ doc }: { doc: GuideDoc }) {
         <ul className="mt-2 flex flex-col gap-2">
           {doc.facts.map((fact) => (
             <li key={fact} className="text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
-              {withNowrap(fact)}
+              {withNowrap(fact, doc.nowrapPhrases)}
             </li>
           ))}
         </ul>
