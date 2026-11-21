@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { RootGuideLinks } from "../root-guide-links";
+import { RootGuideLinks, shouldInterceptClick } from "../root-guide-links";
 
 describe("RootGuideLinks", () => {
   const html = renderToStaticMarkup(<RootGuideLinks />);
@@ -16,5 +16,11 @@ describe("RootGuideLinks", () => {
     expect(html).not.toContain("/ratio");
     expect(html).not.toContain("trial");
     expect(html).toContain('aria-label="가이드"');
+  });
+  it("보조키·휠·이미 처리된 클릭은 가로채지 않는다", () => {
+    const base = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, defaultPrevented: false };
+    expect(shouldInterceptClick(base)).toBe(true);
+    for (const o of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }, { defaultPrevented: true }])
+      expect(shouldInterceptClick({ ...base, ...o })).toBe(false);
   });
 });

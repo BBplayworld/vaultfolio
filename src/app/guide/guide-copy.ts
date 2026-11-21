@@ -78,7 +78,7 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     primary: RATIO_CTA,
     secondary: TRIAL_CTA,
     linkLabel: "주식 비중 한 번에 보기",
-    lastModified: "2026-11-27",
+    lastModified: "2026-11-21",
   },
   "net-worth": {
     slug: "net-worth",
@@ -116,7 +116,7 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     primary: TRIAL_CTA,
     secondary: RATIO_CTA,
     linkLabel: "월말 순자산 정리",
-    lastModified: "2026-11-27",
+    lastModified: "2026-11-21",
   },
   "year-end": {
     slug: "year-end",
@@ -166,6 +166,6 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
       "'기록 안 된 변화'로",
       `'${YEAR_SETTLE_COPY.periodSub}'`,
     ],
-    lastModified: "2026-11-27",
+    lastModified: "2026-11-21",
   },
 };

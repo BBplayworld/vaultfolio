@@ -9,6 +9,11 @@ import { trackThenNavigate } from "@/lib/analytics/ga";
 // 누르면 feature_use guide_open 1건 후 href로 이동(연타 1회 가드). 금액·경로·slug는 보내지 않는다.
 const ORDER: GuideSlug[] = ["year-end", "net-worth", "stock-ratio"];
 
+/** 보조키·휠·가운데 클릭·이미 처리된 클릭은 브라우저 기본 동작(새 탭 등)에 맡긴다 — GA도 보내지 않는다 */
+export function shouldInterceptClick(e: { button: number; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean; defaultPrevented: boolean }): boolean {
+  return !e.defaultPrevented && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
+
 export function RootGuideLinks() {
   const moving = useRef(false);
   return (
@@ -25,6 +30,7 @@ export function RootGuideLinks() {
               href={href}
               data-testid={`root-guide-link-${slug}`}
               onClick={(e) => {
+                if (!shouldInterceptClick(e)) return;
                 e.preventDefault();
                 if (moving.current) return;
                 moving.current = true;

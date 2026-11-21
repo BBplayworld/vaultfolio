@@ -42,7 +42,7 @@ describe("sitemap", () => {
     const b = sitemap();
     vi.useRealTimers();
     expect(b.map((e) => e.lastModified)).toEqual(a.map((e) => e.lastModified));
-    expect(String(a[0].lastModified instanceof Date ? a[0].lastModified.toISOString() : "")).toContain("2026-11-27");
+    expect(String(a[0].lastModified instanceof Date ? a[0].lastModified.toISOString() : "")).toContain("2026-11-21");
   });
 });
 
