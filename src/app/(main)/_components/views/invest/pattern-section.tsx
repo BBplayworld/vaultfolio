@@ -5,6 +5,7 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { BaseRow, PatternData } from "@/lib/invest/pattern";
+import { NOWRAP_TAIL, NoBreak } from "./nowrap";
 import { PATTERN_TITLE, patternNote } from "@/lib/invest/pattern";
 
 const TH = "border-b border-border bg-card px-2 py-1.5 text-2xs font-semibold leading-snug text-muted-foreground align-bottom";
@@ -57,7 +58,7 @@ export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData
       <div id="invest-pattern-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-[240ms] motion-safe:ease-out ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
           <div data-testid="pattern-conclusion" className="mt-1 flex flex-col gap-1.5 text-sm leading-relaxed text-pretty break-keep">
-            {pattern.lines.map((l, i) => <p key={i} className={i === 0 ? "font-semibold" : "text-muted-foreground"}>{l}</p>)}
+            {pattern.lines.map((l, i) => <p key={i} className={i === 0 ? "font-semibold" : "text-muted-foreground"}><NoBreak text={l} phrases={[]} tails={NOWRAP_TAIL} /></p>)}
           </div>
           <div className="mt-3">
             <h4 className="text-sm font-semibold">크게 빠지기 전 12개월</h4>

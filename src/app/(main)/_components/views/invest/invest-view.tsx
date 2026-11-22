@@ -14,6 +14,7 @@ import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
 import { PeriodCard } from "./period-card";
+import { NOWRAP_TAIL, NoBreak } from "./nowrap";
 import { YearGrid } from "./year-grid";
 import { defaultPeriod } from "@/lib/invest/period";
 import { DropList, EpisodeDetail } from "./drop-list";
@@ -233,7 +234,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <div className="mt-4 border-t border-border/60 pt-3">
         <h3 className="text-base font-bold">크게 오른 해<small className="ml-2 text-2xs font-normal text-muted-foreground">한 해에 20% 넘게 오른 해 {pattern.rise.length}번</small></h3>
         <RiseList view={view} pattern={pattern} selYear={riseSel} onSelect={setRiseSel} inlineDetail limit={5} onMore={() => once("invest_rise_tab")} />
-        <p data-testid="rise-answer" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{pattern.lines[2]}</p>
+        <p data-testid="rise-answer" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep"><NoBreak text={pattern.lines[2]} phrases={[]} tails={NOWRAP_TAIL} /></p>
       </div>
     </div>
   );

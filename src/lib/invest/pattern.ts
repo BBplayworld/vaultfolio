@@ -146,5 +146,5 @@ export function buildPattern(d: MarketHistoryData, view: IndexView): PatternData
 export const PATTERN_TITLE = "하락 전 12개월과 크게 오른 해에 있었던 일";
 export const patternNote = (last: number) => `같은 시기에 있었다는 기록이고, 무엇이 원인인지는 말하지 않아요. 결과를 알 수 있는 ${last - 1}년까지만 셌어요. 금리차는 월평균이 0보다 낮은 달이 1개 이상이면 셌어요(연준 H.15).`;
 export const RISE_NOTE = "사건은 연준 원문으로 확인한 것만 적어요.";
-export const RISE_SUB = "한 해에 20% 넘게 오른 해예요. 크게 빠진 때는 여러 해를 재고, 오른 해는 한 해만 재요";
+export const RISE_SUB = "크게 빠진 때는 여러 해를 재고, 오른 해는 한 해만 재요";
 export const INDEX_LABEL = (k: IndexKey) => INDEX_META[k].label;
