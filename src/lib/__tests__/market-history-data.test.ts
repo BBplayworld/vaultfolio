@@ -211,6 +211,7 @@ describe("R4 데이터: 추가 사건 10건·금리차 월평균", () => {
       "2022년 5월 4일 연준 보유 축소 시작(2022)", "2025년 10월 29일 연준 보유 축소 종료(2025)",
     ]);
     expect(data.eventsExtra.every((e) => e.cat === "금리·통화 정책" && [...e.fact].length <= 40)).toBe(true);
+    expect(data.eventsExtra.find((e) => e.id === "R05")?.fact).toBe("연준이 10월에 보유 자산 정상화 프로그램을 시작하기로 했어요.");
     const ids = new Set([...data.events, ...data.eventsExtra].map((e) => e.id));
     expect(ids.size).toBe(41);
   });
