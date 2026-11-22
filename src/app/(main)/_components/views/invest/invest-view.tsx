@@ -11,6 +11,7 @@ import type { IndexKey } from "@/lib/invest/types";
 import { headlineLines, READOUT_HINT, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
+import { track } from "@/lib/analytics/ga";
 import { CalcCard } from "./calc-card";
 import { DropList, EpisodeDetail } from "./drop-list";
 import { layoutMain, MainChart } from "./main-chart";
@@ -49,14 +50,11 @@ export interface InvestViewProps {
   defaultIndex?: IndexKey;
   /** 진행 중 하락 모의(데이터 마지막 연도를 이 해로 자름). preview 점검용 */
   asof?: number;
-  /** 사용자가 지수를 직접 바꿀 때 */
-  onIndexChange?: (k: IndexKey) => void;
-  onOverlayOn?: () => void;
-  onTableOpen?: () => void;
-  onCalcChange?: () => void;
 }
 
-export function InvestView({ variant = "app", defaultIndex = "spx", asof, onIndexChange, onOverlayOn, onTableOpen, onCalcChange }: InvestViewProps) {
+type InvestCategory = "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc";
+
+export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
   const [sel, setSel] = useState<number | null>(null);
   const [yr, setYr] = useState<number | null>(null);
@@ -76,10 +74,17 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, onInde
   const OV = OVERLAY[view.rate];
   const L = width > 0 ? layoutMain(view, width, wide) : null;
 
+  // GA(spec 10절): page_title만(새 파라미터 0). 같은 동작은 진입당 1회, 기본 지수 선택은 보내지 않는다. 체험은 track이 no-op
+  const sent = useRef(new Set<InvestCategory>());
+  const once = (category: InvestCategory) => {
+    if (sent.current.has(category)) return;
+    sent.current.add(category);
+    track("feature_use", { category });
+  };
   const changeIndex = (k: IndexKey) => {
     if (k === idx) return;
     setIdx(k); setSel(null); setYr(null); setOvOn(false); setMenu(false);
-    onIndexChange?.(k);
+    once(`invest_index_${k}`);
   };
   // 그림 바깥을 탭하면 해 선택 해제, 겹쳐 보기 목록은 바깥 탭·Esc로 닫는다
   useEffect(() => {
@@ -145,7 +150,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, onInde
               {[false, true].map((on) => (
                 <button
                   key={String(on)} type="button" role="option" aria-selected={ovOn === on} data-ov={on ? "1" : "0"}
-                  onClick={() => { setOvOn(on); setMenu(false); btnRef.current?.focus(); if (on) onOverlayOn?.(); }}
+                  onClick={() => { setOvOn(on); setMenu(false); btnRef.current?.focus(); if (on) once("invest_overlay"); }}
                   className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-left text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${ovOn === on ? "bg-secondary" : ""}`}
                 >
                   <span>{on ? OV.full : "겹쳐 보기 안 함"}{on && <small className="mt-px block text-2xs font-normal text-muted-foreground">{OV.def} · 오른쪽 축</small>}</span>
@@ -159,7 +164,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, onInde
       {!wide && (
         <>
           <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail width={listW} />
-          <YearTable key={idx} view={view} onOpen={onTableOpen} />
+          <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
         </>
       )}
     </div>
@@ -183,10 +188,10 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, onInde
               ) : <p className="text-sm text-muted-foreground">왼쪽에서 하락을 고르면 그 시기가 보여요</p>}
             </div>
           </div>
-          <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><YearTable key={idx} view={view} onOpen={onTableOpen} /></div>
+          <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><YearTable key={idx} view={view} onOpen={() => once("invest_table")} /></div>
         </>
       )}
-      <div className={wide ? "max-w-[560px]" : ""}><CalcCard key={idx} view={view} onFirstChange={onCalcChange} /></div>
+      <div className={wide ? "max-w-[560px]" : ""}><CalcCard key={idx} view={view} onFirstChange={() => once("invest_calc")} /></div>
       <div data-testid="invest-source" className="mt-1 space-y-1.5 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">
         {src.map((t, i) => <p key={i}>{t}</p>)}
       </div>
