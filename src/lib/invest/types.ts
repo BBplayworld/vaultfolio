@@ -64,4 +64,22 @@ export interface MarketHistoryData {
   eventsExtra: MarketEvent[];
   /** R4: 금리차 월평균(%p), from부터 한 달씩. 없는 달 null */
   spread: { from: string; a: (number | null)[]; b: (number | null)[] };
+  /** 해별 경제 이슈(1990~2026): 읽기 줄·격자·표·오른 해 펼침 공통 출처 */
+  eventsYear: YearEvent[];
+}
+export interface YearEvent {
+  y: number;
+  id: string;
+  name: string;
+  date: string;
+  cat: EventCategory;
+  fact: string;
+  urls: string[];
+  region: "미국" | "글로벌" | "한국";
+  /** 같은 해 안 시간순 키(월) */
+  m: number;
+  /** 2026 '진행 중' 행 */
+  wip: boolean;
+  /** 기존 정본 사건 id(있으면 이름·사실이 같다) */
+  ref: string;
 }

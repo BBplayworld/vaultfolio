@@ -79,7 +79,12 @@ export function build() {
   const sp = csv("spread-monthly.csv").filter((r) => r.month <= `${last}-12`);
   const spread = { from: sp[0].month, a: sp.map((r) => num(r.spread_10y2y_avg)), b: sp.map((r) => num(r.spread_10y3m_avg)) };
   sp.forEach((r, i) => { if (monthIdx(r.month) !== monthIdx(sp[0].month) + i) throw new Error(`금리차 월 계열이 끊겼어요: ${r.month}`); });
-  const out = { last, idx, rate, ovl, rec, usYear, krYear, events, eventsExtra, spread };
+  // 해별 경제 이슈(1990~2026): 해마다 읽기 줄·격자·연도별 표·오른 해 펼침이 같은 출처(yearIssues)에서 읽는다. 첫 화면 점은 늘리지 않는다
+  const eventsYear = csv("events-year.csv").map((r) => ({
+    y: +r.year, id: r.id, name: r.name, date: r.date_display, cat: r.category, fact: r.fact, region: r.region,
+    urls: r.source_urls.split(" ; ").filter(Boolean), m: +r.order_month, wip: r.status === "진행 중", ref: r.rule === "A" ? r.linked_id : "",
+  }));
+  const out = { last, idx, rate, ovl, rec, usYear, krYear, events, eventsExtra, spread, eventsYear };
   validate(out);
   return out;
 }
@@ -101,6 +106,16 @@ function validate(d) {
     if ([...e.fact].length > 40 || !e.fact.endsWith("요.")) throw new Error(`사실 1줄: ${e.id}`);
     if (e.cat !== "금리·통화 정책" || !e.urls.every((u) => u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`추가 사건 분류·출처: ${e.id}`);
   });
+  // 해별 이슈: 53행, 1996·2006 비움, 연준 1차 출처만, 기존 정본(A)은 이름·사실 그대로
+  if (d.eventsYear.length !== 53) throw new Error(`해별 이슈는 53행이어야 해요: ${d.eventsYear.length}`);
+  const allEv = new Map([...d.events, ...d.eventsExtra].map((e) => [e.id, e]));
+  d.eventsYear.forEach((e) => {
+    if ([...e.fact].length > 40 || !e.fact.endsWith("요.")) throw new Error(`해별 이슈 사실 1줄: ${e.id}`);
+    if (!CATEGORIES.includes(e.cat)) throw new Error(`해별 이슈 분류: ${e.id}`);
+    if (!e.urls.length || e.urls.some((u) => !u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`해별 이슈 1차 출처: ${e.id}`);
+    if (e.ref) { const o = allEv.get(e.ref.replace(/^Y-/, "")); if (!o || o.name !== e.name || o.fact !== e.fact) throw new Error(`기존 정본과 다름: ${e.id}`); }
+  });
+  for (let y = 1990; y <= 2025; y++) if (y !== 1996 && y !== 2006 && !d.eventsYear.some((e) => e.y === y)) throw new Error(`해별 이슈가 비었어요: ${y}`);
   const usM = (m) => (monthIdx(m) >= monthIdx(d.ovl.us.from) ? d.ovl.us.v[monthIdx(m) - monthIdx(d.ovl.us.from)] : undefined);
   d.usYear.forEach((r) => { const m = usM(`${r.y}-12`); if (r.y10 != null && Math.abs(m - r.y10) > 0.005) throw new Error(`10년물 12월 월말 ≠ 연말: ${r.y}`); });
   d.usYear.forEach((r) => {
@@ -143,6 +158,7 @@ export function buildPublic() {
     "kr-annual.csv": toCsv(["year", "bok_base_end", "bok_regime", "kr3y_end", "kr10y_end", "kr_bond_end_date"], kr),
     "recessions-us.csv": toCsv(H(rec), rec),
     "events.csv": toCsv(H(ev), ev),
+    "events-year.csv": toCsv(H(csv("events-year.csv")), csv("events-year.csv")),
     "events-extra.csv": toCsv(H(csv("events-extra.csv")), csv("events-extra.csv")),
     "spread-monthly.csv": toCsv(["month", "spread_10y2y_avg", "spread_10y3m_avg"], csv("spread-monthly.csv").filter((r) => r.month <= `${last}-12`)),
   };
