@@ -11,7 +11,7 @@ import { getProfitLossColor } from "@/config/theme";
 const f1 = (v: number) => { const r = Math.round(v * 10) / 10; return r > 0 ? `+${r.toFixed(1)}` : r < 0 ? `${MINUS}${Math.abs(r).toFixed(1)}` : "0.0"; };
 export const gridAlpha = (retPct: number) => 0.1 + 0.5 * Math.min(Math.abs(retPct) / 40, 1);
 
-export function YearGrid({ view, period, showLevels }: { view: IndexView; period: { sy: number; ey: number }; showLevels: boolean }) {
+export function YearGrid({ view, period, showLevels, question }: { view: IndexView; period: { sy: number; ey: number }; showLevels: boolean; question?: string }) {
   const [sel, setSel] = useState<number | null>(null);
   const first = view.start + 1, last = view.last;
   const decs: number[] = [];
@@ -33,6 +33,7 @@ export function YearGrid({ view, period, showLevels }: { view: IndexView; period
   const cap = `해마다 연말 기준 등락(%) · 가격 지수(배당 제외) · ${view.currency === "달러" ? "미국 달러 기준" : "포인트 기준"}`;
   return (
     <section data-testid="yearly-grid" className="rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
+      {question && <p data-testid="q-grid" className="mb-2 text-xs text-muted-foreground text-balance break-keep">{question}</p>}
       <h3 data-testid="yearly-grid-title" className="text-base font-bold">{view.label} 연도별 수익률</h3>
       <p className="mt-1 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{cap}</p>
       <div

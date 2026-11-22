@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { headlineLines, READOUT_HINT, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
+import { QUESTION_HEAD, headlineLines, READOUT_HINT, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -68,7 +68,7 @@ function SourcePanel({ lines }: { lines: string[] }) {
   return (
     <div className="mt-1">
       <button type="button" aria-expanded={open} aria-controls="invest-source-panel" data-testid="invest-source-button" onClick={() => setOpen((o) => !o)} className="inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-        출처·라이선스<Info aria-hidden className="size-3.5" />
+        출처·라이선스 · CC BY-SA 4.0<Info aria-hidden className="size-3.5" />
         <ChevronDown aria-hidden className={`size-3.5 motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       <div id="invest-source-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
@@ -169,7 +169,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <div data-testid="invest-headline">
         <p className="text-lg font-bold leading-snug text-balance break-keep">{head.l1}</p>
         {head.l2 && <p className="mt-1 text-sm text-muted-foreground text-pretty break-keep">{head.l2.lead}<b className="font-semibold text-foreground">{head.l2.bold}</b>{head.l2.rest}</p>}
-        <p data-testid="invest-base" className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>
+        {/* R3: 모바일은 base 줄을 `크게 빠진 때` 카드 각주로 옮긴다(첫 화면 숫자 예산). 1280은 현행 */}
+        {wide && <p data-testid="invest-base" className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>}
       </div>
       <div data-testid="invest-readout" aria-live="polite" className="mt-2 min-h-7">
         {ro && showLevels ? (
@@ -224,7 +225,17 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
 
   const src = sourceLines(view, { spx: marketHistory.idx.spx.rev, ndx: marketHistory.idx.ndx.rev, kospi: marketHistory.idx.kospi.rev });
   const dropsCard = (
-    <div data-testid="invest-drops" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(true)}</div>
+    <div data-testid="invest-drops" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
+      <p data-testid="q-drops" className="mb-2 text-xs text-muted-foreground text-balance break-keep">{QUESTION_HEAD.drops}</p>
+      <h3 className="text-base font-bold">크게 빠진 때</h3>
+      <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail width={listW} bare />
+      <p data-testid="invest-base" className="mt-1 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">{head.l3}</p>
+      <div className="mt-4 border-t border-border/60 pt-3">
+        <h3 className="text-base font-bold">크게 오른 해<small className="ml-2 text-2xs font-normal text-muted-foreground">한 해에 20% 넘게 오른 해 {pattern.rise.length}번</small></h3>
+        <RiseList view={view} pattern={pattern} selYear={riseSel} onSelect={setRiseSel} inlineDetail limit={5} onMore={() => once("invest_rise_tab")} />
+        <p data-testid="rise-answer" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{pattern.lines[2]}</p>
+      </div>
+    </div>
   );
   const deeperCard = (
     <div data-testid="invest-deeper" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
@@ -233,8 +244,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
     </div>
   );
-  const gridNode = <YearGrid key={`g-${idx}`} view={view} period={period} showLevels={showLevels} />;
-  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} />;
+  const gridNode = <YearGrid key={`g-${idx}`} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
+  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} />;
   // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
   // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
   const MOBILE_SECTIONS: { id: string; node: React.ReactNode }[] = [
@@ -247,7 +258,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   return (
     <div data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:gap-4">
       {/* P4: 지수 선택기 상단 고정(모바일). 체험 배너·PWA safe-area 아래에 붙는다 */}
-      <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-1 backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
+      <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-1 backdrop-blur-md border-b border-border/40 xl:static xl:mx-0 xl:mt-0 xl:border-0 xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth value={idx} onChange={changeIndex} options={INDEX_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
       {!wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}

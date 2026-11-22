@@ -22,7 +22,8 @@ const count = (html: string, re: RegExp) => (html.match(re) || []).length;
 // 문장 규칙(spec 6절) 자동 검사 목록. `~해서`·`~하세요`는 사람이 대조한다.
 export const FORBIDDEN = ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등", "→", "↑", "↓", "가데이터", "확인 중"];
 // `수익률` 허용 위치(CEO R4.1): 카드 제목 2(연도별 수익률·기간 수익률)·격자 범례 1(아래 기간 수익률에서 고른 기간) — 그 밖의 `수익`은 0
-const allowRate = (t: string) => t.replaceAll("연도별 수익률", "").replaceAll("기간 수익률", "");
+// `→` 예외(CEO R4.2 R1): 기간 결과 공통 1줄 `같은 총액, {시작}년 말 → {끝}년 말` 1곳(시간 구간 표기, 인과 화살표 아님)
+const allowRate = (t: string) => t.replaceAll("연도별 수익률", "").replaceAll("기간 수익률", "").replaceAll("년 말 → ", "년 말 ");
 const stripTags = (h: string) => h.replace(/<[^>]*>/g, " ");
 
 describe("투자 탭 그림: 이름표·점·침체 띠(AC9·AC11~13)", () => {

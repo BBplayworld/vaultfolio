@@ -71,7 +71,7 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
   );
 }
 
-export function PeriodCard({ view, period, onChange }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void }) {
+export function PeriodCard({ view, period, onChange, question }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void; question?: string }) {
   const { sy, ey } = fixPeriod(view, period.sy, period.ey);
   const r = periodResult(view, sy, ey), t = periodText(r);
   const [info, setInfo] = useState(false);
@@ -85,6 +85,7 @@ export function PeriodCard({ view, period, onChange }: { view: IndexView; period
   const cyRet = cy != null && cy > sy ? (view.ret[cy - view.start] as number) : null;
   return (
     <section data-testid="invest-sec3" className="rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
+      {question && <p data-testid="q-period" className="mb-2 text-xs text-muted-foreground text-balance break-keep">{question}</p>}
       <div className="mb-3 flex flex-wrap items-baseline gap-x-2"><h3 data-testid="invest-sec3-title" className="text-base font-bold">{view.label} 기간 수익률</h3><small className="text-2xs text-muted-foreground">그해 말에 넣었다면</small></div>
       <div role="group" aria-label="기간 길이" data-testid="period-presets" className="flex gap-1.5">
         {presets.map((p) => { const on = ey === view.last && sy === view.last - p.years; return (
@@ -103,14 +104,15 @@ export function PeriodCard({ view, period, onChange }: { view: IndexView; period
         ))}
       </div>
       <div data-testid="calc-result" aria-live="polite" className="mt-3.5 rounded-2xl bg-secondary p-4">
-        <div data-testid="calc-lump" className={rowCls}>
-          <div className="flex items-start gap-1.5 text-sm text-pretty break-keep"><svg width="14" height="14" aria-hidden className="mt-0.5 shrink-0"><circle cx="7" cy="7" r="4.5" fill="var(--card)" stroke={C.ink2} strokeWidth="2" /></svg><span>{lumpSentence(view, r)}</span></div>
+        <p data-testid="same-total" className="mb-2 text-xs text-muted-foreground md:hidden">같은 총액, {sy}년 말 → {ey}년 말</p>
+        <div data-testid="calc-lump" role="group" aria-label={lumpSentence(view, r)} className={rowCls}>
+          <div className="flex items-start gap-1.5 text-sm text-pretty break-keep"><svg width="14" height="14" aria-hidden className="mt-0.5 shrink-0"><circle cx="7" cy="7" r="4.5" fill="var(--card)" stroke={C.ink2} strokeWidth="2" /></svg><span className="md:hidden">한 번에 넣었다면</span><span className="hidden md:inline">{lumpSentence(view, r)}</span></div>
           <div className="my-1 flex items-baseline gap-2"><span data-testid="calc-mult-lump" className="text-2xl font-bold tabular-nums">{t.lumpMult}</span><span data-testid="calc-total-lump" className={`text-base font-semibold tabular-nums ${getProfitLossColor(r.lumpMult - 1)}`}>{t.lumpTotal}</span></div>
           <div className="text-xs text-muted-foreground">해마다 평균 <b data-testid="calc-cagr-lump" className={`font-semibold tabular-nums ${getProfitLossColor(r.lumpCagr)}`}>{t.lumpCagr}</b> {t.lumpVerb} 셈이에요</div>
         </div>
         <div aria-hidden className="my-3 h-px bg-border" />
-        <div data-testid="calc-dca" className={rowCls}>
-          <div className="flex items-start gap-1.5 text-sm text-pretty break-keep"><svg width="14" height="14" aria-hidden className="mt-0.5 shrink-0"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="var(--card)" stroke={C.brand} strokeWidth="2" /></svg><span>{dcaSentence(view, r)}</span></div>
+        <div data-testid="calc-dca" role="group" aria-label={dcaSentence(view, r)} className={rowCls}>
+          <div className="flex items-start gap-1.5 text-sm text-pretty break-keep"><svg width="14" height="14" aria-hidden className="mt-0.5 shrink-0"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="var(--card)" stroke={C.brand} strokeWidth="2" /></svg><span className="md:hidden">매달 나눠 넣었다면({12 * r.n}번)</span><span className="hidden md:inline">{dcaSentence(view, r)}</span></div>
           <div className="my-1 flex items-baseline gap-2"><span data-testid="calc-mult-dca" className="text-2xl font-bold tabular-nums">{t.dcaMult}</span><span data-testid="calc-total-dca" className={`text-base font-semibold tabular-nums ${getProfitLossColor(r.dcaMult - 1)}`}>{t.dcaTotal}</span></div>
           <div data-testid="calc-hold-dca" className="text-xs text-muted-foreground">{HOLD_LINE(t.hold)}</div>
         </div>

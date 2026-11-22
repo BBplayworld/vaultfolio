@@ -46,6 +46,7 @@ function BaseTable({ title, hit, rows, label }: { title: string; hit: string; ro
 
 export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData; last: number; onOpen?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [epOpen, setEpOpen] = useState<number | null>(null);
   const toggle = () => { const n = !open; setOpen(n); if (n) onOpen?.(); };
   return (
     <div data-testid="invest-pattern" className="mt-4 border-t border-border/60 pt-1 xl:mt-0 xl:border-t-0">
@@ -62,13 +63,16 @@ export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData
             <h4 className="text-sm font-semibold">크게 빠지기 전 12개월</h4>
             <ul className="mt-1.5 flex flex-col md:hidden" data-testid="pattern-predrop-cards">
               {pattern.preDrop.map((r) => (
-                <li key={r.py} className="border-b border-border py-2 last:border-b-0">
-                  <div className="text-xs font-medium break-keep">{r.name} <span className="font-normal tabular-nums text-muted-foreground">{r.py}년</span></div>
-                  <dl className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 text-xs">
+                <li key={r.py} className="border-b border-border last:border-b-0">
+                  <button type="button" aria-expanded={epOpen === r.py} onClick={() => setEpOpen(epOpen === r.py ? null : r.py)} className="flex min-h-10 w-full items-center justify-between gap-2 text-left text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                    <span className="break-keep">{r.name} <span className="font-normal tabular-nums text-muted-foreground">{r.py}년</span></span>
+                    <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${epOpen === r.py ? "rotate-180" : ""}`} />
+                  </button>
+                  {epOpen === r.py && <dl className="pb-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 text-xs">
                     {pattern.condLabels.map((c, i) => (
                       <div key={c} className="contents"><dt className="break-keep text-muted-foreground">{c}</dt><dd className={`text-right tabular-nums ${r.cells[i].state === "none" ? "text-muted-foreground" : ""}`}>{r.cells[i].text}</dd></div>
                     ))}
-                  </dl>
+                  </dl>}
                 </li>
               ))}
             </ul>

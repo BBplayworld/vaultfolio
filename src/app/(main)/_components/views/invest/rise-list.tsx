@@ -2,6 +2,7 @@
 
 // R4: 크게 오른 해 목록(행 48px, 전수)과 행 펼침. 연간 등락 > +20%(반올림 전). 해석·인과 문장 0, 비율 % 0.
 import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
 import type { PatternData, RiseYear } from "@/lib/invest/pattern";
 import { RISE_NOTE, RISE_SUB } from "@/lib/invest/pattern";
@@ -48,19 +49,25 @@ export function RiseDetail({ view, r }: { view: IndexView; r: RiseYear }) {
 }
 
 export function RiseList({
-  view, pattern, selYear, onSelect, inlineDetail,
+  view, pattern, selYear, onSelect, inlineDetail, limit, onMore,
 }: {
   view: IndexView;
   pattern: PatternData;
   selYear: number | null;
   onSelect: (y: number | null) => void;
   inlineDetail: boolean;
+  /** 모바일 소목록: 최신 {limit}행만 먼저, `나머지 N개 더 보기`로 전수(R7) */
+  limit?: number;
+  onMore?: () => void;
 }) {
+  const [all, setAll] = useState(false);
+  const rows = [...pattern.rise].reverse();
+  const shown = limit && !all ? rows.slice(0, limit) : rows;
   return (
     <div data-testid="rise-list">
       <p className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{RISE_SUB}</p>
       <div className="-mx-3 mt-1 xl:mx-0">
-        {[...pattern.rise].reverse().map((r) => {
+        {shown.map((r) => {
           const open = selYear === r.y, recEnd = r.recessionEndMonth != null;
           return (
             <div key={r.y} data-testid="rise-row" className={`rounded-xl transition-colors duration-150 ${open ? "bg-secondary" : ""}`}>
@@ -77,6 +84,9 @@ export function RiseList({
           );
         })}
       </div>
+      {limit && !all && rows.length > limit && (
+        <button type="button" data-testid="rise-more" onClick={() => { setAll(true); onMore?.(); }} className="mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-secondary text-sm font-semibold text-muted-foreground outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.98]">나머지 {rows.length - limit}개 더 보기</button>
+      )}
     </div>
   );
 }

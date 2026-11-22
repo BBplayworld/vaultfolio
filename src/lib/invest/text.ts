@@ -101,3 +101,17 @@ export function sourceLines(v: IndexView, revIds: Record<"spx" | "ndx" | "kospi"
   const l4 = `${owner}의 상표이며, 시크릿에셋은 이 기관과 제휴 관계가 아니에요. 과거 시장 사실이며 투자 권유가 아니에요.`;
   return [l1, l2, l3, l4];
 }
+
+/** R4.2 용어 풀이 5줄(연도별 표 펼침 아래 `invest-gloss`) — 정본 라벨은 그대로 두고 풀이만 더한다 */
+export const GLOSS: { term: string; text: string }[] = [
+  { term: "장단기 금리차(10년−2년·10년−3개월)", text: "10년 만기 국채 금리에서 2년(3개월) 만기 금리를 뺀 값이에요. 마이너스면 짧은 쪽 금리가 더 높았다는 뜻이에요." },
+  { term: "10년물", text: "10년 만기 미국 국채의 금리예요." },
+  { term: "경기침체(NBER)", text: "미국 경제연구소(NBER)가 정한 경기침체 기간이에요." },
+  { term: "연준 금리", text: "미국 중앙은행(연준)의 기준금리예요." },
+  { term: "연준 대차대조표 사건", text: "연준이 채권을 사들이거나 줄인 결정이에요." },
+];
+export const QUESTION_HEAD = {
+  drops: "크게 빠지고 오른 때, 금리는 어땠나요?",
+  grid: "해마다 얼마나 움직였나요?",
+  period: "같은 돈을 한 번에, 또는 매달 넣었다면 얼마가 됐을까요?",
+} as const;
