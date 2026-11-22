@@ -19,6 +19,13 @@ export function decadeCounts(): { decade: number; cells: ({ up: number; n: numbe
   return rows;
 }
 
+/** 첫 열 라벨: 마지막 두 어절(`있던 해`)은 줄 끝에 한 글자만 남지 않게 묶는다(C25) */
+function RowLabel({ text }: { text: string }) {
+  const w = text.split(" ");
+  if (w.length < 3) return <>{text}</>;
+  return <>{w.slice(0, -2).join(" ")} <span className="whitespace-nowrap">{w.slice(-2).join(" ")}</span></>;
+}
+
 /** 가이드 고유 표 공용 틀(4열: 구분 | 지수 3). 셀은 `오른 해/전체 해` 개수만, 없으면 — */
 export function GuideCountTable({ caption, head, rows }: { caption: string; head: string; rows: { label: string; cells: ({ up: number; n: number } | null)[] }[] }) {
   return (
@@ -33,7 +40,7 @@ export function GuideCountTable({ caption, head, rows }: { caption: string; head
       <tbody>
         {rows.map((r) => (
           <tr key={r.label}>
-            <th scope="row" className="h-auto min-h-10 w-[5.5rem] border-t border-border py-1 text-left font-semibold break-keep">{r.label}</th>
+            <th scope="row" className="h-auto min-h-10 w-[5.5rem] border-t border-border py-1 text-left font-semibold break-keep"><RowLabel text={r.label} /></th>
             {r.cells.map((c, i) => <td key={i} className="h-10 border-t border-border text-right">{c ? `${c.up}/${c.n}` : "—"}</td>)}
           </tr>
         ))}

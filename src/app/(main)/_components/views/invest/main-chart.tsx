@@ -364,7 +364,7 @@ export function MainChart({
         <path d={ovPath} fill="none" stroke={C.brand} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
         {yearly && <path d={ovSel ? `M${X(ovSel.Y).toFixed(1)},${Y3(ovSel.v).toFixed(1)}L${X(ovSel.Y + 1).toFixed(1)},${Y3(ovSel.v).toFixed(1)}` : ""} fill="none" stroke={C.brand} strokeWidth={2.4} strokeLinecap="round" />}
         {yearly && ovYears.map(({ Y, v }) => <circle key={Y} data-testid="overlay-dot" cx={((X(Y) + X(Y + 1)) / 2).toFixed(1)} cy={Y3(v).toFixed(1)} r={ovSel?.Y === Y ? 3.3 : 2} fill={C.brand} stroke={C.card} strokeWidth={1} />)}
-        {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).filter((t) => (t / rst) % rateTickEvery === 0).map((t) => <text key={t} className={BRAND_TEXT_FILL} fontSize={12} x={W - RP + 4} y={Y3(t) + (t === 0 ? -1 : 4)} style={HALO}>{t}%</text>)}
+        {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).filter((t) => (t / rst) % rateTickEvery === 0).map((t) => <text key={t} className={BRAND_TEXT_FILL} fontSize={12} x={W - 1} textAnchor="end" y={Y3(t) + (t === 0 ? -1 : 4)} style={HALO}>{t}%</text>)}
       </g>
       {tA > y0 + 1 && <rect x={X(y0 + 1)} y={P3} width={X(tA) - X(y0 + 1)} height={H3} fill={C.sec} opacity={0.8} data-nodata="1" />}
       {ep && <rect x={XE(ep.py)} y={P3 - 1} width={XE(ep.ty) - XE(ep.py)} height={H3 + 2} rx={3} fill="none" stroke={C.brand} strokeWidth={2} />}
