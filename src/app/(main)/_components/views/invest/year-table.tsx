@@ -7,7 +7,7 @@ import { useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
 import { DIR_LABEL, GLOSS, fmtLevel, fmtPct, fmtPctPlain, fmtSpread } from "@/lib/invest/text";
 import { ChevronRight } from "lucide-react";
-import { NOWRAP_PCT, NoBreak } from "./nowrap";
+import { NOWRAP_PCT, NoBreak, EventName } from "./nowrap";
 import { getProfitLossColor } from "@/config/theme";
 
 const US_NOTE = "금리차는 그해 마지막 거래일의 10년물에서 2년물·3개월물을 뺀 값이에요. 2년물은 1976년 6월, 3개월물은 1981년 9월부터 자료가 있어요. 경기침체는 NBER 기준으로 그해에 침체였던 달 수예요.";
@@ -46,7 +46,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                 {view.wip && (
                   <div data-testid="year-wip" className="mb-1 rounded-xl bg-secondary px-3 py-2 text-xs break-keep">
                     <div className="font-semibold tabular-nums">{view.wip.y}년 · 진행 중</div>
-                    <div className="mt-1"><span className="font-medium">{view.wip.name}</span> <span className="text-muted-foreground">{view.wip.date} · <NoBreak text={view.wip.cat} /></span><div className="text-2xs text-muted-foreground text-pretty" data-testid="event-fact">{view.wip.fact}</div></div>
+                    <div className="mt-1"><span className="font-medium"><EventName name={view.wip.name} /></span> <span className="text-muted-foreground">{view.wip.date} · <NoBreak text={view.wip.cat} /></span><div className="text-2xs text-muted-foreground text-pretty" data-testid="event-fact">{view.wip.fact}</div></div>
                     <div className="mt-1 text-2xs text-muted-foreground">지수 값은 {view.last}년 말까지라 {view.wip.y}년 등락은 없어요.</div>
                   </div>
                 )}
@@ -77,7 +77,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                             </>
                           )}
                           <dt className="col-span-2 text-muted-foreground">사건</dt>
-                          <dd className="col-span-2 break-keep">{r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium">{e.name}</span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-2xs text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}</dd>
+                          <dd className="col-span-2 break-keep">{r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium"><EventName name={e.name} /></span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-2xs text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}</dd>
                         </dl>
                       )}
                     </div>
@@ -99,7 +99,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                     {view.wip && (
                       <tr data-testid="year-wip-row">
                         <td colSpan={heads.length} className="border-b border-border bg-secondary px-2.5 py-2 text-left whitespace-normal break-keep">
-                          <span className="font-semibold">{view.wip.y}년 · 진행 중</span>{" "}<span className="font-medium">{view.wip.name}</span> <span className="text-muted-foreground">{view.wip.date} · <NoBreak text={view.wip.cat} /></span>
+                          <span className="font-semibold">{view.wip.y}년 · 진행 중</span>{" "}<span className="font-medium"><EventName name={view.wip.name} /></span> <span className="text-muted-foreground">{view.wip.date} · <NoBreak text={view.wip.cat} /></span>
                           <div className="text-2xs text-muted-foreground" data-testid="event-fact">{view.wip.fact}</div>
                           <div className="text-2xs text-muted-foreground">지수 값은 {view.last}년 말까지라 {view.wip.y}년 등락은 없어요.</div>
                         </td>
@@ -126,7 +126,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                           </>
                         )}
                         <td className="min-w-[220px] whitespace-normal border-b border-border bg-card px-2.5 py-1.5 text-left text-muted-foreground">
-                          {r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground">{e.name}</span><div className="text-2xs leading-snug break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}
+                          {r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground"><EventName name={e.name} /></span><div className="text-2xs leading-snug break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}
                         </td>
                       </tr>
                     ))}

@@ -13,3 +13,7 @@ export function NoBreak({ text, phrases = NOWRAP_PHRASES, tails = [] }: { text: 
 
 /** 사건 사실 1줄: `5.25%가`·`2~2.25%로`처럼 수치와 조사 사이에서 끊기지 않게 묶는다(qa D-6) */
 export const NOWRAP_PCT = ["[0-9][0-9.]*(?:~[0-9][0-9.]*)?%[가-힣]{0,2}"];
+
+/** 사건 표시명 끝 `(YYYY)`는 앞 어절에 붙여 한 덩어리로(읽기 줄·표·펼침 공통, R-2) */
+export const NOWRAP_YEAR_SUFFIX = ["[^\\s·]*\\(\\d{4}(?:~\\d{2,4})?\\)"];
+export const EventName = ({ name }: { name: string }) => <NoBreak text={name} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} />;

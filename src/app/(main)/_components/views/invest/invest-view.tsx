@@ -14,7 +14,7 @@ import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
 import { PeriodCard } from "./period-card";
-import { NOWRAP_TAIL, NoBreak } from "./nowrap";
+import { NOWRAP_TAIL, NOWRAP_YEAR_SUFFIX, NoBreak } from "./nowrap";
 import { YearGrid } from "./year-grid";
 import { defaultPeriod } from "@/lib/invest/period";
 import { DropList, EpisodeDetail } from "./drop-list";
@@ -173,16 +173,16 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         {/* R3: 모바일은 base 줄을 `크게 빠진 때` 카드 각주로 옮긴다(첫 화면 숫자 예산). 1280은 현행 */}
         {wide && <p data-testid="invest-base" className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>}
       </div>
-      <div data-testid="invest-readout" aria-live="polite" className="mt-2 min-h-7">
+      <div data-testid="invest-readout" aria-live="polite" className="mt-2 min-h-[4.7rem]">
         {ro && showLevels ? (
           <>
-            <div className="flex h-7 items-center gap-1.5 overflow-hidden whitespace-nowrap text-sm">
+            <div className="flex flex-wrap items-center gap-x-1.5 text-sm" data-testid="readout-main">
               <span>{ro.year}년 말 <b className="font-bold tabular-nums">{ro.level}</b></span><span>·</span>
               <b className={`font-bold tabular-nums ${ro.ret == null ? "" : getProfitLossColor(ro.ret)}`}>{ro.ret == null ? "—" : fmtPct(ro.ret)}</b><span>·</span>
               <span className="text-muted-foreground">{ro.dir}</span>
-              {ro.recession && <><span>·</span><span className="text-muted-foreground">경기침체</span></>}
+              {ro.recession && <><span>·</span><span className="whitespace-nowrap text-muted-foreground">경기침체</span></>}
+              {ro.events && <div className="basis-full pt-0.5 text-xs leading-snug break-keep"><span className="text-muted-foreground">사건</span> <NoBreak text={ro.events} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} /></div>}
             </div>
-            {ro.events && <div className="pb-1 text-xs leading-snug"><span className="text-muted-foreground">사건</span> {ro.events}</div>}
           </>
         ) : <p className="flex h-7 items-center text-xs text-muted-foreground">{READOUT_HINT}</p>}
       </div>

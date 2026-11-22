@@ -8,7 +8,7 @@ import type { PatternData, RiseYear } from "@/lib/invest/pattern";
 import { RISE_NOTE, RISE_SUB } from "@/lib/invest/pattern";
 import { DIR_LABEL, fmtPct, fmtRate } from "@/lib/invest/text";
 import { DirMark } from "./drop-list";
-import { NOWRAP_PCT, NoBreak } from "./nowrap";
+import { NOWRAP_PCT, NoBreak, EventName } from "./nowrap";
 
 const pp = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2) + "%p";
 
@@ -24,8 +24,8 @@ export function RiseDetail({ view, r }: { view: IndexView; r: RiseYear }) {
         <li data-testid="rise-rate">{r.rateFrom != null && r.rateTo != null ? <>그해 금리 {fmtRate(r.rateFrom)}에서 {fmtRate(r.rateTo)}로 · {DIR_LABEL[r.dir]}</> : "그해 금리 자료가 없어요"}</li>
         <li>{r.prevDir === "none" ? "전년 금리 자료가 없어요" : `전년 금리 ${DIR_LABEL[r.prevDir]}`}</li>
         {r.y10 != null && <li>{us ? "10년물" : "국고채 10년"} 그해 말 {fmtRate(r.y10)}{r.d10 != null && <> · 전년 말보다 {pp(r.d10)}</>}</li>}
-        {us && <li data-testid="rise-recession">{r.recessionEndMonth != null ? `이해 ${r.recessionEndMonth}월에 미국 경기침체가 끝났어요(NBER)` : "이해에 미국 경기침체는 없었어요(NBER)"}</li>}
-        {r.dropPeak && <li data-testid="rise-peak">{`이해 말이 '${r.dropPeak}'의 고점이었어요.`}</li>}
+        {us && <li data-testid="rise-recession">{r.recessionEndMonth != null ? `이 해 ${r.recessionEndMonth}월에 미국 경기침체가 끝났어요(NBER)` : "이 해에 미국 경기침체는 없었어요(NBER)"}</li>}
+        {r.dropPeak && <li data-testid="rise-peak">{`이 해 말이 '${r.dropPeak}'의 고점이었어요.`}</li>}
       </ul>
       <div data-testid="rise-events" className="mt-2.5 flex items-start gap-1.5">
         <i aria-hidden className="mt-1.5 inline-block size-2 shrink-0 rounded-full bg-foreground" />
@@ -35,7 +35,7 @@ export function RiseDetail({ view, r }: { view: IndexView; r: RiseYear }) {
               <span className="text-muted-foreground">같은 시기 사건</span>
               {r.events.map((q) => (
                 <div key={q.id} className="mt-1" data-event-id={q.id}>
-                  <span className="font-semibold">{q.name}</span> <span className="text-muted-foreground">{q.date} · <NoBreak text={q.cat} /></span>
+                  <span className="font-semibold"><EventName name={q.name} /></span> <span className="text-muted-foreground">{q.date} · <NoBreak text={q.cat} /></span>
                   <div className="text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={q.fact} phrases={[]} tails={NOWRAP_PCT} /></div>
                 </div>
               ))}
