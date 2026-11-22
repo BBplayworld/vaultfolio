@@ -5,7 +5,7 @@
 // 알파 = 0.10 + 0.50×min(|등락|/40, 1), 글자 foreground(대비 ≥4.5), 부호 글자로도 방향이 구분된다.
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { IndexView } from "@/lib/invest/calc";
-import { NOWRAP_YEAR_SUFFIX, NoBreak } from "./nowrap";
+import { NOWRAP_YEAR_SUFFIX, NoBreak, ReadoutChips } from "./nowrap";
 import { MINUS, READOUT_HINT, fmtLevel, fmtPct, readoutOf } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 
@@ -63,9 +63,7 @@ export function YearGrid({ view, period, showLevels, question }: { view: IndexVi
       <div data-testid="invest-readout-grid" aria-live="polite" className="mt-2 min-h-[4.7rem] text-sm">
         {ro && showLevels ? (
           <div className="flex flex-wrap items-center gap-x-1.5">
-            <span>{ro.year}년 말 <b className="font-bold tabular-nums">{ro.level}</b></span><span>·</span>
-            <b className={`font-bold tabular-nums ${ro.ret == null ? "" : getProfitLossColor(ro.ret)}`}>{ro.ret == null ? "—" : fmtPct(ro.ret)}</b><span>·</span>
-            <span className="text-muted-foreground">{ro.dir}</span>{ro.recession && <><span>·</span><span className="text-muted-foreground">경기침체</span></>}
+            <ReadoutChips ro={ro} />
             {ro.events && <div className="basis-full pt-0.5 text-xs leading-snug break-keep" data-testid="readout-events"><span className="text-muted-foreground">사건</span> <NoBreak text={ro.events} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} /></div>}
           </div>
         ) : <p className="flex h-7 items-center text-xs text-muted-foreground">{READOUT_HINT}</p>}

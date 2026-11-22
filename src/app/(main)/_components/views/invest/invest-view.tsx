@@ -14,7 +14,7 @@ import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
 import { PeriodCard } from "./period-card";
-import { NOWRAP_TAIL, NOWRAP_YEAR_SUFFIX, NoBreak } from "./nowrap";
+import { NOWRAP_TAIL, NOWRAP_YEAR_SUFFIX, NoBreak, ReadoutChips } from "./nowrap";
 import { YearGrid } from "./year-grid";
 import { defaultPeriod } from "@/lib/invest/period";
 import { DropList, EpisodeDetail } from "./drop-list";
@@ -50,13 +50,13 @@ function MeasuredDetail({ view, ep, index }: { view: ReturnType<typeof buildInde
   return <div ref={ref} className="min-w-0 w-full">{w > 0 && <EpisodeDetail data={marketHistory} view={view} ep={ep} index={index} width={w} />}</div>;
 }
 
-/** 캡션 옆 ⓘ — 마우스 오버가 아니라 탭·키보드로 여는 설명(Popover). 눈에 보이는 크기 24px, 히트영역은 after로 40px까지 */
+/** 캡션 옆 ⓘ — 마우스 오버가 아니라 탭·키보드로 여는 설명(Popover). 눈에 보이는 크기 24px, 버튼(히트영역) 40×40 */
 function InfoDot({ left, top, label, children }: { left: number; top: number; label: string; children: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" aria-label={label} data-testid="invest-info" style={{ left, top }} className="absolute z-[1] inline-flex size-6 items-center justify-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 focus-visible:ring-2 focus-visible:ring-ring/50">
-          <Info aria-hidden className="size-3.5" />
+        <button type="button" aria-label={label} data-testid="invest-info" style={{ left: left - 8, top: top - 8 }} className="group absolute z-[1] inline-flex size-10 items-center justify-center rounded-full text-muted-foreground outline-none">
+          <span className="inline-flex size-6 items-center justify-center rounded-full group-focus-visible:ring-2 group-focus-visible:ring-ring/50"><Info aria-hidden className="size-3.5" /></span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-3 text-xs leading-relaxed text-pretty break-keep">{children}</PopoverContent>
@@ -177,10 +177,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         {ro && showLevels ? (
           <>
             <div className="flex flex-wrap items-center gap-x-1.5 text-sm" data-testid="readout-main">
-              <span>{ro.year}년 말 <b className="font-bold tabular-nums">{ro.level}</b></span><span>·</span>
-              <b className={`font-bold tabular-nums ${ro.ret == null ? "" : getProfitLossColor(ro.ret)}`}>{ro.ret == null ? "—" : fmtPct(ro.ret)}</b><span>·</span>
-              <span className="text-muted-foreground">{ro.dir}</span>
-              {ro.recession && <><span>·</span><span className="whitespace-nowrap text-muted-foreground">경기침체</span></>}
+              <ReadoutChips ro={ro} />
               {ro.events && <div className="basis-full pt-0.5 text-xs leading-snug break-keep"><span className="text-muted-foreground">사건</span> <NoBreak text={ro.events} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} /></div>}
             </div>
           </>

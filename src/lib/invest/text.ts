@@ -91,7 +91,7 @@ export function sourceLines(v: IndexView, revIds: Record<"spx" | "ndx" | "kospi"
   const l1 = v.key === "spx"
     ? `지수 연말값: S&P 500 연말 지수 값은 Aswath Damodaran(NYU Stern) 공개 자료 「Historical Returns on Stocks, Bonds and Bills」(2026년 1월 갱신)를 썼고, 연간 등락률은 ${wiki.spx}과 대조해 시크릿에셋이 다시 계산했어요.`
     : v.key === "ndx"
-      ? `지수 연말값: ${wiki.ndx}을 바탕으로 시크릿에셋이 다시 계산·가공했어요. 2003·2004년 연말값은 다른 공개 자료와 최대 0.6% 차이가 있어요(위키 값 사용).`
+      ? `지수 연말값: ${wiki.ndx}을 바탕으로 시크릿에셋이 다시 계산·가공했어요. 2003·2004년 연말값은 다른 공개 자료와 최대 0.6% 차이가 있어요 (위키 값 사용).`
       : `지수 연말값: ${wiki.kospi}를 바탕으로 시크릿에셋이 다시 계산·가공했어요. 1998년 등락률은 표의 %가 아니라 종가로 다시 계산했어요.`;
   const l2 = v.rate === "us"
     ? "금리·침체: 미 기준금리는 미 연준 공개시장 표 · 미 국채 금리: 미 연준(H.15) · 경기침체 기간: NBER(미국 경제연구소) 경기순환 기준일을 가공했어요."
