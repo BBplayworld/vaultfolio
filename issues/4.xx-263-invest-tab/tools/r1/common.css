@@ -1,0 +1,51 @@
+/* #263 R1 목업 공통 — design-system 토큰 재현(라이트/다크). 가데이터 목업 */
+:root{--bg:#F0F2F4;--card:#fff;--fg:#0e0f10;--mf:#5d6166;--muted:#e3e5e8;--sec:#eceef1;--hair:#e6e8eb;--brand:#5b6fbf;--brandsoft:rgba(91,111,191,.14);
+--profit:#e11d48;--loss:#2563eb;--imp:#ea580c;--ink2:rgba(14,15,16,.62);--ink3:rgba(14,15,16,.16);--shadow:0 1px 2px rgba(16,24,40,.05),0 2px 8px rgba(16,24,40,.04)}
+.dark{--bg:#0B0D12;--card:#191C22;--fg:#F2F3F6;--mf:#a9aeb8;--muted:#2c3139;--sec:#2a2e36;--hair:rgba(255,255,255,.10);--profit:#fb7185;--loss:#60a5fa;--imp:#fb923c;--ink2:rgba(242,243,246,.66);--ink3:rgba(242,243,246,.18);--shadow:none;--brandsoft:rgba(120,140,220,.22)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{word-break:keep-all;background:var(--bg);color:var(--fg);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR","WenQuanYi Zen Hei",sans-serif;font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.t2xs{font-size:11px}.txs{font-size:12px}.tsm{font-size:14px}.tbase{font-size:16px}.tlg{font-size:18px}.txl{font-size:20px}.t2xl{font-size:24px}
+.mf{color:var(--mf)}.b{font-weight:700}.sb{font-weight:600}
+.up{color:var(--profit)}.dn{color:var(--loss)}
+.bal{text-wrap:balance}.pre{text-wrap:pretty}
+.app{min-height:100vh}
+.top{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;max-width:1080px;margin:0 auto}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.nav1{display:flex;gap:14px;font-size:18px;font-weight:700;flex:1}
+.nav1 span{color:var(--mf)}.nav1 .on{color:var(--fg)}
+.ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--mf)}
+.ico i{width:18px;height:18px;border-radius:6px;background:var(--ink3);display:block}
+.wrap{max-width:390px;margin:0 auto;padding:4px 16px 40px;display:flex;flex-direction:column;gap:20px}
+.wide .wrap{max-width:1080px;padding:8px 24px 64px;gap:24px}
+.card{background:var(--card);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+.dark .card{box-shadow:none}
+.sec-t{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:baseline;gap:8px}
+.sec-t small{font-size:11px;font-weight:400;color:var(--mf)}
+.seg{display:flex;background:var(--sec);border-radius:14px;padding:3px;gap:2px}
+.seg button{flex:1;height:36px;border-radius:11px;font-size:14px;font-weight:600;color:var(--mf);transition:background-color .16s,color .16s}
+.seg button:active{transform:scale(.96)}
+.seg button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.10)}
+.dark .seg button.on{background:#3a3f49;box-shadow:none}
+.seg.hit button{height:40px}
+.head1{font-size:18px;font-weight:700;line-height:1.35}
+.head2{font-size:14px;color:var(--mf);margin-top:4px}
+.base{font-size:11px;color:var(--mf);margin-top:8px}
+.btn40{width:40px;height:40px;border-radius:12px;background:var(--sec);display:grid;place-items:center;font-size:16px;font-weight:700}
+.btn40:active{transform:scale(.96)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;background:var(--sec);font-size:12px;font-weight:600;white-space:nowrap}
+.sw{width:14px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.sw.up-s{background:var(--ink2)}.sw.flat-s{background:var(--ink3)}
+.sw.dn-s{background:repeating-linear-gradient(135deg,var(--ink2) 0 2px,transparent 2px 5px);outline:1px solid var(--ink3);outline-offset:-1px}
+.note{font-size:11px;color:var(--mf);line-height:1.5}
+.sel{display:flex;gap:8px}.sel .f{flex:1;height:40px;border-radius:12px;background:var(--sec);display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:14px;font-weight:600}
+.sel .f small{font-size:11px;font-weight:400;color:var(--mf)}
+.src{font-size:11px;color:var(--mf);text-align:center;line-height:1.6;padding:0 8px}
+.mock{position:fixed;right:8px;bottom:6px;font-size:10px;color:var(--mf);opacity:.7;z-index:9}
+svg text{font-family:inherit;font-variant-numeric:tabular-nums}
+.focus:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.fadein{animation:fi .2s ease-out}@keyframes fi{from{opacity:0;transform:translateY(4px)}}}
+
+/* 샌드박스 한글 폰트에 굵기가 없어 굵은 글자를 근사 */
+.b,b,.sb,.head1,.sec-t,.nav1,.seg button,.t2xl,.logo{-webkit-text-stroke:.5px currentColor}.seg button:not(.on){-webkit-text-stroke:.2px currentColor}.nav1 span:not(.on){-webkit-text-stroke:0}
