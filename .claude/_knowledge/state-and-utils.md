@@ -1076,3 +1076,4 @@ computePriceChange(points) → % | null
 - `types.ts`·`calc.ts`(지그재그 −15%·금리 방향 0.25%p·NBER 겹침·`buildIndexView`·`calcInvest`(반올림 전 값)·`pickDefaultIndex`·`rateAxisMax`), `text.ts`(문장·출처 4줄·금지어 규칙 R1~R11), `chart.ts`(logTicks·`mergeEventDots` C1·`bandRect`·`stepPath`), `default-index.ts`(`holdingSplit` 기기 안 계산), `market-history.ts`(정적 데이터 진입점, 투자 번들 전용)
 - 데이터: `data/market-history/*.csv` 정본 → `scripts/market-history/build.mjs`(`--check`) → `data/market-history.generated.json` + `public/datasets/market-history/`(CC BY-SA, Damodaran 수준값 제외). `verify-h15.mjs`는 H.15 XML과 10년물 월말 전 월 대조. 갱신 절차 `docs/ops/market-history-refresh.md`
 - 저장 키 0·서버 전송 0·새 API 0. GA는 `invest_*` category 6종(page_title만)
+- R4: `pattern.ts` — `buildPattern`·`RISE_THRESHOLD`(>+20%, 반올림 전)·`monthsLabel`. 데이터 `spread-monthly.csv`·`events-extra.csv`(점 없는 사건 10건). GA category `invest_rise_tab`·`invest_pattern`
