@@ -60,4 +60,8 @@ export interface MarketHistoryData {
   usYear: UsYearRow[];
   krYear: KrYearRow[];
   events: MarketEvent[];
+  /** R4: 행 펼침·표 전용 사건(점 없음) */
+  eventsExtra: MarketEvent[];
+  /** R4: 금리차 월평균(%p), from부터 한 달씩. 없는 달 null */
+  spread: { from: string; a: (number | null)[]; b: (number | null)[] };
 }

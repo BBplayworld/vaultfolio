@@ -201,3 +201,26 @@ describe("공개 가공 데이터셋(CC BY-SA 4.0)", () => {
     expect(+k98.ret_pct).toBeCloseTo((+k98.close / +k97.close - 1) * 100, 2);
   });
 });
+
+describe("R4 데이터: 추가 사건 10건·금리차 월평균", () => {
+  it("추가 사건 10건: CEO 판정 표(날짜·이름·분류)와 같고 첫 화면 사건 31건에는 섞이지 않는다", () => {
+    expect(data.events).toHaveLength(31);
+    expect(data.eventsExtra.map((e) => `${e.date} ${e.name}`)).toEqual([
+      "2008년 11월 25일 연준 자산 매입 시작", "2010년 11월 3일 연준 국채 매입(2010)", "2012년 9월 13일 연준 매입 재개(2012)", "2014년 10월 29일 연준 매입 종료(2014)",
+      "2017년 9월 20일 연준 보유 축소 시작(2017)", "2019년 7월 31일 연준 보유 축소 종료(2019)", "2020년 3월 15일 연준 매입 재개(2020)", "2022년 1월 26일 연준 매입 종료(2022)",
+      "2022년 5월 4일 연준 보유 축소 시작(2022)", "2025년 10월 29일 연준 보유 축소 종료(2025)",
+    ]);
+    expect(data.eventsExtra.every((e) => e.cat === "금리·통화 정책" && [...e.fact].length <= 40)).toBe(true);
+    const ids = new Set([...data.events, ...data.eventsExtra].map((e) => e.id));
+    expect(ids.size).toBe(41);
+  });
+  it("금리차 월평균 600개월(1976-01~2025-12), 10년−2년 1976-06부터·10년−3개월 1981-09부터", () => {
+    expect(data.spread.from).toBe("1976-01");
+    expect(data.spread.a).toHaveLength(600);
+    expect(data.spread.a.findIndex((v) => v != null)).toBe(5);
+    expect(data.spread.b.findIndex((v) => v != null)).toBe(12 * 5 + 8);
+    const i = monthIdx("2007-01") - monthIdx("1976-01");
+    expect(data.spread.a[i]).toBe(-0.12);
+    expect(data.spread.b[i]).toBe(-0.35);
+  });
+});

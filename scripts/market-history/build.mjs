@@ -70,7 +70,16 @@ export function build() {
     idx: r.indexes === "세 지수" ? [...EVENT_INDEX] : r.indexes.split("·"),
   })).filter((e) => e.pm.slice(0, 4) <= String(last));
 
-  const out = { last, idx, rate, ovl, rec, usYear, krYear, events };
+  // R4: 사건 10건(연준 자산 매입·보유 축소 결정, 결과와 무관한 규칙) — 행 펼침·연도별 표 전용, 첫 화면 점 0
+  const eventsExtra = csv("events-extra.csv").map((r) => ({
+    id: r.id, name: r.name, date: r.date_display, pm: r.point_month, cat: r.category, fact: r.fact,
+    urls: r.source_urls.split(" ; ").filter(Boolean), idx: [...EVENT_INDEX],
+  }));
+  // R4: 금리차 월평균(연준 H.15) — 월 단위가 정본. 값이 없는 달은 null
+  const sp = csv("spread-monthly.csv").filter((r) => r.month <= `${last}-12`);
+  const spread = { from: sp[0].month, a: sp.map((r) => num(r.spread_10y2y_avg)), b: sp.map((r) => num(r.spread_10y3m_avg)) };
+  sp.forEach((r, i) => { if (monthIdx(r.month) !== monthIdx(sp[0].month) + i) throw new Error(`금리차 월 계열이 끊겼어요: ${r.month}`); });
+  const out = { last, idx, rate, ovl, rec, usYear, krYear, events, eventsExtra, spread };
   validate(out);
   return out;
 }
@@ -85,6 +94,12 @@ function validate(d) {
     if ([...e.fact].length > 40) throw new Error(`사실 1줄 40자 이하: ${e.id}`);
     if (!e.urls.length || e.urls.some((u) => !u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`1차 URL: ${e.id}`);
     if (e.idx.some((x) => !EVENT_INDEX.includes(x))) throw new Error(`사건 지수: ${e.id}`);
+  });
+  if (d.eventsExtra.length !== 10) throw new Error(`추가 사건은 10건이어야 해요: ${d.eventsExtra.length}`);
+  d.eventsExtra.forEach((e) => {
+    if ([...e.name].length > 18) throw new Error(`표시명 18자 이하: ${e.id}`);
+    if ([...e.fact].length > 40 || !e.fact.endsWith("요.")) throw new Error(`사실 1줄: ${e.id}`);
+    if (e.cat !== "금리·통화 정책" || !e.urls.every((u) => u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`추가 사건 분류·출처: ${e.id}`);
   });
   const usM = (m) => (monthIdx(m) >= monthIdx(d.ovl.us.from) ? d.ovl.us.v[monthIdx(m) - monthIdx(d.ovl.us.from)] : undefined);
   d.usYear.forEach((r) => { const m = usM(`${r.y}-12`); if (r.y10 != null && Math.abs(m - r.y10) > 0.005) throw new Error(`10년물 12월 월말 ≠ 연말: ${r.y}`); });
@@ -128,6 +143,8 @@ export function buildPublic() {
     "kr-annual.csv": toCsv(["year", "bok_base_end", "bok_regime", "kr3y_end", "kr10y_end", "kr_bond_end_date"], kr),
     "recessions-us.csv": toCsv(H(rec), rec),
     "events.csv": toCsv(H(ev), ev),
+    "events-extra.csv": toCsv(H(csv("events-extra.csv")), csv("events-extra.csv")),
+    "spread-monthly.csv": toCsv(["month", "spread_10y2y_avg", "spread_10y3m_avg"], csv("spread-monthly.csv").filter((r) => r.month <= `${last}-12`)),
   };
   const ccText = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "cc-by-sa-4.0.txt"), "utf8");
   files["LICENSE"] = `시크릿에셋 시장 역사 데이터셋 — Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
