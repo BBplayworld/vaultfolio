@@ -12,8 +12,10 @@ import { getProfitLossColor } from "@/config/theme";
 const f1 = (v: number) => { const r = Math.round(v * 10) / 10; return r > 0 ? `+${r.toFixed(1)}` : r < 0 ? `${MINUS}${Math.abs(r).toFixed(1)}` : "0.0"; };
 export const gridAlpha = (retPct: number) => 0.1 + 0.5 * Math.min(Math.abs(retPct) / 40, 1);
 
-export function YearGrid({ view, period, showLevels, question }: { view: IndexView; period: { sy: number; ey: number }; showLevels: boolean; question?: string }) {
-  const [sel, setSel] = useState<number | null>(null);
+export function YearGrid({ view, period, showLevels, question, onYear }: { view: IndexView; period: { sy: number; ey: number }; showLevels: boolean; question?: string; onYear?: () => void }) {
+  const [sel, setSelRaw] = useState<number | null>(null);
+  // 해 선택은 어느 경로(탭·끌기·키보드)든 한 곳으로 — GA 집계용 콜백(연도 값은 넘기지 않는다)
+  const setSel = (y: number) => { setSelRaw(y); onYear?.(); };
   const first = view.start + 1, last = view.last;
   const decs: number[] = [];
   for (let t = Math.floor(first / 10) * 10; t <= Math.floor(last / 10) * 10; t += 10) decs.push(t);

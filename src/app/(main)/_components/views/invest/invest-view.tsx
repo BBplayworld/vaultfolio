@@ -92,7 +92,7 @@ export interface InvestViewProps {
   asof?: number;
 }
 
-type InvestCategory = "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc";
+type InvestCategory = "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
@@ -145,10 +145,12 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   useEffect(() => { if (menu) menuRef.current?.querySelector<HTMLElement>("[aria-selected='true']")?.focus(); }, [menu]);
 
   const pickYear = (y: number) => {
-    setYr(y);
+    setYr(y); once("invest_year_pick");
     const k = view.eps.findIndex((e) => y > e.py && y <= e.ty);
     if (k >= 0) setSel(k);
   };
+  // 하락 행 펼침(닫기는 집계하지 않는다) — 연도·금액 인자 없음
+  const openDrop = (k: number | null) => { setSel(k); if (k != null) once("invest_drop_open"); };
   const ro = yr != null ? readoutOf(view, yr) : null;
   const listW = width || 300;
 
@@ -162,7 +164,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     </div>
   );
   const listBody = (inline: boolean) => (listTab === "drop"
-    ? <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail={inline} width={inline ? listW : 376} bare />
+    ? <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={openDrop} inlineDetail={inline} width={inline ? listW : 376} bare />
     : <RiseList view={view} pattern={pattern} selYear={inline ? riseSel : riseDetailYear} onSelect={setRiseSel} inlineDetail={inline} />);
 
   const chartCard = (
@@ -242,7 +244,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
     </div>
   );
-  const gridNode = <YearGrid key={`g-${idx}`} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
+  const gridNode = <YearGrid key={`g-${idx}`} onYear={() => once("invest_year_pick")} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
   const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} />;
   // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
   // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
