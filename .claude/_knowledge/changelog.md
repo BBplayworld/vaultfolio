@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-11-22
+
+### 투자 탭 (issue-5.137, #263)
+- 하단 `더보기` → `투자`(더보기는 홈 헤더 아이콘), 연 단위 3지수의 크게 빠진 때·금리·미국 경기침체·사건 31건 한 화면, 겹쳐 보기(10년물), 연도별 표, ③ 그해 말에 넣었다면, 공개 가이드 `/guide/market-history`·공개 데이터셋. 저장·서버 전송·새 API 0. PRINCIPLES 1줄(별도 커밋).
+
+
 ## 2026-11-21 (v5.136)
 
 ### 연말 검색 입구 — 올해 자산 결산 가이드 + 루트 가이드 링크 (#5.136, 이슈 #261, risk:low)
@@ -1577,12 +1583,6 @@
 - **일별 달력 금액 넘침**([net-asset-chart.tsx](../../src/app/(main)/_components/views/activity/net-asset-chart.tsx)): 모바일 셀 텍스트 가용폭이 **42.6px**(`(390−24−gap12)/7 − p-1 8`)인데 `text-sm`에서 `+3,433`이 약 42.4px라 옆 칸을 침범했다(1,000만~9,999만원 대역, 순자산도 100억 넘으면 동일). 표기 체계를 바꾸는 대안(억 소수 전환=해상도 손실, 콤마 제거=앱 전체와 불일치)보다 대가가 작아 **`text-xs sm:text-sm`** + `tabular-nums`(규약상 원래 필수였는데 누락) + 셀 `overflow-hidden`으로 처리. `whitespace-nowrap`은 넣지 않음(단위가 둘째 줄로 wrap되는 2줄 레이아웃이라 한 줄로 묶으면 오히려 확실히 넘친다). design-system §타이포 `text-xs` 예외 목록에 등록.
 - **하이브리드 구간 경계 이중계상 수정(위 수정 직후 QA에서 발견)**: `computePeriodAttribution`이 `[prevOld,mid]`+`(mid,curr]`로 쪼갠 뒤 `mergeAttributions`가 key별로 합산하는데, `reflectedCashInflow`가 **양쪽 구간 모두 시작일 당일을 포함**해 `mid` 당일 거래가 두 번 잡혔다 — **`income`이 2배가 되고 반대급부로 사용자가 한 적 없는 "현금 잔액 감소(추정)"가 같은 금액으로 표시**(주식 버그와 정확히 같은 형태). 현금 입출금 기본 날짜가 "오늘"이고 `mid`는 앱을 연 날의 daily 스냅샷이라 일상적으로 겹친다. 합계 = `deltaNet`은 유지돼(income +2배, cash −1배 상쇄) 기존 테스트 전부 통과한 채 살아 있었다. → 4종 flow 함수의 경계 판정을 **`inFlowWindow` 단일 헬퍼**로 통일하고, `resolveAttribution`에 `isFirstSegment`(기본 `true`)를 추가해 **현금·대출의 "시작일 당일 포함"을 전체 기간 첫 구간에만** 적용. 두 구간의 합집합 = `[prevOld, curr]`, 교집합 = 공집합. `detectCashRoundTrip`의 `incomeToDate`도 같은 경계를 쓰도록 맞춤(`netCashEffect`와 기준 일치, 안 맞추면 `cashRoundTrip` 오탐 회귀). R29를 이 3중 조건으로 확장.
 - 신규 회귀 테스트 6건(경계일 이중계상·소급 반영 1회 계상·코인 동형 + mid 당일 현금/주식 중복 방지·전체 시작일 당일 income 보존), 전체 **147건** 통과. 두 수정 모두 되돌려 해당 테스트가 실제로 실패하는 것까지 확인. `npx tsc --noEmit`·`npx vitest run`·`npm run lint`(0 errors)·`npm run build`(22개 라우트) 전부 통과.
-
-## 2026-11-22
-
-### 투자 탭 (issue-5.137, #263)
-- 하단 `더보기` → `투자`(더보기는 홈 헤더 아이콘), 연 단위 3지수의 크게 빠진 때·금리·미국 경기침체·사건 31건 한 화면, 겹쳐 보기(10년물), 연도별 표, ③ 그해 말에 넣었다면, 공개 가이드 `/guide/market-history`·공개 데이터셋. 저장·서버 전송·새 API 0. PRINCIPLES 1줄(별도 커밋).
-
 
 ## 2026-08-04 (4)
 
