@@ -1,6 +1,6 @@
 # #263 R4 재현 스크립트 — data/r4-*.csv 수기 계산값을 qa가 독립 재계산한다.
 # 사용: python3 -I compute.py <issues/5.137-263-invest-tab/data 경로>
-# 주의: 작성 세션에 실행 도구가 없어 미실행. 결과를 r4-*.csv와 대조할 것.
+# 금리차는 월 단위(r4-spread-monthly.csv)로 판정한다(R4 CEO 판정). 결과를 r4-*.csv·CEO 판정 2절 표와 대조할 것.
 import csv
 import os
 import sys
@@ -85,13 +85,20 @@ def bok_dir(y):
     return direction(col(ra, y - 1, 'bok_base_end'), col(ra, y, 'bok_base_end')) if y >= 2000 else None
 
 
-def neg_spread(y, end_col, short_avg_col):
-    e = col(mu, y, end_col)
-    a10, s = col(mu, y, 'us10y_avg'), col(mu, y, short_avg_col)
-    av = a10 - s if (a10 is not None and s is not None) else None
-    if e is None and av is None:
+# 금리차 월 단위(CEO R4 판정 ③): 그해 1~12월 중 월평균 금리차(spread_10y2y_avg·spread_10y3m_avg)가 0 미만인 달이 1개 이상.
+# 정본 데이터 r4-spread-monthly.csv(연준 H.15 월평균). 월 값이 하나도 없는 해는 None(자료 없음).
+_sp = {}
+for _r in rd('r4-spread-monthly.csv'):
+    _sp[_r['month']] = _r
+
+
+def neg_spread(y, which):
+    col_name = 'spread_10y2y_avg' if which == '2y' else 'spread_10y3m_avg'
+    vals = [num(_sp.get('%d-%02d' % (y, m), {}).get(col_name)) for m in range(1, 13)]
+    vals = [v for v in vals if v is not None]
+    if not vals:
         return None
-    return (e is not None and e < 0) or (av is not None and av < 0)
+    return any(v < 0 for v in vals)
 
 
 def d_end(tbl, c, y):
@@ -105,8 +112,8 @@ def flag(v, f):
 
 US = {
     '연준 금리 올라감': lambda y: flag(fed_dir(y), lambda d: d == 'up'),
-    '10년-2년 마이너스': lambda y: neg_spread(y, 'spread_10y2y_end', 'us2y_avg'),
-    '10년-3개월 마이너스': lambda y: neg_spread(y, 'spread_10y3m_end', 'us3m_avg'),
+    '10년-2년 마이너스(월평균<0인 달 ≥1)': lambda y: neg_spread(y, '2y'),
+    '10년-3개월 마이너스(월평균<0인 달 ≥1)': lambda y: neg_spread(y, '3m'),
     'NBER 침체 시작': lambda y: y in NBER_START,
     '10년물 1%p 넘게 오름': lambda y: flag(d_end(mu, 'us10y_end', y), lambda d: d >= 1 - EPS),
 }
