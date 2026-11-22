@@ -11,11 +11,25 @@ import { fmtLevel, fmtPct } from "@/lib/invest/text";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { BRAND_TEXT_FILL, C, HALO, LOSS_FILL, LOSS_STROKE, SVG_TEXT } from "./chart-style";
 
-const GX = 44, RP = 24; // 왼쪽 축 글자 폭·오른쪽 여백(겹쳐 보기 오른쪽 축 글자 자리)
+const GX = 50, RP = 24; // 왼쪽 축 글자 폭·오른쪽 여백(겹쳐 보기 오른쪽 축 글자 자리)
 
 // 글자 폭 근사(한글 12.2·영숫자 6.6, 11px 굵은 글자) — 이름표 단 배치용
-const labelWidth = (s: string) => [...s].reduce((a, c) => a + (/[0-9a-zA-Z.%~]/.test(c) ? 6.6 : c === " " ? 3.8 : 12.2), 0);
-export const capWidth = (s: string) => [...s].reduce((a, c) => a + (/[0-9a-zA-Z.%~()&]/.test(c) ? 6.3 : c === " " ? 3.2 : 11.2), 0);
+const labelWidth = (s: string) => [...s].reduce((a, c) => a + (/[0-9a-zA-Z.%~]/.test(c) ? 7.2 : c === " " ? 4.1 : 13.3), 0);
+export const capWidth = (s: string) => [...s].reduce((a, c) => a + (/[0-9a-zA-Z.%~()&]/.test(c) ? 6.9 : c === " " ? 3.5 : 12.2), 0);
+
+const TIER = 15; // 이름표 단 높이(12px 글자)
+/** x축 연도 라벨 규칙 1곳(D-4·D-5): 후보를 순서대로 시험해 라벨 사이 간격 ≥4px인 첫 후보. 눈금선은 항상 5년 */
+const AX_GAP = 4, W4 = 29.5, W2 = 19.5; // 12px 숫자 4자리·`'80` 근사 폭
+export function xLabelPlan(PW: number, span: number): { step: 5 | 10 | 20; short: boolean } {
+  const pitch5 = (PW / span) * 5;
+  const cands: { step: 5 | 10 | 20; short: boolean }[] = [{ step: 5, short: false }, { step: 5, short: true }, { step: 10, short: false }, { step: 10, short: true }, { step: 20, short: true }];
+  return cands.find((c) => (pitch5 * c.step) / 5 - (c.short ? W2 : W4) >= AX_GAP) ?? cands[4];
+}
+
+/** 연간 등락 축 상한(D-7): 대부분의 해가 보이게 큰 해는 자른다. 자른 막대는 끝에 실제 값을 쓴다 */
+export function retAxisCap(view: Pick<IndexView, "key">, maxRet: number, minRet: number): { up: number | null; dn: number | null } {
+  return { up: maxRet > 60 ? (view.key === "kospi" ? 80 : 60) : null, dn: minRet < -60 ? 60 : null };
+}
 const shortName = (s: string) => s.replace(" 버블 붕괴", "").replace("글로벌 ", "").replace(/(\d{4})년 하락/, "$1년").replace("1973~74년 하락", "73~74년").replace("1990~91년 하락", "90~91년");
 
 export interface MainLayout {
@@ -45,7 +59,7 @@ export interface MainLayout {
 export function layoutMain(view: IndexView, W: number, wide: boolean): MainLayout {
   const PW = W - GX - RP, span = view.last - view.start;
   const XE = (Y: number) => GX + ((Y + 1 - (view.start + 1)) / span) * PW;
-  const H1 = wide ? 190 : 100, H2 = wide ? 72 : 52, H3 = wide ? 64 : 44;
+  const H1 = wide ? 190 : 100, H2 = wide ? 72 : 60, H3 = wide ? 64 : 44;
   const P1 = 24, P1b = P1 + H1, cap2 = P1b + 19, P2 = P1b + 32, P2b = P2 + H2;
   const labels = view.eps.map((e, k) => {
     const cx = (XE(e.py) + XE(e.ty)) / 2, t = shortName(e.name) + (e.ongoing ? "·진행 중" : ""), w = labelWidth(t);
@@ -58,9 +72,9 @@ export function layoutMain(view: IndexView, W: number, wide: boolean): MainLayou
     else { tiers[tr].push({ x0: l.x0, x1: l.x0 + l.w }); l.tier = tr; }
   });
   const nameRows = Math.max(1, ...labels.filter((l) => !l.drop).map((l) => l.tier + 1));
-  const LB = nameRows * 14 + 4;
-  const cap3 = P2b + LB + 16, lg = cap3 + 18, P3 = cap3 + 29, P3b = P3 + H3, AX = P3b + 15;
-  return { W, wide, PW, span, H: AX + 4, H1, H2, H3, P1, P1b, cap2, P2, P2b, cap3, lg, P3, P3b, AX, nameRows, labels };
+  const LB = nameRows * TIER + 6;
+  const cap3 = P2b + LB + 16, lg = cap3 + 18, P3 = cap3 + 29, P3b = P3 + H3, AX = P3b + 16;
+  return { W, wide, PW, span, H: AX + 5, H1, H2, H3, P1, P1b, cap2, P2, P2b, cap3, lg, P3, P3b, AX, nameRows, labels };
 }
 
 /** 가로 위치(px) → 선택 연도(그 해 막대 안, 데이터 범위로 제한) */
@@ -91,10 +105,16 @@ export function MainChart({
   const close = view.close, ix = (Y: number) => close[Y - y0];
   const T1 = logTicks(Math.min(...close), Math.max(...close), H1 >= 150 ? 8 : 6), lnLo = Math.log(T1.lo), lnHi = Math.log(T1.hi);
   const rets = view.ret.filter((x): x is number => x != null);
-  const rrange = Math.max(...rets) - Math.min(...rets), rstep = rrange > 160 ? 50 : rrange > 120 ? 25 : 20;
-  const bmax = Math.ceil(Math.max(...rets) / rstep) * rstep, bmin = Math.floor(Math.min(...rets) / rstep) * rstep;
+  const capR = retAxisCap(view, Math.max(...rets), Math.min(...rets));
+  const eMax = capR.up ?? Math.max(...rets), eMin = capR.dn != null ? -capR.dn : Math.min(...rets);
+  const rrange = eMax - eMin, rstep = capR.up != null || capR.dn != null ? 20 : rrange > 160 ? 50 : rrange > 120 ? 25 : 20;
+  const bmax = capR.up ?? Math.ceil(eMax / rstep) * rstep, bmin = capR.dn != null ? -capR.dn : Math.floor(eMin / rstep) * rstep;
   const Y1 = (v: number) => P1 + H1 - ((Math.log(v) - lnLo) / (lnHi - lnLo)) * H1, Y2 = (p: number) => P2 + ((bmax - p) / (bmax - bmin)) * H2;
   const rmax = rateAxisMax(data, R), rst = 5, Y3 = (r: number) => P3b - (r / rmax) * H3;
+  // 눈금 글자 간격 ≥15px(12px 글자 높이): 우선순위 순으로 놓고 겹치면 뺀다
+  const retTickShown = new Set<number>();
+  { const kept: number[] = []; for (const t of [bmax, bmin, ...(bmax > 20 ? [20] : []), 0]) { if (!kept.some((q) => Math.abs(Y2(q) - Y2(t)) < 15)) { kept.push(t); retTickShown.add(t); } } }
+  const rateTickEvery = (H3 / rmax) * rst >= 15 ? 1 : 2;
   const ep: Episode | null = selEp != null ? view.eps[selEp] ?? null : null;
   const yr = selYear;
   const n = view.years.length;
@@ -106,7 +126,7 @@ export function MainChart({
   const tR0 = monthPos(data.rate[R].from), tA = Math.max(y0 + 1, tR0);
   const recBands = !us ? [] : data.rec;
   const dots = mergeEventDots(view.ev.map((e) => ({ id: e.id, x: X(Math.min(Math.max(e.t, y0 + 1), last + 1)), linked: view.eps.some((q) => e.t >= q.py + 1 && e.t < q.ty + 1) })));
-  const five = (PW / span) * 5 >= 34; // 5년 라벨이 겹치지 않는 최소 간격(px)
+  const xPlan = xLabelPlan(PW, span);
   const decs: number[] = []; for (let Y = Math.ceil((y0 + 1) / 10) * 10; Y <= last; Y += 10) decs.push(Y);
   const ovPath = (() => {
     let q = "", st = false;
@@ -117,6 +137,7 @@ export function MainChart({
     });
     return q;
   })();
+  const lgx = [0, 16 + capWidth("올라간 해") + 8, 16 + capWidth("올라간 해") + 8 + 16 + capWidth("내려간 해") + 8];
   const alt = `${view.label} 연말 지수, 연간 등락, ${rateLabel}를 같은 시간축에 세 줄로 나눈 그림. 같은 값은 아래 연도별 표에 있어요`;
 
   const pick = (clientX: number, svg: SVGSVGElement) => {
@@ -124,17 +145,35 @@ export function MainChart({
     onPickYear(yearAtX(view, W, ((clientX - r.left) / r.width) * W));
   };
 
+  const nameAt = (clientX: number, clientY: number, svg: SVGSVGElement) => {
+    const r = svg.getBoundingClientRect(), x = ((clientX - r.left) / r.width) * W, y = ((clientY - r.top) / r.height) * H;
+    // 줄별 분리: x가 이름표 상자(±8px) 안인 이름표 중 탭 y에 가장 가까운 줄의 것(2단 이름표도 중심 탭이 먹는다)
+    const near = L.labels.filter((l) => !l.drop && x >= l.x0 - 8 && x <= l.x0 + l.w + 8).sort((a, b) => Math.abs(y - (P2b + 10 + a.tier * TIER)) - Math.abs(y - (P2b + 10 + b.tier * TIER)));
+    const hit = near[0];
+    return hit && Math.abs(y - (P2b + 10 + hit.tier * TIER)) <= TIER ? view.eps[hit.k] : null;
+  };
+  const handlers = {
+    onPointerDown: (e: React.PointerEvent<SVGRectElement>) => {
+      const svg = e.currentTarget.ownerSVGElement as SVGSVGElement;
+      const hit = e.currentTarget.getAttribute("data-testid") === "name-hit" ? nameAt(e.clientX, e.clientY, svg) : null;
+      if (hit) { onPickYear(hit.ty); return; }
+      dragging.current = true; (e.currentTarget as Element).setPointerCapture?.(e.pointerId); pick(e.clientX, svg);
+    },
+    onPointerMove: (e: React.PointerEvent<SVGRectElement>) => { if (dragging.current) pick(e.clientX, e.currentTarget.ownerSVGElement as SVGSVGElement); },
+    onPointerUp: () => { dragging.current = false; },
+    onPointerCancel: () => { dragging.current = false; },
+  };
   // C3: 선택선은 글자 구간(연간 등락 캡션·이름표 줄·금리 캡션·범례)에서 끊는다
   const selLine = yr != null ? [[P1, cap2 - 13], [cap2 + 4, P2b], [P3 - 2, P3b]] : [];
   const legendRight = (() => {
     let rx = W - RP; const items: React.ReactNode[] = [];
-    items.push(<text key="ev" className={SVG_TEXT} fontSize={11} x={rx} y={cap2} textAnchor="end" style={HALO}>사건</text>);
+    items.push(<text key="ev" className={SVG_TEXT} fontSize={12} x={rx} y={cap2} textAnchor="end" style={HALO}>사건</text>);
     rx -= capWidth("사건") + 5;
     items.push(<circle key="evd" cx={rx - 3} cy={cap2 - 4} r={3.3} fill={C.fg} />);
     rx -= 14;
     if (us) {
       const t = W < 300 ? "경기침체" : "미국 경기침체(NBER)";
-      items.push(<text key="rt" className={SVG_TEXT} fontSize={11} x={rx} y={cap2} textAnchor="end" style={HALO}>{t}</text>);
+      items.push(<text key="rt" className={SVG_TEXT} fontSize={12} x={rx} y={cap2} textAnchor="end" style={HALO}>{t}</text>);
       rx -= capWidth(t) + 4;
       items.push(<g key="rs"><rect x={rx - 12} y={cap2 - 9} width={12} height={10} rx={2} fill={C.fg} opacity={0.13} /><rect x={rx - 12} y={cap2 - 9} width={12} height={2} fill={C.ink2} /></g>);
     }
@@ -149,7 +188,7 @@ export function MainChart({
       <defs>
         <pattern id={`hz${uid}`} width={4} height={4} patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width={1.6} height={4} fill={C.fg} opacity={0.55} /></pattern>
       </defs>
-      <text className={SVG_TEXT} fontSize={11} x={0} y={11}>지수 · 해마다 연말 값 · {last}년 말까지</text>
+      <text className={SVG_TEXT} fontSize={12} x={0} y={11}>지수 · 해마다 연말 값 · {last}년 말까지</text>
       {/* 미국 경기침체 띠(NBER): 세 층을 관통하는 중립 면 + 위 2px 막대. 코스피에서는 그리지 않음 */}
       {us && (
         <g data-band="1">
@@ -179,7 +218,7 @@ export function MainChart({
         return (
           <g key={t}>
             <line x1={GX} x2={W - RP} y1={y} y2={y} stroke={C.hair} />
-            <text className={SVG_TEXT} fontSize={11} x={GX - 6} y={y + 4} textAnchor="end">{fmtLevel(t)}</text>
+            <text className={SVG_TEXT} fontSize={12} x={GX - 6} y={y + 4} textAnchor="end">{fmtLevel(t)}</text>
           </g>
         );
       })}
@@ -201,13 +240,13 @@ export function MainChart({
       )}
       {yr != null && <circle cx={XE(yr)} cy={Y1(ix(yr))} r={4.6} fill={C.card} stroke={C.brand} strokeWidth={2.2} />}
       {/* ⓑ 연간 등락 */}
-      <text className={SVG_TEXT} fontSize={11} x={0} y={cap2} style={HALO}>연간 등락</text>
+      <text className={SVG_TEXT} fontSize={12} x={0} y={cap2} style={HALO}>연간 등락</text>
       {Array.from({ length: Math.floor((bmax - bmin) / rstep) + 1 }, (_, i) => bmin + i * rstep).map((t) => {
         const y = Y2(t);
         return (
           <g key={t}>
             <line x1={GX} x2={W - RP} y1={y} y2={y} stroke={t === 0 ? C.ink3 : C.hair} />
-            {(t === 0 || t === bmax || t === bmin || (t === 20 && bmax > 20)) && <text className={SVG_TEXT} fontSize={11} x={GX - 6} y={y + 4} textAnchor="end">{t === 0 ? "0%" : fmtPct(t, 0)}</text>}
+            {retTickShown.has(t) && <text className={SVG_TEXT} fontSize={12} x={GX - 6} y={y + 4} textAnchor="end">{t === 0 ? "0%" : fmtPct(t, 0)}</text>}
           </g>
         );
       })}
@@ -217,38 +256,71 @@ export function MainChart({
       {/* R4: +20% 점선(크게 오른 해 기준). 넘은 막대는 빨강 100%, 그 밖의 오른 막대는 옅게, 빠진 때는 파랑 */}
       {bmax >= 20 && <line x1={GX} x2={W - RP} y1={Y2(20)} y2={Y2(20)} stroke={C.ink2} strokeDasharray="4 3" strokeWidth={1} data-testid="rise-line" />}
       {view.years.slice(1).map((Y, j) => {
-        const i = j + 1, r = view.ret[i] as number, xa = X(Y) + 0.5, w = Math.max(1.2, BW - 1), y0b = Y2(0), y1b = Y2(r), k = inDown(Y), on = selEp == null || selEp === k;
+        const i = j + 1, r = view.ret[i] as number, xa = X(Y) + 0.5, w = Math.max(1.2, BW - 1), y0b = Y2(0), y1b = Y2(Math.max(bmin, Math.min(bmax, r))), k = inDown(Y), on = selEp == null || selEp === k;
         const big = view.close[i] / view.close[i - 1] - 1 > RISE_THRESHOLD;
         const common = { x: xa.toFixed(1), y: Math.min(y0b, y1b).toFixed(1), width: w.toFixed(1), height: Math.max(0.8, Math.abs(y1b - y0b)).toFixed(1) };
         if (k >= 0) return <rect key={Y} {...common} className={LOSS_FILL} opacity={on ? 1 : 0.45} />;
         if (r > 0) return <rect key={Y} {...common} className="fill-rose-600 dark:fill-rose-400" opacity={big ? 1 : 0.35} data-rise={big ? "1" : undefined} />;
         return <rect key={Y} {...common} fill={C.ink2} opacity={0.55} />;
       })}
+      {/* D-7: 자른 막대 — 끝에서 4px 아래 카드색 사선(잘림 표시) + 실제 값. 오른쪽 여유가 모자라면 왼쪽에 쓴다. 3년 안 이웃이 또 잘리면 값을 13px 아래로 */}
+      {(() => {
+        const placed: { x0: number; x1: number; y: number }[] = [];
+        return view.years.slice(1).map((Y, j) => {
+          const r = view.ret[j + 1] as number;
+          if (!(r > bmax || r < bmin)) return null;
+          const up = r > bmax, xa = X(Y) + 0.5, w = Math.max(1.2, BW - 1), yEnd = Y2(up ? bmax : bmin), txt = fmtPct(r), tw = labelWidth(txt);
+          const left = xa + w + 3 + tw > W - RP + 2, tx = left ? xa - 3 : xa + w + 3, x0 = left ? tx - tw : tx, x1 = left ? tx : tx + tw;
+          // 먼저 놓인 값 라벨과 겹치면 15px씩 아래로(위쪽 끝은 위로) 밀어 겹침 0
+          let dy = 0;
+          while (placed.some((q) => x0 < q.x1 + 2 && x1 > q.x0 - 2 && Math.abs(q.y - (yEnd + dy)) < 15) && dy < 45) dy += 15;
+          placed.push({ x0, x1, y: yEnd + dy });
+          const cut = up ? yEnd + 4 : yEnd - 4;
+          return (
+            <g key={`clip${Y}`} data-testid="clip-label" data-y={Y}>
+              <line x1={xa - 1} x2={xa + w + 1} y1={cut + (up ? 1.5 : -1.5)} y2={cut - (up ? 1.5 : -1.5)} stroke={C.card} strokeWidth={2} />
+              <text className="fill-foreground" fontSize={12} fontWeight={600} x={tx} y={(up ? yEnd + 11 : yEnd - 3) + (up ? dy : -dy)} textAnchor={left ? "end" : "start"} style={HALO}>{txt}</text>
+            </g>
+          );
+        });
+      })()}
       {/* 사건 점(C1: 6px 안 점은 합침). 크게 빠진 때와 연결된 사건이 있으면 큰 점 */}
       <g data-events="1">
         {dots.filter((d) => !d.linked).map((d) => <circle key={d.ids[0]} cx={d.x.toFixed(1)} cy={P2 - 5} r={2} fill={C.fg} opacity={0.5} data-ev={d.ids[0]} data-ev-ids={d.ids.join(",")} />)}
         {dots.filter((d) => d.linked).map((d) => <circle key={d.ids[0]} cx={d.x.toFixed(1)} cy={P2 - 5} r={3.3} fill={C.fg} stroke={C.card} strokeWidth={1.2} data-ev={d.ids[0]} data-ev-ids={d.ids.join(",")} data-linked="1" />)}
       </g>
       {legendRight}
+      {/* D-8: 하락 구간 브래킷(고점~바닥 해) + 이름표와 어긋나면 세로 연결선. 글자는 선 위에 후광으로 그린다 */}
+      {L.labels.map((l) => {
+        if (l.drop) return null;
+        const e = view.eps[l.k], on = selEp == null || selEp === l.k, a = XE(e.py), b = Math.max(a + 4, XE(e.ty)), cx = (a + b) / 2, by = P2b + 3;
+        const lx = Math.max(l.x0 + 2, Math.min(l.x0 + l.w - 2, cx)), top = P2b + l.tier * TIER + 5;
+        return (
+          <g key={`br${l.k}`} data-testid="drop-bracket" opacity={on ? 1 : 0.5} stroke={C.ink2} strokeWidth={selEp === l.k ? 2 : 1.2} fill="none" strokeDasharray={e.ongoing ? "3 2" : undefined}>
+            <path d={`M${a.toFixed(1)},${by - 3}V${by}H${b.toFixed(1)}V${by - 3}`} />
+            {(l.tier > 0 || Math.abs(lx - cx) > 0.5) && <line x1={cx} x2={lx} y1={by} y2={top} strokeWidth={1} strokeDasharray={undefined} />}
+          </g>
+        );
+      })}
       {L.labels.map((l) => !l.drop && (
         <g key={l.k}>
-          <text className="fill-foreground" fontSize={11} fontWeight={600} x={l.x0} y={P2b + 12 + l.tier * 14} opacity={selEp == null || selEp === l.k ? 1 : 0.6} data-nm="1" style={HALO}>{l.t}</text>
-          {view.eps[l.k].ongoing && <line x1={l.x0} x2={l.x0 + l.w} y1={P2b + 15 + l.tier * 14} y2={P2b + 15 + l.tier * 14} stroke={C.ink2} strokeDasharray="2 2" />}
+          <text className="fill-foreground" fontSize={12} fontWeight={600} x={l.x0} y={P2b + 15 + l.tier * TIER} opacity={selEp == null || selEp === l.k ? 1 : 0.6} data-nm="1" style={HALO}>{l.t}</text>
+          {view.eps[l.k].ongoing && <line x1={l.x0} x2={l.x0 + l.w} y1={P2b + 18 + l.tier * TIER} y2={P2b + 18 + l.tier * TIER} stroke={C.ink2} strokeDasharray="2 2" />}
         </g>
       ))}
       {/* ⓒ 기준금리 */}
-      <text className={SVG_TEXT} fontSize={11} x={0} y={cap3} style={HALO}>{rateLabel} · 매달 값</text>
+      <text className={SVG_TEXT} fontSize={12} x={0} y={cap3} style={HALO}>{rateLabel} · 매달 값</text>
       <g style={HALO}>
-        <rect x={0} y={lg - 9} width={12} height={9} rx={2} fill={C.ink2} /><text className={SVG_TEXT} fontSize={11} x={16} y={lg}>올라간 해</text>
-        <rect x={74} y={lg - 9} width={12} height={9} rx={2} fill={`url(#hz${uid})`} stroke={C.ink3} /><text className={SVG_TEXT} fontSize={11} x={90} y={lg}>내려간 해</text>
-        <line x1={148} x2={158} y1={lg - 4} y2={lg - 4} stroke={C.ink2} strokeWidth={2} strokeLinecap="round" /><text className={SVG_TEXT} fontSize={11} x={163} y={lg}>거의 그대로</text>
+        <rect x={0} y={lg - 9} width={12} height={9} rx={2} fill={C.ink2} /><text className={SVG_TEXT} fontSize={12} x={16} y={lg}>올라간 해</text>
+        <rect x={lgx[1]} y={lg - 9} width={12} height={9} rx={2} fill={`url(#hz${uid})`} stroke={C.ink3} /><text className={SVG_TEXT} fontSize={12} x={lgx[1] + 16} y={lg}>내려간 해</text>
+        <line x1={lgx[2]} x2={lgx[2] + 10} y1={lg - 4} y2={lg - 4} stroke={C.ink2} strokeWidth={2} strokeLinecap="round" /><text className={SVG_TEXT} fontSize={12} x={lgx[2] + 15} y={lg}>거의 그대로</text>
       </g>
       {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).map((t) => {
         const y = Y3(t);
         return (
           <g key={t}>
             <line x1={GX} x2={W - RP} y1={y} y2={y} stroke={t === 0 ? C.ink3 : C.hair} />
-            <text className={SVG_TEXT} fontSize={11} x={GX - 6} y={y + 4} textAnchor="end">{t}%</text>
+            {(t / rst) % rateTickEvery === 0 && <text className={SVG_TEXT} fontSize={12} x={GX - 6} y={y + 4} textAnchor="end">{t}%</text>}
           </g>
         );
       })}
@@ -261,11 +333,11 @@ export function MainChart({
       {/* 겹쳐 보기 선: 항상 DOM에 두고 불투명도만 전환(재마운트 없음, 스케일은 켜기 전·후 같음) */}
       <g data-testid="overlay-line" aria-hidden="true" style={{ opacity: overlayOn ? 1 : 0, pointerEvents: "none" }} className="motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-out">
         <path d={ovPath} fill="none" stroke={C.brand} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
-        {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).map((t) => <text key={t} className={BRAND_TEXT_FILL} fontSize={11} x={W - RP + 4} y={Y3(t) + 4} style={HALO}>{t}%</text>)}
+        {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).filter((t) => (t / rst) % rateTickEvery === 0).map((t) => <text key={t} className={BRAND_TEXT_FILL} fontSize={12} x={W - RP + 4} y={Y3(t) + (t === 0 ? -1 : 4)} style={HALO}>{t}%</text>)}
       </g>
       {tA > y0 + 1 && <rect x={X(y0 + 1)} y={P3} width={X(tA) - X(y0 + 1)} height={H3} fill={C.sec} opacity={0.8} data-nodata="1" />}
       {ep && <rect x={XE(ep.py)} y={P3 - 1} width={XE(ep.ty) - XE(ep.py)} height={H3 + 2} rx={3} fill="none" stroke={C.brand} strokeWidth={2} />}
-      {tA > y0 + 1 && <text className={SVG_TEXT} fontSize={11} x={X(y0 + 1) + 8} y={P3 + H3 / 2 + 4} style={HALO}>자료 없음</text>}
+      {tA > y0 + 1 && <text className={SVG_TEXT} fontSize={12} x={X(y0 + 1) + 8} y={P3 + H3 / 2 + 4} style={HALO}>자료 없음</text>}
       {yr != null && (
         <g data-testid="year-select">
           <rect x={X(yr)} y={P3 - 1} width={X(yr + 1) - X(yr)} height={H3 + 2} rx={2} fill="none" stroke={C.brand} strokeWidth={2} />
@@ -273,22 +345,19 @@ export function MainChart({
         </g>
       )}
       {Array.from({ length: Math.floor((last - Math.ceil((y0 + 1) / 5) * 5) / 5) + 1 }, (_, i) => Math.ceil((y0 + 1) / 5) * 5 + i * 5).map((Y) => {
-        // x축 연도: 5년 간격 눈금, 라벨은 글자(4자리≈27px)가 겹치지 않는 폭이면 5년마다, 좁으면(390·320) 10년마다
-        const x = XE(Y), major = Y % 10 === 0, label = five ? true : major;
+        // x축 연도: 눈금선은 5년, 라벨은 xLabelPlan(함수 1곳)이 폭별로 정한다
+        const x = XE(Y), label = Y % xPlan.step === 0;
         return (
           <g key={Y}>
             <line x1={x} x2={x} y1={P3b} y2={P3b + (label ? 5 : 3)} stroke={C.ink3} />
-            {label && <text className={SVG_TEXT} fontSize={11} x={x} y={AX} textAnchor="middle">{Y}</text>}
+            {label && <text className={SVG_TEXT} fontSize={12} x={x} y={AX} textAnchor="middle">{xPlan.short ? `'${String(Y).slice(2)}` : Y}</text>}
           </g>
         );
       })}
-      <rect
-        x={GX} y={P1 - 6} width={PW} height={P3b - P1 + 6} fill="transparent" data-testid="invest-chart-hit"
-        onPointerDown={(e) => { dragging.current = true; (e.currentTarget as Element).setPointerCapture?.(e.pointerId); pick(e.clientX, e.currentTarget.ownerSVGElement as SVGSVGElement); }}
-        onPointerMove={(e) => { if (dragging.current) pick(e.clientX, e.currentTarget.ownerSVGElement as SVGSVGElement); }}
-        onPointerUp={() => { dragging.current = false; }}
-        onPointerCancel={() => { dragging.current = false; }}
-      />
+      <rect x={GX} y={P1 - 6} width={PW} height={P3b - P1 + 6} fill="transparent" data-testid="invest-chart-hit" {...handlers} />
+      {/* onClick 빈 핸들러: 터치 보정(touch adjustment)이 아래쪽 ⓘ·겹쳐 보기 버튼으로 탭을 가져가지 않게 이 상자를 클릭 대상으로 표시한다(N-1) */}
+      {/* D-1: 이름표 탭 → 그 하락의 바닥 해. 이름표 밖은 기존 해 고르기·끌기와 같다 */}
+      <rect x={GX} y={P2b} width={PW} height={Math.max(40, L.nameRows * TIER + 6)} fill="transparent" data-testid="name-hit" style={{ cursor: "pointer" }} onClick={() => {}} {...handlers} />
     </svg>
   );
 }

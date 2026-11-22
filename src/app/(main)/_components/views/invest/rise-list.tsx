@@ -43,7 +43,7 @@ export function RiseDetail({ view, r }: { view: IndexView; r: RiseYear }) {
           )}
         </div>
       </div>
-      <p className="mt-2 text-2xs text-muted-foreground">{RISE_NOTE}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{RISE_NOTE}</p>
     </div>
   );
 }
@@ -65,7 +65,7 @@ export function RiseList({
   const shown = limit && !all ? rows.slice(0, limit) : rows;
   return (
     <div data-testid="rise-list">
-      <p className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{RISE_SUB}</p>
+      <p className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">{RISE_SUB}</p>
       <div className="-mx-3 mt-1 xl:mx-0">
         {shown.map((r) => {
           const open = selYear === r.y, recEnd = r.recessionEndMonth != null;
@@ -75,7 +75,7 @@ export function RiseList({
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                   <span className="text-base font-semibold tabular-nums">{r.y}년</span>
                   <span className="text-sm font-semibold tabular-nums text-rose-600 dark:text-rose-400">{fmtPct(r.ret)}</span>
-                  {recEnd && <span className="rounded-md bg-secondary px-1.5 text-2xs font-semibold text-muted-foreground" data-testid="rise-tag">침체 끝난 해</span>}
+                  {recEnd && <span className="rounded-md bg-secondary px-1.5 text-xs font-semibold text-muted-foreground" data-testid="rise-tag">침체 끝난 해</span>}
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"><DirMark dir={r.dir} />금리 {DIR_LABEL[r.dir]}<ChevronRight aria-hidden className={`size-4 transition-transform duration-200 ${open ? "rotate-90" : ""}`} /></span>
               </button>

@@ -973,6 +973,13 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - 접힘 섹션 `하락 전 12개월과 크게 오른 해에 있었던 일`: 결론 3줄 CEO 값(S&P 3번 중 1번·16년→1년(42년 중 3년)·18년 중 8/16년 중 2), 금리차 월평균 조건(2007만 ●), 비율 % 0. 사건 10건 원문 대조(qa 10/10)는 출시 차단
 - 금지어 추가: 전조·조심·경고·과열·붐·기대·연착륙·반등. GA `invest_rise_tab`·`invest_pattern`
 
+### F-INVEST-R1 (#5.138 #265) 투자 탭 터치·길이·낙폭
+- 문서 높이 390 ≤3,629px·320 ≤3,798px(3지수, `?trial=1#invest`). 오른 해 기본 1행+`나머지 N개 더 보기`, 각주 `invest-notes`·기간 `honest-info` 접힘(열면 원문 그대로)
+- 스테퍼 `year-prev`·`year-next` ≥40×40·±1년·←/→·경계 disabled, 이름표 탭 → 그 하락의 바닥 해. 하락 행마다 `drop-dd`(−NN.N%)
+- SVG·정보 글자 12px 미만 0, x축 라벨 간격 ≥4px(320 `'80` 규칙), 클립 값 라벨(나스닥 3·코스피 2·S&P 0), 1280 폭 ≤960·좌우 카드 하단 정렬
+- 1996 연준 연설 1행(원문 대조), GA `투자·해 선택`·`투자·하락 행 펼침`·`가이드·내 자산 이동`(파라미터 0), `/guide/index-returns-by-year` 고유 표·sitemap 7건
+
+
 ## F-GUIDE-YE (#5.136 #261) 연말 가이드·루트 링크 줄
 - `/guide/year-end` 200·h1 1·단계 4·fact 7(앱 상수 import)·CTA 2. 하단 `guide-other-list`에 자기 제외 2행(3편 공통)
 - `curl /` `first-paint-shell` 안 `root-guide-links`와 링크 3(`year-end`·`net-worth`·`stock-ratio`) href. 웰컴 분기는 `CopyrightFooter` 직전, 보유자·체험·마법사 0

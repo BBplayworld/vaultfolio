@@ -7,19 +7,19 @@ const V = { spx: buildIndexView(data, "spx"), ndx: buildIndexView(data, "ndx"), 
 const FORBID = ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "→", "↑", "↓", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등"];
 
 describe("해별 경제 이슈(1990~2026)", () => {
-  it("53행·사실 53/53이 40자 이하·금지어 0·연준 1차 출처만", () => {
-    expect(data.eventsYear).toHaveLength(53);
+  it("54행·사실 54/54이 40자 이하·금지어 0·연준 1차 출처만", () => {
+    expect(data.eventsYear).toHaveLength(54);
     for (const e of data.eventsYear) {
       expect([...e.fact].length, e.id).toBeLessThanOrEqual(40);
       for (const w of FORBID) expect(e.fact + e.name, `${e.id} ${w}`).not.toContain(w);
       expect(e.urls.every((u) => u.startsWith("https://www.federalreserve.gov/")), e.id).toBe(true);
     }
   });
-  it("1990~2025는 1996·2006을 빼고 해마다 1건 이상(S&P·나스닥·코스피 모두)", () => {
+  it("1990~2025는 2006을 빼고 해마다 1건 이상(S&P·나스닥·코스피 모두)", () => {
     for (const k of ["spx", "ndx", "kospi"] as const) {
       for (let y = Math.max(1990, V[k].start + 1); y <= 2025; y++) {
         const n = yearIssues(V[k], y).length;
-        if (y === 1996 || y === 2006) expect(n, `${k} ${y}`).toBe(0);
+        if (y === 2006) expect(n, `${k} ${y}`).toBe(0);
         else expect(n, `${k} ${y}`).toBeGreaterThan(0);
       }
     }
@@ -60,8 +60,13 @@ describe("해별 경제 이슈(1990~2026)", () => {
     expect(V.kospi.ev.length).toBe(21);
     expect(data.events).toHaveLength(31);
   });
-  it("1996·2006 행은 데이터에 없다", () => {
-    expect(data.eventsYear.some((e) => e.id === "Y1996-1" || e.id === "Y2006-1")).toBe(false);
+  it("2006 행은 데이터에 없고, 1996은 연준 의장 연설 1건(원문 1차 출처, 금지어 `과열` 0)", () => {
+    expect(data.eventsYear.some((e) => e.id === "Y2006-1")).toBe(false);
+    const r = data.eventsYear.filter((e) => e.y === 1996);
+    expect(r).toHaveLength(1);
+    expect(r[0].urls).toEqual(["https://www.federalreserve.gov/boarddocs/speeches/1996/19961205.htm"]);
+    expect(r[0].date).toBe("1996년 12월 5일");
+    expect(r[0].fact + r[0].name).not.toContain("과열");
   });
 });
 

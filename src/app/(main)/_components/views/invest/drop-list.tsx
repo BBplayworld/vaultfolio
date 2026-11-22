@@ -6,6 +6,7 @@ import type { Episode, EventPoint, IndexView, RateDir } from "@/lib/invest/calc"
 import { DIR_VERB, DIR_LABEL, LIST_NOTE_2, LIST_SUB, EMPTY_LIST, fmtPct, fmtRate, listNote } from "@/lib/invest/text";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { C } from "./chart-style";
+import { FoldNote } from "./fold-note";
 import { NOWRAP_PCT, NOWRAP_TAIL, NoBreak, EventName } from "./nowrap";
 import { ZoomChart } from "./zoom-chart";
 
@@ -36,10 +37,10 @@ function EpisodeDetail({ data, view, ep, index, width }: { data: MarketHistoryDa
         <div className="text-xs text-muted-foreground tabular-nums">고점 {ep.py}년 말 · 바닥 {ep.ty}년 말{ep.ongoing ? " · 진행 중" : ""}</div>
       </div>
       <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)] gap-2.5">
-        <div><div className="text-2xs leading-snug text-muted-foreground break-keep">고점에서 바닥까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ty - ep.py}년</div></div>
-        <div><div className="text-2xs leading-snug text-muted-foreground break-keep">고점에서 전고점까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ry ? `${ep.ry - ep.py}년` : "아직이에요"}</div></div>
+        <div><div className="text-xs leading-snug text-muted-foreground break-keep">고점에서 바닥까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ty - ep.py}년</div></div>
+        <div><div className="text-xs leading-snug text-muted-foreground break-keep">고점에서 전고점까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ry ? `${ep.ry - ep.py}년` : "아직이에요"}</div></div>
         <div>
-          <div className="text-2xs leading-snug text-muted-foreground break-keep">그 사이 금리</div>
+          <div className="text-xs leading-snug text-muted-foreground break-keep">그 사이 금리</div>
           {ep.dir === "none" ? <div className="mt-0.5 text-sm text-muted-foreground">자료가 없어요</div> : (
             <div className="mt-0.5 text-sm font-semibold"><span className="inline-flex items-center gap-1.5"><DirMark dir={ep.dir} />{DIR_VERB[ep.dir as Exclude<RateDir, "none">]}</span><span className="block text-xs font-normal text-muted-foreground tabular-nums">{fmtRate(ep.rf as number)}에서 {fmtRate(ep.rt as number)}로</span></div>
           )}
@@ -92,14 +93,14 @@ export function DropList({
     <div data-testid="invest-list">
       <div className={bare ? "" : "border-t border-border/60 pt-4 -mx-3 px-3 xl:mx-0 xl:border-t-0 xl:px-0 xl:pt-1"}>
         {!bare && <h3 className="text-base font-bold">크게 빠진 때</h3>}
-        <p className={`${bare ? "mt-2" : "mt-0.5"} text-2xs leading-snug text-muted-foreground text-pretty break-keep`}>{LIST_SUB}</p>
+        <p className={`${bare ? "mt-2" : "mt-0.5"} text-xs leading-snug text-muted-foreground text-pretty break-keep`}>{LIST_SUB}</p>
       </div>
       {view.eps.length === 0 ? (
         <p data-testid="drop-empty" className="mt-3 text-sm text-muted-foreground">{EMPTY_LIST}</p>
       ) : (
         <>
-          <div aria-hidden className="relative mx-3 mt-2.5 h-3.5">
-            {ticks.map((t) => <span key={t} className="absolute top-0 whitespace-nowrap text-2xs text-muted-foreground tabular-nums" style={{ left: `${(t / dmax) * 100}%`, transform: `translateX(${t === dmax ? "-100%" : "-50%"})` }}>{fmtPct(-t, 0)}</span>)}
+          <div aria-hidden className="relative ml-3 mr-[calc(0.75rem+3.25rem+0.5rem)] mt-2.5 h-4">
+            {ticks.map((t) => <span key={t} className="absolute top-0 whitespace-nowrap text-xs text-muted-foreground tabular-nums" style={{ left: `${(t / dmax) * 100}%`, transform: `translateX(${t === dmax ? "-100%" : "-50%"})` }}>{fmtPct(-t, 0)}</span>)}
           </div>
           <div className="-mx-3 mt-0.5 xl:mx-0">
             {view.eps.map((e, k) => {
@@ -111,14 +112,15 @@ export function DropList({
                     className={`relative block min-h-14 w-full rounded-xl px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform active:scale-[0.99] ${hl ? "ring-2 ring-brand ring-inset" : ""}`}
                   >
                     <div className="flex min-h-[22px] items-center justify-between gap-2">
-                      <span className="min-w-0 text-base font-semibold break-keep">{e.name}{e.ongoing && <span className="ml-1.5 rounded-md border border-dashed px-1.5 text-2xs font-semibold text-muted-foreground" style={{ borderColor: C.ink2 }}>진행 중</span>}</span>
+                      <span className="min-w-0 text-base font-semibold break-keep">{e.name}{e.ongoing && <span className="ml-1.5 rounded-md border border-dashed px-1.5 text-xs font-semibold text-muted-foreground" style={{ borderColor: C.ink2 }}>진행 중</span>}</span>
                       <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"><DirMark dir={e.dir} />{DIR_LABEL[e.dir]}<ChevronRight aria-hidden className={`size-4 transition-transform duration-200 ${open ? "rotate-90" : ""}`} /></span>
                     </div>
-                    <div className="mt-2 flex items-center">
+                    <div className="mt-2 flex items-center gap-2">
                       <div className={`relative h-2 flex-1 rounded ${open ? "bg-card" : "bg-secondary"}`}>
-                        {ticks.map((t) => <i key={t} aria-hidden className="absolute -bottom-0.5 -top-0.5 w-px" style={{ left: `${(t / dmax) * 100}%`, background: C.ink3 }} />)}
+                        {ticks.map((t) => <i key={t} aria-hidden className="absolute -bottom-1.5 -top-1.5 w-px" style={{ left: `${(t / dmax) * 100}%`, background: C.ink3 }} />)}
                         <i className="absolute inset-y-0 left-0 rounded bg-blue-600 dark:bg-blue-400" style={{ width: `${(-e.dd / dmax) * 100}%` }} />
                       </div>
+                      <span data-testid="drop-dd" className="w-[3.25rem] shrink-0 text-right text-xs font-semibold leading-3 tabular-nums text-blue-600 dark:text-blue-400">{fmtPct(e.dd)}</span>
                     </div>
                   </button>
                   {open && inlineDetail && <EpisodeDetail data={data} view={view} ep={e} index={k} width={width} />}
@@ -128,8 +130,10 @@ export function DropList({
           </div>
         </>
       )}
-      <p className="mt-2 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">{listNote(view)}</p>
-      <p className="mt-1 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">{LIST_NOTE_2}</p>
+      <FoldNote label="목록 읽는 법" testId="invest-notes">
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{listNote(view)}</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{LIST_NOTE_2}</p>
+      </FoldNote>
     </div>
   );
 }

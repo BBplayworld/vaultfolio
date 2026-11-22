@@ -1077,3 +1077,4 @@ computePriceChange(points) → % | null
 - 데이터: `data/market-history/*.csv` 정본 → `scripts/market-history/build.mjs`(`--check`) → `data/market-history.generated.json` + `public/datasets/market-history/`(CC BY-SA, Damodaran 수준값 제외). `verify-h15.mjs`는 H.15 XML과 10년물 월말 전 월 대조. 갱신 절차 `docs/ops/market-history-refresh.md`
 - 저장 키 0·서버 전송 0·새 API 0. GA는 `invest_*` category 6종(page_title만)
 - R4: `pattern.ts` — `buildPattern`·`RISE_THRESHOLD`(>+20%, 반올림 전)·`monthsLabel`. 데이터 `spread-monthly.csv`·`events-extra.csv`(점 없는 사건 10건). GA category `invest_rise_tab`·`invest_pattern`
+- 5.138: `main-chart.tsx` — `xLabelPlan(PW, span)`(x축 라벨 폭별 규칙 1곳: 5년→5년 `'80`→10년→10년 `'80`→20년, 간격 ≥4px) · `retAxisCap(view, max, min)`(연간 등락 상한: 나스닥 +60·코스피 +80, 넘으면 막대 자르고 실제 값 라벨). `decade-table.tsx` `decadeCounts()`(연대별 오른 해 수). GA category `invest_year_pick`·`invest_drop_open`(투자·해 선택/하락 행 펼침, 진입당 1회, 연도·금액 0)·`guide_move`(가이드·내 자산 이동, 홈 이동 link CTA). 데이터 `events-year.csv` 54행(1996 연준 의장 연설 추가)

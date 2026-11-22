@@ -54,10 +54,11 @@ export interface Readout {
   recession: boolean;
   events: string | null;
 }
-export function readoutOf(v: IndexView, year: number): Readout {
+/** maxEv: 좁은 폭(320)은 1건 + `외 n건`, 그 밖은 2건 + `외 n건`(말줄임 없음, 전체는 행 펼침·연도별 표) */
+export function readoutOf(v: IndexView, year: number, maxEv = 2): Readout {
   const row = v.tbl.find((r) => r.y === year)!;
   const evs = row.issues;
-  const events = evs.length ? evs.slice(0, 2).map((e) => e.name).join(" · ") + (evs.length > 2 ? ` 외 ${evs.length - 2}건` : "") : null;
+  const events = evs.length ? evs.slice(0, maxEv).map((e) => e.name).join(" · ") + (evs.length > maxEv ? ` 외 ${evs.length - maxEv}건` : "") : null;
   return {
     year, level: fmtLevel(row.close), ret: row.ret, dir: row.dir === "none" ? "금리 자료 없음" : `금리 ${DIR_LABEL[row.dir]}`,
     recession: (row.rec ?? 0) > 0, events,
@@ -74,7 +75,9 @@ export function listNote(v: IndexView): string {
 export const LIST_NOTE_2 = "같은 시기에 있었다는 기록이고, 무엇이 원인인지는 말하지 않아요.";
 export const LIST_SUB = `연말 기준 고점 대비 ${Math.round(DROP_THRESHOLD * 100)}% 넘게 빠진 때예요. 연말만 재서 장중 저점보다 얕게 나와요`;
 
-export const CALC_FOOT = "과거 연말 지수 값으로 계산한 결과예요. 배당·세금·수수료는 빼고, 반올림하지 않은 값으로 계산해 마지막에 한 번만 반올림해요. 앞으로도 같다는 뜻은 아니에요.";
+/** 결과 숫자 바로 아래 상시 노출(5.138 N-3, CEO 승인): 과거 계산이고 앞날을 말하지 않는다 */
+export const CALC_PAST = "과거 연말 값으로 계산한 결과예요. 앞으로도 같다는 뜻은 아니에요.";
+export const CALC_FOOT = "배당·세금·수수료는 빼고, 반올림하지 않은 값으로 계산해 마지막에 한 번만 반올림해요.";
 export const CALC_DIV = "배당을 다시 넣었다면 결과는 이보다 커요.";
 export const EMPTY_LIST = "없었어요";
 export const LOAD_ERROR = "잠시 뒤 다시 열어 주세요";
@@ -91,7 +94,7 @@ export function sourceLines(v: IndexView, revIds: Record<"spx" | "ndx" | "kospi"
   const l1 = v.key === "spx"
     ? `지수 연말값: S&P 500 연말 지수 값은 Aswath Damodaran(NYU Stern) 공개 자료 「Historical Returns on Stocks, Bonds and Bills」(2026년 1월 갱신)를 썼고, 연간 등락률은 ${wiki.spx}과 대조해 시크릿에셋이 다시 계산했어요.`
     : v.key === "ndx"
-      ? `지수 연말값: ${wiki.ndx}을 바탕으로 시크릿에셋이 다시 계산·가공했어요. 2003·2004년 연말값은 다른 공개 자료와 최대 0.6% 차이가 있어요(위키 값 사용).`
+      ? `지수 연말값: ${wiki.ndx}을 바탕으로 시크릿에셋이 다시 계산·가공했어요. 2003·2004년 연말값은 다른 공개 자료와 최대 0.6% 차이가 있어요 (위키 값 사용).`
       : `지수 연말값: ${wiki.kospi}를 바탕으로 시크릿에셋이 다시 계산·가공했어요. 1998년 등락률은 표의 %가 아니라 종가로 다시 계산했어요.`;
   const l2 = v.rate === "us"
     ? "금리·침체: 미 기준금리는 미 연준 공개시장 표 · 미 국채 금리: 미 연준(H.15) · 경기침체 기간: NBER(미국 경제연구소) 경기순환 기준일을 가공했어요."

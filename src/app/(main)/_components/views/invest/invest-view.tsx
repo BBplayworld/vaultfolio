@@ -3,18 +3,18 @@
 // 투자 탭 본문(#263): 지수 선택 → 머리 3줄 → 읽기 줄 → 그림 3층(+겹쳐 보기) → 크게 빠진 때 → 연도별 표 → ③ → 출처 4줄.
 // 앱 투자 탭과 공개 가이드(`/guide/market-history`)가 이 컴포넌트 1벌을 그대로 쓴다. 데이터는 정적 번들(네트워크·저장 0).
 // 앱에서는 next/dynamic으로 진입 때만 불러온다(invest-lazy.tsx) — 이 파일과 lib/invest 데이터는 첫 화면 번들에 넣지 않는다.
-import { Check, ChevronDown, Info } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { QUESTION_HEAD, headlineLines, READOUT_HINT, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
+import { QUESTION_HEAD, headlineLines, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
 import { PeriodCard } from "./period-card";
-import { NOWRAP_TAIL, NOWRAP_YEAR_SUFFIX, NoBreak } from "./nowrap";
+import { NOWRAP_TAIL, NOWRAP_YEAR_SUFFIX, NoBreak, ReadoutChips } from "./nowrap";
 import { YearGrid } from "./year-grid";
 import { defaultPeriod } from "@/lib/invest/period";
 import { DropList, EpisodeDetail } from "./drop-list";
@@ -50,13 +50,13 @@ function MeasuredDetail({ view, ep, index }: { view: ReturnType<typeof buildInde
   return <div ref={ref} className="min-w-0 w-full">{w > 0 && <EpisodeDetail data={marketHistory} view={view} ep={ep} index={index} width={w} />}</div>;
 }
 
-/** 캡션 옆 ⓘ — 마우스 오버가 아니라 탭·키보드로 여는 설명(Popover). 눈에 보이는 크기 24px, 히트영역은 after로 40px까지 */
+/** 캡션 옆 ⓘ — 마우스 오버가 아니라 탭·키보드로 여는 설명(Popover). 눈에 보이는 크기 24px, 버튼(히트영역) 40×40 */
 function InfoDot({ left, top, label, children }: { left: number; top: number; label: string; children: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" aria-label={label} data-testid="invest-info" style={{ left, top }} className="absolute z-[1] inline-flex size-6 items-center justify-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 focus-visible:ring-2 focus-visible:ring-ring/50">
-          <Info aria-hidden className="size-3.5" />
+        <button type="button" aria-label={label} data-testid="invest-info" style={{ left: left - 8, top: top - 8 }} className="group absolute z-[1] inline-flex size-10 items-center justify-center rounded-full text-muted-foreground outline-none">
+          <span className="inline-flex size-6 items-center justify-center rounded-full group-focus-visible:ring-2 group-focus-visible:ring-ring/50"><Info aria-hidden className="size-3.5" /></span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-3 text-xs leading-relaxed text-pretty break-keep">{children}</PopoverContent>
@@ -74,7 +74,7 @@ function SourcePanel({ lines }: { lines: string[] }) {
       </button>
       <div id="invest-source-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
-          <div data-testid="invest-source" className="space-y-1.5 pb-1 pt-1 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">
+          <div data-testid="invest-source" className="space-y-1.5 pb-1 pt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">
             {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
           </div>
         </div>
@@ -92,7 +92,7 @@ export interface InvestViewProps {
   asof?: number;
 }
 
-type InvestCategory = "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc";
+type InvestCategory = "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
@@ -106,6 +106,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const mounted = useMounted();
   const wide = useMediaQuery("(min-width: 1280px)");
   const chartRef = useRef<HTMLDivElement>(null);
+  const stepRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(chartRef);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -134,7 +135,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   useEffect(() => {
     const down = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (yr != null && chartRef.current && !chartRef.current.contains(t)) setYr(null);
+      if (yr != null && chartRef.current && !chartRef.current.contains(t) && !stepRef.current?.contains(t)) setYr(null);
       if (menu && !menuRef.current?.contains(t) && !btnRef.current?.contains(t)) setMenu(false);
     };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape" && menu) { setMenu(false); btnRef.current?.focus(); } };
@@ -145,11 +146,16 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   useEffect(() => { if (menu) menuRef.current?.querySelector<HTMLElement>("[aria-selected='true']")?.focus(); }, [menu]);
 
   const pickYear = (y: number) => {
-    setYr(y);
+    setYr(y); once("invest_year_pick");
     const k = view.eps.findIndex((e) => y > e.py && y <= e.ty);
     if (k >= 0) setSel(k);
   };
-  const ro = yr != null ? readoutOf(view, yr) : null;
+  // 하락 행 펼침(닫기는 집계하지 않는다) — 연도·금액 인자 없음
+  const openDrop = (k: number | null) => { setSel(k); if (k != null) once("invest_drop_open"); };
+  // D-1: 해 스테퍼 — 기존 pickYear만 호출한다(상태 신설 0). 선택이 없으면 어느 쪽이든 마지막 해부터
+  const stepYear = (d: 1 | -1) => pickYear(yr == null ? view.last : Math.max(view.start + 1, Math.min(view.last, yr + d)));
+  const stepCls = "inline-flex size-10 items-center justify-center rounded-xl bg-secondary text-foreground outline-none motion-safe:transition-[background-color,transform] motion-safe:duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40 disabled:active:scale-100";
+  const ro = yr != null ? readoutOf(view, yr, width > 0 && width < 300 ? 1 : 2) : null;
   const listW = width || 300;
 
   const changeTab = (t: "drop" | "rise") => { setListTab(t); if (t === "rise") once("invest_rise_tab"); };
@@ -162,7 +168,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     </div>
   );
   const listBody = (inline: boolean) => (listTab === "drop"
-    ? <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail={inline} width={inline ? listW : 376} bare />
+    ? <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={openDrop} inlineDetail={inline} width={inline ? listW : 376} bare />
     : <RiseList view={view} pattern={pattern} selYear={inline ? riseSel : riseDetailYear} onSelect={setRiseSel} inlineDetail={inline} />);
 
   const chartCard = (
@@ -171,20 +177,26 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         <p className="text-lg font-bold leading-snug text-balance break-keep">{head.l1}</p>
         {head.l2 && <p className="mt-1 text-sm text-muted-foreground text-pretty break-keep">{head.l2.lead}<b className="font-semibold text-foreground">{head.l2.bold}</b>{head.l2.rest}</p>}
         {/* R3: 모바일은 base 줄을 `크게 빠진 때` 카드 각주로 옮긴다(첫 화면 숫자 예산). 1280은 현행 */}
-        {wide && <p data-testid="invest-base" className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>}
+        {wide && <p data-testid="invest-base" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>}
       </div>
-      <div data-testid="invest-readout" aria-live="polite" className="mt-2 min-h-[3.75rem] max-[359px]:min-h-[4.7rem]">
-        {ro && showLevels ? (
-          <>
-            <div className="flex flex-wrap items-center gap-x-1.5 text-sm" data-testid="readout-main">
-              <span>{ro.year}년 말 <b className="font-bold tabular-nums">{ro.level}</b></span><span>·</span>
-              <b className={`font-bold tabular-nums ${ro.ret == null ? "" : getProfitLossColor(ro.ret)}`}>{ro.ret == null ? "—" : fmtPct(ro.ret)}</b><span>·</span>
-              <span className="text-muted-foreground">{ro.dir}</span>
-              {ro.recession && <><span>·</span><span className="whitespace-nowrap text-muted-foreground">경기침체</span></>}
-              {ro.events && <div className="basis-full pt-0.5 text-xs leading-snug break-keep"><span className="text-muted-foreground">사건</span> <NoBreak text={ro.events} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} /></div>}
-            </div>
-          </>
-        ) : <p className="flex h-7 items-center text-xs text-muted-foreground">{READOUT_HINT}</p>}
+      {/* 읽기 줄 예약 영역: 첫 행 = 해 스테퍼(라벨이 해 고르기 안내를 겸함), 둘째 행 = 읽기 줄. 해를 골라도 높이가 변하지 않는다(5.138 N-2) */}
+      <div data-testid="invest-readout" className="mt-2 flex min-h-[60px] flex-wrap content-start items-center gap-x-2 gap-y-0.5 max-[389px]:min-h-[76px] max-[359px]:min-h-[84px]">
+        {showLevels && (
+          <div
+            ref={stepRef} role="group" aria-label="해 이동" data-testid="year-stepper" className="flex h-10 shrink-0 items-center gap-1"
+            onKeyDown={(e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); stepYear(e.key === "ArrowLeft" ? -1 : 1); } }}
+          >
+            <button type="button" aria-label="이전 해" data-testid="year-prev" disabled={yr != null && yr <= view.start + 1} onClick={() => stepYear(-1)} className={stepCls}><ChevronLeft aria-hidden className="size-5" /></button>
+            <span data-testid="year-stepper-label" className={yr != null ? "min-w-[4rem] text-center text-base font-semibold tabular-nums" : "min-w-[4rem] text-center text-xs text-muted-foreground"}>{yr != null ? `${yr}년` : "해 고르기"}</span>
+            <button type="button" aria-label="다음 해" data-testid="year-next" disabled={yr != null && yr >= view.last} onClick={() => stepYear(1)} className={stepCls}><ChevronRight aria-hidden className="size-5" /></button>
+          </div>
+        )}
+        {ro && showLevels && (
+          <div aria-live="polite" data-testid="readout-main" className="flex min-w-0 flex-1 basis-0 flex-wrap items-center gap-x-1.5 text-xs">
+            <ReadoutChips ro={ro} hideYear />
+          </div>
+        )}
+        {ro && showLevels && ro.events && <div className="basis-full text-xs leading-snug break-keep"><span className="text-muted-foreground">사건</span> <NoBreak text={ro.events} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} /></div>}
       </div>
       <div ref={chartRef} className="relative mt-1 min-w-0" data-testid="invest-chart-wrap">
         {L && showLevels ? (
@@ -213,7 +225,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
                   onClick={() => { setOvOn(on); setMenu(false); btnRef.current?.focus(); if (on) once("invest_overlay"); }}
                   className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-left text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${ovOn === on ? "bg-secondary" : ""}`}
                 >
-                  <span>{on ? OV.full : "겹쳐 보기 안 함"}{on && <small className="mt-px block text-2xs font-normal text-muted-foreground">{OV.def} · 오른쪽 축</small>}</span>
+                  <span>{on ? OV.full : "겹쳐 보기 안 함"}{on && <small className="mt-px block text-xs font-normal text-muted-foreground">{OV.def} · 오른쪽 축</small>}</span>
                   <Check aria-hidden className={`size-4 text-brand dark:text-indigo-300 ${ovOn === on ? "" : "invisible"}`} />
                 </button>
               ))}
@@ -230,10 +242,10 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <p data-testid="q-drops" className="mb-2 text-xs text-muted-foreground text-balance break-keep">{QUESTION_HEAD.drops}</p>
       <h3 className="text-base font-bold">크게 빠진 때</h3>
       <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail width={listW} bare />
-      <p data-testid="invest-base" className="mt-1 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">{head.l3}</p>
+      <p data-testid="invest-base" className="mt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{head.l3}</p>
       <div className="mt-4 border-t border-border/60 pt-3">
-        <h3 className="text-base font-bold">크게 오른 해<small className="ml-2 text-2xs font-normal text-muted-foreground">한 해에 20% 넘게 오른 해 {pattern.rise.length}번</small></h3>
-        <RiseList view={view} pattern={pattern} selYear={riseSel} onSelect={setRiseSel} inlineDetail limit={5} onMore={() => once("invest_rise_tab")} />
+        <h3 className="text-base font-bold">크게 오른 해<small className="ml-2 text-xs font-normal text-muted-foreground">한 해에 20% 넘게 오른 해 {pattern.rise.length}번</small></h3>
+        <RiseList view={view} pattern={pattern} selYear={riseSel} onSelect={setRiseSel} inlineDetail limit={1} onMore={() => once("invest_rise_tab")} />
         <p data-testid="rise-answer" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep"><NoBreak text={pattern.lines[2]} phrases={[]} tails={NOWRAP_TAIL} /></p>
       </div>
     </div>
@@ -245,7 +257,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
     </div>
   );
-  const gridNode = <YearGrid key={`g-${idx}`} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
+  const gridNode = <YearGrid key={`g-${idx}`} onYear={() => once("invest_year_pick")} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
   const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} />;
   // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
   // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
@@ -257,7 +269,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     { id: "deeper", node: deeperCard },
   ];
   return (
-    <div data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:gap-4">
+    <div data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:mx-auto xl:w-full xl:max-w-[960px] xl:gap-4">
       {/* P4: 지수 선택기 상단 고정(모바일). 체험 배너·PWA safe-area 아래에 붙는다 */}
       <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth value={idx} onChange={changeIndex} options={INDEX_OPTIONS} ariaLabel="지수 선택" className="w-full" />
@@ -266,19 +278,19 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       {wide && (
         <>
           {chartCard}
-          <div className="grid grid-cols-[400px_minmax(0,1fr)] items-start gap-4">
-            <div className="min-w-0 rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(false)}</div>
-            <div data-testid="invest-detail" className="sticky top-3 min-w-0 overflow-hidden rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
+          <div className="grid grid-cols-[400px_minmax(0,1fr)] items-stretch gap-4">
+            <div className="min-w-0 h-full rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(false)}</div>
+            <div data-testid="invest-detail" className="h-full min-w-0 overflow-hidden rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
               {listTab === "rise" ? (
                 pattern.rise.find((r) => r.y === riseDetailYear) ? (
                   <>
-                    <div className="mb-1.5 flex items-baseline gap-2 text-base font-bold">{riseDetailYear}년<small className="text-2xs font-normal text-muted-foreground">크게 오른 해</small></div>
+                    <div className="mb-1.5 flex items-baseline gap-2 text-base font-bold">{riseDetailYear}년<small className="text-xs font-normal text-muted-foreground">크게 오른 해</small></div>
                     <RiseDetail view={view} r={pattern.rise.find((r) => r.y === riseDetailYear)!} />
                   </>
                 ) : <p className="text-sm text-muted-foreground">크게 오른 해가 없었어요</p>
               ) : selEff != null && view.eps[selEff] ? (
                 <>
-                  <div className="mb-1.5 flex items-baseline gap-2 text-base font-bold">{view.eps[selEff].name}<small className="text-2xs font-normal text-muted-foreground">{view.eps[selEff].py}~{view.eps[selEff].ty}년</small></div>
+                  <div className="mb-1.5 flex items-baseline gap-2 text-base font-bold">{view.eps[selEff].name}<small className="text-xs font-normal text-muted-foreground">{view.eps[selEff].py}~{view.eps[selEff].ty}년</small></div>
                   <MeasuredDetail view={view} ep={view.eps[selEff]} index={selEff} />
                 </>
               ) : <p className="text-sm text-muted-foreground">왼쪽에서 하락을 고르면 그 시기가 보여요</p>}
@@ -286,7 +298,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
           </div>
           <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} /></div>
           <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><YearTable key={idx} view={view} onOpen={() => once("invest_table")} /></div>
-          <div className="grid grid-cols-[440px_minmax(0,1fr)] items-start gap-4"><div className="min-w-0">{gridNode}</div><div className="min-w-0">{periodNode}</div></div>
+          <div className="grid grid-cols-[440px_minmax(0,1fr)] items-stretch gap-4"><div className="min-w-0 [&>section]:h-full">{gridNode}</div><div className="min-w-0 [&>section]:h-full">{periodNode}</div></div>
         </>
       )}
       <SourcePanel lines={src} />

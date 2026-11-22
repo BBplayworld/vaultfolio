@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { fmtPct, type Readout } from "@/lib/invest/text";
+import { getProfitLossColor } from "@/config/theme";
 
 /** 가운뎃점으로 이어진 어구가 줄 중간에서 끊기지 않게 묶는다(C25). 지정한 어구만 nowrap */
 // 사건 분류 7종 전부(금리·통화 정책·금융위기·시장 급락·전쟁·지정학·기술 거품·팬데믹·에너지)는 줄 중간에서 끊지 않는다(qa D-7)
@@ -18,3 +20,15 @@ export const NOWRAP_PCT = ["[0-9][0-9.]*(?:~[0-9][0-9.]*)?%[가-힣]{0,2}"];
 /** 사건 표시명 끝 `(YYYY)`는 앞 어절에 붙여 한 덩어리로(읽기 줄·표·펼침 공통, R-2) */
 export const NOWRAP_YEAR_SUFFIX = ["[^\\s·]*\\(\\d{4}(?:~\\d{2,4})?\\)"];
 export const EventName = ({ name }: { name: string }) => <NoBreak text={name} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} />;
+
+/** 읽기 줄 칩: 구분점 `·`을 뒤 칩 앞에 붙여 한 덩어리로 묶는다 — 좁은 폭에서 줄 끝에 `·`이 매달리지 않는다(D-11) */
+export function ReadoutChips({ ro, hideYear = false }: { ro: Readout; hideYear?: boolean }) {
+  return (
+    <>
+      <span className="whitespace-nowrap">{hideYear ? "연말" : `${ro.year}년 말`} <b className="font-bold tabular-nums">{ro.level}</b></span>
+      <span className="whitespace-nowrap">· <b className={`font-bold tabular-nums ${ro.ret == null ? "" : getProfitLossColor(ro.ret)}`}>{ro.ret == null ? "—" : fmtPct(ro.ret)}</b></span>
+      <span className="whitespace-nowrap text-muted-foreground">· {ro.dir}</span>
+      {ro.recession && <span className="whitespace-nowrap text-muted-foreground">· 경기침체</span>}
+    </>
+  );
+}

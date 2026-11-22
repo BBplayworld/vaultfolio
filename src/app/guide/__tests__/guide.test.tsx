@@ -12,6 +12,7 @@ import { featureTitleOf, screenPath, trackScreen, trackThenNavigate, __resetGaSt
 vi.mock("@/components/logo", () => ({ Logo: () => null })); // next/font 의존 제거(node 환경)
 
 import { GUIDES, GUIDE_SLUGS, GUIDE_BRAND_LINE } from "../guide-copy";
+import { decadeCounts } from "../_components/decade-table";
 import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 import { CARD_UNTIL_DAY, FIRST_RECORD_MIN_DAYS } from "@/lib/report/settlement";
 import { GuideShell, guideMetadata } from "../guide-shell";
@@ -21,7 +22,7 @@ import { marketHistory } from "@/lib/invest/market-history";
 // 가이드(#77) 정적 규칙 — node 환경, 서버 렌더 마크업·문구 상수·메타 대상
 const WWW = "https://www.secretasset.xyz";
 // 본문이 글 3편(단계·fact 구조)인 가이드. market-history(#263)는 본문이 투자 탭 컴포넌트라 따로 검사한다
-const ARTICLE_SLUGS = GUIDE_SLUGS.filter((s) => s !== "market-history");
+const ARTICLE_SLUGS = GUIDE_SLUGS.filter((s) => s !== "market-history" && s !== "index-returns-by-year");
 const FORBIDDEN = /[0-9]\s*(원|만|억|%)|줄이세요|늘리세요|리밸런싱|사세요|파세요|추천|절대|완벽|원천|서버로 아무것도|세금|엑셀|시트|노션|절세/;
 
 describe("정본 호스트", () => {
@@ -36,9 +37,9 @@ describe("정본 호스트", () => {
 
 describe("sitemap", () => {
   const a = sitemap();
-  it("6건, 모두 www 접두(market-history 1줄 포함)", () => {
-    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`, `${WWW}/guide/year-end`, `${WWW}/guide/market-history`]);
-    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6, 0.6, 0.6]);
+  it("7건, 모두 www 접두(market-history·index-returns-by-year 포함)", () => {
+    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`, `${WWW}/guide/year-end`, `${WWW}/guide/market-history`, `${WWW}/guide/index-returns-by-year`]);
+    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6, 0.6, 0.6, 0.6]);
   });
   it("lastModified는 호출마다 같은 고정 날짜", () => {
     vi.useFakeTimers();
@@ -79,7 +80,7 @@ describe("JS 없는 본문", () => {
     expect(html).toContain('href="/?trial=1"');
     expect(html).toContain(GUIDE_BRAND_LINE);
     const others = GUIDE_SLUGS.filter((x) => x !== slug);
-    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(3);
+    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(GUIDE_SLUGS.length - 1);
     others.forEach((o) => expect(html).toContain(`data-testid="guide-other-link-${o}"`));
     expect(html.indexOf(`guide-other-link-${others[0]}`)).toBeLessThan(html.indexOf(`guide-other-link-${others[1]}`));
     for (const id of ["guide-page", "guide-title", "guide-summary", "guide-steps", "guide-step-1", "guide-fact-box", "guide-cta-primary", "guide-cta-secondary", "guide-other-list", "guide-brand"]) {
@@ -100,7 +101,7 @@ describe("market-history 가이드(#263)", () => {
     expect(html).toContain("내 자산도 정리해 보기");
     expect(html).toContain('data-testid="guide-cta-primary"');
     expect(html).toContain(GUIDE_BRAND_LINE);
-    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(3);
+    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(GUIDE_SLUGS.length - 1);
   });
   it("설명의 숫자(시작 연도·건수)는 투자 데이터에서 파생한 값과 같다", () => {
     const v = buildIndexView(marketHistory, "spx");
@@ -129,6 +130,43 @@ describe("market-history 가이드(#263)", () => {
   it("공개 데이터셋 링크는 없고 앱 본문 번들 격리: guide-copy는 투자 데이터를 import하지 않는다", () => {
     const src = readFileSync(join(__dirname, "../guide-copy.ts"), "utf8");
     expect(src).not.toMatch(/from\s+["'][^"']*invest/);
+  });
+});
+
+describe("index-returns-by-year 가이드(5.138)", () => {
+  const doc = GUIDES["index-returns-by-year"];
+  const html = renderToStaticMarkup(<GuideShell slug="index-returns-by-year" />);
+  const mh = GUIDES["market-history"];
+  it("SEO·canonical·h1 1개·고유 표 1개(연대 × 3지수, 오른 해/전체 해)", () => {
+    expect(guideMetadata("index-returns-by-year").alternates?.canonical).toBe(`${WWW}/guide/index-returns-by-year`);
+    expect(html.match(/<h1/g)).toHaveLength(1);
+    expect(html.match(/data-testid="guide-unique-table"/g)).toHaveLength(1);
+    expect(html).toContain('<th scope="row"');
+    expect(html).toContain("<caption");
+    expect(html).toContain("내 자산도 정리해 보기");
+  });
+  it("표 값: 연대별 오른 해 수가 투자 데이터에서 파생된다(S&P 1961~69, 나스닥 60·70년대 `—`)", () => {
+    const rows = decadeCounts();
+    const v = buildIndexView(marketHistory, "spx");
+    const d60 = rows.find((r) => r.decade === 1960)!.cells[0]!;
+    let up = 0; for (let y = 1961; y <= 1969; y++) if ((v.ret[y - v.start] as number) > 0) up++;
+    expect(d60).toEqual({ up, n: 9 });
+    expect(rows.find((r) => r.decade === 1960)!.cells[1]).toBeNull();
+    expect(rows.at(-1)!.cells[0]!.n).toBe(6);
+  });
+  it("SSR에 지수 수준값 0, 요약·제목이 market-history와 겹치지 않고 금지어 0", () => {
+    for (const level of ["6,846", "6846", "5,882"]) expect(html).not.toContain(level);
+    expect(doc.summary).not.toBe(mh.summary);
+    expect(doc.title).not.toBe(mh.title);
+    const sentences = (t: string) => t.split(/[.]/).map((x) => x.trim()).filter((x) => x.length > 8);
+    const mhs = new Set(sentences(mh.summary));
+    for (const x of sentences(doc.summary)) expect(mhs.has(x), x).toBe(false);
+    const t = [doc.summary, doc.primary.label, doc.linkLabel].join("\n");
+    for (const w of ["때문", "덕분", "추천", "수익", "과열", "기대", "반등", "신호", "기회"]) expect(t).not.toContain(w);
+  });
+  it("첫 화면 가이드 링크는 4개 그대로(새 편은 루트 링크 줄에 없다)", () => {
+    const src = readFileSync(join(__dirname, "../../(main)/_components/layout/onboarding/root-guide-links.tsx"), "utf8");
+    expect(src).toContain('const ORDER: GuideSlug[] = ["year-end", "net-worth", "stock-ratio", "market-history"];');
   });
 });
 
@@ -180,7 +218,8 @@ describe("문구 규칙", () => {
     expect(d.steps[1].inlineLink).toEqual({ label: "월말 순자산 정리하는 법", href: "/guide/net-worth" });
   });
   it("linkLabel 4종·GUIDE_SLUGS 순서", () => {
-    expect(GUIDE_SLUGS).toEqual(["stock-ratio", "net-worth", "year-end", "market-history"]);
+    expect(GUIDE_SLUGS).toEqual(["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year"]);
+    expect(GUIDES["index-returns-by-year"].linkLabel).toBe("해마다 오르내린 %, 한 격자로 보기");
     expect(GUIDES["market-history"].linkLabel).toBe("크게 빠진 때와 금리, 한 장으로 보기");
     expect(GUIDES["year-end"].linkLabel).toBe("올해 자산 결산");
     expect(GUIDES["net-worth"].linkLabel).toBe("월말 순자산 정리");
