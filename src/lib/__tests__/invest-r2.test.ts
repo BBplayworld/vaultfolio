@@ -32,6 +32,11 @@ describe("R2-1 연도별 표 물가·실업률", () => {
     expect(r25.cpi).toBeNull();
     expect(r25.un).toBeNull();
   });
+  it("실업률 연평균은 x.x5를 일관되게 올림(half-up, 정수 연산): 1997 4.95→5.0·2017 4.35→4.4·2022 3.65→3.7", () => {
+    expect(blsYear(d, 1997).un).toBe(5);
+    expect(blsYear(d, 2017).un).toBe(4.4);
+    expect(blsYear(d, 2022).un).toBe(3.7);
+  });
   it("계단선 마지막 값 해는 2024", () => {
     const ys = d.bls.filter((r) => r.cpi != null).map((r) => r.y);
     expect(Math.max(...ys)).toBe(2024);
