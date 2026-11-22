@@ -84,7 +84,9 @@ export function build() {
     y: +r.year, id: r.id, name: r.name, date: r.date_display, cat: r.category, fact: r.fact, region: r.region,
     urls: r.source_urls.split(" ; ").filter(Boolean), m: +r.order_month, wip: r.status === "진행 중", ref: r.rule === "A" ? r.linked_id : "",
   }));
-  const out = { last, idx, rate, ovl, rec, usYear, krYear, events, eventsExtra, spread, eventsYear };
+  // R2: 미국 CPI-U·실업률 연평균(BLS 원자료, FRED 경유 월값의 12개월 평균). 값이 없는 해(2025: 10월 미공표)는 null
+  const bls = csv("macro-us-bls.csv").filter((r) => +r.year <= last).map((r) => ({ y: +r.year, cpi: num(r.cpi_u_yoy_pct), un: num(r.unemployment_avg_pct) }));
+  const out = { last, idx, rate, ovl, rec, usYear, krYear, events, eventsExtra, spread, eventsYear, bls };
   validate(out);
   return out;
 }
@@ -123,9 +125,18 @@ function validate(d) {
     d.rec.forEach((x) => { for (let mi = monthIdx(x.s); mi <= monthIdx(x.e); mi++) if (Math.floor(mi / 12) === r.y) n++; });
     if (n !== r.rec) throw new Error(`침체 월 수 불일치: ${r.y} ${n} vs ${r.rec}`);
   });
+  bls_check(d);
   d.rec.forEach((x) => { if (monthIdx(x.e) - monthIdx(x.s) + 1 !== x.n) throw new Error(`침체 구간 월 수: ${x.s}`); });
   const krM = (m) => d.rate.kr.v[monthIdx(m) - monthIdx(d.rate.kr.from)];
   d.krYear.forEach((r) => { if (r.base != null && Math.abs(krM(`${r.y}-12`) - r.base) > 0.005) throw new Error(`한국 기준금리 연말 ≠ 월 12월: ${r.y}`); });
+}
+
+function bls_check(d) {
+  if (d.bls[0].y !== 1961) throw new Error("BLS 연평균은 1961부터예요");
+  d.bls.forEach((r, i) => {
+    if (i && r.y !== d.bls[i - 1].y + 1) throw new Error(`BLS 연도가 끊겼어요: ${r.y}`);
+    if ((r.cpi == null) !== (r.un == null) && r.y !== d.last) throw new Error(`BLS 값 짝이 안 맞아요: ${r.y}`);
+  });
 }
 
 export const serialize = (data) => JSON.stringify(data) + "\n";
@@ -160,6 +171,7 @@ export function buildPublic() {
     "events.csv": toCsv(H(ev), ev),
     "events-year.csv": toCsv(H(csv("events-year.csv")), csv("events-year.csv")),
     "events-extra.csv": toCsv(H(csv("events-extra.csv")), csv("events-extra.csv")),
+    "macro-us-bls.csv": toCsv(["year", "cpi_u_avg", "cpi_u_yoy_pct", "unemployment_avg_pct"], csv("macro-us-bls.csv").filter((r) => +r.year <= last)),
     "spread-monthly.csv": toCsv(["month", "spread_10y2y_avg", "spread_10y3m_avg"], csv("spread-monthly.csv").filter((r) => r.month <= `${last}-12`)),
   };
   const ccText = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "cc-by-sa-4.0.txt"), "utf8");
@@ -186,6 +198,7 @@ S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같�
 | \`index-annual.csv\` | 지수 연말 값(나스닥100 1985~, 코스피 1981~)·연간 등락률(%). **S&P 500은 연말 지수 값 없이 등락률만** 있어요. 나스닥100·코스피 등락률은 연말 값으로 다시 계산한 값이에요 |
 | \`rates-monthly.csv\` | 월 단위: 연준 기준금리 목표(범위면 상·하단), 미 10년물 월말 값, 한국은행 기준금리(2008년 3월 전은 콜금리 목표), 국고채 10년 월평균 |
 | \`macro-us-annual.csv\` | 미국 연 단위: 10년·2년·3개월물 연말 값과 연평균, 장단기 금리차(%p), 그해 경기침체 월 수 |
+| \`macro-us-bls.csv\` | 미국 연 단위(1961~): 소비자물가지수(CPI-U, 전 품목, 비계절조정) 연평균·전년 대비(%)와 실업률(비계절조정) 연평균(%). 연평균은 월 12개의 단순 평균. 해당 해에 공표되지 않은 달이 있으면 빈 칸(2025: 10월 미공표) |
 | \`kr-annual.csv\` | 한국 연 단위: 기준금리·국고채 3년·10년 연말 값과 기준일 |
 | \`recessions-us.csv\` | NBER 경기순환 기준일(고점·저점)과 침체 구간(고점 다음 달 ~ 저점 월) |
 | \`events.csv\` | 사건 ${ev.length}건: 표시명·날짜·분류·사실 1줄·1차 출처 URL·관련 지수 |
@@ -202,6 +215,7 @@ S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같�
 - S&P 500: 이 폴더의 등락률은 위키 표 값이에요. 앱 화면은 Aswath Damodaran(NYU Stern) 공개 자료 「Historical Returns on Stocks, Bonds and Bills」(2026년 1월 갱신)의 연말 지수로 다시 계산한 값을 써서, 소수점 아래에서 이 파일과 차이가 날 수 있어요. Damodaran 값 자체는 이 폴더에 넣지 않아요.
 - 나스닥100 2003·2004년 연말 값은 다른 공개 자료와 최대 0.6% 차이가 있어요(위키 값 사용).
 - 금리: 미 연준 공개시장 표·H.15(미 정부 저작물, 출처 표기), 한국은행 ECOS(한국은행이 작성한 통계, 출처 표기).
+- 물가·실업률: 미 노동통계국(BLS) 원자료 CPI-U(\`CUUR0000SA0\`)·실업률(\`LNU04000000\`)의 월값을 세인트루이스 연은 FRED(\`CPIAUCNS\`·\`UNRATENSA\`)에서 받아 연평균으로 가공했어요(2026-11-22 내려받음). 미 정부 저작물(17 U.S.C. §105)로 공공 영역이며 출처 표기만 해요. BLS·FRED 공식 발표 연평균 표와는 반올림 차이가 있을 수 있어요.
 - 경기침체: NBER 경기순환 기준일(출처 표기 조건으로 복사 허용). NBER 로고·상표는 쓰지 않아요.
 - 사건: 미 연준 공개 문서(1차 출처 URL은 \`events.csv\`·\`events-extra.csv\`·\`events-year.csv\`).
 - S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc., KOSPI는 한국거래소의 상표예요. 시크릿에셋은 이 기관들과 제휴 관계가 아니에요.

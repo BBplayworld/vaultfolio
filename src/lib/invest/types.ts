@@ -32,6 +32,12 @@ export interface UsYearRow {
   s3: number | null;
   rec: number;
 }
+/** 미국 CPI-U 연평균 전년 대비 %·실업률 연평균 %(BLS 원자료, FRED 월값의 12개월 평균). 값 없으면 null */
+export interface BlsYearRow {
+  y: number;
+  cpi: number | null;
+  un: number | null;
+}
 export interface KrYearRow {
   y: number;
   base: number | null;
@@ -58,6 +64,8 @@ export interface MarketHistoryData {
   ovl: Record<RateKey, MonthSeries>;
   rec: Recession[];
   usYear: UsYearRow[];
+  /** R2: 1961~ 미국 물가·실업률 연평균 */
+  bls: BlsYearRow[];
   krYear: KrYearRow[];
   events: MarketEvent[];
   /** R4: 행 펼침·표 전용 사건(점 없음) */

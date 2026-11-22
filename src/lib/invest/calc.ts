@@ -228,3 +228,9 @@ export function pickDefaultIndex(holding: { domestic: number; overseas: number }
   return holding.domestic > holding.overseas ? "kospi" : "spx";
 }
 
+
+/** R2: 해별 미국 물가(CPI-U 연평균 전년 대비 %)·실업률(연평균 %). 자료 없는 해(2026 이후·2025 10월 미공표)는 null */
+export function blsYear(d: MarketHistoryData, y: number): { cpi: number | null; un: number | null } {
+  const r = d.bls.find((q) => q.y === y);
+  return { cpi: r?.cpi ?? null, un: r?.un ?? null };
+}
