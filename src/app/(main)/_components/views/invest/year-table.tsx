@@ -12,7 +12,7 @@ import { getProfitLossColor } from "@/config/theme";
 
 const US_NOTE = "금리차는 그해 마지막 거래일의 10년물에서 2년물·3개월물을 뺀 값이에요. 2년물은 1976년 6월, 3개월물은 1981년 9월부터 자료가 있어요. 경기침체는 NBER 기준으로 그해에 침체였던 달 수예요.";
 const KR_NOTE = "국고채는 그해 마지막 거래일 값이에요. 한국 기준금리는 2008년 3월 전에는 콜금리 목표예요.";
-export const YEAR_NOTE = "사건은 해마다 연준 원문으로 확인한 일을 시간순으로 적었어요. 1996·2006년은 찾지 못해 비워 뒀어요.";
+export const YEAR_NOTE = "사건은 해마다 연준 원문으로 확인한 일을 시간순으로 적었어요. 2006년은 찾지 못해 비워 뒀어요.";
 export const TABLE_HINT = "그림의 값을 해마다 표로 모았어요. 가로로 밀어 볼 수 있어요";
 
 export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => void }) {

@@ -106,8 +106,8 @@ function validate(d) {
     if ([...e.fact].length > 40 || !e.fact.endsWith("요.")) throw new Error(`사실 1줄: ${e.id}`);
     if (e.cat !== "금리·통화 정책" || !e.urls.every((u) => u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`추가 사건 분류·출처: ${e.id}`);
   });
-  // 해별 이슈: 53행, 1996·2006 비움, 연준 1차 출처만, 기존 정본(A)은 이름·사실 그대로
-  if (d.eventsYear.length !== 53) throw new Error(`해별 이슈는 53행이어야 해요: ${d.eventsYear.length}`);
+  // 해별 이슈: 54행, 2006 비움, 연준 1차 출처만, 기존 정본(A)은 이름·사실 그대로
+  if (d.eventsYear.length !== 54) throw new Error(`해별 이슈는 54행이어야 해요: ${d.eventsYear.length}`);
   const allEv = new Map([...d.events, ...d.eventsExtra].map((e) => [e.id, e]));
   d.eventsYear.forEach((e) => {
     if ([...e.fact].length > 40 || !e.fact.endsWith("요.")) throw new Error(`해별 이슈 사실 1줄: ${e.id}`);
@@ -115,7 +115,7 @@ function validate(d) {
     if (!e.urls.length || e.urls.some((u) => !u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`해별 이슈 1차 출처: ${e.id}`);
     if (e.ref) { const o = allEv.get(e.ref.replace(/^Y-/, "")); if (!o || o.name !== e.name || o.fact !== e.fact) throw new Error(`기존 정본과 다름: ${e.id}`); }
   });
-  for (let y = 1990; y <= 2025; y++) if (y !== 1996 && y !== 2006 && !d.eventsYear.some((e) => e.y === y)) throw new Error(`해별 이슈가 비었어요: ${y}`);
+  for (let y = 1990; y <= 2025; y++) if (y !== 2006 && !d.eventsYear.some((e) => e.y === y)) throw new Error(`해별 이슈가 비었어요: ${y}`);
   const usM = (m) => (monthIdx(m) >= monthIdx(d.ovl.us.from) ? d.ovl.us.v[monthIdx(m) - monthIdx(d.ovl.us.from)] : undefined);
   d.usYear.forEach((r) => { const m = usM(`${r.y}-12`); if (r.y10 != null && Math.abs(m - r.y10) > 0.005) throw new Error(`10년물 12월 월말 ≠ 연말: ${r.y}`); });
   d.usYear.forEach((r) => {
@@ -190,7 +190,7 @@ S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같�
 | \`recessions-us.csv\` | NBER 경기순환 기준일(고점·저점)과 침체 구간(고점 다음 달 ~ 저점 월) |
 | \`events.csv\` | 사건 ${ev.length}건: 표시명·날짜·분류·사실 1줄·1차 출처 URL·관련 지수 |
 | \`events-extra.csv\` | 연준 자산 매입·보유 축소 결정 10건(표시명·날짜·사실 1줄·연준 보도자료 URL) |
-| \`events-year.csv\` | 해별 경제 이슈 1990~2026(53행): 해·표시명·날짜·분류·지역·사실 1줄·연준 1차 출처 URL. 연준 공개 문서 기반이며 공개 문서는 출처 표기로 인용하고, 가공·정리한 이 표는 CC BY-SA 4.0 |
+| \`events-year.csv\` | 해별 경제 이슈 1990~2026(54행): 해·표시명·날짜·분류·지역·사실 1줄·연준 1차 출처 URL. 연준 공개 문서 기반이며 공개 문서는 출처 표기로 인용하고, 가공·정리한 이 표는 CC BY-SA 4.0 |
 
 ## 정의
 - 가격 지수(배당 제외), 미국 지수는 달러 기준, 연말 종가 기준이에요.
