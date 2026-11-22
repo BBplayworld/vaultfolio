@@ -100,14 +100,14 @@ describe("투자 탭 데이터: 하락·금리 집계 독립 재계산(AC4·AC5)
     expect(e[0].dd).toBeCloseTo(-41.9, 1);
     expect(e[2].dd).toBeCloseTo(-38.49, 1);
   });
-  it("금리 방향 기준선(지수 첫 해 포함, spec 4-6 숫자): S&P 43=18/16/9 · 나스닥 41=17/15/9 · 코스피 26=14/12/0", () => {
+  it("금리 방향 기준선(머리와 같은 해 범위, 첫 해 제외): S&P 43=18/16/9 · 나스닥 40=16/15/9 · 코스피 26=14/12/0", () => {
     const base = (k: "spx" | "ndx" | "kospi") => {
       const r = K[k], s = data.idx[k], b = { n: 0, up: 0, down: 0, flat: 0 };
-      for (let y = s.start; y <= data.last; y++) { const c = cls(delta(r, y - 1, y)); if (c !== "none") { b.n++; b[c as "up" | "down" | "flat"]++; } }
+      for (let y = s.start + 1; y <= data.last; y++) { const c = cls(delta(r, y - 1, y)); if (c !== "none") { b.n++; b[c as "up" | "down" | "flat"]++; } }
       return b;
     };
     expect(base("spx")).toEqual({ n: 43, up: 16, down: 18, flat: 9 });
-    expect(base("ndx")).toEqual({ n: 41, up: 15, down: 17, flat: 9 });
+    expect(base("ndx")).toEqual({ n: 40, up: 15, down: 16, flat: 9 });
     expect(base("kospi")).toEqual({ n: 26, up: 12, down: 14, flat: 0 });
   });
   it("하락 구간 금리 방향: S&P 내려감 2·올라감 1·자료 없음 1 / 나스닥 2·1 / 코스피 1·3·자료 없음 2", () => {

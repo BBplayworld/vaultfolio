@@ -38,9 +38,9 @@ describe("투자 탭 계산: 금리 방향(0.25%p)", () => {
     expect(classifyDelta(-0.25)).toBe("down");
     expect(classifyDelta(null)).toBe("none");
   });
-  it("기준선: S&P 43=18/16/9 · 나스닥 41=17/15/9 · 코스피 26=14/12/0 (down/up/flat)", () => {
+  it("기준선: S&P 43=18/16/9 · 나스닥 40=16/15/9 · 코스피 26=14/12/0 (down/up/flat)", () => {
     expect(views.spx.base).toEqual({ n: 43, up: 16, down: 18, flat: 9 });
-    expect(views.ndx.base).toEqual({ n: 41, up: 15, down: 17, flat: 9 });
+    expect(views.ndx.base).toEqual({ n: 40, up: 15, down: 16, flat: 9 });
     expect(views.kospi.base).toEqual({ n: 26, up: 12, down: 14, flat: 0 });
   });
   it("하락 구간 방향 표식", () => {

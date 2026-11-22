@@ -159,7 +159,8 @@ export function buildIndexView(d: MarketHistoryData, key: IndexKey, asof?: numbe
   const yrDir: IndexView["yrDir"] = {};
   for (const y of years) { const delta = rateDelta(d, r, y - 1, y); yrDir[y] = { d: delta, k: classifyDelta(delta) }; }
   const base: RateBase = { n: 0, up: 0, down: 0, flat: 0 };
-  for (const y of years) { const k = yrDir[y].k; if (k !== "none") { base.n++; base[k]++; } }
+  // 기준선은 머리(`{첫 해+1}년 이후`)와 같은 해들만 센다 — 지수의 첫 연말값 해는 연간 등락이 없어 제외(나스닥 1985 제외, #263 N-2)
+  for (const y of years.slice(1)) { const k = yrDir[y].k; if (k !== "none") { base.n++; base[k]++; } }
   const ev: EventPoint[] = d.events
     .filter((e) => e.idx.includes(M.ev))
     .map((e) => ({ ...e, t: +e.pm.slice(0, 4) + (+e.pm.slice(5) - 0.5) / 12, y: +e.pm.slice(0, 4) }))
