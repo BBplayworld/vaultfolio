@@ -122,7 +122,7 @@ export const QUESTION_HEAD = {
 } as const;
 
 /** R2: 미국 물가·실업률 출처·정의(화면 반영 전 문구 정본). 'BLS 공식' 표기·FRED 로고·제휴 표현 금지 */
-export const BLS_SOURCE = "물가·실업률: 미 노동통계국(BLS) · FRED(세인트루이스 연은) 경유, 원자료 시리즈 CUUR0000SA0·LNU04000000을 가공했어요(공공 영역).";
+export const BLS_SOURCE = "물가·실업률: 미 노동통계국(BLS) · FRED(세인트루이스 연은) 경유(CPIAUCNS·UNRATENSA) 자료를 가공했어요(공공 영역).";
 export const BLS_INFO = "연평균은 월 12개 평균이에요. 물가는 CPI-U(전 품목) 연평균의 전년 대비 %, 실업률은 연평균 %예요.";
 
 /** R2-3: 펼침 안 `같은 해` 줄 값(현재 지수 제외 나머지). 단위 표기만, 환산·인과 0 */
