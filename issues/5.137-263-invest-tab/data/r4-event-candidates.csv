@@ -1,0 +1,19 @@
+id,date,category,name_draft,fact_draft,url_candidate,index,status,note
+N01,1995-07,금리·통화 정책,연준 인하(1995),연준이 1995년 7월 목표를 6%에서 5.75%로 내렸어요.,https://www.federalreserve.gov/monetarypolicy/openmarket_archive.htm,세 지수,후보·원문 재열람 필요,rates-annual 1995(인상1·인하2·연말 5.50)과 일치. '연착륙'은 해석어라 금지
+N02,1998-09~11,금리·통화 정책,연준 인하(1998),연준이 1998년 9~11월 세 번 내려 목표가 4.75%가 됐어요.,https://www.federalreserve.gov/monetarypolicy/openmarket_archive.htm,세 지수,후보·원문 재열람 필요,rates-annual 1998(인하3·연말 4.75)과 일치
+N03,2024-09-18,금리·통화 정책,연준 인하(2024),연준이 목표범위를 0.5%p 내려 4.75~5%로 정했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20240918a.htm,세 지수,후보·원문 재열람 필요,rates-annual 2024(인하3·연말 4.50)과 일치. N01~N03은 '금리 전환' 규칙 채택 시에만(설계 2-3 참조)
+A01,2008-11-25,금리·통화 정책,연준 자산매입 시작,연준이 주택저당증권과 정부기관 채권을 사들이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20081125b.htm,세 지수,후보·원문 재열람 필요,하락 창(금융위기) 안
+A02,2009-03-18,금리·통화 정책,연준 매입 확대(2009),연준이 주택저당증권 매입을 늘리고 장기 국채도 사기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20090318a.htm,세 지수,후보·원문 재열람 필요,
+A03,2010-11-03,금리·통화 정책,연준 국채 매입(2010),연준이 2011년 6월까지 장기 국채를 더 사들이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20101103a.htm,세 지수,후보·원문 재열람 필요,
+A04,2012-09-13,금리·통화 정책,연준 매입 재개(2012),연준이 주택저당증권을 매달 사들이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20120913a.htm,세 지수,후보·원문 재열람 필요,
+A05,2013-12-18,금리·통화 정책,연준 매입 축소(2013),연준이 2014년 1월부터 자산 매입 속도를 줄이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20131218a.htm,세 지수,후보·원문 재열람 필요,E23(2013-05 발언)과 같은 해
+A06,2014-10-29,금리·통화 정책,연준 매입 종료,연준이 10월로 자산 매입을 끝내기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20141029a.htm,세 지수,후보·원문 재열람 필요,
+A07,2017-09-20,금리·통화 정책,연준 보유 축소(2017),연준이 10월부터 보유 채권을 줄이기 시작하기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20170920a.htm,세 지수,후보·원문 재열람 필요,
+A08,2020-03-23,금리·통화 정책,연준 무제한 매입,연준이 국채와 주택저당증권을 필요한 만큼 사겠다고 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20200323b.htm,세 지수,후보·원문 재열람 필요,E30과 같은 달. C1 합침 대상
+A09,2021-11-03,금리·통화 정책,연준 매입 축소(2021),연준이 11월 말부터 자산 매입 속도를 줄이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20211103a.htm,세 지수,후보·원문 재열람 필요,
+A10,2022-05-04,금리·통화 정책,연준 보유 축소(2022),연준이 6월 1일부터 보유 채권을 줄이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20220504b.htm,세 지수,후보·원문 재열람 필요(a/b 중 계획 문서 확인),하락 창(2022) 안
+H01,2023~24,(보류),AI 투자 확대,—,연준 원문 문장 미확인(FSR·의사록 탐색 필요),나스닥·S&P,보류,'기대'·'붐'은 해석어. 연준 문서가 사실로 적은 문장이 있을 때만
+H02,1997~99,(보류),기술 투자 붐,—,연준 증언·통화정책보고서 탐색 필요,나스닥·S&P,보류,'붐'·'과열' 해석어. 1996-12 연설 '비이성적 과열'은 평가 인용이라 R3 위반 소지 → 제외
+H03,1980년대,(보류),디스인플레이션,—,BLS(403)·govinfo 대통령 경제보고서(탐색 중),S&P,보류,물가 자료 후속(spec 2절)과 묶음
+H04,2009·2017·2020,(보류·새 분류 필요),미국 재정법(ARRA·감세법·CARES),—,https://www.congress.gov/,세 지수,보류,'재정 정책' 8번째 분류 신설 필요 → CEO 판정
+H05,2024·2025,(보류),한국 밸류업·상법 개정,—,금융위원회·법제처 원문(호스트 미허용),코스피,보류,1차 원문 열람 경로 없음
