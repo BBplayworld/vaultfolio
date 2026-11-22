@@ -91,3 +91,13 @@ describe("낙폭 상시(D-3)·히트맵 라벨(D-9)", () => {
     expect(html).not.toContain(">0년<");
   });
 });
+
+describe("수정 라운드(N-2·N-3)", () => {
+  it("사건 줄 상한: 320은 1건 + 외 n건, 390은 2건 + 외 n건(말줄임 없음)", async () => {
+    const { readoutOf, CALC_PAST } = await import("@/lib/invest/text");
+    expect(readoutOf(views.spx, 2022, 1).events).toMatch(/ 외 2건$/);
+    expect(readoutOf(views.spx, 2022, 2).events).toMatch(/ 외 1건$/);
+    expect(readoutOf(views.spx, 2022, 1).events).not.toContain("…");
+    expect(CALC_PAST).toBe("과거 연말 값으로 계산한 결과예요. 앞으로도 같다는 뜻은 아니에요.");
+  });
+});

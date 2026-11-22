@@ -22,10 +22,10 @@ export const NOWRAP_YEAR_SUFFIX = ["[^\\s·]*\\(\\d{4}(?:~\\d{2,4})?\\)"];
 export const EventName = ({ name }: { name: string }) => <NoBreak text={name} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} />;
 
 /** 읽기 줄 칩: 구분점 `·`을 뒤 칩 앞에 붙여 한 덩어리로 묶는다 — 좁은 폭에서 줄 끝에 `·`이 매달리지 않는다(D-11) */
-export function ReadoutChips({ ro }: { ro: Readout }) {
+export function ReadoutChips({ ro, hideYear = false }: { ro: Readout; hideYear?: boolean }) {
   return (
     <>
-      <span className="whitespace-nowrap">{ro.year}년 말 <b className="font-bold tabular-nums">{ro.level}</b></span>
+      <span className="whitespace-nowrap">{hideYear ? "연말" : `${ro.year}년 말`} <b className="font-bold tabular-nums">{ro.level}</b></span>
       <span className="whitespace-nowrap">· <b className={`font-bold tabular-nums ${ro.ret == null ? "" : getProfitLossColor(ro.ret)}`}>{ro.ret == null ? "—" : fmtPct(ro.ret)}</b></span>
       <span className="whitespace-nowrap text-muted-foreground">· {ro.dir}</span>
       {ro.recession && <span className="whitespace-nowrap text-muted-foreground">· 경기침체</span>}

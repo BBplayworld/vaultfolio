@@ -147,8 +147,10 @@ export function MainChart({
 
   const nameAt = (clientX: number, clientY: number, svg: SVGSVGElement) => {
     const r = svg.getBoundingClientRect(), x = ((clientX - r.left) / r.width) * W, y = ((clientY - r.top) / r.height) * H;
-    const hit = L.labels.find((l) => !l.drop && y >= P2b + l.tier * TIER && y < P2b + (l.tier + 1) * TIER + 2 && x >= l.x0 - 8 && x <= l.x0 + l.w + 8);
-    return hit ? view.eps[hit.k] : null;
+    // 줄별 분리: x가 이름표 상자(±8px) 안인 이름표 중 탭 y에 가장 가까운 줄의 것(2단 이름표도 중심 탭이 먹는다)
+    const near = L.labels.filter((l) => !l.drop && x >= l.x0 - 8 && x <= l.x0 + l.w + 8).sort((a, b) => Math.abs(y - (P2b + 10 + a.tier * TIER)) - Math.abs(y - (P2b + 10 + b.tier * TIER)));
+    const hit = near[0];
+    return hit && Math.abs(y - (P2b + 10 + hit.tier * TIER)) <= TIER ? view.eps[hit.k] : null;
   };
   const handlers = {
     onPointerDown: (e: React.PointerEvent<SVGRectElement>) => {
@@ -354,7 +356,7 @@ export function MainChart({
       })}
       <rect x={GX} y={P1 - 6} width={PW} height={P3b - P1 + 6} fill="transparent" data-testid="invest-chart-hit" {...handlers} />
       {/* D-1: 이름표 탭 → 그 하락의 바닥 해. 이름표 밖은 기존 해 고르기·끌기와 같다 */}
-      <rect x={GX} y={P2b} width={PW} height={L.nameRows * TIER + 6} fill="transparent" data-testid="name-hit" {...handlers} />
+      <rect x={GX} y={P2b} width={PW} height={Math.max(40, L.nameRows * TIER + 6)} fill="transparent" data-testid="name-hit" {...handlers} />
     </svg>
   );
 }

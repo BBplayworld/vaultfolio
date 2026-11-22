@@ -10,7 +10,7 @@ import { C, HALO, LOSS_FILL, LOSS_STROKE, SVG_TEXT } from "./chart-style";
 
 export function ZoomChart({ data, view, ep, width }: { data: MarketHistoryData; view: IndexView; ep: Episode; width: number }) {
   const uid = useId().replace(/:/g, "");
-  const W = width, GX = 44, RP = 16, PW = W - GX - RP;
+  const W = width, GX = 50, RP = 16, PW = Math.max(1, W - GX - RP);
   const a = Math.max(view.start, ep.py - 1), z = Math.min(view.last, (ep.ry ?? view.last) + 1), span = z - a;
   const X = (t: number) => GX + ((t - a) / span) * PW, XE = (Y: number) => X(Y);
   const R = view.rate, close = view.close, ix = (Y: number) => close[Y - view.start];

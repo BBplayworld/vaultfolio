@@ -6,7 +6,7 @@ import { Info } from "lucide-react";
 import { useRef, useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
 import { APPROX_DEF, APPROX_LINE, HOLD_LINE, IRR_SENTENCE, PERIOD_FOOT_1, dcaSentence, fixPeriod, lumpSentence, periodPresets, periodResult, periodText } from "@/lib/invest/period";
-import { CALC_DIV, CALC_FOOT, MINUS, fmtPct } from "@/lib/invest/text";
+import { CALC_DIV, CALC_FOOT, CALC_PAST, MINUS, fmtPct } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 import { C, HALO, SVG_TEXT } from "./chart-style";
 import { NOWRAP_TAIL, NoBreak } from "./nowrap";
@@ -24,6 +24,8 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
   const G = Math.max(...ticks.map((v) => tl(v).length)) * 6.4 + 8, PW = W - G, bw = PW / (n + 1), X = (i: number) => bw * (i + 0.5);
   const rets: number[] = []; for (let Y = sy + 1; Y <= ey; Y++) rets.push(view.ret[Y - view.start] as number);
   const showLbl = bw >= 20, mp = Math.max(0, ...rets), mn = Math.max(0, ...rets.map((x) => -x)), pad = showLbl ? 14 : 3, T2 = T1 + H1 + 40, H2 = 92;
+  // N-4: 값 라벨 폭(≈`+24` 20px·`−12.3` 더 넓음)이 이웃 라벨과 4px 안으로 붙으면 뒤쪽 라벨은 생략
+  const lblOn = new Set<number>(); { let lastX = -99; rets.forEach((x, k) => { const w = f0(x).length * 7.2 + 2, cx = X(k + 1); if (cx - w / 2 >= lastX + 4) { lblOn.add(k + 1); lastX = cx + w / 2; } }); }
   const sc = (H2 - 2 * pad) / (mp + mn || 1), z = T2 + pad + mp * sc;
   const xs = [sy]; for (let Y = sy + 1; Y <= ey; Y++) if ((Y - sy) % (bw >= 34 ? 1 : bw >= 17 ? 2 : bw >= 7 ? 5 : 10) === 0) xs.push(Y);
   if (xs[xs.length - 1] !== ey) xs.push(ey);
@@ -73,7 +75,7 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
         return (
           <g key={i}>
             <rect data-testid="period-bar" data-y={sy + i} x={X(i) - w / 2} y={x >= 0 ? z - h : z} width={w} height={Math.max(h, 1)} rx={Math.min(2, w / 4)} className={x >= 0 ? "fill-rose-600 dark:fill-rose-400" : "fill-blue-600 dark:fill-blue-400"} />
-            {showLbl && <text className="fill-foreground" style={HALO} x={X(i)} y={x >= 0 ? z - h - 4 : z + h + 12} textAnchor="middle" fontSize={12} fontWeight={600}>{f0(x)}</text>}
+            {showLbl && lblOn.has(i) && <text className="fill-foreground" style={HALO} x={X(i)} y={x >= 0 ? z - h - 4 : z + h + 12} textAnchor="middle" fontSize={12} fontWeight={600}>{f0(x)}</text>}
           </g>
         );
       })}
@@ -128,6 +130,7 @@ export function PeriodCard({ view, period, onChange, question }: { view: IndexVi
           <div data-testid="calc-hold-dca" className="text-xs text-muted-foreground break-keep"><NoBreak text={HOLD_LINE(t.hold)} phrases={[]} tails={NOWRAP_TAIL} /></div>
         </div>
       </div>
+      <p data-testid="calc-past" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} /></p>
       <p data-testid="period-honest" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">
         {APPROX_LINE}
         {/* ⓘ는 끝 어절 바로 뒤(40px 히트, 줄 높이는 음수 마진으로 유지) */}

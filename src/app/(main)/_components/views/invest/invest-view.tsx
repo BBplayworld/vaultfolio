@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { QUESTION_HEAD, headlineLines, READOUT_HINT, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
+import { QUESTION_HEAD, headlineLines, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -35,7 +35,7 @@ const INDEX_OPTIONS = INDEX_KEYS.map((k) => ({ value: k, label: INDEX_META[k].la
 export function ChartSkeleton({ wide }: { wide: boolean }) {
   const h = layoutMain(buildIndexView(marketHistory, "spx"), 326, wide);
   return (
-    <div data-testid="invest-chart-skeleton" aria-hidden className="flex flex-col gap-3" style={{ minHeight: h.H + 44 }}>
+    <div data-testid="invest-chart-skeleton" aria-hidden className="flex flex-col gap-3" style={{ minHeight: h.H }}>
       <div className="rounded-xl bg-secondary" style={{ height: h.H1 }} />
       <div className="rounded-xl bg-secondary" style={{ height: h.H2 }} />
       <div className="rounded-xl bg-secondary" style={{ height: h.H3 }} />
@@ -106,6 +106,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const mounted = useMounted();
   const wide = useMediaQuery("(min-width: 1280px)");
   const chartRef = useRef<HTMLDivElement>(null);
+  const stepRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(chartRef);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -134,7 +135,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   useEffect(() => {
     const down = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (yr != null && chartRef.current && !chartRef.current.contains(t)) setYr(null);
+      if (yr != null && chartRef.current && !chartRef.current.contains(t) && !stepRef.current?.contains(t)) setYr(null);
       if (menu && !menuRef.current?.contains(t) && !btnRef.current?.contains(t)) setMenu(false);
     };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape" && menu) { setMenu(false); btnRef.current?.focus(); } };
@@ -154,7 +155,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   // D-1: 해 스테퍼 — 기존 pickYear만 호출한다(상태 신설 0). 선택이 없으면 어느 쪽이든 마지막 해부터
   const stepYear = (d: 1 | -1) => pickYear(yr == null ? view.last : Math.max(view.start + 1, Math.min(view.last, yr + d)));
   const stepCls = "inline-flex size-10 items-center justify-center rounded-xl bg-secondary text-foreground outline-none motion-safe:transition-[background-color,transform] motion-safe:duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40 disabled:active:scale-100";
-  const ro = yr != null ? readoutOf(view, yr) : null;
+  const ro = yr != null ? readoutOf(view, yr, width > 0 && width < 300 ? 1 : 2) : null;
   const listW = width || 300;
 
   const changeTab = (t: "drop" | "rise") => { setListTab(t); if (t === "rise") once("invest_rise_tab"); };
@@ -178,15 +179,24 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         {/* R3: 모바일은 base 줄을 `크게 빠진 때` 카드 각주로 옮긴다(첫 화면 숫자 예산). 1280은 현행 */}
         {wide && <p data-testid="invest-base" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>}
       </div>
-      <div data-testid="invest-readout" aria-live="polite" className="mt-2 min-h-12 max-[359px]:min-h-16">
-        {ro && showLevels ? (
-          <>
-            <div className="flex flex-wrap items-center gap-x-1.5 text-sm" data-testid="readout-main">
-              <ReadoutChips ro={ro} />
-              {ro.events && <div className="basis-full pt-0.5 text-xs leading-snug break-keep"><span className="text-muted-foreground">사건</span> <NoBreak text={ro.events} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} /></div>}
-            </div>
-          </>
-        ) : <p className="flex h-7 items-center text-xs text-muted-foreground">{READOUT_HINT}</p>}
+      {/* 읽기 줄 예약 영역: 첫 행 = 해 스테퍼(라벨이 해 고르기 안내를 겸함), 둘째 행 = 읽기 줄. 해를 골라도 높이가 변하지 않는다(5.138 N-2) */}
+      <div data-testid="invest-readout" className="mt-2 flex min-h-[60px] flex-wrap content-start items-center gap-x-2 gap-y-0.5 max-[389px]:min-h-[76px] max-[359px]:min-h-[84px]">
+        {showLevels && (
+          <div
+            ref={stepRef} role="group" aria-label="해 이동" data-testid="year-stepper" className="flex h-10 shrink-0 items-center gap-1"
+            onKeyDown={(e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); stepYear(e.key === "ArrowLeft" ? -1 : 1); } }}
+          >
+            <button type="button" aria-label="이전 해" data-testid="year-prev" disabled={yr != null && yr <= view.start + 1} onClick={() => stepYear(-1)} className={stepCls}><ChevronLeft aria-hidden className="size-5" /></button>
+            <span data-testid="year-stepper-label" className={yr != null ? "min-w-[4rem] text-center text-base font-semibold tabular-nums" : "min-w-[4rem] text-center text-xs text-muted-foreground"}>{yr != null ? `${yr}년` : "해 고르기"}</span>
+            <button type="button" aria-label="다음 해" data-testid="year-next" disabled={yr != null && yr >= view.last} onClick={() => stepYear(1)} className={stepCls}><ChevronRight aria-hidden className="size-5" /></button>
+          </div>
+        )}
+        {ro && showLevels && (
+          <div aria-live="polite" data-testid="readout-main" className="flex min-w-0 flex-1 basis-0 flex-wrap items-center gap-x-1.5 text-xs">
+            <ReadoutChips ro={ro} hideYear />
+          </div>
+        )}
+        {ro && showLevels && ro.events && <div className="basis-full text-xs leading-snug break-keep"><span className="text-muted-foreground">사건</span> <NoBreak text={ro.events} phrases={[]} tails={NOWRAP_YEAR_SUFFIX} /></div>}
       </div>
       <div ref={chartRef} className="relative mt-1 min-w-0" data-testid="invest-chart-wrap">
         {L && showLevels ? (
@@ -219,14 +229,6 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
                   <Check aria-hidden className={`size-4 text-brand dark:text-indigo-300 ${ovOn === on ? "" : "invisible"}`} />
                 </button>
               ))}
-            </div>
-            <div
-              role="group" aria-label="해 이동" data-testid="year-stepper" className="mt-1 flex h-10 items-center justify-center gap-2"
-              onKeyDown={(e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); stepYear(e.key === "ArrowLeft" ? -1 : 1); } }}
-            >
-              <button type="button" aria-label="이전 해" data-testid="year-prev" disabled={yr != null && yr <= view.start + 1} onClick={() => stepYear(-1)} className={stepCls}><ChevronLeft aria-hidden className="size-5" /></button>
-              <span data-testid="year-stepper-label" className={yr != null ? "min-w-[4.5rem] text-center text-base font-semibold tabular-nums" : "min-w-[4.5rem] text-center text-xs text-muted-foreground"}>{yr != null ? `${yr}년` : "해 고르기"}</span>
-              <button type="button" aria-label="다음 해" data-testid="year-next" disabled={yr != null && yr >= view.last} onClick={() => stepYear(1)} className={stepCls}><ChevronRight aria-hidden className="size-5" /></button>
             </div>
           </>
         ) : <ChartSkeleton wide={wide} />}
