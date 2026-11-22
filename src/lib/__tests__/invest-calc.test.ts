@@ -220,3 +220,17 @@ describe("투자 탭 차트 기하", () => {
     expect(t.hi).toBeGreaterThanOrEqual(6846);
   });
 });
+
+describe("투자 탭 기본 지수 판정용 보유 분할(기기 안 계산)", () => {
+  const st = (category: "domestic" | "foreign" | "unlisted", q: number, p: number, currency: "KRW" | "USD" = "KRW", inactiveStatus?: "delisted") => ({ category, quantity: q, currentPrice: p, currency, inactiveStatus });
+  it("국내·해외 평가액(원 환산)", async () => {
+    const { holdingSplit } = await import("../invest/default-index");
+    expect(holdingSplit([st("domestic", 10, 1000), st("foreign", 1, 5, "USD")], { USD: 1400, JPY: 900 })).toEqual({ domestic: 10000, overseas: 7000 });
+  });
+  it("주식이 없거나 상장폐지뿐이면 null(= S&P 500)", async () => {
+    const { holdingSplit } = await import("../invest/default-index");
+    expect(holdingSplit([], { USD: 1400, JPY: 900 })).toBeNull();
+    expect(holdingSplit([st("domestic", 1, 1000, "KRW", "delisted")], { USD: 1400, JPY: 900 })).toBeNull();
+    expect(holdingSplit([st("unlisted", 1, 1000)], { USD: 1400, JPY: 900 })).toBeNull();
+  });
+});
