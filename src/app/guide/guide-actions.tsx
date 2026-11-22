@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { trackScreen, trackThenNavigate } from "@/lib/analytics/ga";
+import { track, trackScreen, trackThenNavigate } from "@/lib/analytics/ga";
 import { TRIAL_ENTRY_URL } from "@/lib/trial/trial-mode";
 
 import type { GuideCta, GuideSlug } from "./guide-copy";
@@ -24,7 +24,8 @@ function GuideCtaButton({ cta, variant, testId }: { cta: GuideCta; variant: "bra
   if (cta.kind === "link") {
     return (
       <Button asChild variant={variant} className={CTA_BASE} data-testid={testId}>
-        <Link href={cta.href}>{cta.label}</Link>
+        {/* 앱 홈(`/`)으로 가는 link CTA만 이동 의도를 센다(page_title `가이드·내 자산 이동`, 파라미터 0). 이동은 막지 않는다 */}
+        <Link href={cta.href} onClick={cta.href === "/" ? () => track("feature_use", { category: "guide_move" }) : undefined}>{cta.label}</Link>
       </Button>
     );
   }
