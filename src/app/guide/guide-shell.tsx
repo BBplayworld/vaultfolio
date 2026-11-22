@@ -46,7 +46,7 @@ export function GuideShell({ slug }: { slug: GuideSlug }) {
           <span className="text-sm font-semibold text-foreground">{APP_CONFIG.name}</span>
         </header>
         <GuideScreenTracker slug={slug} />
-        {slug === "market-history" ? <MarketHistoryArticle doc={doc} /> : <GuideArticle doc={doc} />}
+        {slug === "market-history" || slug === "index-returns-by-year" ? <MarketHistoryArticle doc={doc} withDecadeTable={slug === "index-returns-by-year"} /> : <GuideArticle doc={doc} />}
         <nav aria-labelledby="guide-other-title" data-testid="guide-other-list" className="flex flex-col">
           <h2 id="guide-other-title" className="mb-1 text-sm font-semibold">
             다른 가이드
