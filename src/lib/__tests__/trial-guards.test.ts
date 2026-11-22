@@ -114,12 +114,12 @@ describe("정적 검사 — 숨김 목록·인라인 GA 플래그", () => {
   it("루트 layout 인라인 GA 스크립트: trial=1이면 ga-disable", () => {
     expect(read("app/layout.tsx")).toContain("if (params.get('trial') === '1') window['ga-disable-' + GA_ID] = true;");
   });
-  it("FAB·상단 더보기/설치·하단 update/more 가드", () => {
+  it("FAB·상단 더보기/설치·하단 update 가드(체험 4칸: 투자 포함, #263)", () => {
     expect(read("app/(main)/page.tsx")).toContain("{!isTrialMode() && <FloatingAddButton />}");
     const top = read("app/(main)/_components/header-menu/top-bar.tsx");
     expect(top).toContain('const showMore = view.type === "home" && !isWelcomeGuide && !trial;');
     expect(top).toContain("const showInstall = !trial;");
-    expect(read("app/(main)/_components/pwa/bottom-nav.tsx")).toContain('NAV_ITEMS.filter(({ id }) => id !== "update" && id !== "more")');
+    expect(read("app/(main)/_components/pwa/bottom-nav.tsx")).toContain('NAV_ITEMS.filter(({ id }) => id !== "update")');
   });
   it("인앱 게이트에 isTrialMode() 전달", () => {
     expect(read("app/(main)/_components/pwa/in-app-browser-gate.tsx")).toContain("resolveInAppGate({ isTrial: isTrialMode(),");

@@ -26,6 +26,7 @@ export type AssetView =
   | { type: "more" }
   | { type: "settings"; focus?: "notify" } // focus: 렌더 후 알림 구역 1회 스크롤(5.115, 해시·저장에 남기지 않음)
   | { type: "tax" }
+  | { type: "invest" } // 투자 탭(#263): 과거 시장 기록(하단 1차 탭). 하위 해시 0
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab; init?: ChangeInit };
 
@@ -92,14 +93,15 @@ const LEGACY_ACTIVITY_TABS: Record<string, ChangeInit> = {
 };
 
 // 1차 메뉴 좌우 순서 — 스와이프 이동·슬라이드 방향 계산 공용
-const PAGE_ORDER = ["home", "detail", "activity", "more"] as const;
+// 더보기는 홈 헤더 아이콘으로 여는 페이지라 순서 밖(#263). 투자가 마지막 칸
+const PAGE_ORDER = ["home", "detail", "activity", "invest"] as const;
 type MainViewType = typeof PAGE_ORDER[number];
 // 슬라이드 전환 방향: "right"=오른쪽에서 진입(다음 메뉴), "left"=왼쪽에서 진입(이전 메뉴)
 export type SlideDir = "left" | "right" | null;
-// settings는 더보기, tax는 상세 하위 페이지(4.89) — 스와이프 위치상 각각 more·detail로 취급(PAGE_ORDER는 불변)
-const mainTypeOf = (t: AssetView["type"]): MainViewType => (t === "settings" ? "more" : t === "tax" ? "detail" : t);
-// 체험(#59)은 더보기·설정을 두지 않는다(하단 탭·상단 메뉴와 같은 범위) — 스와이프 순서에서 more 제외
-const TRIAL_SWIPE_ORDER: readonly MainViewType[] = ["home", "detail", "activity"];
+// tax는 상세 하위 페이지(4.89) — 스와이프 위치상 detail로 취급. more·settings는 순서 밖(indexOf -1 → 슬라이드·스와이프 없음)
+const mainTypeOf = (t: AssetView["type"]): AssetView["type"] => (t === "tax" ? "detail" : t);
+// 체험(#59)은 더보기·설정을 두지 않지만 투자는 둔다(#263: 체험 하단 홈·상세·성과·투자) — 스와이프 순서는 비체험과 같다
+const TRIAL_SWIPE_ORDER: readonly MainViewType[] = ["home", "detail", "activity", "invest"];
 export function swipeOrderOf(trial: boolean): readonly MainViewType[] {
   return trial ? TRIAL_SWIPE_ORDER : PAGE_ORDER;
 }
@@ -115,6 +117,7 @@ export function parseHash(hash: string): AssetView {
   if (clean === "more") return { type: "more" };
   if (clean === "settings") return { type: "settings" };
   if (clean === "tax") return { type: "tax" };
+  if (clean === "invest") return { type: "invest" };
   const [type, tab] = clean.split("/");
   if (type === "detail") {
     // #detail (탭 생략) → hub
@@ -135,6 +138,7 @@ export function toHash(view: AssetView): string {
   if (view.type === "more") return "#more";
   if (view.type === "settings") return "#settings";
   if (view.type === "tax") return "#tax";
+  if (view.type === "invest") return "#invest";
   // 허브는 짧은 #detail / #activity 형태 유지
   if (view.tab === "hub") return `#${view.type}`;
   return `#${view.type}/${view.tab}`;
@@ -146,6 +150,7 @@ export function toHash(view: AssetView): string {
 export function getBackLabel(view: AssetView, stockPageOrigin?: "stocks" | "market-compare", reportFromDetail = false): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "홈";
+  if (view.type === "invest") return "홈";
   if (view.type === "settings") return "더보기";
   // 세금 일정은 홈 배너·더보기 두 경로에서 진입하므로 중립 라벨(실제 복귀는 history.back)
   if (view.type === "tax") return "뒤로";
@@ -236,8 +241,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   // 1차 메뉴 간 이동 방향 계산 (그 외엔 null → 기본 전환)
   const computeSlideDir = (from: AssetView, to: AssetView): SlideDir => {
-    const pi = PAGE_ORDER.indexOf(mainTypeOf(from.type));
-    const ni = PAGE_ORDER.indexOf(mainTypeOf(to.type));
+    const pi = (PAGE_ORDER as readonly string[]).indexOf(mainTypeOf(from.type));
+    const ni = (PAGE_ORDER as readonly string[]).indexOf(mainTypeOf(to.type));
     if (pi < 0 || ni < 0 || pi === ni) return null;
     return ni > pi ? "right" : "left";
   };
@@ -339,7 +344,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const enoughDistance = absX > 45;
       const isFlick = duration < 400 && absX > 30; // 빠르고 짧은 플릭
       if (duration <= 1000 && isHorizontal && (enoughDistance || isFlick)) {
-        const currentType = mainTypeOf(view.type);
+        const currentType = mainTypeOf(view.type) as MainViewType;
         const order = swipeOrderOf(isTrialMode());
         if (!order.includes(currentType)) return;
 
@@ -353,7 +358,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
             if (targetType === "home") navigate({ type: "home" });
             else if (targetType === "detail") navigate({ type: "detail", tab: "hub" });
             else if (targetType === "activity") navigate({ type: "activity", tab: "hub" });
-            else if (targetType === "more") navigate({ type: "more" });
+            else if (targetType === "invest") navigate({ type: "invest" });
           }
         } else {
           // RtoL swipe: 하단 NAV 기준 오른쪽 메뉴 이동 (인덱스 증가)
@@ -363,7 +368,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
             if (targetType === "home") navigate({ type: "home" });
             else if (targetType === "detail") navigate({ type: "detail", tab: "hub" });
             else if (targetType === "activity") navigate({ type: "activity", tab: "hub" });
-            else if (targetType === "more") navigate({ type: "more" });
+            else if (targetType === "invest") navigate({ type: "invest" });
           }
         }
       }

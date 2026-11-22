@@ -37,7 +37,7 @@ export default function Page() {
   const initTutorial = useTutorialStore((s) => s.initTutorial);
   const completeStep = useTutorialStore((s) => s.completeStep);
   const isWizardOpen = useOnboardingWizardStore((s) => s.isOpen);
-  const hideFooterInPWA = isStandalone && (view.type === "detail" || view.type === "activity");
+  const hideFooterInPWA = isStandalone && (view.type === "detail" || view.type === "activity" || view.type === "invest");
 
   const hasNoAssets = !hasAnyAssets(assetData);
   const isWelcomeGuide = isSharePending || hasNoAssets;
