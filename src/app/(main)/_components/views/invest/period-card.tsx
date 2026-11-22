@@ -9,10 +9,10 @@ import { APPROX_DEF, APPROX_LINE, HOLD_LINE, IRR_SENTENCE, PERIOD_FOOT_1, dcaSen
 import { CALC_DIV, CALC_FOOT, MINUS, fmtPct } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 import { C, HALO, SVG_TEXT } from "./chart-style";
-import { NoBreak } from "./nowrap";
+import { NOWRAP_TAIL, NoBreak } from "./nowrap";
 import { useElementWidth } from "./use-width";
 
-const SELECT_CLS = "h-10 min-w-0 flex-1 appearance-none rounded-xl bg-secondary pl-11 pr-7 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
+const SELECT_CLS = "h-10 min-w-0 flex-1 appearance-none rounded-xl bg-secondary pl-9 pr-6 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
 const stepAx = (M: number) => [0.5, 1, 2, 5, 10, 20, 50, 100, 200].find((s) => M / s <= 4) ?? 200;
 const f0 = (v: number) => { const r = Math.round(v); return r > 0 ? `+${r}` : r < 0 ? `${MINUS}${Math.abs(r)}` : "0"; };
 
@@ -26,12 +26,40 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
   const showLbl = bw >= 20, mp = Math.max(0, ...rets), mn = Math.max(0, ...rets.map((x) => -x)), pad = showLbl ? 14 : 3, T2 = T1 + H1 + 40, H2 = 92;
   const sc = (H2 - 2 * pad) / (mp + mn || 1), z = T2 + pad + mp * sc;
   const xs = [sy]; for (let Y = sy + 1; Y <= ey; Y++) if ((Y - sy) % (bw >= 34 ? 1 : bw >= 17 ? 2 : bw >= 7 ? 5 : 10) === 0) xs.push(Y);
-  if (xs[xs.length - 1] !== ey) { if (X(ey - sy) - X(xs[xs.length - 1] - sy) < 36) xs.pop(); xs.push(ey); }
+  if (xs[xs.length - 1] !== ey) xs.push(ey);
+  // 연도 글자(≈26px)가 겹치지 않게 폭 기준으로 솎는다: 첫 라벨은 왼쪽 정렬(0~26px), 다음은 중심이 직전 라벨 오른쪽 끝 + 16px 이상(R-5)
+  const keep: number[] = [];
+  for (const Y of xs) {
+    const x = X(Y - sy), right = keep.length ? (keep.length === 1 && X(keep[0] - sy) < 16 ? 26 : X(keep[keep.length - 1] - sy) + 13) : -99;
+    if (x - 13 >= right + 3) keep.push(Y);
+    else if (Y === ey && keep.length > 1) { keep.pop(); if (x - 13 >= (keep.length === 1 && X(keep[0] - sy) < 16 ? 26 : X(keep[keep.length - 1] - sy) + 13) + 3) keep.push(Y); }
+  }
+  xs.length = 0; xs.push(...keep);
   const TH = T2 + H2 + 18;
   const pts = (A: number[]) => A.map((v, i) => `${X(i).toFixed(1)},${yy(v).toFixed(1)}`).join(" ");
   const ex = X(n), yl = yy(S.lump[n]), yd = yy(S.dca[n]);
-  let a = Math.max(yl - 9, T1 + 2), b = Math.max(yd - 9, T1 + 2);
-  if (Math.abs(a - b) < 14) { if (yl <= yd) b = a + 14; else a = b + 14; }
+  // 끝 라벨은 두 선·넣은 돈 선·서로와 겹치지 않는 자리(점 위·아래로 번갈아)를 찾아 놓는다(R-1)
+  const segs: [number, number, number, number][] = [];
+  for (const A of [S.lump, S.dca, S.principal]) for (let i = 1; i < A.length; i++) segs.push([X(i - 1), yy(A[i - 1]), X(i), yy(A[i])]);
+  const hitRect = (x0: number, y0: number, x1: number, y1: number) => segs.some(([ax, ay, bx, by]) => {
+    const lo = Math.max(x0, Math.min(ax, bx)), hi = Math.min(x1, Math.max(ax, bx));
+    if (lo > hi) return false;
+    const f = (x: number) => (bx === ax ? ay : ay + ((by - ay) * (x - ax)) / (bx - ax));
+    const ya = bx === ax ? Math.min(ay, by) : f(lo), yb = bx === ax ? Math.max(ay, by) : f(hi);
+    return Math.max(ya, yb) >= y0 && Math.min(ya, yb) <= y1;
+  });
+  const lw = (s: string) => [...s].reduce((q, ch) => q + (/[0-9.]/.test(ch) ? 7 : ch === " " ? 3.5 : 12.5), 0);
+  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const place = (py: number, text: string) => {
+    const w = lw(text), x1 = ex - 8, x0 = x1 - w;
+    for (const dy of [-9, 17, -25, 33, -41, 49, 0]) {
+      const y = Math.min(Math.max(py + dy, T1 + 4), T1 + H1 - 2), r = { x0: x0 - 2, x1: x1 + 2, y0: y - 12, y1: y + 3 };
+      if (hitRect(r.x0, r.y0, r.x1, r.y1) || placed.some((o) => !(o.x1 < r.x0 || r.x1 < o.x0 || o.y1 < r.y0 || r.y1 < o.y0))) continue;
+      placed.push(r); return y;
+    }
+    const y = py - 9; placed.push({ x0, x1, y0: y - 12, y1: y + 3 }); return y;
+  };
+  const labs = [yl <= yd ? ["lump", "한 번에", S.lump[n], C.ink2, yl] as const : ["dca", "매달", S.dca[n], C.brand, yd] as const, yl <= yd ? ["dca", "매달", S.dca[n], C.brand, yd] as const : ["lump", "한 번에", S.lump[n], C.ink2, yl] as const].map(([id, nm, v, c, py]) => ({ id, nm, v, c, py, y: place(py, `${nm} ${v.toFixed(2)}배`) }));
   const alt = `${sy}년 말부터 ${ey}년 말까지 같은 총액을 한 번에 넣은 경우 ${r.lumpMult.toFixed(2)}배, 매달 나눠 넣은 경우 ${r.dcaMult.toFixed(2)}배. 값은 위 결과와 같아요`;
   return (
     <svg viewBox={`0 0 ${W} ${TH}`} width={W} height={TH} role="img" aria-label={alt} data-testid="period-chart" style={{ display: "block", touchAction: "pan-y", userSelect: "none", fontVariantNumeric: "tabular-nums" }}>
@@ -48,7 +76,7 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
         <polyline fill="none" stroke={C.brand} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" points={pts(S.dca)} />
         {bw >= 14 && S.dca.map((v, i) => <rect key={i} x={X(i) - 2.6} y={yy(v) - 2.6} width={5.2} height={5.2} transform={`rotate(45 ${X(i)} ${yy(v)})`} fill={C.card} stroke={C.brand} strokeWidth={1.5} />)}
       </g>
-      {([[a, S.lump[n], "한 번에", C.ink2, yl, "lump"], [b, S.dca[n], "매달", C.brand, yd, "dca"]] as const).map(([y, v, nm, c, py, id]) => (
+      {labs.map(({ y, v, nm, c, py, id }) => (
         <g key={id}>
           <circle cx={ex} cy={py} r={3.6} fill={c} stroke={C.card} strokeWidth={2} />
           <text data-testid={`end-${id}`} className="fill-foreground" style={HALO} x={ex - 8} y={y} textAnchor="end" fontSize={12} fontWeight={600}>{nm} {v.toFixed(2)}배</text>
@@ -95,11 +123,11 @@ export function PeriodCard({ view, period, onChange, question }: { view: IndexVi
       <div className="mt-2.5 flex gap-2">
         {([["start", "시작", sy, sOpts], ["end", "끝", ey, eOpts]] as const).map(([k, l, v, opts]) => (
           <label key={k} className="relative flex min-w-0 flex-1 items-center">
-            <span className="pointer-events-none absolute left-3 z-10 text-2xs text-muted-foreground">{l}</span>
+            <span className="pointer-events-none absolute left-2.5 z-10 text-2xs text-muted-foreground">{l}</span>
             <select aria-label={`${l} 연도 말`} data-testid={`period-${k}`} value={v} className={SELECT_CLS} onChange={(e) => set(k === "start" ? +e.target.value : sy, k === "end" ? +e.target.value : ey)}>
               {opts.map((y) => <option key={y} value={y}>{y}년 말</option>)}
             </select>
-            <span aria-hidden className="pointer-events-none absolute right-2.5 text-muted-foreground">⌄</span>
+            <span aria-hidden className="pointer-events-none absolute right-2 text-muted-foreground">⌄</span>
           </label>
         ))}
       </div>
@@ -114,13 +142,14 @@ export function PeriodCard({ view, period, onChange, question }: { view: IndexVi
         <div data-testid="calc-dca" role="group" aria-label={dcaSentence(view, r)} className={rowCls}>
           <div className="flex items-start gap-1.5 text-sm text-pretty break-keep"><svg width="14" height="14" aria-hidden className="mt-0.5 shrink-0"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="var(--card)" stroke={C.brand} strokeWidth="2" /></svg><span className="md:hidden">매달 나눠 넣었다면({12 * r.n}번)</span><span className="hidden md:inline">{dcaSentence(view, r)}</span></div>
           <div className="my-1 flex items-baseline gap-2"><span data-testid="calc-mult-dca" className="text-2xl font-bold tabular-nums">{t.dcaMult}</span><span data-testid="calc-total-dca" className={`text-base font-semibold tabular-nums ${getProfitLossColor(r.dcaMult - 1)}`}>{t.dcaTotal}</span></div>
-          <div data-testid="calc-hold-dca" className="text-xs text-muted-foreground">{HOLD_LINE(t.hold)}</div>
+          <div data-testid="calc-hold-dca" className="text-xs text-muted-foreground break-keep"><NoBreak text={HOLD_LINE(t.hold)} phrases={[]} tails={NOWRAP_TAIL} /></div>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-1">
-        <p data-testid="period-honest" className="text-2xs leading-snug text-muted-foreground text-pretty break-keep">{APPROX_LINE}</p>
-        <button type="button" aria-expanded={info} aria-controls="period-honest-def" aria-label="어림 방식 보기" data-testid="honest-info" onClick={() => setInfo((o) => !o)} className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><Info aria-hidden className="size-4" /></button>
-      </div>
+      <p data-testid="period-honest" className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">
+        {APPROX_LINE}
+        {/* ⓘ는 끝 어절 바로 뒤(40px 히트, 줄 높이는 음수 마진으로 유지) */}
+        <button type="button" aria-expanded={info} aria-controls="period-honest-def" aria-label="어림 방식 보기" data-testid="honest-info" onClick={() => setInfo((o) => !o)} className="-my-3.5 ml-0.5 inline-flex size-10 items-center justify-center rounded-full align-middle text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><Info aria-hidden className="size-4" /></button>
+      </p>
       <div id="period-honest-def" {...(info ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${info ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
           <p data-testid="honest-def" className="text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">{APPROX_DEF}</p>
