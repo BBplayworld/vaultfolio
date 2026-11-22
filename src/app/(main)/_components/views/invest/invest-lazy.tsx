@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { Component, useMemo, useState, type ReactNode } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
+import { isTrialMode } from "@/lib/trial/trial-mode";
 import { holdingSplit } from "@/lib/invest/default-index";
 import { pickDefaultIndex } from "@/lib/invest/calc";
 import { LOAD_ERROR } from "@/lib/invest/text";
@@ -40,7 +41,7 @@ export function InvestTab() {
   const { assetData, exchangeRates } = useAssetData();
   const [Comp, setComp] = useState(() => makeDynamic());
   const [boundaryKey, setBoundaryKey] = useState(0);
-  const defaultIndex = useMemo(() => pickDefaultIndex(holdingSplit(assetData.stocks, exchangeRates)), [assetData.stocks, exchangeRates]);
+  const defaultIndex = useMemo(() => pickDefaultIndex(isTrialMode() ? null : holdingSplit(assetData.stocks, exchangeRates)), [assetData.stocks, exchangeRates]);
   // 진행 중 하락 모의(preview 점검용): ?asof=2022
   const asof = useMemo(() => {
     if (typeof window === "undefined" || !isPreviewEnv()) return undefined;

@@ -40,7 +40,7 @@ export function ChartSkeleton({ wide }: { wide: boolean }) {
 function MeasuredDetail({ view, ep, index }: { view: ReturnType<typeof buildIndexView>; ep: ReturnType<typeof buildIndexView>["eps"][number]; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const w = useElementWidth(ref);
-  return <div ref={ref}>{w > 0 && <EpisodeDetail data={marketHistory} view={view} ep={ep} index={index} width={w} />}</div>;
+  return <div ref={ref} className="min-w-0 w-full">{w > 0 && <EpisodeDetail data={marketHistory} view={view} ep={ep} index={index} width={w} />}</div>;
 }
 
 export interface InvestViewProps {
@@ -128,7 +128,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
           </>
         ) : <p className="flex h-7 items-center text-xs text-muted-foreground">{READOUT_HINT}</p>}
       </div>
-      <div ref={chartRef} className="relative mt-1" data-testid="invest-chart-wrap">
+      <div ref={chartRef} className="relative mt-1 min-w-0" data-testid="invest-chart-wrap">
         {L && showLevels ? (
           <>
             <MainChart data={marketHistory} view={view} width={width} wide={wide} selEp={selEff} selYear={yr} overlayOn={ovOn} onPickYear={pickYear} />
@@ -177,9 +177,9 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       {chartCard}
       {wide && (
         <>
-          <div className="grid grid-cols-[400px_1fr] items-start gap-4">
-            <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail={false} width={376} /></div>
-            <div data-testid="invest-detail" className="sticky top-3 rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
+          <div className="grid grid-cols-[400px_minmax(0,1fr)] items-start gap-4">
+            <div className="min-w-0 rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail={false} width={376} /></div>
+            <div data-testid="invest-detail" className="sticky top-3 min-w-0 overflow-hidden rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
               {selEff != null && view.eps[selEff] ? (
                 <>
                   <div className="mb-1.5 flex items-baseline gap-2 text-base font-bold">{view.eps[selEff].name}<small className="text-2xs font-normal text-muted-foreground">{view.eps[selEff].py}~{view.eps[selEff].ty}년</small></div>
