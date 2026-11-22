@@ -1,0 +1,51 @@
+id,grade,name,url,used_for
+K1,2차(교차확인용),위키백과 KOSPI 연도별 표(검색 스니펫·wikiwand 미러),https://www.wikiwand.com/en/articles/KOSPI,KOSPI 1981~2010 종가·등락률
+K2,준1차(당시 보도),서울신문 1990-12-27,https://www.seoul.co.kr/news/1990/12/27/19901227006004,KOSPI 1990 종가
+K3,준1차(보도·KRX 인용),머니투데이 2011 증시결산,https://www.mt.co.kr/hotissue/3146,KOSPI 2011
+K4,2차(집계),simianx KOSPI 연간 수익률표,https://www.simianx.ai/ko/stories/kospi-returns-by-year-every-year-1982-2026-table,KOSPI 1989·2012~2014·2017~2020
+K5,준1차(보도),이투데이 2016 증시결산 / 경북매일 2015,https://www.etoday.co.kr/news/view/1432902,KOSPI 2015·2016
+K6,준1차(보도·KRX 인용),뉴시스 2020-12-30,https://mobile.newsis.com/view/NISX20201230_0001289150,KOSPI 2020
+K7,준1차(보도),Korea Times 2021-12-30,https://www.koreatimes.co.kr/amp/economy/20211230/kospi-ends-2021-with-disappointing-performance,KOSPI 2021
+K8,준1차(보도·KRX 인용),비즈워치 2023-12-28 / 뉴시스 2022-12-29,https://news.bizwatch.co.kr/article/market/2023/12/28/0041,KOSPI 2022·2023
+K9,준1차(보도),아시아경제 2024-12-30,https://www.asiae.co.kr/en/article/2024123017402153373,KOSPI 2024
+K10,준1차(보도),Korea Times 2025-12-30 / 뉴시스 2025-12-30,https://www.koreatimes.co.kr/amp/economy/policy/20251230/korean-stock-market-finishes-2025-on-high-note,KOSPI 2025
+S1,준1차(학술),Damodaran(NYU) histretSP,https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP_files/sheet002.htm,SPX 1990~1992 연말
+S2,2차(집계),Slickcharts S&P 500 returns details,https://www.slickcharts.com/sp500/returns/details,SPX TR·가격 2008·2022~2025
+S4,준1차(공공기관 문서),California ARB 2012 첨부문서,https://arb.ca.gov/regact/2012/hdobd12/hdobd15dayattc.pdf,SPX 가격 1951~1962·1969(월말 기준)
+S5,준1차(학술 블로그·Damodaran 기반),UMD David Kass,https://blog.umd.edu/davidkass/2020/01/06/sp-500-total-return-up-in-80-of-past-78-years-1942-2019,SPX TR 1950~1962·1992~1995·2005~2018
+S6,2차(언론),Motley Fool annual returns,https://www.fool.com/investing/stock-market/indexes/sp-500/annual-returns,SPX TR 1995~1999·2016·2019·2021
+S7,2차(집계),StatMuse 월말·연말 종가,https://old.statmuse.com/money/ask/s%26p+500+price+1980s,SPX 1950·1959·1979·1989 종가
+S8,2차(집계),YCharts S&P 500 Annual (Total) Return,https://ycharts.com/indicators/sp_500_return_annual,SPX 가격·TR 2010~2013·2022~2024
+S9,2차(집계),Statista S&P 500 연말,https://statista.com/statistics/189536/standard-and-poor-500-composite-index-values-since-2000,SPX 2000·2005 종가(반올림)
+S10,준1차(보도),IBTimes 2010-01-01,https://www.ibtimes.com/wall-st-closes-out-09-best-gains-2003-357266,SPX 2009
+S11,2차(언론),Investing.com 2025-01,https://investing.com/analysis/sp-500-yearend-gains-top-20-for-second-year-running-200655829,SPX 2023·2024
+S12,준1차(보도),Yahoo Finance 2025-12-31,https://finance.yahoo.com/news/stock-market-ends-2025-double-211712999.html,SPX 2025
+S13,2차(집계),StatMuse 연간 수익률,https://statmuse.com/money/ask/s-and-p-500-yearly-return-1996-to-1999,SPX 1999·교차확인(불일치 다수)
+S14,준1차(보도),CNN Money 1999-12-31,https://money.cnn.com/1999/12/31/markets/markets_newyork/,SPX 1999
+S15,2차(출처명 불명확·Slickcharts 추정),Slickcharts S&P 500 returns,https://www.slickcharts.com/sp500/returns,SPX TR 1971~1977
+N1,2차(교차확인용),위키백과 Nasdaq-100,https://en.wikipedia.org/wiki/Nasdaq-100,NDX 1985~1986
+N2,2차(집계),Slickcharts Nasdaq 100 returns,https://www.slickcharts.com/nasdaq100/returns,NDX 2022·2023
+N3,1차(지수 사업자),Nasdaq NDX factsheet,https://indexes.nasdaq.com/docs/FS_NDX.pdf,NDX 2022·2023
+F1,2차(연준 목록 재게시),FedRateCalc,https://fedratecalc.com/fed-funds-rate-history/,연준 1990·2022~2025
+F2,2차(언론),Bankrate,https://www.bankrate.com/banking/federal-reserve/history-of-federal-funds-rate/,연준 1990·1991
+F3,준1차(보도),Fox News Fed Rate Changes Since 1990,https://www.foxnews.com/story/fed-rate-changes-since-1990.amp,연준 1991·1992
+F4,2차(집계),TradingLookup,https://tradinglookup.com/data/fed-rate-history/,연준 연간 인상·인하 횟수
+F5,1차(연준 아카이브),federalreserve.gov/fomc/fundsrate.htm(UNT 보관본),https://webarchive.library.unt.edu/web/20090812223833/http://federalreserve.gov/fomc/fundsrate.htm,연준 1998·1999
+F6,1차(CRS 보고서),CRS 98-856,https://policyarchive.org/download/19770,연준 2001
+F7,1차(연준),Fed MPR 2008-02,https://www.federalreserve.gov/monetarypolicy/mpr_20080227_part3_accessible.htm,연준 2004
+F8,1차(연준),Fed MPR 2008-07,https://www.federalreserve.gov/monetarypolicy/mpr_20080715_part3.htm,연준 2008
+F9,준1차(업계지),ABA Banking Journal 2015-12,https://bankingjournal.aba.com/2015/12/fed-raises-rates-for-first-time-since-2006/,연준 2015
+F10,1차(연준),Fed Open Market Operations,https://www.federalreserve.gov/monetarypolicy/openmarket.htm,연준 2016
+F11,1차(지역 연준),Chicago Fed,https://www.chicagofed.org/research/dual-mandate/the-federal-funds-rate,연준 2019
+F12,2차(집계),HSH,https://www.hsh.com/indices/federal-funds-rate.html,연준 2019·2020
+U1,1차(FRED),FRED RIFLGFCY10NA(연평균),https://fred.stlouisfed.org/data/RIFLGFCY10NA,미 10년물 연평균 2021~2025
+U2,준1차(시장 요약),Briefing.com 2025-12-31,https://briefing.com/bond-market-update/archive/2025/12/31/treasury-market-summary,미 10년물 2025 연말
+U3,2차(언론),ETF Trends 2025-12-31,https://www.etftrends.com/fixed-income-content-hub/treasury-yields-snapshot-december-31-2025/amp/,미 10년물 2025 연말(교차)
+B1,1차(한국은행),한국은행 기준금리 추이,https://www.bok.or.kr/portal/singl/baseRate/list.do?dataSeCd=01&menuNo=200643,한은 2003~
+B2,2차(블로그 정리),bluesharehub 기준금리 변동 정리,https://bluesharehub.com/korea-base-rate-history/,한은 1999~2002 보완
+R1,준1차(금투협 자료 인용 보도),스마트투데이(금투협 2024 장외채권시장 동향),https://www.smarttoday.co.kr/ko-kr/articles/69807,국고채 3·10년 2023·2024 연말
+X1,준1차(보도),뉴시스 2025-12-30,https://www.newsis.com/view/NISX20251230_0003460103,원/달러 2025
+X2,준1차(보도),뉴시스 2024-12-30,https://www.newsis.com/view/NISX20241230_0003015254,원/달러 1997·2024
+E1,2차(집계),historyofmarket bear markets,https://historyofmarket.com/sp500/bear-markets/,약세장 낙폭·기간
+E2,2차(집계),finabase 폭락사 비교,https://finabase.io/learn/articles/history-of-stock-market-crashes,약세장 회복일(2007·2022)
+E3,2차(집계),GetHossa max drawdown,https://gethossa.com/blog/max-drawdown-sp-500-bear-markets-recovery-time,약세장 낙폭 교차
