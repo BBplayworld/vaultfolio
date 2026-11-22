@@ -1,0 +1,6681 @@
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="ko">
+<head>
+	<title>
+	통합검색 | 대한민국 정책브리핑</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="description" content="대한민국 정책포털 korea.kr 정책브리핑" />
+<meta name="keywords" content="대한민국 정책포털 korea.kr 정책브리핑 홈페이지 입니다." />
+<meta name ="robots" content="noindex, nofollow">
+<!-- css -->
+<link rel="shortcut icon" href="/images/common/favicon.ico" />
+<link rel="stylesheet" type="text/css" href="/cssV5/totalsearch/css/totalsearch.css?time=202611222240" />
+<link rel="stylesheet" type="text/css"  href="/cssV5/webfonts.css" />
+<link rel="stylesheet" type="text/css" href="/cssV5/totalsearch/css/ark.css" />
+
+<!-- script -->
+
+<script src="/jsV5/jquery-3.7.1.min.js"></script>
+
+
+ 
+ <script type="text/javascript" src="/jsV5/calendar.js"></script>
+<script type="text/javascript" src="/jsV5/totalsearch/swiper.5.4.5.js?time=202611222240"></script>
+<script type="text/javascript" src="/jsV5/totalsearch/common.ui.js?time=202611222240"></script>
+<script type="text/javascript" src="/jsV5/totalsearch/jquery-migrate-1.2.1.min.js"></script>
+
+
+
+<script type="text/javascript">
+	
+	var thisUrl = location.href;
+	var cookie = document.cookie;
+	var ckCnt = cookie.indexOf("selectedMedia=PC");
+	if(ckCnt == -1){	
+		if( navigator.userAgent.match(/Android/i)
+		    || navigator.userAgent.match(/webOS/i)
+		    || navigator.userAgent.match(/iPhone/i)
+		    || navigator.userAgent.match(/iPad/i)
+		    || navigator.userAgent.match(/iPod/i)
+		    || navigator.userAgent.match(/BlackBerry/i)
+		    || navigator.userAgent.match(/Windows Phone/i) ){
+			
+			window.location.href = thisUrl.replace("https://www.korea.kr","https://m.korea.kr");
+		}
+	}
+	
+	// $(document).on("load", function() {
+	// 	if ($(".sch_result_contents").find(".article.theme").length > 0) {
+	// 		let themeHeight = $(".article.theme").outerHeight();
+	// 		$(".sch_result_r").find(".article.bgst1").css("padding-top", themeHeight + "px");
+	// 		$("#t_contanier .sch_result_l").css("padding-top", themeHeight + "px");
+	// 	}
+	// });
+
+	//ebook 열기
+	function openEbook(dir, attachId) {
+		window.open("https://www.korea.kr/fcatalog/ecatalog5.jsp?Dir="+dir+"&fileId="+attachId);
+	}
+	
+	//위클리 공감, 카툰 공감 ebook 열기
+	function openEbookWeekly(dir, newsId) {
+		updateNewsDataHitCnt(newsId);
+		window.open("https://gonggam.korea.kr/fcatalog/ecatalog5.jsp?Dir="+dir);
+	}
+	
+	function updateNewsDataHitCnt(newsId){
+
+		$.ajax({
+			type:"POST",
+			url: "/common/updateNewsDataHitCnt.do",
+			dataType: "xml",
+			data: {
+				  newsId:newsId
+			},
+			success: function( data ) {
+				return;
+			}
+		});
+
+	}
+	
+
+	function topKeywordSubmitSr(keyword){
+		if(keyword != null && keyword != ""){
+			$("#topSearchKeywordSr").val(keyword);
+		}
+	    location.href = "/totalSearch.do?"+$("#topSearchFormSr").serialize();	
+	return false;
+	}
+	
+		
+	// 정렬
+	function doRank(val){
+		$("#sort").val(val);
+		//checkRequery();
+		location.href = "/totalSearch.do?"+paramData();
+		//reSearch();
+	}
+	
+		
+	//결과내 재검색
+	function reSearch() {
+		$('#scnt').val(1);
+		
+		var rquery = $("#rquery_i").val();
+		var equery = $("#equery_i").val();
+		var op = $("input[name=op]:checked").val();
+		
+		$("#rquery").val(rquery);
+		$("#equery").val(equery);
+		$("#op").val(op);
+		$("#reSrchFlag").val("Y");
+		
+		location.href = "/totalSearch.do?"+paramData();
+	}
+	
+	// 기간 설정
+	function dateFormat(date, separator) {
+		var year = date.getFullYear();
+		var month = date.getMonth() +1;
+		var day = date.getDate();
+		
+		if (month <10) {
+			month = "0" + month;
+		}
+
+		if (day <10) {
+			day = "0" + day;
+		}
+
+		return year + separator + month + separator + day;
+	}
+	
+	function paramData(){
+		var $param = '';
+	    var $param2 = $('#searchForm :input[value]').serializeArray();
+	    var cnt = 0;        
+
+	   	 $.each($param2,function() {
+	   		if($(this)[0].value != ''){
+	   			if(cnt == 0){
+	   				$param = $param + $(this)[0].name + "=" + encodeURIComponent($(this)[0].value);
+	   				cnt++;
+	   			}else{
+	   				$param = $param + "&" + $(this)[0].name + "=" + encodeURIComponent($(this)[0].value) ;
+	   				cnt++;
+	   			}
+	   		 }
+		 });
+	   	 return $param;
+	}
+		
+	// 상세검색 (기관별, 주제별) 탭 선택
+	function initTabOn(){		
+		//파라미터 체크
+		var tabdept = '';		
+		if(tabdept != ''){
+			if(tabdept == 1){
+				$("#eq1-1a").prop('checked', true);
+				$('.order_word').show();
+				$('.order_organ').hide();
+			}else{
+				$("#eq1-2a").prop('checked', true);
+				$('.order_word').hide();
+				$('.order_organ').show();
+			}						
+		}else{
+			$("#eq1-1a").prop('checked', true);
+			$('.order_word').show();
+			$('.order_organ').hide();
+		}
+	}
+	
+
+	
+	function goDetailSearch(){
+
+		//상세검색 체크박스 검사
+		checkDetail();
+		//간편검색 - 결과내재검색 검사
+		checkRequery();
+		
+		//페이징 초기화
+		$("#scnt").val(1);
+		
+		location.href = "/totalSearch.do?"+paramData();
+		return false;
+	}
+	
+	//상세검색 체크박스 검사
+	function checkDetail(){
+		
+		var name = "";
+		var checkTarget = new Array("dtl_attach_type","dtl_president","dtl_dept_type","dtl_dept_code","dtl_news_type","dtl_doc_type");
+		
+		jQuery.each(checkTarget,function(i,target){
+			var value = "";
+			
+			if(target == "dtl_attach_type"){
+				//첨부문서 목록
+				name = "chk_";
+			}else if(target == "dtl_president"){
+				//정권별 목록
+				name = "pptype_";
+			}else if(target == "dtl_dept_type" || target == "dtl_dept_code"){
+				//기관별
+				name = "pgtype_ta";
+				var index;
+				$("#order > input").each(function(cnt){					
+					if($(this).is(":checked")){
+						name = name + (cnt + 1 ) + "_";
+						$("#tabdept").val(($(this).index()+1));
+					}
+				});
+			}else if(target == "dtl_news_type"){
+				//유형별 목록
+				name = "pntype_";
+			}else if(target == "dtl_doc_type"){
+				//전문자료 목록
+				name = "pdtype_";
+			}
+			
+			
+			
+			// 체크박스 검사
+			$("input[id^="+ name +"]:checked").each(function(){
+				
+				var id = $(this).prop("id");
+				if(target == "dtl_dept_type" || target == "dtl_dept_code"){ // 타켓이 DEPT_TYPE일 때,
+					if(target == "dtl_dept_type"){
+						if($("#"+id).val().length < 2){	// DEPT_TYPE의 경우 한자리 단어. ex) 'A','B'..'E'
+							if(value == "")	value = $("#"+id).val();
+							else value = value + "," + $("#"+id).val();
+						}
+					}else if(target == "dtl_dept_code"){
+						if($("#"+id).val().length > 1){	// DEPT_TYPE를 제외한 DEPT_CODE
+							if(value == "") value = $("#"+id).val();
+							else value = value + "," + $("#"+id).val();	
+						}
+					}
+				}else{
+					if(value == "") value = $("#"+id).val();
+					else value = value + "," + $("#"+id).val();	
+				}
+			});	
+			
+			$("#"+target).val(value);
+		});
+	}
+	
+	 // 페이징
+	function pageLink(pageNo){
+		$("#searchForm").each(function() {
+            this.reset();
+         });
+		$('#scnt').val(pageNo);
+		$('#srchFlag').val("N");
+		location.href = "/totalSearch.do?"+paramData();
+	}
+	
+	//간편검색 - 결과내재검색 검사 
+	function checkRequery(){
+		var requery = $("#rquery").val();
+		if(requery != "" && requery != null){
+			$("#reSrchFlag").val("Y");
+		}
+	}
+	 
+	
+
+	function fn_newsType(dir, type, cnt){
+		
+		if(cnt > 0){
+			//간편검색 - 결과내재검색 검사
+			checkRequery();
+			
+			//페이징 초기화 
+			$("#scnt").val(1);
+			
+			if (dir == "img_korea" || dir == "movie_korea"){
+				$("#punit").val(16);	//출력갯수
+			}else{
+				$("#punit").val(10);	//출력갯수
+			}
+			
+			
+			$('#news_type').val(type);
+			
+					
+			//where(collection) 변경
+			if(dir == "" || dir == "all" || dir == null){
+				$("#where").val("ALL");
+			}else{
+				$("#where").val(dir);
+			}
+			location.href = "/totalSearch.do?"+paramData();
+			return false;
+		}else{
+			alert('검색 대상의 결과가 0건 입니다.');
+		}
+	}
+	
+	$(window).on('load', function() {
+		// 풋터 위로 정렬
+		$('.footer .control .top').on('click', function() {
+			$('html, body').animate({ scrollTop: 0 }, 100);
+		});
+		
+		$(window).on('scroll', function() {
+			var goTop = $('.footer .control .top');
+			var scrollTop = $(window).scrollTop();
+			scrollTop > 0 ? goTop.addClass('active') : goTop.removeClass('active');
+		});
+	});
+	
+	$(document).ready(function(){	
+		
+		//관련사이트
+		$('.rel_btn').on('click',function(){
+			const t = $(this);
+			if(t.parent().hasClass('active')){
+				t.attr("title","관련사이트 열기");
+			}else{
+				t.attr("title","관련사이트 닫기");
+			}
+			t.parent().toggleClass("active");
+		});
+		
+		/* $('.result_list ul li .text span').dotdotdot({watch:'watch', wrap:'letter', callback: function(){
+			$('.sch_cont').removeClass('hidden');
+		}});
+		$('.result_list_photo ul li strong').dotdotdot({watch:'watch', wrap:'letter', callback: function(){
+			$('.sch_cont').removeClass('hidden');
+		}});
+		$('.result_list_sns ul li .text span').dotdotdot({watch:'watch', wrap:'letter', callback: function(){
+			$('.sch_cont').removeClass('hidden');
+		}}); 
+		
+		$('.result_list_sns ul li .text span').trigger('update.dot');
+		$('.result_list ul li .text span').trigger('update.dot');
+		$('.result_list_photo ul li strong').trigger('update.dot');
+		*/
+		
+		
+		$('.article .btn > .more_result, .sch_tab button').click(function(){
+			var dir = $(this).val();
+			//간편검색 - 결과내재검색 검사
+			checkRequery();
+			
+			//페이징 초기화 
+			$("#scnt").val(1);
+			
+			//분류값 초기화 
+			$('#news_type').val('');
+			
+			if (dir == "img_korea" || dir == "movie_korea"){
+				$("#punit").val(16);	//출력갯수
+			}else{
+				$("#punit").val(10);	//출력갯수
+			}
+			
+			//where(collection) 변경
+			if(dir == "" || dir == "all" || dir == null){
+				$("#where").val("ALL");
+			}else{
+				$("#where").val(dir);
+			}
+			location.href = "/totalSearch.do?"+paramData();
+			return false;
+		});
+		
+		
+		$('.article .btn > .more_result, .sch_tab button').click(function(){
+			var dir = $(this).val();
+			//간편검색 - 결과내재검색 검사
+			checkRequery();
+			
+			//페이징 초기화 
+			$("#scnt").val(1);
+			
+			if (dir == "img_korea" || dir == "movie_korea"){
+				$("#punit").val(16);	//출력갯수
+			}else{
+				$("#punit").val(10);	//출력갯수
+			}
+			
+			//where(collection) 변경
+			if(dir == "" || dir == "all" || dir == null){
+				$("#where").val("ALL");
+			}else{
+				$("#where").val(dir);
+			}
+			location.href = "/totalSearch.do?"+paramData();
+			return false;
+		});
+				
+		
+		//펼쳐보기
+		$('.article .btn > .more').click(function(){
+			var dir = $(this).val();
+			
+			var load = $('.loader',$(this).closest('.btn'));
+			
+			
+			
+			if($(this).find('.more_txt').text() == '열기' ){
+				$(load).removeClass('hidden');
+				
+				var rquery = $("#rquery_i").val();		
+				var equery = $("#equery_i").val();		
+				var op = $("input[name=op]:checked").val();		
+				
+				$("#rquery").val(rquery);		
+				$("#equery").val(equery);		
+				$("#op").val(op);		
+				// $("#reSrchFlag").val("Y");
+				$("#where").val(dir);
+				
+				if (dir == "img_korea" || dir == "movie_korea"){			
+					$("#scnt").val(4);		//시작위치			
+					$("#punit").val(8);	//출력갯수			
+				}else{			
+					$("#scnt").val(4);		//시작위치			
+					$("#punit").val(6);	//출력갯수			
+				}
+
+				
+				$.ajax({			
+					type: 'POST',			
+					url : "/totalSearch.do",			
+					data: $("#searchForm").serialize() + "&pageType=result",			
+					dataType: "html",			
+					success: function(data){				
+						$("#result_"+dir).append(data);				
+						$("#resultdata_"+dir).slideDown("fast");				
+						if (dir == "img_korea"){					
+							$("#result_"+dir+" > ul").css("border-bottom","none");					
+						}				
+						$("#where").val("all");				
+						$("#scnt").val(1);	
+						
+						/* $('ul li .text span', $("#resultdata_"+dir)).dotdotdot({watch:'watch', wrap:'letter'});
+						$('ul li strong', $("#resultdata_"+dir)).dotdotdot({watch:'watch', wrap:'letter'});
+						$('ul li .text span', $("#resultdata_"+dir)).dotdotdot({watch:'watch', wrap:'letter'});
+
+						$('ul li .text span', $("#resultdata_"+dir)).trigger('update.dot');
+						$('ul li strong', $("#resultdata_"+dir)).trigger('update.dot');
+						$('ul li .text span', $("#resultdata_"+dir)).trigger('update.dot'); */
+						
+						$(load).addClass('hidden');
+					}			
+				});				
+				
+				$(this).find('.more_txt').text('접기');
+				$(this).addClass('on');
+			}else{
+				
+				$("#resultdata_"+dir).slideUp("fast");
+				$("#resultdata_"+dir).remove();
+
+				$(window).scrollTop( ($("#"+dir).offset().top)-20 );
+				
+				$(this).find('.more_txt').text('열기');
+				$(this).removeClass('on');
+			}
+		});	
+		
+		$('.go_top').on('click', function() {
+			$('html, body').animate({scrollTop : 0}, 100);
+			$('body').focus();
+		});
+		$(window).on('scroll', function() {
+			if($(window).scrollTop() > 430){
+				$('.go_top').addClass('active');
+			}else{
+				$('.go_top').removeClass('active');
+			} 
+		});
+		
+		
+	});
+</script>	
+</head>
+<body>
+	<div id="wrap">
+
+		<!-- S: Header -->
+		
+
+
+
+
+<script type="text/javascript" src="/js/totalsearch/ark.js"></script>
+<script>
+	$(document).ready(function(){
+		
+	    $("#topSearchFormSr").submit(function(event) {    
+			event.preventDefault();	    	
+	    });
+		
+		$('.clear_input').click(function(e){
+			e.preventDefault();
+		  $('#topSearchKeywordSr').val('');		
+		  hideArk();
+		});
+		
+		
+		$('.detail_sch_post').keyup(function(e){
+			if(e.which == 27){
+				$('.detail_sch').click();
+			}
+		});
+
+		$('#topSearchKeywordSr').keypress(function(e){
+			if(e.which == 13){
+				topKeywordSubmitSr($('#topSearchKeywordSr').val());
+				return false;
+			}
+		});
+		
+		$('#topSearchFormSr button[type=submit]').click(function(){
+			if($("#topSearchKeywordSr").val() == "" || $("#topSearchKeywordSr").val() == null || $("#topSearchKeywordSr").val()=="검색어를 입력하세요."){
+				alert("검색어를 입력해주세요");
+				$("#topSearchKeywordSr").val("");
+				$("#topSearchKeywordSr").focus();
+			}else{
+				topKeywordSubmitSr($('#topSearchKeywordSr').val());
+			}				
+			return false;
+		});
+		
+        $('#srchStartDate, #srchStartDateBt').click(function(){
+        	$("#hidden_dateRange").val('day');
+        	show_calendar('calStart', 'srchStartDate', $('#srchStartDate').val());
+        });
+        $('#srchEndDate, #srchEndDateBt').click(function(){
+        	$("#hidden_dateRange").val('day');
+        	show_calendar('calEnd', 'srchEndDate', $('#srchEndDate').val());
+        });
+        
+        $('#re_srchStartDate, #re_srchStartDateBt').click(function(){
+        	$("#hidden_dateRange").val('day');
+        	show_calendar('re_calStart', 're_srchStartDate', $('#re_srchStartDate').val());
+        });
+        $('#re_srchEndDate, #re_srchEndDateBt').click(function(){
+        	$("#hidden_dateRange").val('day');
+        	show_calendar('re_calEnd', 're_srchEndDate', $('#re_srchEndDate').val());
+        });
+        
+         $('input[name=sch_dateRange], input[name=re_sch_dateRange]').click(function(){  
+        	$("#hidden_dateRange").val($(this).val());
+        });
+        
+         $('input[name=re_sch_dateRange], input[name=sch_dateRange]').click(function(){
+        	 doDate($(this).val());
+        	 if($(this).closest('.detail_sch_wrap').length > 0){
+        		$('#srchStartDate').val( $('#sdate').val());
+     		 	$('#srchEndDate').val( $('#edate').val());
+        	 }else{
+       		 	$('#re_srchStartDate').val( $('#sdate').val());
+    		 	$('#re_srchEndDate').val( $('#edate').val());
+        	 }
+         });
+         
+         /*
+        $('input[name=sch_range]').click(function(){
+        	$("#range").val($(this).val());
+        }); */
+        
+        $('.sch_btn > .restart ').click(function(){
+        	if($(this).closest('.detail_sch_wrap').length > 0){
+				var re = '';
+				$('.detail_sch_wrap .select-opt ul').empty();
+			}else{
+				var re = 're_';
+				$('.re_sch_wrap .select-opt ul').empty();					
+				$('#re_topSearchKeywordSr').val('');
+			}
+        	
+        	
+        	$($('input[name='+re+'sch_dateRange]')[0]).click();        	
+        	$($('input[name='+re+'sch_range]')[0]).click();
+        	
+        	        	
+        	$('input[name='+re+'subJectCode], input[name='+re+'subJectType], input[name='+re+'deptType], input[name='+re+'deptCode], input[name='+re+'newsType]').prop('checked', false);
+        	
+        	//doDate('all');
+        	//$("#range").val('ALL');
+        });
+        
+        
+        
+		var newsType	= $("#dtl_news_type").val();
+		var deptType   	= $("#dtl_dept_type").val();
+		var deptCode   	= $("#dtl_dept_code").val();
+		
+		var smenu   	= $("#dtl_smenu").val();
+		var newsmlCode  = $("#dtl_newsml_code").val();
+		
+		
+		// 주제별 대
+		if(smenu != null && smenu != ""){
+			var smenuSplit = smenu.split(",");
+			$("input[name=re_subJectType]").each(function(){
+				var newsVal = $(this).val();
+				for(var idx in smenuSplit){
+					if(newsVal == smenuSplit[idx]){						
+						$(this).prop("checked", true);
+						$('.re_sch_wrap .select-opt ul').append('<li><button value="'+$(this).attr('id')+'">' + $(this).attr('title') +'<span>삭제</span></button></li>');
+					}
+				}				
+			});
+		}		
+		
+		// 주제별 중
+		if(newsmlCode != null && newsmlCode != ""){
+			var newsmlCodeSplit = newsmlCode.split(",");
+			$("input[name=re_subJectCode]").each(function(){
+				var newsVal = $(this).val();
+				for(var idx in newsmlCodeSplit){
+					if(newsVal == newsmlCodeSplit[idx]){
+						var code = newsVal.substr(0,5);	
+						if(!$('#re_stype_'+code).parent().find('button.sbtn').hasClass('close')){
+							$('#re_stype_'+code).parent().find('button.sbtn').click();
+						}
+						
+						$(this).prop("checked", true);
+						$('.re_sch_wrap .select-opt ul').append('<li><button value="'+$(this).attr('id')+'">' + $(this).attr('title') + '<span>삭제</span></button></li>');
+					}
+				}				
+			});
+		}
+				
+		// 유형
+		if(deptType != null && deptType != ""){
+			var deptTypeSplit = deptType.split(",");
+			$("input[name=re_deptType]").each(function(){
+				var newsVal = $(this).val();
+				for(var idx in deptTypeSplit){
+					if(newsVal == deptTypeSplit[idx]){						
+						$(this).prop("checked", true);
+						$('.re_sch_wrap .select-opt ul').append('<li><button value="'+$(this).attr('id')+'">' + $(this).attr('title') + '<span>삭제</span></button></li>');
+					}
+				}				
+			});
+		}
+		
+		// 유형
+		if(deptCode != null && deptCode != ""){
+			deptCode = deptCode.replaceAll("A00009,D00020", "A00009");
+			var deptCodeSplit = deptCode.split(",");
+			$("input[name=re_deptCode]").each(function(){
+				var newsVal = $(this).val();
+				for(var idx in deptCodeSplit){
+					if (deptCodeSplit[idx] == 'A00009') {
+						deptCodeSplit[idx] = 'A00009,D00020';
+					}
+					if(newsVal == deptCodeSplit[idx]){
+						$(this).prop("checked", true);
+						$('.re_sch_wrap .select-opt ul').append('<li><button value="'+$(this).attr('id')+'">' + $(this).attr('title') + '<span>삭제</span></button></li>');
+					}
+				}				
+			});
+		}
+		
+		// 유형
+		if(newsType != null && newsType != ""){
+			var newsTypeSplit = newsType.split(",");
+			$("input[name=re_newsType]").each(function(){
+				var newsVal = $(this).val();
+				for(var idx in newsTypeSplit){
+					if(newsVal == newsTypeSplit[idx]){						
+						$(this).prop("checked", true);
+						$('.re_sch_wrap .select-opt ul').append('<li><button value="'+$(this).attr('id')+'">' + $(this).attr('title') + '<span>삭제</span></button></li>');
+					}
+				}				
+			});
+		}
+				
+		$("input[name=subJectType], input[name=subJectCode], input[name=deptType], input[name=deptCode], input[name=newsType], input[name=re_subJectType], input[name=re_subJectCode], input[name=re_deptType], input[name=re_deptCode], input[name=re_newsType]").click(function(){
+			
+			if($(this).closest('.detail_sch_wrap').length > 0){				
+				var opt = $('.detail_sch_wrap .select-opt ul');
+				var re = '';
+			}else{
+				var opt = $('.re_sch_wrap .select-opt ul');
+				var re = 're_';
+			}
+			
+			opt.empty();
+		
+			var name = $(this).attr('name');
+			
+			if(re+'deptType' == name){
+				var code = $(this).attr('id').replace(re+'deptType', '');
+				$('input[id^='+re+'pgtype_ta2_'+code+']').prop("checked", false);					
+			}else if(re+'deptCode' == name){
+				var code = $(this).val().substr(0,1);
+				$('input[id='+re+'deptType'+code+']').prop("checked", false);
+			}else if(re+'subJectType' == name){
+				var code = $(this).val().substr(0,5);
+				$('input[id^='+re+'scode_'+code+']').prop("checked", false);				
+			}else if(re+'subJectCode' == name){
+				var code = $(this).val().substr(0,5);
+				$('input[id='+re+'stype_'+code+']').prop("checked", false);				
+			}
+			
+			$('input[name='+re+'subJectType]:checked').each(function(){
+				opt.append('<li><button value="'+$(this).attr('id')+'">'+$(this).attr('title')+'<span>삭제</span></button></li>');
+			}); 
+			
+			$('input[name='+re+'subJectCode]:checked').each(function(){
+				opt.append('<li><button value="'+$(this).attr('id')+'">'+$(this).attr('title')+'<span>삭제</span></button></li>');
+			}); 
+			
+			$('input[name='+re+'deptType]:checked').each(function(){
+				opt.append('<li><button value="'+$(this).attr('id')+'">'+$(this).attr('title')+'<span>삭제</span></button></li>');
+			}); 
+			
+			$('input[name='+re+'deptCode]:checked').each(function(){
+				opt.append('<li><button value="'+$(this).attr('id')+'">'+$(this).attr('title')+'<span>삭제</span></button></li>');
+			});
+			
+			$('input[name='+re+'newsType]:checked').each(function(){
+				opt.append('<li><button value="'+$(this).attr('id')+'">'+$(this).attr('title')+'<span>삭제</span></button></li>');
+			});		
+			
+			fn_liempty();
+		});
+		
+		
+		
+		$('.sch_btn .sch').click(function(){			 
+			if($(this).closest('.detail_sch_wrap').length > 0){
+				var opt = $(this).closest('.detail_sch_wrap');
+				var re = '';
+				
+				if($("#topSearchKeywordSr").val() == "" || $("#topSearchKeywordSr").val() == null || $("#topSearchKeywordSr").val()=="검색어를 입력하세요."){
+					alert("검색어를 입력해주세요");
+					$("#topSearchKeywordSr").val("");
+					$("#topSearchKeywordSr").focus();
+					return false;
+				}
+				
+				$('#keyword').val($('#topSearchKeywordSr').val());
+				$('#where').val('ALL');				
+			}else{
+				var opt = $(this).closest('.re_sch_wrap');
+				var re = 're_';
+				if($('#re_topSearchKeywordSr').val() != '' && $('#re_topSearchKeywordSr').val() != null){
+					$('#rquery').val($('#re_topSearchKeywordSr').val());									
+				}				
+			}
+			
+			$("#reSrchFlag").val("Y");	
+			 
+			if($('#hidden_dateRange').val() == 'day'){ 
+				if('' == $('#'+re+'srchStartDate').val()){
+	     			alert('검색 시작일을 입력하세요.');
+	     			$('#'+re+'srchStartDate').focus();
+	     			return false;
+	     		}				
+				if('' == $('#'+re+'srchEndDate').val()){
+					alert('검색 종료일을 입력하세요.');
+					$('#s'+re+'rchEndDate').focus();
+	                return false;
+	     		}
+				if( '' != $('#'+re+'srchStartDate').val() && '' != $('#'+re+'srchEndDate').val()) {
+		            if($('#'+re+'srchStartDate').val() > $('#'+re+'srchEndDate').val() ){
+		                alert('시작일이 종료일보다 클 수 없습니다.');
+		                return false;
+		            }
+		        }
+				$('#sdate').val($('#'+re+'srchStartDate').val());
+				$('#edate').val($('#'+re+'srchEndDate').val());	
+				$('#dateRange').val($('#hidden_dateRange').val());
+			}else{						
+				doDate($('input[name='+re+'sch_dateRange]:checked').val());
+			}
+			
+			$("#range").val($('input[name='+re+'sch_range]:checked').val());
+			
+			var ckArray = new Array();
+        	$('input[name='+re+'deptType]:checked').each(function(){
+        		ckArray.push(this.value);
+        	});
+        	$('#dtl_dept_type').val(ckArray);
+        	
+        	ckArray = new Array();
+        	$('input[name='+re+'deptCode]:checked').each(function(){
+        		ckArray.push(this.value);
+        	});        	
+        	$('#dtl_dept_code').val(ckArray);
+        	
+        	ckArray = new Array();
+        	$('input[name='+re+'newsType]:checked').each(function(){
+        		ckArray.push(this.value);
+        	});        	
+        	$('#dtl_news_type').val(ckArray);        	
+        	
+        	ckArray = new Array();
+        	$('input[name='+re+'subJectCode]:checked').each(function(){
+        		ckArray.push(this.value);
+        	});        	
+        	$('#dtl_newsml_code').val(ckArray);
+        	        	 
+        	ckArray = new Array();
+        	$('input[name='+re+'subJectType]:checked').each(function(){
+        		ckArray.push(this.value);
+        	});        	
+        	$('#dtl_smenu').val(ckArray);
+			
+        	//페이징 초기화
+    		$("#scnt").val(1);
+    		
+        	$('#searchForm').submit();
+    		//location.href = "/totalSearch.do?"+paramData();
+    		return false;
+		}); 
+		
+		 $('#re_topSearchKeywordSr').keyup(function(event) {
+			 if(event.keyCode == '13'){
+				 $('.re_sch_wrap .sch_btn .sch').click();
+			 }			
+		 });
+		 
+		fn_liempty();
+		
+		
+		
+		
+    	$(document).click(function(event) {    		
+    		if($(event.target).closest('.container .inp, .re_sch_wrap .inp_ark').length == 0){
+    			hideArk(wrapId);
+    		}else{
+    			if($(event.target).closest('.container .inp').length == 0){
+    				hideArk('ark_wrap');
+    			}else{
+    				hideArk('re_ark_wrap');
+    			}
+    		}
+    	});
+    	
+    	$(document).keyup(function(event) {   
+    		if(event.keyCode == 9){
+    			if($(event.target).closest('.container .inp, .re_sch_wrap .inp_ark').length == 0){
+        			hideArk(wrapId);
+        		}else{
+        			if($(event.target).closest('.container .inp').length == 0){
+        				hideArk('ark_wrap');
+        			}else{
+        				hideArk('re_ark_wrap');
+        			}
+        		} 	
+    		}    		  		
+    	});
+    	
+    	$('.sch_cont').removeClass('hidden');
+    	
+    	
+    	let p = -1;
+    	$('.inp, .inp_ark').keydown(function(event) {   
+    		
+    		var key = event.keyCode;
+    		let arkCnt = $('.ark_content li button').length;
+       		if(key == 38 || key == 40){
+       			event.preventDefault();
+       			$('.ark_content li button', this).each(function(i){
+       				if(document.activeElement == this){
+       					p = i;
+       					return false;
+       				}else{
+       					p = -1;	
+       				}    				
+    			});
+       			//console.log(p);
+           		switch(key){
+       	    		case 38:       	    			
+       	    			p--;
+       	    			break;
+       	    		case 40:
+       	    			p++;
+       	    			break;
+           		}
+           		
+           		if(p == arkCnt){
+           			$('.ark_content button', this)[0].focus();	
+           			p = 0;
+           		}else if(p < 0){
+           			$('#'+$('input[type=text]',this).attr('id')).focus();
+           			p = -1;
+           		}else{
+           			console.log($('.ark_content button', this)[p]);
+           			$('.ark_content button', this)[p].focus();           			
+           		}           		
+       		}    		   		    		 
+    		
+    	})
+	});
+	
+    function goTotalSearch(){
+    	if($("#form_search_keyword").val() == ""){
+    		alert('검색어를 입력해주세요');
+        	return false;
+    	}else{
+    		location.href = "/totalSearch.do?"+$("#topSearchForm").serialize();	
+    	}
+    }
+	
+	function fn_liempty(){
+		$('.select-opt ul li button').off('click').on('click', function(){});
+		$('.select-opt ul li button').click(function (){
+			var id = $(this).val();
+			$('#'+id).prop('checked', false);
+			$(this).closest('li').remove();
+	   });
+	}
+	
+	// 날짜지정
+	function doDate(range){
+		var startDate = '';
+		var endDate = '';
+
+		if(range != 'all') {
+
+			var currentDate = new Date();
+			endDate = dateFormat(currentDate,'-');
+
+			if (range == 'day') {
+				currentDate.setDate(currentDate.getDate()-1);
+			} else if (range == 'week') {
+				currentDate.setDate(currentDate.getDate()-7);
+			} else if (range == 'month') {
+				currentDate.setMonth(currentDate.getMonth()-1);
+			} else if (range == 'year') {
+				currentDate.setFullYear(currentDate.getFullYear()-1);
+			} else {
+				startDate = '1970-01-01';
+			}
+
+			startDate = dateFormat(currentDate,'-');
+		}
+		
+		$('#sdate').val(startDate);
+		$('#edate').val(endDate);
+		$('#dateRange').val(range);
+		//location.href = "/totalSearch.do?"+paramData();
+		//reSearch();
+		
+		$('.go_top').on('click', function() {
+			$('html, body').animate({scrollTop : 0}, 100);
+			$('body').focus();
+		});
+		$(window).on('scroll', function() {
+			if($(window).scrollTop() > 430){
+				$('.go_top').addClass('active');
+			}else{
+				$('.go_top').removeClass('active');
+			}
+		});
+	} 
+	
+
+</script>
+<form name="searchForm" id="searchForm" method="get" action="/totalSearch.do" >
+	<input type="hidden" id="srchFlag"	      name="srchFlag" 		value="Y" 									title="검색여부" />
+	<input type="hidden" id="reSrchFlag"      name="reSrchFlag" 	value="" 									title="재검색여부" />
+	<input type="hidden" id="keyword"      	  name="keyword" 		value="" 		title="검색어" />
+	<input type="hidden" id="oldKeyword"      name="oldKeyword" 	value="" 		title="이전화면 검색엔진 검색어" />
+	<input type="hidden" id="resultKeyword"   name="resultKeyword" 	value="" 	title="현재화면 검색엔진 검색어" />
+	<input type="hidden" id="sort"            name="sort" 			value="" 			title="정렬 조건" />
+	<input type="hidden" id="scnt"            name="scnt" 			value="" 			title="시작카운트" />
+	<input type="hidden" id="punit"           name="punit" 			value="" 			title="리스트출력갯수" />
+	<input type="hidden" id="where"           name="where" 			value="all" 			title="검색 분류" />
+	<input type="hidden" id="isOnlyBody"      name="isOnlyBody" 	value=""		title="외부페이지여부" />
+	<input type="hidden" id="sdate"           name="sdate"          value=""           title="검색시작일"/>
+	<input type="hidden" id="edate"           name="edate"          value=""           title="검색종료일"/>
+	<input type="hidden" id="dateRange"       name="dateRange"      value=""       title="기간종류"/>
+	<input type="hidden" id="range"      	  name="range"      	value=""       	title="검색범위"/>
+	<input type="hidden" id="rquery"      	  name="rquery"      	value=""       	title="재검색어"/>
+	<input type="hidden" id="equery"      	  name="equery"      	value=""       	title="검색제외어"/>
+	<input type="hidden" id="op"      	  	  name="op"      		value=""       		title="검색연산자"/>
+	<input type="hidden" id="multiFlag"		  name="multiFlag"      value="Y" 									 title="멀티그룹바이 FLAG"/>
+	<input type="hidden" id="news_type"       name="news_type" 		value="" 			title="분류" />
+	<!-- 2016.12.06 Wisenut.  -->	
+	
+	<input type="hidden" id="dtl_dept_type"		name="dtl_dept_type"    value="" 		title="상세검색-기관코드(대)목록"/>
+	<input type="hidden" id="dtl_dept_code"		name="dtl_dept_code"    value="" 		title="상세검색-기관코드목록"/>
+	<input type="hidden" id="dtl_news_type"		name="dtl_news_type"    value="" 		title="상세검색-유형별목록"/>
+	<input type="hidden" id="dtl_smenu"			name="dtl_smenu" 		value="" 			title="상세검색-주제별 대분류"/>
+	<input type="hidden" id="dtl_newsml_code"	name="dtl_newsml_code" 	value="" 	title="상세검색-주제별 중분류"/>
+	
+	<!-- 2016.12.12 Wisenut. 상세검색(기관별,주제별) 탭선택 -->
+	<input type="hidden" id="hidden_dateRange"	name="hidden_dateRange"  />
+</form>
+	
+	<div class="eg_info">
+		<p><img src="/images/v5/common/eg_taegeukgi.png" alt="태극기">이 누리집은 대한민국 공식 전자정부 누리집입니다.</p>
+	</div>
+	
+	<header id="header" class="header">
+		<div class="container">
+           
+                    
+                    
+                            <div class="logo"><a href="/"><span>대한민국 정책브리핑</span></a></div>
+                    
+            
+			<div class="gnb">
+				<ul class="nav" id="nav">
+					
+						
+							
+								<li>
+									<a href="/news/policyNewsList.do">뉴스</a>
+									<div class="submenu">
+										<div>
+											<div class="menu_item">
+												<a href="/news/policyNewsList.do" class="subm_title">뉴스</a>
+												<ul>
+							
+							
+							
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/news/policyNewsList.do">
+										
+									정책뉴스</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/news/ministryNewsHome.do">
+										
+									부처별 뉴스</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/news/policyFocusHome.do">
+										
+									정책포커스</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/news/reporterList.do">
+										
+									국민이 말하는 정책</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/news/celebrityList.do">
+										
+									오피니언</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/news/customizedNewsList.do">
+										
+									키워드 뉴스</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/multi/mediaNewsList.do">
+										
+									멀티미디어 뉴스</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+								
+											
+					
+						
+							
+							
+							
+								
+											
+					
+						
+							
+							
+							
+								
+											
+					
+						
+							
+							
+							
+								
+											
+					
+						
+							
+							
+							
+								
+											
+					
+						
+							
+							
+												</ul>
+											</div>
+										</div>
+									</div>
+								</li>
+								<li>
+									
+									
+										<a href="/briefing/pressReleaseList.do">브리핑룸</a>
+									
+									<div class="submenu">
+										<div>
+											<div class="menu_item">
+												
+												
+													<a href="/briefing/pressReleaseList.do" class="subm_title">브리핑룸</a>
+												
+												
+													
+													
+														<ul>	
+													
+																																
+							
+							
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/briefing/pressReleaseList.do">
+										
+									보도자료</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/briefing/actuallyList.do">
+										
+									사실은 이렇습니다</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/briefing/briefingHomeList.do">
+										
+									브리핑 자료</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/briefing/speechList.do">
+										
+									연설문</a>
+								</li>
+								
+											
+					
+						
+							
+							
+												</ul>
+											</div>
+										</div>
+									</div>
+								</li>
+								<li>
+									
+									
+										<a href="/archive/ebookMainList.do">정책자료</a>
+									
+									<div class="submenu">
+										<div>
+											<div class="menu_item">
+												
+												
+													<a href="/archive/ebookMainList.do" class="subm_title">정책자료</a>
+												
+												
+													
+													
+														<ul>	
+													
+																																
+							
+							
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+									
+										<a href="https://www.korea.kr/govVision/index.html" target="_blank" title="새창열림">													
+										
+										
+									국정과제</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/archive/ebookMainList.do">
+										
+									전자책</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/archive/expDocMainList.do">
+										
+									전문자료</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/archive/recruitInfoList.do">
+										
+									채용정보</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/archive/governmentList.do">
+										
+									국정신문(’92-’04)</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+									
+										<a href="https://www.ehistory.go.kr/" target="_blank" title="새창열림">													
+										
+										
+									대한뉴스</a>
+								</li>
+								
+											
+					
+						
+							
+							
+												</ul>
+											</div>
+										</div>
+									</div>
+								</li>
+								<li>
+									
+									
+										<a href="/etc/byulbyulList.do">구독&참여</a>
+									
+									<div class="submenu">
+										<div>
+											<div class="menu_item">
+												
+												
+													<a href="/etc/byulbyulList.do" class="subm_title">구독&참여</a>
+												
+												
+													
+													
+														<ul>	
+													
+																																
+							
+							
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/etc/byulbyulList.do">
+										
+									이벤트</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/etc/newsLetterMain.do">
+										
+									뉴스레터</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/etc/newsNotifyGuide.do">
+										
+									정책정보 알림설정</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/etc/deptSns.do">
+										
+									정부기관 SNS</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+							
+								<li>
+										
+									
+										<a href="/etc/banner.do">
+										
+									배너달기</a>
+								</li>
+								
+											
+					
+						
+							
+							
+							
+													<li>
+															
+														
+															<a href="/etc/noticeList.do">
+															
+														공지사항</a>
+													</li>
+												</ul>
+											</div>
+										</div>
+									</div>
+								</li>
+							
+								
+											
+					
+				</ul>
+				<div class="gnb_bg"></div>
+			</div>
+				
+			<div class="util">
+				<div class="site_link">
+					<a target="_blank" href="https://www.president.go.kr" title="새창으로 열림">청와대 소식</a>
+					<a class="mail" target="_blank" href="https://mail.korea.kr" title="새창으로 열림">공직메일</a>
+					<!-- <a class="social" href="/etc/deptSns.do?type=SNS">소통채널(SNS)</a> -->
+					<!-- 알림설정 버튼 -->
+					<button id="notify_button_id" type="button" onclick="javascript:location.href='/etc/newsNotifySetting.do';" class="notify_btn">
+					  <span class="sr-only">알림<span>ON</span></span>
+					</button>
+				</div>
+			</div>					
+		</div>
+	</header>
+
+
+<div id="t_header">
+	<div class="container">
+		<h1 class="sr-only">대한민국 정책브리핑 통합검색</h1>
+		<a class="logo" href="/">대한민국 정책브리핑</a>
+		
+		<!-- S: breadcrumbs --><!-- 20260827추가 -->
+		<div class="breadcrumbs">
+			<h2 class="sr-only">사이트 이동경로</h2>
+			<ul class="lst">
+				<li><a class="home" href="/"><span>홈</span></a></li>
+				<li class="dep2"><strong><a href="/totalSearch.do?topSearchKeyword="><span>통합검색</span></a></strong></li>
+			</ul>
+		</div>
+		<!--// E: breadcrumbs -->
+		
+		<div class="inp">		
+			<form method="get" id="topSearchFormSr" name="topSearchFormSr" action="/totalSearch.do" >
+				<input type="hidden" name="where" id="topSearchWhere" value="ALL" />
+				<input type="hidden" name="op" id="topSearchOp" value="" />
+				<input type="hidden" id="multiFlag1"	name="multiFlag" value="Y" title="멀티그룹바이 FLAG"/>
+				<fieldset>
+					<legend>검색폼</legend>
+					<label for="topSearchKeywordSr">검색어를 입력하세요</label>
+					<input type="text" id="topSearchKeywordSr" name="topSearchKeyword" value="" title="검색어를 입력하세요" autocomplete="off"  />
+					<div id="ark"></div>
+					<button class="clear_input" type="button">입력내용삭제</button><!-- 입력내용삭제 20210622 -->
+					<button type="submit">검색</button>
+				</fieldset>
+			</form>
+		</div>
+
+		<button class="detail_sch_open"><span>상세검색<i>열기</i></span></button>
+			<div class="detail_sch_wrap" id="totalschCk">				
+				<div class="sch_post">
+					<!-- 기간/범위 -->
+					<div class="post">
+						<div class="">
+							<strong class="title">검색기간</strong>
+							<div class="sort">
+								<ul>
+									<li><input type="radio" name="sch_dateRange" id="dateRange_all" title="검색기간-전체" value="all" checked="checked" /><label for="dateRange_all">전체</label></li>
+									<li><input type="radio" name="sch_dateRange" id="dateRange_week" title="최근 1주" value="week"  /><label for="dateRange_week">최근 1주</label></li>
+									<li><input type="radio" name="sch_dateRange" id="dateRange_month" title="최근 1달" value="month" /><label for="dateRange_month">최근 1달</label></li>
+									<li><input type="radio" name="sch_dateRange" id="dateRange_year" title="최근 1년" value="year" /><label for="dateRange_year">최근 1년</label></li>
+									<li><input type="radio" name="sch_dateRange" id="re_dateRange_self" title="직접입력" data-target="period_free_date1"/><label for="re_dateRange_self">직접입력</label></li>
+									<li class="period period_free_date1">
+										<label for="srchStartDate">검색시작년월일입력</label>
+										<span>
+											<input id="srchStartDate" name="srchStartDate" value="" type="text" readonly="readonly">
+											<button id="srchStartDateBt"><i>시작날짜 달력 팝업 열기</i></button>
+											<span class="cal-pop" id="calStart" style="display:none;"></span><!-- calendar popup -->
+										</span>
+										<em>~</em>
+										<label for="srchEndDate">검색마지막년월일입력</label>
+										<span>
+											<input id="srchEndDate" name="srchEndDate" value="" type="text" readonly="readonly">
+											<button id="srchEndDateBt"><i>끝날짜 달력 팝업 열기</i></button>
+											<span class="cal-pop" id="calEnd" style="display:none;"></span><!-- calendar popup -->
+										</span>
+									</li>
+								</ul>
+							</div>
+						</div>
+						<div class="">
+							<strong class="title">검색범위</strong>
+							<div class="sort">
+								<ul>
+									<li><input type="radio" name="sch_range" id="range_all" title="검색범위-전체" value="ALL"  /><label for="range_all">전체</label></li>
+									<li><input type="radio" name="sch_range" id="range_title" title="제목" value="TITLE"  /><label for="range_title">제목</label></li>
+									<li><input type="radio" name="sch_range" id="range_content" title="본문" value="CONTENT"  /><label for="range_content">본문</label></li>
+									<li><input type="radio" name="sch_range" id="range_attch" title="첨부파일" value="ATTACH_NAME"  /><label for="range_attch">첨부파일</label></li>
+								</ul>
+							</div>
+						</div>
+					</div>
+					
+					<div class="post">
+						<strong class="title">주제별</strong>
+						<div class="box control">
+							<ul>
+								
+									
+										
+											<li>
+												<div>
+													<input type="checkbox" value="EDS01" id="stype_EDS01" title="경제" name="subJectType">
+													<label for="stype_EDS01">경제</label>
+													<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+												</div>
+												<ul>
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0101" id="scode_EDS0101" title="경제일반" name="subJectCode">
+												<label for="scode_EDS0101">경제일반</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0102" id="scode_EDS0102" title="생활경제" name="subJectCode">
+												<label for="scode_EDS0102">생활경제</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0103" id="scode_EDS0103" title="기업" name="subJectCode">
+												<label for="scode_EDS0103">기업</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0104" id="scode_EDS0104" title="금융" name="subJectCode">
+												<label for="scode_EDS0104">금융</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0105" id="scode_EDS0105" title="산업" name="subJectCode">
+												<label for="scode_EDS0105">산업</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0106" id="scode_EDS0106" title="국토개발·지역경제" name="subJectCode">
+												<label for="scode_EDS0106">국토개발·지역경제</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0107" id="scode_EDS0107" title="통신·과학" name="subJectCode">
+												<label for="scode_EDS0107">통신·과학</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+										
+												</ul>
+											</li>
+											<li>
+												<div>
+													<input type="checkbox" value="EDS02" id="stype_EDS02" title="사회" name="subJectType">
+													<label for="stype_EDS02">사회</label>
+													<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+												</div>
+												<ul>
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0201" id="scode_EDS0201" title="사회일반" name="subJectCode">
+												<label for="scode_EDS0201">사회일반</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0202" id="scode_EDS0202" title="노동·고용" name="subJectCode">
+												<label for="scode_EDS0202">노동·고용</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0203" id="scode_EDS0203" title="복지" name="subJectCode">
+												<label for="scode_EDS0203">복지</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0204" id="scode_EDS0204" title="보건·위생" name="subJectCode">
+												<label for="scode_EDS0204">보건·위생</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0205" id="scode_EDS0205" title="교육·입시" name="subJectCode">
+												<label for="scode_EDS0205">교육·입시</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0206" id="scode_EDS0206" title="환경" name="subJectCode">
+												<label for="scode_EDS0206">환경</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+										
+												</ul>
+											</li>
+											<li>
+												<div>
+													<input type="checkbox" value="EDS03" id="stype_EDS03" title="문화" name="subJectType">
+													<label for="stype_EDS03">문화</label>
+													<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+												</div>
+												<ul>
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0301" id="scode_EDS0301" title="문화일반" name="subJectCode">
+												<label for="scode_EDS0301">문화일반</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0302" id="scode_EDS0302" title="공연·예술" name="subJectCode">
+												<label for="scode_EDS0302">공연·예술</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0303" id="scode_EDS0303" title="문화콘텐츠" name="subJectCode">
+												<label for="scode_EDS0303">문화콘텐츠</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0304" id="scode_EDS0304" title="관광" name="subJectCode">
+												<label for="scode_EDS0304">관광</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0305" id="scode_EDS0305" title="체육" name="subJectCode">
+												<label for="scode_EDS0305">체육</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+										
+												</ul>
+											</li>
+											<li>
+												<div>
+													<input type="checkbox" value="EDS04" id="stype_EDS04" title="외교/안보" name="subJectType">
+													<label for="stype_EDS04">외교/안보</label>
+													<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+												</div>
+												<ul>
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0401" id="scode_EDS0401" title="외교" name="subJectCode">
+												<label for="scode_EDS0401">외교</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0402" id="scode_EDS0402" title="안보" name="subJectCode">
+												<label for="scode_EDS0402">안보</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0403" id="scode_EDS0403" title="남북관계" name="subJectCode">
+												<label for="scode_EDS0403">남북관계</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+											<li>
+												<input type="checkbox" value="EDS0404" id="scode_EDS0404" title="국제" name="subJectCode">
+												<label for="scode_EDS0404">국제</label>
+											</li>
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+																	
+										
+									
+								
+									
+																								
+																							
+										
+												</ul>
+											</li>															
+																	
+										
+									
+									
+							</ul>
+						</div>
+					</div>
+					<!-- 기관별 -->
+					<div class="post">
+						<strong class="title">기관별</strong>
+						<div class="box control" >
+							<ul>
+								<li>
+									<div>
+										<input value="A" id="deptTypeA" title="부처" type="checkbox" name="deptType">
+										<label for="deptTypeA"> 부처</label>
+										<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+									</div>
+									<ul>
+										
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00016" id="pgtype_ta2_A00016" title="청와대"  />
+															<label for="pgtype_ta2_A00016">청와대</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00004" id="pgtype_ta2_A00004" title="국무조정실"  />
+															<label for="pgtype_ta2_A00004">국무조정실</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00001" id="pgtype_ta2_A00001" title="고용노동부"  />
+															<label for="pgtype_ta2_A00001">고용노동부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00033" id="pgtype_ta2_A00033" title="과학기술정보통신부"  />
+															<label for="pgtype_ta2_A00033">과학기술정보통신부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00002" id="pgtype_ta2_A00002" title="교육부"  />
+															<label for="pgtype_ta2_A00002">교육부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00038" id="pgtype_ta2_A00038" title="국가데이터처"  />
+															<label for="pgtype_ta2_A00038">국가데이터처</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00037" id="pgtype_ta2_A00037" title="국가보훈부"  />
+															<label for="pgtype_ta2_A00037">국가보훈부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00005" id="pgtype_ta2_A00005" title="국방부"  />
+															<label for="pgtype_ta2_A00005">국방부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00006" id="pgtype_ta2_A00006" title="국토교통부"  />
+															<label for="pgtype_ta2_A00006">국토교통부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00040" id="pgtype_ta2_A00040" title="기획예산처"  />
+															<label for="pgtype_ta2_A00040">기획예산처</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00019" id="pgtype_ta2_A00019" title="기후에너지환경부"  />
+															<label for="pgtype_ta2_A00019">기후에너지환경부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00008" id="pgtype_ta2_A00008" title="농림축산식품부"  />
+															<label for="pgtype_ta2_A00008">농림축산식품부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+															<input type="checkbox" name="deptCode" value="A00009,D00020" id="pgtype_ta2_A00009" title="문화체육관광부"/>
+															<label for="pgtype_ta2_A00009">문화체육관광부</label>
+														
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00010" id="pgtype_ta2_A00010" title="법무부"  />
+															<label for="pgtype_ta2_A00010">법무부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00011" id="pgtype_ta2_A00011" title="법제처"  />
+															<label for="pgtype_ta2_A00011">법제처</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00012" id="pgtype_ta2_A00012" title="보건복지부"  />
+															<label for="pgtype_ta2_A00012">보건복지부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00015" id="pgtype_ta2_A00015" title="산업통상부"  />
+															<label for="pgtype_ta2_A00015">산업통상부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00013" id="pgtype_ta2_A00013" title="성평등가족부"  />
+															<label for="pgtype_ta2_A00013">성평등가족부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00027" id="pgtype_ta2_A00027" title="식품의약품안전처"  />
+															<label for="pgtype_ta2_A00027">식품의약품안전처</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00014" id="pgtype_ta2_A00014" title="외교부"  />
+															<label for="pgtype_ta2_A00014">외교부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00030" id="pgtype_ta2_A00030" title="인사혁신처"  />
+															<label for="pgtype_ta2_A00030">인사혁신처</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00041" id="pgtype_ta2_A00041" title="재정경제부"  />
+															<label for="pgtype_ta2_A00041">재정경제부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00032" id="pgtype_ta2_A00032" title="중소벤처기업부"  />
+															<label for="pgtype_ta2_A00032">중소벤처기업부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00039" id="pgtype_ta2_A00039" title="지식재산처"  />
+															<label for="pgtype_ta2_A00039">지식재산처</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00017" id="pgtype_ta2_A00017" title="통일부"  />
+															<label for="pgtype_ta2_A00017">통일부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+																					
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00023" id="pgtype_ta2_A00023" title="해양수산부"  />
+															<label for="pgtype_ta2_A00023">해양수산부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+												<li>
+													
+														
+														
+															<input type="checkbox" name="deptCode" value="A00031" id="pgtype_ta2_A00031" title="행정안전부"  />
+															<label for="pgtype_ta2_A00031">행정안전부</label>
+														
+													
+												</li>
+											
+										
+																					
+											
+										
+									</ul>
+								</li>
+								<li>
+									<div>
+										<input value="B" id="deptTypeB" title="청" type="checkbox" name="deptType">
+										<label for="deptTypeB"> 청</label>
+										<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+									</div>
+									<ul>
+										
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00002" id="pgtype_ta2_B00002" title="경찰청">
+													<label for="pgtype_ta2_B00002">경찰청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00027" id="pgtype_ta2_B00027" title="공소청">
+													<label for="pgtype_ta2_B00027">공소청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00003" id="pgtype_ta2_B00003" title="관세청">
+													<label for="pgtype_ta2_B00003">관세청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00025" id="pgtype_ta2_B00025" title="국가유산청">
+													<label for="pgtype_ta2_B00025">국가유산청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00004" id="pgtype_ta2_B00004" title="국세청">
+													<label for="pgtype_ta2_B00004">국세청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00005" id="pgtype_ta2_B00005" title="기상청">
+													<label for="pgtype_ta2_B00005">기상청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00006" id="pgtype_ta2_B00006" title="농촌진흥청">
+													<label for="pgtype_ta2_B00006">농촌진흥청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00008" id="pgtype_ta2_B00008" title="방위사업청">
+													<label for="pgtype_ta2_B00008">방위사업청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00009" id="pgtype_ta2_B00009" title="병무청">
+													<label for="pgtype_ta2_B00009">병무청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00010" id="pgtype_ta2_B00010" title="산림청">
+													<label for="pgtype_ta2_B00010">산림청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00021" id="pgtype_ta2_B00021" title="새만금개발청">
+													<label for="pgtype_ta2_B00021">새만금개발청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00022" id="pgtype_ta2_B00022" title="소방청">
+													<label for="pgtype_ta2_B00022">소방청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00026" id="pgtype_ta2_B00026" title="우주항공청">
+													<label for="pgtype_ta2_B00026">우주항공청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00024" id="pgtype_ta2_B00024" title="재외동포청">
+													<label for="pgtype_ta2_B00024">재외동포청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00013" id="pgtype_ta2_B00013" title="조달청">
+													<label for="pgtype_ta2_B00013">조달청</label>
+												</li>
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00028" id="pgtype_ta2_B00028" title="중대범죄수사청">
+													<label for="pgtype_ta2_B00028">중대범죄수사청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00023" id="pgtype_ta2_B00023" title="질병관리청">
+													<label for="pgtype_ta2_B00023">질병관리청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00017" id="pgtype_ta2_B00017" title="해양경찰청">
+													<label for="pgtype_ta2_B00017">해양경찰청</label>
+												</li>
+											
+										
+											
+											
+										
+											
+											
+										
+											
+											
+												<li>
+													<input type="checkbox" name="deptCode" value="B00018" id="pgtype_ta2_B00018" title="행정중심복합도시건설청">
+													<label for="pgtype_ta2_B00018">행정중심복합도시건설청</label>
+												</li>
+											
+										
+									</ul>
+								</li>
+								<li>
+									<div>
+										<input value="C" id="deptTypeC" title="위원회" type="checkbox" name="deptType">
+										<label for="deptTypeC"> 위원회</label>
+										<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+									</div>
+									<ul>
+										
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00022" id="pgtype_ta2_C00022" title="감사원" />
+														<label for="pgtype_ta2_C00022">감사원</label>
+													</li>
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00019" id="pgtype_ta2_C00019" title="개인정보보호위원회" />
+														<label for="pgtype_ta2_C00019">개인정보보호위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00001" id="pgtype_ta2_C00001" title="공정거래위원회" />
+														<label for="pgtype_ta2_C00001">공정거래위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00015" id="pgtype_ta2_C00015" title="국가인권위원회" />
+														<label for="pgtype_ta2_C00015">국가인권위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00002" id="pgtype_ta2_C00002" title="국민권익위원회" />
+														<label for="pgtype_ta2_C00002">국민권익위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00003" id="pgtype_ta2_C00003" title="금융위원회" />
+														<label for="pgtype_ta2_C00003">금융위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00005" id="pgtype_ta2_C00005" title="방송미디어통신위원회" />
+														<label for="pgtype_ta2_C00005">방송미디어통신위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00012" id="pgtype_ta2_C00012" title="원자력안전위원회" />
+														<label for="pgtype_ta2_C00012">원자력안전위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+													<li>
+														<input type="checkbox" name="deptCode" value="C00016" id="pgtype_ta2_C00016" title="중앙선거관리위원회" />
+														<label for="pgtype_ta2_C00016">중앙선거관리위원회</label>
+													</li>
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+												
+												
+											
+									</ul>
+								</li>
+							</ul>
+						</div>
+					</div>
+					<!-- 유형별 -->
+					<div class="post">
+						<strong class="title">유형별</strong>
+						<div class="box">
+							<ul>
+								
+							</ul>
+						</div>
+					</div>
+				</div>
+						
+				<!-- 선택한 항목 -->
+				<div class="select-opt">
+					<strong>선택한 항목</strong>
+					<ul>
+						<li>&nbsp;</li>	
+					</ul>
+				</div>
+				<!-- 버튼 -->
+				<div class="sch_btn">
+					<button class="restart"><span>초기화</span></button>
+					<button class="sch"><span>상세검색</span></button>				
+				</div>
+				<button class="detail_sch_close"><span>상세검색<i>닫기</i></span></button>
+			</div>
+			<div class="key">
+				<ul>
+					
+						
+							<li><a href="javascript:topKeywordSubmitSr('2027 예산안');">2027 예산안</a></li>
+						
+							<li><a href="javascript:topKeywordSubmitSr('국민성장펀드');">국민성장펀드</a></li>
+						
+							<li><a href="javascript:topKeywordSubmitSr('3대 메가프로젝트');">3대 메가프로젝트</a></li>
+						
+					
+				</ul>
+			</div>
+		</div>	
+	</div>
+
+
+	<div id="t_contanier">
+
+		<div class="section">
+
+			<!-- S: Sch Tab -->
+			
+
+
+
+
+<div class="sch_tab">
+	<ul>
+		
+	</ul>
+</div>
+			<!--// E: Sch Tab -->
+
+			<div class="sch_cont hidden">
+			
+				<div class="article total_info">
+					<div class="text">
+						<strong>‘’</strong>에 대해 결과가 <strong>0건</strong>의 자료가 있습니다.
+					</div>
+					<div class="re_sch_open"><button><span>결과 내 재검색<i>열기</i></span></button></div>
+					<div class="re_sch_wrap">
+						<div>
+							<div class="sch_post">
+								<!-- 기간/범위 -->
+								<div class="post">
+									<div class="">
+										<strong class="title">검색어</strong>
+										<div class="sort inp_ark">
+											<input class="inp" type="text" id="re_topSearchKeywordSr" name="reSearchKeyword" title="검색어를 입력하세요." placeholder="검색어를 입력하세요." autocomplete="off"  />
+											<div id="re_ark"></div>
+										</div>
+									</div>
+									<div class="">
+										<strong class="title">검색기간</strong>
+										<div class="sort">
+											<ul>
+												<li><input type="radio" name="re_sch_dateRange" id="re_dateRange_all" title="검색기간-전체" value="all"  /><label for="re_dateRange_all">전체</label></li>
+												<li><input type="radio" name="re_sch_dateRange" id="re_dateRange_week" title="최근 1주" value="week"  /><label for="re_dateRange_week"> 최근 1주</label></li>
+												<li><input type="radio" name="re_sch_dateRange" id="re_dateRange_month" title="최근 1달" value="month"  /><label for="re_dateRange_month">최근 1달</label></li>
+												<li><input type="radio" name="re_sch_dateRange" id="re_dateRange_year" title="최근 1년" value="year"  /><label for="re_dateRange_year">최근 1년</label></li>
+												<li><input type="radio" name="re_sch_dateRange" id="re_dateRange_self" title="직접입력" data-target="period_free_date2"/><label for="re_dateRange_self">직접입력</label></li>
+												<li class="period period_free_date2">
+													<label for="re_srchStartDate">검색시작년월일입력</label>
+													<span>
+														<input id="re_srchStartDate" name="re_srchStartDate" value="" type="text" readonly="readonly">
+														<button id="re_srchStartDateBt"><i>시작날짜 달력 팝업 열기</i></button>
+														<span class="cal-pop" id="re_calStart" style="display:none;"></span><!-- calendar popup -->
+													</span>
+													<em>~</em>
+													<label for="re_srchEndDate">검색마지막년월일입력</label>
+													<span>
+														<input id="re_srchEndDate" name="re_srchEndDate" value="" type="text" readonly="readonly">
+														<button id="re_srchEndDateBt"><i>끝날짜 달력 팝업 열기</i></button>
+														<span class="cal-pop" id="re_calEnd" style="display:none;"></span><!-- calendar popup -->
+													</span>
+												</li>
+											</ul>
+										</div>
+									</div>
+									<div class="">
+										<strong class="title">검색범위</strong>
+										<div class="sort">
+											<ul>
+												<li><input type="radio" name="re_sch_range" id="re_range_all" title="검색범위-전체" value="ALL"  /><label for="re_range_all">전체</label></li>
+												<li><input type="radio" name="re_sch_range" id="re_range_title" title="제목" value="TITLE"  /><label for="re_range_title">제목</label></li>
+												<li><input type="radio" name="re_sch_range" id="re_range_content" title="본문" value="CONTENT"  /><label for="re_range_content">본문</label></li>
+												<li><input type="radio" name="re_sch_range" id="re_range_attch" title="첨부파일" value="ATTACH_NAME"  /><label for="re_range_attch">첨부파일</label></li>
+											</ul>
+										</div>
+									</div>
+								</div>
+								
+								<div class="post">
+									<strong class="title">주제별</strong>
+									<div class="box control">
+										<ul>
+											
+												
+													
+														<li>
+															<div>
+																<input type="checkbox" value="EDS01" id="re_stype_EDS01" title="경제" name="re_subJectType">
+																<label for="re_stype_EDS01">경제</label>
+																<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+															</div>
+															<ul>
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0101" id="re_scode_EDS0101" title="경제일반" name="re_subJectCode">
+															<label for="re_scode_EDS0101">경제일반</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0102" id="re_scode_EDS0102" title="생활경제" name="re_subJectCode">
+															<label for="re_scode_EDS0102">생활경제</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0103" id="re_scode_EDS0103" title="기업" name="re_subJectCode">
+															<label for="re_scode_EDS0103">기업</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0104" id="re_scode_EDS0104" title="금융" name="re_subJectCode">
+															<label for="re_scode_EDS0104">금융</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0105" id="re_scode_EDS0105" title="산업" name="re_subJectCode">
+															<label for="re_scode_EDS0105">산업</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0106" id="re_scode_EDS0106" title="국토개발·지역경제" name="re_subJectCode">
+															<label for="re_scode_EDS0106">국토개발·지역경제</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0107" id="re_scode_EDS0107" title="통신·과학" name="re_subJectCode">
+															<label for="re_scode_EDS0107">통신·과학</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+													
+															</ul>
+														</li>
+														<li>
+															<div>
+																<input type="checkbox" value="EDS02" id="re_stype_EDS02" title="사회" name="re_subJectType">
+																<label for="re_stype_EDS02">사회</label>
+																<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+															</div>
+															<ul>
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0201" id="re_scode_EDS0201" title="사회일반" name="re_subJectCode">
+															<label for="re_scode_EDS0201">사회일반</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0202" id="re_scode_EDS0202" title="노동·고용" name="re_subJectCode">
+															<label for="re_scode_EDS0202">노동·고용</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0203" id="re_scode_EDS0203" title="복지" name="re_subJectCode">
+															<label for="re_scode_EDS0203">복지</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0204" id="re_scode_EDS0204" title="보건·위생" name="re_subJectCode">
+															<label for="re_scode_EDS0204">보건·위생</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0205" id="re_scode_EDS0205" title="교육·입시" name="re_subJectCode">
+															<label for="re_scode_EDS0205">교육·입시</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0206" id="re_scode_EDS0206" title="환경" name="re_subJectCode">
+															<label for="re_scode_EDS0206">환경</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+													
+															</ul>
+														</li>
+														<li>
+															<div>
+																<input type="checkbox" value="EDS03" id="re_stype_EDS03" title="문화" name="re_subJectType">
+																<label for="re_stype_EDS03">문화</label>
+																<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+															</div>
+															<ul>
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0301" id="re_scode_EDS0301" title="문화일반" name="re_subJectCode">
+															<label for="re_scode_EDS0301">문화일반</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0302" id="re_scode_EDS0302" title="공연·예술" name="re_subJectCode">
+															<label for="re_scode_EDS0302">공연·예술</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0303" id="re_scode_EDS0303" title="문화콘텐츠" name="re_subJectCode">
+															<label for="re_scode_EDS0303">문화콘텐츠</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0304" id="re_scode_EDS0304" title="관광" name="re_subJectCode">
+															<label for="re_scode_EDS0304">관광</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0305" id="re_scode_EDS0305" title="체육" name="re_subJectCode">
+															<label for="re_scode_EDS0305">체육</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+													
+															</ul>
+														</li>
+														<li>
+															<div>
+																<input type="checkbox" value="EDS04" id="re_stype_EDS04" title="외교/안보" name="re_subJectType">
+																<label for="re_stype_EDS04">외교/안보</label>
+																<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+															</div>
+															<ul>
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0401" id="re_scode_EDS0401" title="외교" name="re_subJectCode">
+															<label for="re_scode_EDS0401">외교</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0402" id="re_scode_EDS0402" title="안보" name="re_subJectCode">
+															<label for="re_scode_EDS0402">안보</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0403" id="re_scode_EDS0403" title="남북관계" name="re_subJectCode">
+															<label for="re_scode_EDS0403">남북관계</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+														<li>
+															<input type="checkbox" value="EDS0404" id="re_scode_EDS0404" title="국제" name="re_subJectCode">
+															<label for="re_scode_EDS0404">국제</label>
+														</li>
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+																				
+													
+												
+											
+												
+																											
+																										
+													
+															</ul>
+														</li>															
+																				
+													
+												
+												
+										</ul>
+									</div>
+								</div>
+								
+								
+								<!-- 기관별 -->
+								<div class="post">
+									<strong class="title">기관별</strong>
+									<div class="box control">
+										<ul>
+											<li>
+												<div>
+													<input value="A" id="re_deptTypeA" name="re_deptType" title="부처" type="checkbox">
+													<label for="re_deptTypeA"> 부처</label>
+													<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+												</div>
+												<ul>
+													
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00016" id="re_pgtype_ta2_A00016" title="청와대"  />
+																		<label for="re_pgtype_ta2_A00016">청와대</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00004" id="re_pgtype_ta2_A00004" title="국무조정실"  />
+																		<label for="re_pgtype_ta2_A00004">국무조정실</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00001" id="re_pgtype_ta2_A00001" title="고용노동부"  />
+																		<label for="re_pgtype_ta2_A00001">고용노동부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00033" id="re_pgtype_ta2_A00033" title="과학기술정보통신부"  />
+																		<label for="re_pgtype_ta2_A00033">과학기술정보통신부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00002" id="re_pgtype_ta2_A00002" title="교육부"  />
+																		<label for="re_pgtype_ta2_A00002">교육부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00038" id="re_pgtype_ta2_A00038" title="국가데이터처"  />
+																		<label for="re_pgtype_ta2_A00038">국가데이터처</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00037" id="re_pgtype_ta2_A00037" title="국가보훈부"  />
+																		<label for="re_pgtype_ta2_A00037">국가보훈부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00005" id="re_pgtype_ta2_A00005" title="국방부"  />
+																		<label for="re_pgtype_ta2_A00005">국방부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00006" id="re_pgtype_ta2_A00006" title="국토교통부"  />
+																		<label for="re_pgtype_ta2_A00006">국토교통부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00040" id="re_pgtype_ta2_A00040" title="기획예산처"  />
+																		<label for="re_pgtype_ta2_A00040">기획예산처</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00019" id="re_pgtype_ta2_A00019" title="기후에너지환경부"  />
+																		<label for="re_pgtype_ta2_A00019">기후에너지환경부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00008" id="re_pgtype_ta2_A00008" title="농림축산식품부"  />
+																		<label for="re_pgtype_ta2_A00008">농림축산식품부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00009,D00020" id="re_pgtype_ta2_A00009" title="문화체육관광부"  />
+																		<label for="re_pgtype_ta2_A00009">문화체육관광부</label>
+																	
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00010" id="re_pgtype_ta2_A00010" title="법무부"  />
+																		<label for="re_pgtype_ta2_A00010">법무부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00011" id="re_pgtype_ta2_A00011" title="법제처"  />
+																		<label for="re_pgtype_ta2_A00011">법제처</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00012" id="re_pgtype_ta2_A00012" title="보건복지부"  />
+																		<label for="re_pgtype_ta2_A00012">보건복지부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00015" id="re_pgtype_ta2_A00015" title="산업통상부"  />
+																		<label for="re_pgtype_ta2_A00015">산업통상부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00013" id="re_pgtype_ta2_A00013" title="성평등가족부"  />
+																		<label for="re_pgtype_ta2_A00013">성평등가족부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00027" id="re_pgtype_ta2_A00027" title="식품의약품안전처"  />
+																		<label for="re_pgtype_ta2_A00027">식품의약품안전처</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00014" id="re_pgtype_ta2_A00014" title="외교부"  />
+																		<label for="re_pgtype_ta2_A00014">외교부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00030" id="re_pgtype_ta2_A00030" title="인사혁신처"  />
+																		<label for="re_pgtype_ta2_A00030">인사혁신처</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00041" id="re_pgtype_ta2_A00041" title="재정경제부"  />
+																		<label for="re_pgtype_ta2_A00041">재정경제부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00032" id="re_pgtype_ta2_A00032" title="중소벤처기업부"  />
+																		<label for="re_pgtype_ta2_A00032">중소벤처기업부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00039" id="re_pgtype_ta2_A00039" title="지식재산처"  />
+																		<label for="re_pgtype_ta2_A00039">지식재산처</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00017" id="re_pgtype_ta2_A00017" title="통일부"  />
+																		<label for="re_pgtype_ta2_A00017">통일부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00023" id="re_pgtype_ta2_A00023" title="해양수산부"  />
+																		<label for="re_pgtype_ta2_A00023">해양수산부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+															<li>
+																
+																	
+																	
+																		<input type="checkbox" name="re_deptCode" value="A00031" id="re_pgtype_ta2_A00031" title="행정안전부"  />
+																		<label for="re_pgtype_ta2_A00031">행정안전부</label>
+																	
+																
+															</li>
+														
+													
+																								
+														
+																											
+												</ul>
+											</li>
+											<li>
+												<div>
+													<input value="B" id="re_deptTypeB" name="re_deptType" title="청" type="checkbox">
+													<label for="re_deptTypeB"> 청</label>
+													<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+												</div>
+												<ul>
+													
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00002" id="re_pgtype_ta2_B00002" title="경찰청"  />
+																<label for="re_pgtype_ta2_B00002">경찰청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00027" id="re_pgtype_ta2_B00027" title="공소청"  />
+																<label for="re_pgtype_ta2_B00027">공소청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00003" id="re_pgtype_ta2_B00003" title="관세청"  />
+																<label for="re_pgtype_ta2_B00003">관세청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00025" id="re_pgtype_ta2_B00025" title="국가유산청"  />
+																<label for="re_pgtype_ta2_B00025">국가유산청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00004" id="re_pgtype_ta2_B00004" title="국세청"  />
+																<label for="re_pgtype_ta2_B00004">국세청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00005" id="re_pgtype_ta2_B00005" title="기상청"  />
+																<label for="re_pgtype_ta2_B00005">기상청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00006" id="re_pgtype_ta2_B00006" title="농촌진흥청"  />
+																<label for="re_pgtype_ta2_B00006">농촌진흥청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00008" id="re_pgtype_ta2_B00008" title="방위사업청"  />
+																<label for="re_pgtype_ta2_B00008">방위사업청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00009" id="re_pgtype_ta2_B00009" title="병무청"  />
+																<label for="re_pgtype_ta2_B00009">병무청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00010" id="re_pgtype_ta2_B00010" title="산림청"  />
+																<label for="re_pgtype_ta2_B00010">산림청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00021" id="re_pgtype_ta2_B00021" title="새만금개발청"  />
+																<label for="re_pgtype_ta2_B00021">새만금개발청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00022" id="re_pgtype_ta2_B00022" title="소방청"  />
+																<label for="re_pgtype_ta2_B00022">소방청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00026" id="re_pgtype_ta2_B00026" title="우주항공청"  />
+																<label for="re_pgtype_ta2_B00026">우주항공청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00024" id="re_pgtype_ta2_B00024" title="재외동포청"  />
+																<label for="re_pgtype_ta2_B00024">재외동포청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00013" id="re_pgtype_ta2_B00013" title="조달청"  />
+																<label for="re_pgtype_ta2_B00013">조달청</label>
+															</li>
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00028" id="re_pgtype_ta2_B00028" title="중대범죄수사청"  />
+																<label for="re_pgtype_ta2_B00028">중대범죄수사청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00023" id="re_pgtype_ta2_B00023" title="질병관리청"  />
+																<label for="re_pgtype_ta2_B00023">질병관리청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00017" id="re_pgtype_ta2_B00017" title="해양경찰청"  />
+																<label for="re_pgtype_ta2_B00017">해양경찰청</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="B00018" id="re_pgtype_ta2_B00018" title="행정중심복합도시건설청"  />
+																<label for="re_pgtype_ta2_B00018">행정중심복합도시건설청</label>
+															</li>
+														
+													
+												</ul>
+											</li>
+											<li>
+												<div>
+													<input value="C" id="re_deptTypeC" name="re_deptType" title="위원회" type="checkbox">
+													<label for="re_deptTypeC"> 위원회</label>
+													<button class="sbtn close" type="button"><span><i>접기</i></span></button>
+												</div>
+												<ul>
+													
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00022" id="re_pgtype_ta2_C00022" title="감사원"  />
+																<label for="re_pgtype_ta2_C00022">감사원</label>
+															</li>
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00019" id="re_pgtype_ta2_C00019" title="개인정보보호위원회"  />
+																<label for="re_pgtype_ta2_C00019">개인정보보호위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00001" id="re_pgtype_ta2_C00001" title="공정거래위원회"  />
+																<label for="re_pgtype_ta2_C00001">공정거래위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00015" id="re_pgtype_ta2_C00015" title="국가인권위원회"  />
+																<label for="re_pgtype_ta2_C00015">국가인권위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00002" id="re_pgtype_ta2_C00002" title="국민권익위원회"  />
+																<label for="re_pgtype_ta2_C00002">국민권익위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00003" id="re_pgtype_ta2_C00003" title="금융위원회"  />
+																<label for="re_pgtype_ta2_C00003">금융위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00005" id="re_pgtype_ta2_C00005" title="방송미디어통신위원회"  />
+																<label for="re_pgtype_ta2_C00005">방송미디어통신위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00012" id="re_pgtype_ta2_C00012" title="원자력안전위원회"  />
+																<label for="re_pgtype_ta2_C00012">원자력안전위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+															<li>
+																<input type="checkbox" name="re_deptCode" value="C00016" id="re_pgtype_ta2_C00016" title="중앙선거관리위원회"  />
+																<label for="re_pgtype_ta2_C00016">중앙선거관리위원회</label>
+															</li>
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+													
+																								
+														
+																										
+												</ul>
+											</li>
+										</ul>
+									</div>
+								</div>
+								<!-- 유형별 -->
+								<div class="post">
+									<strong class="title">유형별</strong>
+									<div class="box">
+										<ul>
+																							
+										</ul>
+									</div>
+								</div>
+							</div>
+							<div class="select-opt">
+								<strong>선택한 항목</strong>
+								<ul>
+									<li>&nbsp;</li>	
+								</ul>
+							</div>
+							<div class="sch_btn">
+								<button class="restart"><span>초기화</span></button>
+								<button class="sch"><span>결과 내 재검색</span></button>
+							</div>
+							<button class="re_sch_close"><span>결과 내 재검색 닫기</span></button>
+						</div>
+					</div>
+
+					<ul class="sort">
+						<li  ><button onclick="doRank('date');"><span>최신순</span></button></li>
+						<li  ><button onclick="doRank('past');"><span>과거순</span></button></li>
+						<li  ><button onclick="doRank('rank');"><span>정확도순</span></button></li>
+					</ul>
+				</div>
+
+		<!--// E: Header -->	
+		
+			<!-- S: 테마검색 -->
+			
+
+			<div class="sch_result_contents">
+
+				<div class="sch_result_l">
+					
+					
+					
+						
+							<script type="text/javascript">		
+								$('.sch_cont').removeClass('hidden');
+							</script> 
+							
+							<div class="article nodata">
+								
+								<div class="info">
+									<ul>
+										<li>검색결과를 찾을 수 없습니다.</li>
+										<li>단어의 철자가 정확한지 확인해주세요.</li>
+										<li>보다 일반적인 단어로 검색해보세요. </li>
+									</ul>
+								</div>
+							</div>
+						
+					
+				
+									
+					
+						
+									
+					
+
+				</div>
+
+				
+			</div>
+
+		<!-- S: Footer -->
+		
+
+
+<script src="/jsV5/makePCookie.js"></script>
+
+	<footer id="footer" class="footer">
+		<div class="container">
+			
+			<div class="foot_notice">
+				
+					<h2>공지사항</h2>
+					<div class="desc">
+						
+							<a href="/etc/noticeView.do?newsId=132038885&pWise=main&pWiseSub=O1">정책브리핑 RSS 서비스 제공 중단 안내</a>
+						
+					</div>
+					<a href="/etc/noticeList.do" class="more"><i class="sr-only">공지사항</i><span>더보기</span></a>
+				
+			</div>
+			
+
+			<div class="foot_logo"><span>대한민국 정책브리핑</span></div>
+			<div class="foot_cnt">
+				<address>
+					<span><i>(30119) 세종특별자치시 갈매로 388 정부세종청사 15동</i></span>
+					<span><i><b>전화</b> 044-203-3555 (월~금 09:00~18:00, 공휴일 제외)</i><i><b>팩스</b> 044-203-3488</i><i><b>대표메일</b> <a href="mailto:Webmaster@korea.kr">webmaster@korea.kr</a></i></span>
+				</address>
+				<div class="link">
+					<div class="related_link">
+						<button type="button" class="rel_btn" title="관련사이트 열기">관련사이트</button>
+						<ul class="lst">
+							<li><a href="https://gonggam.korea.kr" target="_blank" title="새창열림">K-공감</a></li>
+							<li><a href="https://www.ktv.go.kr/" target="_blank" title="새창열림">KTV</a></li>
+							<li><a href="https://www.korea.net/" target="_blank" title="새창열림">코리아넷</a></li>
+							<li><a href="https://www.epeople.go.kr/index.jsp" target="_blank" title="새창열림">국민신문고</a></li>
+							<li><a href="https://www.laiis.go.kr/myMain.do" target="_blank" title="새창열림">내고장알리미</a></li>
+						</ul>
+					</div>
+					<div class="link_bottom">
+						<span class="sns">
+							<a class="sns-fb" target="_blank" href="https://www.facebook.com/hipolicy" title="새창열림"><span>페이스북 바로가기</span></a>
+							<a class="sns-tw" target="_blank" href="https://twitter.com/hellopolicy" title="새창열림"><span>X 바로가기</span></a>
+							<a class="sns-nv" target="_blank" href="https://blog.naver.com/hellopolicy" title="새창열림"><span>네이버포스트 바로가기</span></a>
+							<a class="sns-ut" target="_blank" href="https://www.youtube.com/user/hipolicy" title="새창열림"><span>유튜브 바로가기</span></a>
+							<a class="sns-is" target="_blank" href="https://www.instagram.com/gov_korea" title="새창열림"><span>인스타그램 바로가기</span></a>
+						</span>
+						<a class="ministry" href="/etc/ministry.do">행정부처 바로가기<i class="xe-icon"></i></a>
+					</div>
+				</div>
+			</div>
+			<div class="foot_btm">
+				<ul class="nav">
+					<li><a href="/guide/privacy.do" >개인정보처리방침</a></li>
+					<li><a href="/guide/copyRight.do">저작권정책</a></li>
+					<li><a href="/guide/emailReject.do">이메일 수집거부</a></li>			
+					<li><a href="/guide/faq.do">자주 묻는 질문(FAQ)</a></li>
+				</ul>
+				<p class="copy">© Ministry of Culture, Sports and Tourism . All rights reserved</p>
+			</div>
+		</div>
+	</footer>
+	<div class="go_top">
+		<button type="button">
+			<i class="xe-icon"></i>
+			<span>상단으로 이동</span>
+		</button>
+	</div><!--//go_top -->
+	<!--// E: footer -->
+
+<script type="text/javascript">
+(function(w, d, a){
+    w.__beusablerumclient__ = {
+        load : function(src){
+            var b = d.createElement("script");
+            b.src = src; b.async=true; b.type = "text/javascript";
+            d.getElementsByTagName("head")[0].appendChild(b);
+        }
+    };w.__beusablerumclient__.load(a + "?url=" + encodeURIComponent(d.URL));
+})(window, document, "//rum.beusable.net/load/b170510e100133u636");
+</script>
+
+		<!-- 
+
+
+
+
+
+		</div>
+	</div>
+</div>
+<div id="t_footer">
+	<div class="inner">
+		<div class="sch">
+			<a class="logo" href="/">대한민국 정책브리핑</a>
+			<div class="inp">
+				<form method="get" id="topSearchFormSr1" name="topSearchFormSr" action="/totalSearch.do" onsubmit="return topKeywordSubmitSr($('#bottomSearchKeywordSr').val());">
+					<fieldset>
+						<legend>검색폼</legend>
+						<label for="bottomSearchKeywordSr">검색어</label>
+						<input type="text" id="bottomSearchKeywordSr" name="bottomSearchKeywordSr" value="" title="검색어를 입력하세요." placeholder="검색어를 입력하세요." />
+						<button type="submit">검색</button>
+					</fieldset>
+				</form>
+			</div>
+		</div>
+		<ul class="utill">
+			<li><a href="/guide/privacy.do">개인정보처리방침</a></li>
+			<li><a href="/guide/copyRight.do">저작권정책</a></li>
+			<li><a href="/etc/deptSns.do">부처SNS</a></li>
+		</ul>
+		<div class="link">
+			<a class="fb" href="https://www.facebook.com/hipolicy" target="_blank" title="새창열림">페이스북</a>
+			<a class="tw" href="https://twitter.com/hellopolicy" target="_blank" title="새창열림">X</a>
+			<a class="bl" href="https://blog.naver.com/hellopolicy" target="_blank" title="새창열림">블로그</a>
+			<a class="yt" href="https://www.youtube.com/user/hipolicy" target="_blank" title="새창열림">유투브</a>
+			<a class="is" href="https://www.instagram.com/gov_korea" target="_blank" title="새창열림">인스타그램</a>
+			<a class="my" href="/etc/ministry.do" >행정부처 바로가기</a>
+		</div>
+		<address>
+			<span>30119  세종특별자치시 갈매로 388</span>
+			<span>
+				<i>044-203-3555</i>
+				<i>webmaster@korea.kr</i>
+				<i>문화체육관광부</i>
+			</span>
+		</address>
+	</div>
+</div>
+<div class="go-top">
+	<button type="button">
+		<span>상단으로 이동</span>
+	</button>
+</div>
+<script type="text/javascript">
+(function(w, d, a){
+    w.__beusablerumclient__ = {
+        load : function(src){
+            var b = d.createElement("script");
+            b.src = src; b.async=true; b.type = "text/javascript";
+            d.getElementsByTagName("head")[0].appendChild(b);
+        }
+    };w.__beusablerumclient__.load(a + "?url=" + encodeURIComponent(d.URL));
+})(window, document, "//rum.beusable.net/load/b170510e100133u636");
+</script> -->
+		<!--// E: Footer -->
+
+	</div>
+</body>
+</html>
