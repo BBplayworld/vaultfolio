@@ -124,6 +124,9 @@ export interface YearRow {
   s2: number | null;
   s3: number | null;
   rec: number | null;
+  /** R2: 미국 물가(CPI-U 연평균 전년 대비 %)·실업률(연평균 %). 값 없는 해·한국 지수는 null */
+  cpi: number | null;
+  un: number | null;
   /** 코스피 전용 */
   k3: number | null;
   k10: number | null;
@@ -153,6 +156,8 @@ export interface IndexView {
   /** 데이터 끝 이후 진행 중인 해의 이슈(2026) */
   wip: YearEvent | null;
   tbl: YearRow[];
+  /** R2-3: 같은 해 다른 두 지수의 연간 등락(%, 자료 없는 지수는 생략). 펼침 안 1줄 전용 */
+  same: Record<number, { label: string; ret: number }[]>;
 }
 
 /** 지수 하나의 화면 값 전부. asof(연도)를 주면 그 해 말에서 데이터를 자른 모의(진행 중 하락 검증용) */
@@ -197,10 +202,19 @@ export function buildIndexView(d: MarketHistoryData, key: IndexKey, asof?: numbe
       y, close: close[i], ret: ret[i], rate: decRate(d, r, y), dir: yrDir[y].k, issues: issues[y] ?? [],
       y10: r === "us" ? u?.y10 ?? null : null, s2: r === "us" ? u?.s2 ?? null : null, s3: r === "us" ? u?.s3 ?? null : null,
       rec: r === "us" ? recessionMonthsIn(d.rec, y) : null,
+      cpi: r === "us" ? blsYear(d, y).cpi : null, un: r === "us" ? blsYear(d, y).un : null,
       k3: r === "kr" ? kr?.k3 ?? null : null, k10: r === "kr" ? kr?.k10 ?? null : null,
     };
   });
-  return { key, label: M.label, currency: M.currency, rate: r, start: S.start, last, years, close, ret, yrDir, eps, base, ev, issues, wip: d.eventsYear.find((e) => e.wip) ?? null, tbl };
+  const same: IndexView["same"] = {};
+  for (const y of years) {
+    const o = INDEX_KEYS.filter((k) => k !== key).flatMap((k) => {
+      const S2 = d.idx[k], i = y - S2.start;
+      return i < 1 || i >= S2.close.length || y > last ? [] : [{ label: INDEX_META[k].label, ret: Math.round((S2.close[i] / S2.close[i - 1] - 1) * 10000) / 100 }];
+    });
+    if (o.length) same[y] = o;
+  }
+  return { key, label: M.label, currency: M.currency, rate: r, start: S.start, last, years, close, ret, yrDir, eps, base, ev, issues, wip: d.eventsYear.find((e) => e.wip) ?? null, tbl, same };
 }
 
 /** 머리 2줄째 집계(하락 구간의 금리 방향 건수) */
@@ -228,3 +242,9 @@ export function pickDefaultIndex(holding: { domestic: number; overseas: number }
   return holding.domestic > holding.overseas ? "kospi" : "spx";
 }
 
+
+/** R2: 해별 미국 물가(CPI-U 연평균 전년 대비 %)·실업률(연평균 %). 자료 없는 해(2026 이후·2025 10월 미공표)는 null */
+export function blsYear(d: MarketHistoryData, y: number): { cpi: number | null; un: number | null } {
+  const r = d.bls.find((q) => q.y === y);
+  return { cpi: r?.cpi ?? null, un: r?.un ?? null };
+}

@@ -5,14 +5,14 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
-import { DIR_LABEL, GLOSS, fmtLevel, fmtPct, fmtPctPlain, fmtSpread } from "@/lib/invest/text";
+import { BLS_GAP_NOTE, DIR_LABEL, GLOSS, fmtLevel, fmtPct, fmtPct1Plain, fmtPctPlain, fmtSpread } from "@/lib/invest/text";
 import { ChevronRight } from "lucide-react";
-import { NOWRAP_PCT, NoBreak, EventName } from "./nowrap";
+import { NOWRAP_PCT, NoBreak, EventName, SameYear } from "./nowrap";
 import { getProfitLossColor } from "@/config/theme";
 
-const US_NOTE = "금리차는 그해 마지막 거래일의 10년물에서 2년물·3개월물을 뺀 값이에요. 2년물은 1976년 6월, 3개월물은 1981년 9월부터 자료가 있어요. 경기침체는 NBER 기준으로 그해에 침체였던 달 수예요.";
+const US_NOTE = "금리차는 그해 마지막 거래일의 10년물에서 2년물·3개월물을 뺀 값이에요. 2년물은 1976년 6월, 3개월물은 1981년 9월부터 자료가 있어요. 경기침체는 NBER 기준으로 그해에 침체였던 달 수예요. 물가는 소비자물가(CPI-U) 연평균의 전년 대비, 실업률은 연평균이에요(월 12개 평균, 미 노동통계국 · FRED 경유). " + BLS_GAP_NOTE;
 const KR_NOTE = "국고채는 그해 마지막 거래일 값이에요. 한국 기준금리는 2008년 3월 전에는 콜금리 목표예요.";
-export const YEAR_NOTE = "사건은 해마다 연준 원문으로 확인한 일을 시간순으로 적었어요. 2006년은 찾지 못해 비워 뒀어요.";
+export const YEAR_NOTE = "사건은 해마다 1차 원문으로 확인한 일을 시간순으로 적었어요. 1963·1983·1988·2006년은 찾지 못해 비워 뒀어요.";
 export const TABLE_HINT = "그림의 값을 해마다 표로 모았어요. 가로로 밀어 볼 수 있어요";
 
 export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => void }) {
@@ -22,7 +22,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
   const [rowOpen, setRowOpen] = useState<number | null>(null);
   const us = view.rate === "us";
   const heads = us
-    ? ["연도", "연말 지수", "연간 등락", "기준금리 연말", "금리 방향", "10년물 연말", "장단기 금리차 10년−2년(%p)", "장단기 금리차 10년−3개월(%p)", "경기침체", "사건"]
+    ? ["연도", "연말 지수", "연간 등락", "기준금리 연말", "금리 방향", "10년물 연말", "장단기 금리차 10년−2년(%p)", "장단기 금리차 10년−3개월(%p)", "경기침체", "물가 상승률 연평균(%)", "실업률 연평균(%)", "사건"]
     : ["연도", "연말 지수", "연간 등락", "기준금리 연말", "금리 방향", "국고채 3년 연말", "국고채 10년 연말", "사건"];
   const toggle = () => { const next = !open; setOpen(next); if (next) { setDrawn(true); onOpen?.(); } };
   return (
@@ -60,7 +60,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                         <ChevronRight aria-hidden className={`size-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
                       </button>
                       {open && (
-                        <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-3 pb-3 pt-1 text-xs" data-testid="yearly-row-detail">
+                        <dl className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-3 pt-1 text-xs ${view.same[r.y] ? "pb-1" : "pb-3"}`} data-testid="yearly-row-detail">
                           <dt className="text-muted-foreground">연간 등락</dt><dd className={`text-right tabular-nums ${r.ret == null ? "" : getProfitLossColor(r.ret)}`}>{r.ret == null ? "—" : fmtPct(r.ret, 1)}</dd>
                           <dt className="text-muted-foreground">기준금리 연말</dt><dd className="text-right tabular-nums">{fmtPctPlain(r.rate)}</dd>
                           {us ? (
@@ -69,6 +69,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                               <dt className="text-muted-foreground">금리차 10년−2년(%p)</dt><dd className="text-right tabular-nums">{fmtSpread(r.s2)}</dd>
                               <dt className="text-muted-foreground">금리차 10년−3개월(%p)</dt><dd className="text-right tabular-nums">{fmtSpread(r.s3)}</dd>
                               <dt className="text-muted-foreground">경기침체</dt><dd className="text-right tabular-nums">{r.rec ? `${r.rec}개월` : "—"}</dd>
+                              <dt className="break-keep text-muted-foreground">물가·실업률(연평균)</dt><dd data-testid="row-bls" className="text-right tabular-nums">{fmtPct1Plain(r.cpi)} · {fmtPct1Plain(r.un)}</dd>
                             </>
                           ) : (
                             <>
@@ -76,10 +77,11 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                               <dt className="text-muted-foreground">국고채 10년 연말</dt><dd className="text-right tabular-nums">{fmtPctPlain(r.k10)}</dd>
                             </>
                           )}
-                          <dt className="col-span-2 text-muted-foreground">사건</dt>
+                                                    <dt className="col-span-2 text-muted-foreground">사건</dt>
                           <dd className="col-span-2 break-keep">{r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium"><EventName name={e.name} /></span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-xs text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}</dd>
                         </dl>
                       )}
+                      {open && <div className="px-2 pb-3 empty:hidden"><SameYear view={view} year={r.y} className="" /></div>}
                     </div>
                   );
                 })}
@@ -91,7 +93,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                   <thead>
                     <tr>
                       {heads.map((h, i) => (
-                        <th key={h} scope="col" className={`sticky top-0 border-b border-border bg-card px-2.5 py-1.5 align-bottom text-xs font-semibold leading-snug text-muted-foreground ${i === 0 ? "left-0 z-30 text-left" : i === heads.length - 1 ? "z-20 text-left" : "z-20 text-right"}`}>{h.includes("금리차") ? <>장단기 금리차<br />{h.slice(8)}</> : h}</th>
+                        <th key={h} scope="col" className={`sticky top-0 border-b border-border bg-card px-2.5 py-1.5 align-bottom text-xs font-semibold leading-snug text-muted-foreground ${i === 0 ? "left-0 z-30 text-left" : i === heads.length - 1 ? "z-20 text-left" : "z-20 text-right"}`}>{h.includes("금리차") ? <>장단기 금리차<br />{h.slice(8)}</> : h.startsWith("물가") ? <>물가 상승률<br />연평균(%)</> : h.startsWith("실업률") ? <>실업률<br />연평균(%)</> : h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -118,6 +120,8 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                             <td className="border-b border-border bg-card px-2.5 py-1.5 text-right">{fmtSpread(r.s2)}</td>
                             <td className="border-b border-border bg-card px-2.5 py-1.5 text-right">{fmtSpread(r.s3)}</td>
                             <td className="border-b border-border bg-card px-2.5 py-1.5 text-right">{r.rec ? `${r.rec}개월` : "—"}</td>
+                            <td data-col="cpi" className="border-b border-border bg-card px-2.5 py-1.5 text-right">{fmtPct1Plain(r.cpi)}</td>
+                            <td data-col="unemp" className="border-b border-border bg-card px-2.5 py-1.5 text-right">{fmtPct1Plain(r.un)}</td>
                           </>
                         ) : (
                           <>
@@ -133,6 +137,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                   </tbody>
                 </table>
               </div>
+              {us && <p data-testid="year-bls-note" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep md:hidden">{BLS_GAP_NOTE}</p>}
               <p className="mt-2 hidden text-xs leading-relaxed text-muted-foreground text-pretty break-keep md:block">{us ? US_NOTE : KR_NOTE} {YEAR_NOTE}</p>
               <dl data-testid="invest-gloss" className="mt-3 rounded-xl bg-secondary p-3 text-xs leading-relaxed text-pretty break-keep">
                 {GLOSS.map((g) => <div key={g.term} className="mb-1.5 last:mb-0"><dt className="inline font-semibold">{g.term}</dt> <dd className="inline text-muted-foreground">{g.text}</dd></div>)}

@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { QUESTION_HEAD, headlineLines, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
+import { BLS_INFO, QUESTION_HEAD, headlineLines, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -18,17 +18,22 @@ import { NOWRAP_TAIL, NOWRAP_YEAR_SUFFIX, NoBreak, ReadoutChips } from "./nowrap
 import { YearGrid } from "./year-grid";
 import { defaultPeriod } from "@/lib/invest/period";
 import { DropList, EpisodeDetail } from "./drop-list";
-import { capWidth, layoutMain, MainChart } from "./main-chart";
+import { capWidth, layoutMain, MainChart, type OverlayKey } from "./main-chart";
 import { useElementWidth, useMediaQuery, useMounted } from "./use-width";
 import { YearTable } from "./year-table";
 import { PatternSection } from "./pattern-section";
 import { RiseDetail, RiseList } from "./rise-list";
 import { buildPattern } from "@/lib/invest/pattern";
 
-const OVERLAY = {
-  us: { label: "10년물", full: "미 10년물 국채 금리", def: "매달 마지막 날 값" },
-  kr: { label: "10년물", full: "국고채 10년 금리", def: "매달 평균" },
-} as const;
+// 겹쳐 보기 항목: 한국 지수는 10년물만. 물가·실업률은 연 값(계단선)이라 미국 지수에만 둔다(R2-1)
+const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: string; def: string }[]> = {
+  us: [
+    { key: "y10", label: "10년물", full: "미 10년물 국채 금리", def: "매달 마지막 날 값 · 오른쪽 축" },
+    { key: "cpi", label: "물가", full: "미 소비자물가 상승률", def: "연평균 · 전년 대비 % · 오른쪽 축" },
+    { key: "unemp", label: "실업률", full: "미 실업률", def: "연평균 % · 오른쪽 축" },
+  ],
+  kr: [{ key: "y10", label: "10년물", full: "국고채 10년 금리", def: "매달 평균 · 오른쪽 축" }],
+};
 const INDEX_OPTIONS = INDEX_KEYS.map((k) => ({ value: k, label: INDEX_META[k].label, testId: `invest-index-${k}` }));
 
 /** 층 높이를 고정한 스켈레톤(회색 면 3개, CLS 0) */
@@ -98,7 +103,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
   const [sel, setSel] = useState<number | null>(null);
   const [yr, setYr] = useState<number | null>(null);
-  const [ovOn, setOvOn] = useState(false);
+  const [ov, setOv] = useState<OverlayKey | null>(null);
   const [menu, setMenu] = useState(false);
   const [listTab, setListTab] = useState<"drop" | "rise">("drop");
   const [riseSel, setRiseSel] = useState<number | null>(null);
@@ -116,7 +121,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const selEff = sel ?? (wide && view.eps.length ? deepest : null);
   const showLevels = variant === "app" || mounted;
   const head = headlineLines(view);
-  const OV = OVERLAY[view.rate];
+  const OVS = OVERLAY[view.rate];
+  const ovCur = OVS.find((o) => o.key === ov) ?? null;
   const L = width > 0 ? layoutMain(view, width, wide) : null;
 
   // GA(spec 10절): page_title만(새 파라미터 0). 같은 동작은 진입당 1회, 기본 지수 선택은 보내지 않는다. 체험은 track이 no-op
@@ -128,7 +134,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   };
   const changeIndex = (k: IndexKey) => {
     if (k === idx) return;
-    setIdx(k); setSel(null); setYr(null); setOvOn(false); setMenu(false); setRiseSel(null); setPeriodOverride(null);
+    setIdx(k); setSel(null); setYr(null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
     once(`invest_index_${k}`);
   };
   // 그림 바깥을 탭하면 해 선택 해제, 겹쳐 보기 목록은 바깥 탭·Esc로 닫는다
@@ -201,17 +207,17 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <div ref={chartRef} className="relative mt-1 min-w-0" data-testid="invest-chart-wrap">
         {L && showLevels ? (
           <>
-            <MainChart data={marketHistory} view={view} width={width} wide={wide} selEp={selEff} selYear={yr} overlayOn={ovOn} onPickYear={pickYear} />
+            <MainChart data={marketHistory} view={view} width={width} wide={wide} selEp={selEff} selYear={yr} overlay={ov} onPickYear={pickYear} />
             <InfoDot left={capWidth(`지수 · 해마다 연말 값 · ${view.last}년 말까지`) + 2} top={-2} label="지수 값 설명">가격 지수(배당 제외)이고, 해마다 마지막 날(연말) 종가 기준이에요. 한 해 안의 움직임은 담지 않아요.</InfoDot>
-            <InfoDot left={capWidth(`${view.rate === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값`) + 2} top={L.cap3 - 14} label="기준금리 설명">{view.rate === "us" ? "연준 목표금리(범위면 상단)를 매달 이어서 그렸어요. 1982년 9월부터 자료가 있어요." : "한국은행 기준금리를 매달 이어서 그렸어요(2008년 3월 전은 콜금리 목표). 1999년 5월부터 자료가 있어요."}</InfoDot>
+            <InfoDot left={capWidth(`${view.rate === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값`) + 2} top={L.cap3 - 14} label="기준금리 설명">{(view.rate === "us" ? "연준 목표금리(범위면 상단)를 매달 이어서 그렸어요. 1982년 9월부터 자료가 있어요." : "한국은행 기준금리를 매달 이어서 그렸어요(2008년 3월 전은 콜금리 목표). 1999년 5월부터 자료가 있어요.") + (ov === "cpi" || ov === "unemp" ? ` 겹쳐 본 선: ${BLS_INFO}` : "")}</InfoDot>
             <button
-              ref={btnRef} type="button" aria-haspopup="listbox" aria-expanded={menu} data-testid="overlay-button"
+              ref={btnRef} type="button" aria-haspopup="listbox" aria-expanded={menu} aria-label={ovCur ? `겹쳐 보기, ${ovCur.label} 켜짐` : "겹쳐 보기"} data-testid="overlay-button"
               onClick={() => setMenu((m) => !m)}
               style={{ top: L.cap3 - 24 }} className="group absolute right-0 flex h-10 min-w-14 items-center justify-end outline-none"
             >
-              <span className={`inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full pl-2.5 pr-1.5 text-xs font-semibold transition-[background-color,color,transform] duration-150 group-active:scale-[0.96] group-focus-visible:ring-2 group-focus-visible:ring-ring/50 ${ovOn ? "bg-brand/15 text-brand dark:text-indigo-300" : "bg-secondary text-foreground"}`}>
-                {ovOn ? <><i aria-hidden className="inline-block h-0 w-3 rounded-[1px] border-t-2 border-brand" />{OV.label}</> : "겹쳐 보기"}
-                <ChevronDown aria-hidden className={`size-3.5 ${ovOn ? "" : "text-muted-foreground"}`} />
+              <span className={`inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full pl-2.5 pr-1.5 text-xs font-semibold transition-[background-color,color,transform] duration-150 group-active:scale-[0.96] group-focus-visible:ring-2 group-focus-visible:ring-ring/50 ${ovCur ? "bg-brand/15 text-brand dark:text-indigo-300" : "bg-secondary text-foreground"}`}>
+                {ovCur ? <><i aria-hidden className="inline-block h-0 w-3 rounded-[1px] border-t-2 border-brand" />{ovCur.label}</> : "겹쳐 보기"}
+                <ChevronDown aria-hidden className={`size-3.5 ${ovCur ? "" : "text-muted-foreground"}`} />
               </span>
             </button>
             <div
@@ -219,14 +225,14 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
               style={{ top: L.cap3 + 14 }}
               className={`absolute right-0 z-10 w-[236px] origin-top-right rounded-2xl bg-card p-1.5 shadow-[0_0_0_1px_var(--border),0_8px_24px_rgba(16,24,40,.14)] dark:bg-popover dark:shadow-[0_0_0_1px_var(--border),0_8px_24px_rgba(0,0,0,.45)] motion-safe:transition-[opacity,transform,visibility] motion-safe:duration-150 motion-safe:ease-out ${menu ? "visible scale-100 opacity-100" : "invisible -translate-y-1 scale-[0.98] opacity-0"}`}
             >
-              {[false, true].map((on) => (
+              {[null, ...OVS].map((o) => (
                 <button
-                  key={String(on)} type="button" role="option" aria-selected={ovOn === on} data-ov={on ? "1" : "0"}
-                  onClick={() => { setOvOn(on); setMenu(false); btnRef.current?.focus(); if (on) once("invest_overlay"); }}
-                  className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-left text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${ovOn === on ? "bg-secondary" : ""}`}
+                  key={o?.key ?? "none"} type="button" role="option" aria-selected={ov === (o?.key ?? null)} data-ov={o ? o.key : "0"}
+                  onClick={() => { setOv(o?.key ?? null); setMenu(false); btnRef.current?.focus(); if (o) once("invest_overlay"); }}
+                  className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-left text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${ov === (o?.key ?? null) ? "bg-secondary" : ""}`}
                 >
-                  <span>{on ? OV.full : "겹쳐 보기 안 함"}{on && <small className="mt-px block text-xs font-normal text-muted-foreground">{OV.def} · 오른쪽 축</small>}</span>
-                  <Check aria-hidden className={`size-4 text-brand dark:text-indigo-300 ${ovOn === on ? "" : "invisible"}`} />
+                  <span className="whitespace-nowrap">{o ? o.full : "겹쳐 보기 안 함"}{o && <small className="mt-px block text-xs font-normal text-muted-foreground">{o.def}</small>}</span>
+                  <Check aria-hidden className={`size-4 shrink-0 text-brand dark:text-indigo-300 ${ov === (o?.key ?? null) ? "" : "invisible"}`} />
                 </button>
               ))}
             </div>

@@ -16,7 +16,7 @@ import { defaultPeriod } from "@/lib/invest/period";
 
 const views = { spx: buildIndexView(marketHistory, "spx"), ndx: buildIndexView(marketHistory, "ndx"), kospi: buildIndexView(marketHistory, "kospi") };
 const chart = (k: keyof typeof views, w: number, o: { wide?: boolean; selEp?: number | null; selYear?: number | null; ov?: boolean } = {}) =>
-  renderToStaticMarkup(<MainChart data={marketHistory} view={views[k]} width={w} wide={!!o.wide} selEp={o.selEp ?? null} selYear={o.selYear ?? null} overlayOn={!!o.ov} onPickYear={() => {}} />);
+  renderToStaticMarkup(<MainChart data={marketHistory} view={views[k]} width={w} wide={!!o.wide} selEp={o.selEp ?? null} selYear={o.selYear ?? null} overlay={o.ov ? "y10" : null} onPickYear={() => {}} />);
 const count = (html: string, re: RegExp) => (html.match(re) || []).length;
 
 // 문장 규칙(spec 6절) 자동 검사 목록. `~해서`·`~하세요`는 사람이 대조한다.

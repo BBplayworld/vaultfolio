@@ -7,7 +7,7 @@ import { DIR_VERB, DIR_LABEL, LIST_NOTE_2, LIST_SUB, EMPTY_LIST, fmtPct, fmtRate
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { C } from "./chart-style";
 import { FoldNote } from "./fold-note";
-import { NOWRAP_PCT, NOWRAP_TAIL, NoBreak, EventName } from "./nowrap";
+import { NOWRAP_PCT, NOWRAP_TAIL, NoBreak, EventName, SameYear } from "./nowrap";
 import { ZoomChart } from "./zoom-chart";
 
 /** 금리 방향 표식: 올라감 = 면, 내려감 = 빗금, 거의 그대로 = 짧은 선(색이 아니라 모양으로 구분) */
@@ -54,6 +54,7 @@ function EpisodeDetail({ data, view, ep, index, width }: { data: MarketHistoryDa
           <span>{ep.recs.length ? ep.recs.map((t) => `미국 경기침체 ${t}(NBER)`).join(", ") : "이 기간에 미국 경기침체는 없었어요(NBER)"}</span>
         </div>
       )}
+      <SameYear view={view} year={ep.ty} />
       {evs.length > 0 && (
         <div data-testid="detail-events" className="mt-2.5 flex items-start gap-1.5 text-xs leading-relaxed text-pretty break-keep">
           <i aria-hidden className="mt-1.5 inline-block size-2 shrink-0 rounded-full bg-foreground" />

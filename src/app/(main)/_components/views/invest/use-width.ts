@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type RefObject } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 
-/** 요소 폭(px). 처음 측정 전은 0 */
+/** 요소 폭(px). 처음 측정 전은 0. 렌더마다 ref가 가리키는 요소가 바뀌었는지 확인해 새 요소를 다시 관찰한다
+ *  (공개 가이드는 SSR 뒤 wide 전환으로 레이아웃 트리가 바뀌어 DOM이 교체된다 — 예전 요소만 보면 폭이 0으로 남아 그림이 스켈레톤에 머문다) */
 export function useElementWidth(ref: RefObject<HTMLElement | null>): number {
   const [w, setW] = useState(0);
+  const seen = useRef<HTMLElement | null>(null);
+  const ro = useRef<ResizeObserver | null>(null);
   useEffect(() => {
     const el = ref.current;
+    if (el === seen.current) return;
+    ro.current?.disconnect();
+    seen.current = el;
     if (!el) return;
     const read = () => setW(Math.round(el.getBoundingClientRect().width));
     read();
     if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [ref]);
+    ro.current = new ResizeObserver(read);
+    ro.current.observe(el);
+  });
+  useEffect(() => () => ro.current?.disconnect(), []);
   return w;
 }
 
