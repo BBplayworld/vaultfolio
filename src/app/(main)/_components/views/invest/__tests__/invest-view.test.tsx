@@ -97,7 +97,9 @@ describe("투자 탭 행·표·③ 마크업", () => {
     for (const [k, n] of [["spx", 4], ["ndx", 3], ["kospi", 6]] as const) {
       const html = renderToStaticMarkup(<DropList data={marketHistory} view={views[k]} sel={null} yr={null} onSelect={() => {}} inlineDetail width={300} />);
       expect(count(html, /data-testid="drop-row"/g)).toBe(n);
-      expect(count(html, /aria-expanded="false"/g)).toBe(n);
+      expect(count(html, /aria-expanded="false"/g)).toBe(n + 1); // 행 n + 각주 접힘 버튼 1(5.138 D-2)
+      expect(html).toContain('data-testid="invest-notes"');
+      expect(count(html, /data-testid="drop-dd"/g)).toBe(n); // D-3: 행마다 낙폭 상시
       expect(html).not.toContain("episode-detail");
       expect(html).toContain("무엇이 원인인지는 말하지 않아요");
     }

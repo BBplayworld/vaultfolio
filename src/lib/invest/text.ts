@@ -78,7 +78,7 @@ export const CALC_FOOT = "과거 연말 지수 값으로 계산한 결과예요.
 export const CALC_DIV = "배당을 다시 넣었다면 결과는 이보다 커요.";
 export const EMPTY_LIST = "없었어요";
 export const LOAD_ERROR = "잠시 뒤 다시 열어 주세요";
-export const READOUT_HINT = "해를 누르거나 끌면 그해 말 값이 나와요";
+export const READOUT_HINT = "해를 누르거나 끌거나 ‹ › 로 옮기면 그해 말 값이 나와요";
 
 /** 7절 출처·고지 4줄(지수별). 갱신일 `{재대조일}`은 한은 재대조 후 상수만 바꾼다 */
 export const KR_RECHECK_DATE = "2026.11.22";

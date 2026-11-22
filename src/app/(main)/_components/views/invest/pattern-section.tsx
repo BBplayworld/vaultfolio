@@ -8,7 +8,7 @@ import type { BaseRow, PatternData } from "@/lib/invest/pattern";
 import { NOWRAP_TAIL, NoBreak } from "./nowrap";
 import { PATTERN_TITLE, patternNote } from "@/lib/invest/pattern";
 
-const TH = "border-b border-border bg-card px-2 py-1.5 text-2xs font-semibold leading-snug text-muted-foreground align-bottom";
+const TH = "border-b border-border bg-card px-2 py-1.5 text-xs font-semibold leading-snug text-muted-foreground align-bottom";
 const TD = "border-b border-border px-2 py-1.5 align-top";
 
 function BaseTable({ title, hit, rows, label }: { title: string; hit: string; rows: BaseRow[]; label: string }) {
@@ -52,7 +52,7 @@ export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData
   return (
     <div data-testid="invest-pattern" className="mt-4 border-t border-border/60 pt-1 xl:mt-0 xl:border-t-0">
       <button type="button" aria-expanded={open} aria-controls="invest-pattern-panel" data-testid="pattern-button" onClick={toggle} className="flex min-h-12 w-full items-center justify-between gap-2 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform active:scale-[0.99]">
-        <span><b className="block text-base font-semibold text-balance break-keep">{PATTERN_TITLE}</b><small className="block text-2xs font-normal leading-snug text-muted-foreground">결과를 알 수 있는 해까지 세어 표로 모았어요</small></span>
+        <span><b className="block text-base font-semibold text-balance break-keep">{PATTERN_TITLE}</b><small className="block text-xs font-normal leading-snug text-muted-foreground">결과를 알 수 있는 해까지 세어 표로 모았어요</small></span>
         <ChevronDown aria-hidden className={`size-5 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       <div id="invest-pattern-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-[240ms] motion-safe:ease-out ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
@@ -84,7 +84,7 @@ export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData
                 <tbody>
                   {pattern.preDrop.map((r) => (
                     <tr key={r.py}>
-                      <th scope="row" className={`${TD} sticky left-0 bg-card text-left font-medium`}>{r.name}<span className="block text-2xs font-normal text-muted-foreground tabular-nums">{r.py}년</span></th>
+                      <th scope="row" className={`${TD} sticky left-0 bg-card text-left font-medium`}>{r.name}<span className="block text-xs font-normal text-muted-foreground tabular-nums">{r.py}년</span></th>
                       {r.cells.map((c, i) => <td key={i} className={`${TD} break-keep ${c.state === "none" ? "text-muted-foreground" : ""}`}>{c.text}</td>)}
                     </tr>
                   ))}
@@ -94,7 +94,7 @@ export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData
           </div>
           <BaseTable title="같은 조건이 있던 모든 해" hit="그중 고점이 된 해" rows={pattern.preDropBase} label="조건별 기준선" />
           <BaseTable title="크게 오른 해" hit="그중 20% 넘게 오른 해" rows={pattern.riseBase} label="크게 오른 해 기준선" />
-          <p className="mt-2 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep" data-testid="pattern-note">{patternNote(last)}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep" data-testid="pattern-note">{patternNote(last)}</p>
         </div>
       </div>
     </div>
