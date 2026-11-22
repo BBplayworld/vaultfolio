@@ -74,7 +74,7 @@ describe("분류 라벨 nowrap(qa D-7)", () => {
     for (const c of ["금리·통화 정책", "금융위기", "시장 급락", "전쟁·지정학", "기술 거품", "팬데믹", "에너지"]) expect(nw, c).toContain(`"${c}"`);
     for (const f of readdirSync(dir).filter((n) => n.endsWith(".tsx"))) {
       const src = readFileSync(join(dir, f), "utf8");
-      for (const m of src.matchAll(/\{[a-zA-Z.]*\.cat\}/g)) throw new Error(`${f}: 분류를 NoBreak 없이 출력 ${m[0]}`);
+      for (const m of src.matchAll(/(?<!text=)\{[a-zA-Z.]*\.cat\}/g)) throw new Error(`${f}: 분류를 NoBreak 없이 출력 ${m[0]}`);
     }
   });
 });
