@@ -53,7 +53,7 @@ export function ZoomChart({ data, view, ep, width }: { data: MarketHistoryData; 
       {dot(ep.py, "peak", "고점", -9, XE(ep.py) < GX + 22 ? "start" : "middle")}
       {dot(ep.ty, "trough", "바닥", 17)}
       {ep.ry && ep.ry <= z && dot(ep.ry, "recover", "전고점 되찾음", -9, XE(ep.ry) > W - RP - 46 ? "end" : "middle")}
-      <text className={SVG_TEXT} fontSize={12} x={0} y={cap3}>{R === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값</text>
+      <text className={SVG_TEXT} fontSize={12} x={4} y={cap3}>{R === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값</text>
       {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).map((t) => <g key={t}><line x1={GX} x2={W - RP} y1={Y3(t)} y2={Y3(t)} stroke={t === 0 ? C.ink3 : C.hair} /><text className={SVG_TEXT} fontSize={12} x={GX - 6} y={Y3(t) + 4} textAnchor="end">{t}%</text></g>)}
       {Array.from({ length: z - a }, (_, i) => a + 1 + i).map((Y) => {
         const c = view.yrDir[Y]?.k;
