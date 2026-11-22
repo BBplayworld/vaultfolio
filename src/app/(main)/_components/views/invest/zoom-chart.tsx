@@ -17,7 +17,7 @@ export function ZoomChart({ data, view, ep, width }: { data: MarketHistoryData; 
   const seg: number[] = []; for (let Y = a; Y <= z; Y++) seg.push(ix(Y));
   const T1 = logTicks(Math.min(...seg), Math.max(...seg), 5), lnLo = Math.log(T1.lo), lnHi = Math.log(T1.hi);
   const wide = W > 420;
-  const H1 = wide ? 130 : 104, H3 = wide ? 54 : 44, P1 = 14, P1b = P1 + H1, cap3 = P1b + 26, P3 = cap3 + 10, P3b = P3 + H3, AX = P3b + 16, H = AX + 4;
+  const H1 = wide ? 130 : 104, H3 = wide ? 54 : 44, P1 = 14, P1b = P1 + H1, cap3 = P1b + 30, P3 = cap3 + 14, P3b = P3 + H3, AX = P3b + 16, H = AX + 4;
   const Y1 = (v: number) => P1 + H1 - ((Math.log(v) - lnLo) / (lnHi - lnLo)) * H1;
   const mv: number[] = [];
   for (let mi = (a + 1) * 12; mi < (z + 1) * 12; mi++) { const v = rateAt(data, R, `${Math.floor(mi / 12)}-${String((mi % 12) + 1).padStart(2, "0")}`); if (v != null) mv.push(v); }

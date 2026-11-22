@@ -355,8 +355,9 @@ export function MainChart({
         );
       })}
       <rect x={GX} y={P1 - 6} width={PW} height={P3b - P1 + 6} fill="transparent" data-testid="invest-chart-hit" {...handlers} />
+      {/* onClick 빈 핸들러: 터치 보정(touch adjustment)이 아래쪽 ⓘ·겹쳐 보기 버튼으로 탭을 가져가지 않게 이 상자를 클릭 대상으로 표시한다(N-1) */}
       {/* D-1: 이름표 탭 → 그 하락의 바닥 해. 이름표 밖은 기존 해 고르기·끌기와 같다 */}
-      <rect x={GX} y={P2b} width={PW} height={Math.max(40, L.nameRows * TIER + 6)} fill="transparent" data-testid="name-hit" {...handlers} />
+      <rect x={GX} y={P2b} width={PW} height={Math.max(40, L.nameRows * TIER + 6)} fill="transparent" data-testid="name-hit" style={{ cursor: "pointer" }} onClick={() => {}} {...handlers} />
     </svg>
   );
 }
