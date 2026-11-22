@@ -52,3 +52,6 @@ next-env.d.ts
 # 에이전트 팀 메모리 체크아웃 (memory 브랜치의 worktree)
 .memory/
 .memory-init/
+
+# vitest 캐시(루트 아래 어디든)
+**/node_modules/
