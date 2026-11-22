@@ -56,7 +56,7 @@ export interface Readout {
 }
 export function readoutOf(v: IndexView, year: number): Readout {
   const row = v.tbl.find((r) => r.y === year)!;
-  const evs = row.ev;
+  const evs = row.issues;
   const events = evs.length ? evs.slice(0, 2).map((e) => e.name).join(" · ") + (evs.length > 2 ? ` 외 ${evs.length - 2}건` : "") : null;
   return {
     year, level: fmtLevel(row.close), ret: row.ret, dir: row.dir === "none" ? "금리 자료 없음" : `금리 ${DIR_LABEL[row.dir]}`,

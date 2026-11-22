@@ -1,6 +1,6 @@
 // 투자 탭(#263) 순수 계산. 데이터는 인자로 받는다(이 파일은 데이터 JSON을 import하지 않는다 → 첫 화면 번들 0).
 // 정의 한 벌(spec 4절): 머리·읽기 줄·목록 행·표·공개 가이드가 모두 이 파일의 값을 쓴다.
-import type { EventIndex, IndexKey, MarketEvent, MarketHistoryData, MonthSeries, RateKey, Recession, UsYearRow } from "./types";
+import type { EventIndex, IndexKey, MarketEvent, MarketHistoryData, MonthSeries, RateKey, Recession, UsYearRow, YearEvent } from "./types";
 
 /** 크게 빠진 때 문턱(연말값 기준 15%) */
 export const DROP_THRESHOLD = 0.15;
@@ -117,9 +117,8 @@ export interface YearRow {
   ret: number | null;
   rate: number | null;
   dir: RateDir;
-  ev: EventPoint[];
-  /** R4 추가 사건(행 펼침·표 전용, 읽기 줄·점에는 없음) */
-  evx: EventPoint[];
+  /** 그해 경제 이슈(yearIssues, 시간순, 한국 행은 코스피만) */
+  issues: YearEvent[];
   /** 미국 지수 전용 */
   y10: number | null;
   s2: number | null;
@@ -149,6 +148,10 @@ export interface IndexView {
   eps: Episode[];
   base: RateBase;
   ev: EventPoint[];
+  /** 해별 경제 이슈(1990~) — 읽기 줄·격자·표·오른 해 펼침 공통 */
+  issues: Record<number, YearEvent[]>;
+  /** 데이터 끝 이후 진행 중인 해의 이슈(2026) */
+  wip: YearEvent | null;
   tbl: YearRow[];
 }
 
@@ -167,9 +170,13 @@ export function buildIndexView(d: MarketHistoryData, key: IndexKey, asof?: numbe
     .filter((e) => e.idx.includes(M.ev))
     .map((e) => ({ ...e, t: +e.pm.slice(0, 4) + (+e.pm.slice(5) - 0.5) / 12, y: +e.pm.slice(0, 4) }))
     .filter((e) => e.y <= last);
-  const evx: EventPoint[] = d.eventsExtra
-    .map((e) => ({ ...e, t: +e.pm.slice(0, 4) + (+e.pm.slice(5) - 0.5) / 12, y: +e.pm.slice(0, 4) }))
-    .filter((e) => e.y <= last);
+  // 해별 경제 이슈: 한국 행은 코스피에서만, 같은 해 안 시간순(월→id)
+  const issues: Record<number, YearEvent[]> = {};
+  for (const e of d.eventsYear) {
+    if (e.wip || e.y > last || (e.region === "한국" && key !== "kospi")) continue;
+    (issues[e.y] ||= []).push(e);
+  }
+  for (const y of Object.keys(issues)) issues[+y].sort((a, b) => a.m - b.m || a.id.localeCompare(b.id));
   const eps: Episode[] = zigzag(close).map((z) => {
     const py = years[z.p], ty = years[z.t], nm = EPISODE_NAMES[key][py];
     const delta = rateDelta(d, r, py, ty);
@@ -187,13 +194,13 @@ export function buildIndexView(d: MarketHistoryData, key: IndexKey, asof?: numbe
   const tbl: YearRow[] = years.slice().reverse().map((y) => {
     const i = y - S.start, u = usRow(y), kr = d.krYear.find((q) => q.y === y);
     return {
-      y, close: close[i], ret: ret[i], rate: decRate(d, r, y), dir: yrDir[y].k, ev: ev.filter((q) => q.y === y), evx: evx.filter((q) => q.y === y),
+      y, close: close[i], ret: ret[i], rate: decRate(d, r, y), dir: yrDir[y].k, issues: issues[y] ?? [],
       y10: r === "us" ? u?.y10 ?? null : null, s2: r === "us" ? u?.s2 ?? null : null, s3: r === "us" ? u?.s3 ?? null : null,
       rec: r === "us" ? recessionMonthsIn(d.rec, y) : null,
       k3: r === "kr" ? kr?.k3 ?? null : null, k10: r === "kr" ? kr?.k10 ?? null : null,
     };
   });
-  return { key, label: M.label, currency: M.currency, rate: r, start: S.start, last, years, close, ret, yrDir, eps, base, ev, tbl };
+  return { key, label: M.label, currency: M.currency, rate: r, start: S.start, last, years, close, ret, yrDir, eps, base, ev, issues, wip: d.eventsYear.find((e) => e.wip) ?? null, tbl };
 }
 
 /** 머리 2줄째 집계(하락 구간의 금리 방향 건수) */
@@ -204,6 +211,9 @@ export function episodeDirCounts(eps: Episode[]): Record<RateDir, number> {
 }
 
 /** 하락 구간 안(고점 다음 해 ~ 바닥 해)의 연도면 그 하락의 인덱스, 아니면 -1 */
+/** 그해 경제 이슈 단일 출처: 읽기 줄·격자·연도별 표·오른 해 펼침이 모두 이 함수를 쓴다 */
+export const yearIssues = (v: IndexView, y: number): YearEvent[] => v.issues[y] ?? [];
+
 export const episodeIndexOfYear = (eps: Episode[], y: number) => eps.findIndex((e) => y > e.py && y <= e.ty);
 
 /** 월 금리 계단 최대값 기준 오른쪽 축 상한(겹쳐 보기 켜기 전·후 같은 스케일) */

@@ -77,10 +77,10 @@ describe("R4: 진행 중 모의·사건", () => {
     const p = P("kospi", 2022);
     expect(p.preDropBase[0].to).toBe(2021);
   });
-  it("오른 해 펼침 사건에 추가 사건 포함(2008 아님: 2014 나스닥 매입 종료), 그해 ≤2건 시간순", () => {
+  it("오른 해 펼침 사건 = yearIssues(2019는 3건 전부, 시간순)", () => {
     const y = P("spx").rise.find((r) => r.y === 2019)!;
-    expect(y.events.map((e) => e.id)).toEqual(expect.arrayContaining(["R06"]));
-    for (const r of P("spx").rise) { expect(r.events.length).toBeLessThanOrEqual(2); for (let i = 1; i < r.events.length; i++) expect(r.events[i].t).toBeGreaterThanOrEqual(r.events[i - 1].t); }
+    expect(y.events.map((e) => e.id)).toEqual(["Y2019-1", "Y-E29", "Y-R06"]);
+    for (const r of P("spx").rise) for (let i = 1; i < r.events.length; i++) expect(r.events[i].m).toBeGreaterThanOrEqual(r.events[i - 1].m);
   });
   it("첫 화면 점은 31건 그대로(추가 사건은 view.ev에 없다)", () => {
     expect(buildIndexView(data, "spx").ev.some((e) => e.id.startsWith("R"))).toBe(false);

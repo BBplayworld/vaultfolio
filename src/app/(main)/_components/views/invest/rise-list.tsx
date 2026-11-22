@@ -8,7 +8,7 @@ import type { PatternData, RiseYear } from "@/lib/invest/pattern";
 import { RISE_NOTE, RISE_SUB } from "@/lib/invest/pattern";
 import { DIR_LABEL, fmtPct, fmtRate } from "@/lib/invest/text";
 import { DirMark } from "./drop-list";
-import { NoBreak } from "./nowrap";
+import { NOWRAP_PCT, NoBreak } from "./nowrap";
 
 const pp = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2) + "%p";
 
@@ -30,13 +30,13 @@ export function RiseDetail({ view, r }: { view: IndexView; r: RiseYear }) {
       <div data-testid="rise-events" className="mt-2.5 flex items-start gap-1.5">
         <i aria-hidden className="mt-1.5 inline-block size-2 shrink-0 rounded-full bg-foreground" />
         <div className="min-w-0">
-          {r.events.length === 0 ? <span className="text-muted-foreground">이해에 적어 둔 사건은 없어요</span> : (
+          {r.events.length === 0 ? <span className="text-muted-foreground">이 해에 적어 둔 사건은 없어요</span> : (
             <>
               <span className="text-muted-foreground">같은 시기 사건</span>
               {r.events.map((q) => (
                 <div key={q.id} className="mt-1" data-event-id={q.id}>
                   <span className="font-semibold">{q.name}</span> <span className="text-muted-foreground">{q.date} · <NoBreak text={q.cat} /></span>
-                  <div className="text-muted-foreground break-keep text-pretty" data-testid="event-fact">{q.fact}</div>
+                  <div className="text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={q.fact} phrases={[]} tails={NOWRAP_PCT} /></div>
                 </div>
               ))}
             </>

@@ -10,3 +10,6 @@ export function NoBreak({ text, phrases = NOWRAP_PHRASES, tails = [] }: { text: 
   if (parts.length === 1) return text;
   return parts.map((part, i) => (i % 2 === 1 ? <span key={i} className="whitespace-nowrap">{part}</span> : part));
 }
+
+/** 사건 사실 1줄: `5.25%가`·`2~2.25%로`처럼 수치와 조사 사이에서 끊기지 않게 묶는다(qa D-6) */
+export const NOWRAP_PCT = ["[0-9][0-9.]*(?:~[0-9][0-9.]*)?%[가-힣]{0,2}"];

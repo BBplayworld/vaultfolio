@@ -6,7 +6,7 @@ import type { Episode, EventPoint, IndexView, RateDir } from "@/lib/invest/calc"
 import { DIR_VERB, DIR_LABEL, LIST_NOTE_2, LIST_SUB, EMPTY_LIST, fmtPct, fmtRate, listNote } from "@/lib/invest/text";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { C } from "./chart-style";
-import { NoBreak } from "./nowrap";
+import { NOWRAP_PCT, NoBreak } from "./nowrap";
 import { ZoomChart } from "./zoom-chart";
 
 /** 금리 방향 표식: 올라감 = 면, 내려감 = 빗금, 거의 그대로 = 짧은 선(색이 아니라 모양으로 구분) */
@@ -61,7 +61,7 @@ function EpisodeDetail({ data, view, ep, index, width }: { data: MarketHistoryDa
             {evs.map((q) => (
               <div key={q.id} className="mt-1" data-event-id={q.id}>
                 <span className="font-semibold">{q.name}</span> <span className="text-muted-foreground">{q.date} · <NoBreak text={q.cat} /></span>
-                <div className="text-muted-foreground break-keep text-pretty" data-testid="event-fact">{q.fact}</div>
+                <div className="text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={q.fact} phrases={[]} tails={NOWRAP_PCT} /></div>
               </div>
             ))}
           </div>

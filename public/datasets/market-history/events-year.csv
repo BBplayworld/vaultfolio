@@ -1,6 +1,6 @@
 year,id,linked_id,name,date_display,category,region,fact,source_urls,rule,status,order_month
 1990,Y-E08,E08,걸프전,1990년 8월,전쟁·지정학,글로벌,이라크가 쿠웨이트를 침공했어요.,https://www.federalreserve.gov/monetarypolicy/files/FOMC19900821meeting.pdf,A,확정,8
-1991,Y1991-1,E08,걸프전(1991),1991년 1월,전쟁·지정학,글로벌,1월 다국적군이 걸프전에서 이라크와 싸웠어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19910206.pdf,A2,확정,1
+1991,Y1991-1,E08,걸프전(1991),1991년 1월,전쟁·지정학,글로벌,1월에 걸프전이 시작됐어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19910206.pdf,A2,확정,1
 1991,Y1991-2,,소련 쿠데타 시도,1991년 8월,전쟁·지정학,글로벌,소련에서 쿠데타 시도가 있었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19910820.pdf,B,확정,8
 1992,Y1992-1,,유럽 통화 위기,1992년 9월,금융위기,글로벌,9월 중순 유럽 외환시장에 큰 혼란이 있었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19921006.pdf,B,확정,9
 1993,Y1993-1,,유럽 환율 변동폭 확대,1993년 7~8월,금리·통화 정책,글로벌,유럽 환율조정장치가 통화 변동 허용 폭을 넓혔어요.,https://www.federalreserve.gov/fomc/MINUTES/1993/19930817min.htm,B,확정,8
@@ -9,7 +9,7 @@ year,id,linked_id,name,date_display,category,region,fact,source_urls,rule,status
 1995,Y1995-1,E10,멕시코 지원 발표,1995년 1월 31일,금융위기,글로벌,미국 대통령이 멕시코 금융 안정 지원 계획을 발표했어요.,https://www.federalreserve.gov/fomc/minutes/19960130.htm,A2,확정,1
 1997,Y-E11,E11,아시아 외환위기,1997년 11월,금융위기,글로벌,동남아에서 시작된 금융 불안이 그해 말 한국으로 번졌어요.,https://www.federalreserve.gov/boarddocs/testimony/1997/19971113.htm ; https://www.federalreserve.gov/fomc/minutes/19971216.htm,A,확정,11
 1998,Y-E12,E12,러시아·LTCM 위기,1998년 8월,금융위기,글로벌,"러시아가 채무 지급을 유예했고, 뉴욕 연준이 LTCM 재편을 도왔어요.",https://www.federalreserve.gov/fomc/minutes/19980929.htm ; https://www.federalreserve.gov/boarddocs/testimony/1998/19981001.htm,A,확정,8
-1999,Y1999-1,,유로화 도입,1999년 1월 1일,금리·통화 정책,글로벌,유럽 단일 통화인 유로가 도입됐어요.,https://www.federalreserve.gov/fomc/minutes/19981222.htm,B,확정,1
+1999,Y1999-1,,유로화 도입,1999년 1월 1일,금리·통화 정책,글로벌,유럽 단일 통화인 유로가 도입됐어요.,https://www.federalreserve.gov/fomc/minutes/19990202.htm,B,확정,1
 2000,Y-E13,E13,닷컴 버블 붕괴,2000~2002년,기술 거품,미국,많은 인터넷 기업이 무너지고 첨단기술 업종이 어려움을 겪었어요.,https://www.federalreserve.gov/boarddocs/hh/2002/july/testimony.htm,A,확정,3
 2001,Y-E14,E14,9·11 테러,2001년 9월 11일,전쟁·지정학,미국,같은 날 연준이 정상 운영 중이고 재할인 창구가 열려 있다고 했어요.,https://www.federalreserve.gov/boarddocs/press/general/2001/20010911/,A,확정,9
 2002,Y2002-1,,아르헨티나 페소 하락,2001년 12월~2002년 1월,금융위기,글로벌,아르헨티나 페소 가치가 내려갔어요.,https://www.federalreserve.gov/fomc/minutes/20020130.htm,B,확정,12
@@ -51,4 +51,4 @@ year,id,linked_id,name,date_display,category,region,fact,source_urls,rule,status
 2024,Y-E33,E33,엔 캐리 청산,2024년 8월,시장 급락,글로벌,8월 초 미국·해외 주가지수와 달러-엔 환율이 크게 움직였어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20240918.htm,A,확정,8
 2025,Y-E34,E34,미국 상호관세 발표,2025년 4월 2일,전쟁·지정학,미국,"미국이 예상보다 높은 관세를 발표했고, 뒤에 일부를 유예했어요.",https://www.federalreserve.gov/monetarypolicy/fomcminutes20250507.htm,A,확정,4
 2025,Y-R10,R10,연준 보유 축소 종료(2025),2025년 10월 29일,금리·통화 정책,미국,연준이 12월 1일에 보유 채권 축소를 끝내기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20251029a.htm,A,확정,10
-2026,Y2026-1,,중동 분쟁(2026),2026년 2~3월,전쟁·지정학,글로벌,중동에서 분쟁이 시작됐고 원유 선물 가격이 크게 올랐어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20260318.htm,B,진행 중,3
+2026,Y2026-1,,중동 분쟁(2026),2026년 초,전쟁·지정학,글로벌,중동에서 분쟁이 시작됐고 원유 선물 가격이 크게 올랐어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20260318.htm,B,진행 중,3

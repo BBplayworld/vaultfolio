@@ -59,12 +59,13 @@ export function YearGrid({ view, period, showLevels, question }: { view: IndexVi
         <span className="text-balance break-keep">−40% 이하 ~ +40% 이상, 진할수록 많이 움직인 해</span>
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-2xs text-muted-foreground"><i aria-hidden className="inline-block h-[3px] w-4 rounded-sm bg-brand" /><span data-testid="yearly-legend-period">아래 기간 수익률에서 고른 기간</span></div>
-      <div data-testid="invest-readout-grid" aria-live="polite" className="mt-2 min-h-7 text-sm">
+      <div data-testid="invest-readout-grid" aria-live="polite" className="mt-2 min-h-[3.25rem] text-sm">
         {ro && showLevels ? (
           <div className="flex flex-wrap items-center gap-x-1.5">
             <span>{ro.year}년 말 <b className="font-bold tabular-nums">{ro.level}</b></span><span>·</span>
             <b className={`font-bold tabular-nums ${ro.ret == null ? "" : getProfitLossColor(ro.ret)}`}>{ro.ret == null ? "—" : fmtPct(ro.ret)}</b><span>·</span>
             <span className="text-muted-foreground">{ro.dir}</span>{ro.recession && <><span>·</span><span className="text-muted-foreground">경기침체</span></>}
+            {ro.events && <div className="basis-full pt-0.5 text-xs leading-snug break-keep" data-testid="readout-events"><span className="text-muted-foreground">사건</span> {ro.events}</div>}
           </div>
         ) : <p className="flex h-7 items-center text-xs text-muted-foreground">{READOUT_HINT}</p>}
       </div>

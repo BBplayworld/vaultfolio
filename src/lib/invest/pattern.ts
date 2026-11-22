@@ -1,8 +1,8 @@
 // R4: 크게 오른 해 목록·펼침, '하락 전 12개월과 크게 오른 해에 있었던 일' 섹션의 계산(#263).
 // 모두 데이터에서 계산한다(결론 문장 숫자 하드코딩 0). 결과 정의는 O2만 쓴다: 그해 말이 '크게 빠진 때'의 고점이 된 해.
 // 분모는 결과를 알 수 있는 {last−1}년까지. 비율 %는 만들지 않는다('N년 중 k년'만). 해석·인과 문장 0.
-import { classifyDelta, decRate, INDEX_META, monthIndex, rateDelta, type EventPoint, type IndexView, type RateDir } from "./calc";
-import type { IndexKey, MarketHistoryData } from "./types";
+import { classifyDelta, decRate, INDEX_META, monthIndex, rateDelta, yearIssues, type IndexView, type RateDir } from "./calc";
+import type { IndexKey, MarketHistoryData, YearEvent } from "./types";
 
 /** 크게 오른 해 기준: 연간 등락(반올림 전) > +20% */
 export const RISE_THRESHOLD = 0.2;
@@ -51,7 +51,7 @@ export interface RiseYear {
   /** 미국 지수: 그해 침체가 끝난 달(없으면 null) */
   recessionEndMonth: number | null;
   dropPeak: string | null;
-  events: EventPoint[];
+  events: YearEvent[];
 }
 export interface PatternData {
   key: IndexKey;
@@ -116,7 +116,6 @@ export function buildPattern(d: MarketHistoryData, view: IndexView): PatternData
     return { label: c.label, from: ys[0], to: ys[ys.length - 1], years: ys.length, nCond: cy.length, kHit: cy.filter(isRise).length, baseHit: ys.filter(isRise).length };
   });
 
-  const evs = [...view.ev, ...d.eventsExtra.map((e) => ({ ...e, t: +e.pm.slice(0, 4) + (+e.pm.slice(5) - 0.5) / 12, y: +e.pm.slice(0, 4) }))] as EventPoint[];
   const rise: RiseYear[] = [];
   for (let y = first; y <= last; y++) {
     if (!isRise(y)) continue;
@@ -127,7 +126,7 @@ export function buildPattern(d: MarketHistoryData, view: IndexView): PatternData
       y10: us ? usY10(d, y) : krK10(d, y), d10: us ? d10((q) => usY10(d, q), y) : d10((q) => krK10(d, q), y),
       recessionEndMonth: us ? nberEnd.get(y) ?? null : null,
       dropPeak: peak ? peak.name : null,
-      events: evs.filter((e) => e.y === y).sort((a, b) => a.t - b.t).slice(0, 2),
+      events: yearIssues(view, y),
     });
   }
 

@@ -98,7 +98,7 @@ describe("투자 탭 계산: 머리·읽기 줄 문장", () => {
     expect(fmtPct(r.ret!)).toBe("−38.5%");
     expect(r.dir).toBe("금리 내려감");
     expect(r.recession).toBe(true);
-    expect(r.events).toBe("글로벌 금융위기");
+    expect(r.events).toBe("글로벌 금융위기 · 연준 자산 매입 시작");
   });
   it("목록 각주에 2020 연간 등락", () => {
     expect(listNote(views.spx)).toContain("2020년 S&P 500는 연간 +16.3%로 끝나");

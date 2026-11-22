@@ -7,11 +7,12 @@ import { useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
 import { DIR_LABEL, GLOSS, fmtLevel, fmtPct, fmtPctPlain, fmtSpread } from "@/lib/invest/text";
 import { ChevronRight } from "lucide-react";
-import { NoBreak } from "./nowrap";
+import { NOWRAP_PCT, NoBreak } from "./nowrap";
 import { getProfitLossColor } from "@/config/theme";
 
 const US_NOTE = "금리차는 그해 마지막 거래일의 10년물에서 2년물·3개월물을 뺀 값이에요. 2년물은 1976년 6월, 3개월물은 1981년 9월부터 자료가 있어요. 경기침체는 NBER 기준으로 그해에 침체였던 달 수예요.";
-const KR_NOTE = "국고채는 그해 마지막 거래일 값이에요. 한국 기준금리는 2008년 3월 전에는 콜금리 목표예요. 사건은 이 지수와 관련 있는 것만 적었어요.";
+const KR_NOTE = "국고채는 그해 마지막 거래일 값이에요. 한국 기준금리는 2008년 3월 전에는 콜금리 목표예요.";
+export const YEAR_NOTE = "사건은 해마다 연준 원문으로 확인한 일을 시간순으로 적었어요. 1996·2006년은 찾지 못해 비워 뒀어요.";
 export const TABLE_HINT = "그림의 값을 해마다 표로 모았어요. 가로로 밀어 볼 수 있어요";
 
 export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => void }) {
@@ -42,6 +43,13 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
             <>
               {/* 모바일(<768): 4칸 + 행 펼침(가로 스크롤 0), 최신 10년 + 이전 해 10개 더 보기 */}
               <div data-testid="yearly-list" className="mt-2 md:hidden">
+                {view.wip && (
+                  <div data-testid="year-wip" className="mb-1 rounded-xl bg-secondary px-3 py-2 text-xs break-keep">
+                    <div className="font-semibold tabular-nums">{view.wip.y}년 · 진행 중</div>
+                    <div className="mt-1"><span className="font-medium">{view.wip.name}</span> <span className="text-muted-foreground">{view.wip.date} · <NoBreak text={view.wip.cat} /></span><div className="text-2xs text-muted-foreground text-pretty" data-testid="event-fact">{view.wip.fact}</div></div>
+                    <div className="mt-1 text-2xs text-muted-foreground">지수 값은 {view.last}년 말까지라 {view.wip.y}년 등락은 없어요.</div>
+                  </div>
+                )}
                 {view.tbl.slice(0, rowsShown).map((r) => {
                   const open = rowOpen === r.y;
                   return (
@@ -69,7 +77,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                             </>
                           )}
                           <dt className="col-span-2 text-muted-foreground">사건</dt>
-                          <dd className="col-span-2 break-keep">{r.ev.length + r.evx.length ? [...r.ev, ...r.evx].sort((x, z) => x.t - z.t).map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium">{e.name}</span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-2xs text-muted-foreground break-keep text-pretty" data-testid="event-fact">{e.fact}</div></div>) : "—"}</dd>
+                          <dd className="col-span-2 break-keep">{r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium">{e.name}</span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-2xs text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}</dd>
                         </dl>
                       )}
                     </div>
@@ -88,6 +96,15 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                     </tr>
                   </thead>
                   <tbody>
+                    {view.wip && (
+                      <tr data-testid="year-wip-row">
+                        <td colSpan={heads.length} className="border-b border-border bg-secondary px-2.5 py-2 text-left whitespace-normal break-keep">
+                          <span className="font-semibold">{view.wip.y}년 · 진행 중</span>{" "}<span className="font-medium">{view.wip.name}</span> <span className="text-muted-foreground">{view.wip.date} · <NoBreak text={view.wip.cat} /></span>
+                          <div className="text-2xs text-muted-foreground" data-testid="event-fact">{view.wip.fact}</div>
+                          <div className="text-2xs text-muted-foreground">지수 값은 {view.last}년 말까지라 {view.wip.y}년 등락은 없어요.</div>
+                        </td>
+                      </tr>
+                    )}
                     {view.tbl.map((r) => (
                       <tr key={r.y}>
                         <th scope="row" className="sticky left-0 z-10 border-b border-border bg-card px-2.5 py-1.5 text-left font-semibold">{r.y}</th>
@@ -109,14 +126,14 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                           </>
                         )}
                         <td className="min-w-[220px] whitespace-normal border-b border-border bg-card px-2.5 py-1.5 text-left text-muted-foreground">
-                          {r.ev.length + r.evx.length ? [...r.ev, ...r.evx].sort((x, z) => x.t - z.t).map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground">{e.name}</span><div className="text-2xs leading-snug break-keep text-pretty" data-testid="event-fact">{e.fact}</div></div>) : "—"}
+                          {r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground">{e.name}</span><div className="text-2xs leading-snug break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 hidden text-2xs leading-relaxed text-muted-foreground text-pretty break-keep md:block">{us ? US_NOTE : KR_NOTE}</p>
+              <p className="mt-2 hidden text-2xs leading-relaxed text-muted-foreground text-pretty break-keep md:block">{us ? US_NOTE : KR_NOTE} {YEAR_NOTE}</p>
               <dl data-testid="invest-gloss" className="mt-3 rounded-xl bg-secondary p-3 text-2xs leading-relaxed text-pretty break-keep">
                 {GLOSS.map((g) => <div key={g.term} className="mb-1.5 last:mb-0"><dt className="inline font-semibold">{g.term}</dt> <dd className="inline text-muted-foreground">{g.text}</dd></div>)}
               </dl>
