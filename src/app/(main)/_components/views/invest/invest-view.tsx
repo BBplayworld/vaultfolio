@@ -3,7 +3,8 @@
 // 투자 탭 본문(#263): 지수 선택 → 머리 3줄 → 읽기 줄 → 그림 3층(+겹쳐 보기) → 크게 빠진 때 → 연도별 표 → ③ → 출처 4줄.
 // 앱 투자 탭과 공개 가이드(`/guide/market-history`)가 이 컴포넌트 1벌을 그대로 쓴다. 데이터는 정적 번들(네트워크·저장 0).
 // 앱에서는 next/dynamic으로 진입 때만 불러온다(invest-lazy.tsx) — 이 파일과 lib/invest 데이터는 첫 화면 번들에 넣지 않는다.
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Info } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
@@ -14,7 +15,7 @@ import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
 import { CalcCard } from "./calc-card";
 import { DropList, EpisodeDetail } from "./drop-list";
-import { layoutMain, MainChart } from "./main-chart";
+import { capWidth, layoutMain, MainChart } from "./main-chart";
 import { useElementWidth, useMediaQuery, useMounted } from "./use-width";
 import { YearTable } from "./year-table";
 
@@ -41,6 +42,39 @@ function MeasuredDetail({ view, ep, index }: { view: ReturnType<typeof buildInde
   const ref = useRef<HTMLDivElement>(null);
   const w = useElementWidth(ref);
   return <div ref={ref} className="min-w-0 w-full">{w > 0 && <EpisodeDetail data={marketHistory} view={view} ep={ep} index={index} width={w} />}</div>;
+}
+
+/** 캡션 옆 ⓘ — 마우스 오버가 아니라 탭·키보드로 여는 설명(Popover). 눈에 보이는 크기 24px, 히트영역은 after로 40px까지 */
+function InfoDot({ left, top, label, children }: { left: number; top: number; label: string; children: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label={label} data-testid="invest-info" style={{ left, top }} className="absolute z-[1] inline-flex size-6 items-center justify-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 focus-visible:ring-2 focus-visible:ring-ring/50">
+          <Info aria-hidden className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3 text-xs leading-relaxed text-pretty break-keep">{children}</PopoverContent>
+    </Popover>
+  );
+}
+
+function SourcePanel({ lines }: { lines: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-1">
+      <button type="button" aria-expanded={open} aria-controls="invest-source-panel" data-testid="invest-source-button" onClick={() => setOpen((o) => !o)} className="inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+        출처·라이선스<Info aria-hidden className="size-3.5" />
+        <ChevronDown aria-hidden className={`size-3.5 motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <div id="invest-source-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div data-testid="invest-source" className="space-y-1.5 pb-1 pt-1 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">
+            {lines.map((t, i) => <p key={i}>{t}</p>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export interface InvestViewProps {
@@ -132,6 +166,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         {L && showLevels ? (
           <>
             <MainChart data={marketHistory} view={view} width={width} wide={wide} selEp={selEff} selYear={yr} overlayOn={ovOn} onPickYear={pickYear} />
+            <InfoDot left={capWidth(`지수 · 해마다 연말 값 · ${view.last}년 말까지`) + 2} top={-2} label="지수 값 설명">가격 지수(배당 제외)이고, 해마다 마지막 날(연말) 종가 기준이에요. 한 해 안의 움직임은 담지 않아요.</InfoDot>
+            <InfoDot left={capWidth(`${view.rate === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값`) + 2} top={L.cap3 - 14} label="기준금리 설명">{view.rate === "us" ? "연준 목표금리(범위면 상단)를 매달 이어서 그렸어요. 1982년 9월부터 자료가 있어요." : "한국은행 기준금리를 매달 이어서 그렸어요(2008년 3월 전은 콜금리 목표). 1999년 5월부터 자료가 있어요."}</InfoDot>
             <button
               ref={btnRef} type="button" aria-haspopup="listbox" aria-expanded={menu} data-testid="overlay-button"
               onClick={() => setMenu((m) => !m)}
@@ -192,9 +228,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         </>
       )}
       <div className={wide ? "max-w-[560px]" : ""}><CalcCard key={idx} view={view} onFirstChange={() => once("invest_calc")} /></div>
-      <div data-testid="invest-source" className="mt-1 space-y-1.5 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">
-        {src.map((t, i) => <p key={i}>{t}</p>)}
-      </div>
+      <SourcePanel lines={src} />
     </div>
   );
 }
