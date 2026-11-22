@@ -41,7 +41,12 @@ export function SameYear({ view, year, className = "mt-1.5" }: { view: IndexView
   return (
     <div data-testid="same-year" className={`${className} flex flex-wrap gap-x-1.5 text-xs tabular-nums break-keep`}>
       <span className="text-muted-foreground">{SAME_YEAR_LABEL}</span>
-      {o.map((x, i) => <span key={x.label} className="whitespace-nowrap"><span className="text-muted-foreground">{i ? "· " : ""}{x.label}</span> <span className="text-foreground">{fmtPct(x.ret, 1)}</span></span>)}
+      {o.map((x, i) => (
+        <span key={x.label} className="whitespace-nowrap" aria-label={`${x.label} ${fmtPct(x.ret, 1)}`}>
+          <span aria-hidden className="text-muted-foreground">{i ? "· " : ""}<span className="max-[359px]:hidden">{x.label}</span><span className="hidden max-[359px]:inline">{x.label.replace(/ ?100$| 500$/, "")}</span></span>{" "}
+          <span aria-hidden className="text-foreground">{fmtPct(x.ret, 1)}</span>
+        </span>
+      ))}
     </div>
   );
 }

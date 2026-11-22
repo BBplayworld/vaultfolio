@@ -60,7 +60,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                         <ChevronRight aria-hidden className={`size-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
                       </button>
                       {open && (
-                        <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-3 pb-3 pt-1 text-xs" data-testid="yearly-row-detail">
+                        <dl className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-3 pt-1 text-xs ${view.same[r.y] ? "pb-1" : "pb-3"}`} data-testid="yearly-row-detail">
                           <dt className="text-muted-foreground">연간 등락</dt><dd className={`text-right tabular-nums ${r.ret == null ? "" : getProfitLossColor(r.ret)}`}>{r.ret == null ? "—" : fmtPct(r.ret, 1)}</dd>
                           <dt className="text-muted-foreground">기준금리 연말</dt><dd className="text-right tabular-nums">{fmtPctPlain(r.rate)}</dd>
                           {us ? (
@@ -77,11 +77,11 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                               <dt className="text-muted-foreground">국고채 10년 연말</dt><dd className="text-right tabular-nums">{fmtPctPlain(r.k10)}</dd>
                             </>
                           )}
-                          <dd className="col-span-2 empty:hidden"><SameYear view={view} year={r.y} className="" /></dd>
-                          <dt className="col-span-2 text-muted-foreground">사건</dt>
+                                                    <dt className="col-span-2 text-muted-foreground">사건</dt>
                           <dd className="col-span-2 break-keep">{r.issues.length ? r.issues.map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium"><EventName name={e.name} /></span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-xs text-muted-foreground break-keep text-pretty" data-testid="event-fact"><NoBreak text={e.fact} phrases={[]} tails={NOWRAP_PCT} /></div></div>) : "—"}</dd>
                         </dl>
                       )}
+                      {open && <div className="px-2 pb-3 empty:hidden"><SameYear view={view} year={r.y} className="" /></div>}
                     </div>
                   );
                 })}
