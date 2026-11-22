@@ -1,0 +1,44 @@
+/* #263 R4.1 목업 — r3/common.css 토큰 재사용, 신규 토큰 0 (색은 손익 profit/loss 알파 조합) */
+.stub{border:1px dashed var(--ink3);border-radius:14px;padding:10px 12px;font-size:11px;color:var(--mf);text-align:center}
+.gridcard{padding:16px 16px 12px}
+.gbleed{margin:12px -16px 0;position:relative;touch-action:pan-y;user-select:none}
+.ggrid{display:grid;width:100%}
+.gh{height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--mf)}
+.gy{height:40px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--mf)}
+.gc{height:40px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--fg);box-shadow:inset -1px -1px 0 var(--card);border-radius:0;position:relative;transition:box-shadow .12s}
+.gc.e{background:transparent}
+.gc.z{background:var(--sec)}
+.gc:active{transform:scale(.96)}
+.gc.in{box-shadow:inset -1px -1px 0 var(--card),inset 0 -3px 0 var(--brand)}
+.gc.sel{box-shadow:inset 0 0 0 2px var(--fg)}
+.gc.sel.in{box-shadow:inset 0 0 0 2px var(--fg),inset 0 -3px 0 var(--brand)}
+.gleg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--mf)}
+.gbar{display:inline-flex;height:10px;border-radius:3px;overflow:hidden}
+.gbar i{width:14px;display:block}
+.ul{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--brand);vertical-align:middle;margin-right:4px}
+.ctl{display:flex;gap:6px;margin-top:10px}
+.ctl button{flex:1;height:40px;border-radius:12px;background:var(--sec);font-size:13px;font-weight:600;color:var(--mf);transition:background-color .16s,color .16s}
+.ctl button:active{transform:scale(.96)}
+.ctl button.on{background:var(--brandsoft);color:var(--brandtx)}
+.sel2{display:flex;gap:8px;margin-top:10px}
+.sel2 label{flex:1;position:relative;display:block}
+.sel2 select{appearance:none;-webkit-appearance:none;width:100%;height:40px;border-radius:12px;background:var(--sec);border:0;padding:0 28px 0 12px;font:inherit;font-size:14px;font-weight:600;color:var(--fg)}
+.sel2 label small{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--mf);pointer-events:none;font-weight:400}
+.sel2 label span.v{pointer-events:none}
+.sel2 label:after{content:"⌄";position:absolute;right:11px;top:9px;color:var(--mf);pointer-events:none}
+.sel2 select{padding-left:46px}
+.rbig{display:flex;align-items:baseline;gap:8px;margin:4px 0 6px}
+.pcap{display:flex;justify-content:space-between;gap:8px;margin-top:14px;font-size:11px;color:var(--mf)}
+.pcw{margin-top:4px}
+.gcol{background:var(--card)}
+.altb .mock{display:none}
+@media (prefers-reduced-motion:no-preference){.pfade{animation:fi .18s ease-out}}
+.two2{display:grid;grid-template-columns:440px 1fr;gap:16px;align-items:start}
+.rrow+.rsep{height:1px;background:var(--hair);margin:12px 0}
+.res .rrow .tsm svg{vertical-align:-2px}
+.honest{display:flex;align-items:center;gap:0;margin-top:6px}
+.ib{width:40px;height:40px;display:grid;place-items:center;flex:none;margin:-8px 0 -8px -4px;border-radius:12px}.ib:active{transform:scale(.96)}.ib .ih{margin:0}
+.idef{display:grid;grid-template-rows:0fr;overflow:hidden;visibility:hidden;margin:0}
+.idef.open{visibility:visible;margin:2px 0 4px}
+.idef:not(.open){height:0}
+.wrapok .rd1{height:auto;min-height:28px;white-space:normal;flex-wrap:wrap;row-gap:0}
