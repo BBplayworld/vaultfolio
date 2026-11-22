@@ -69,13 +69,13 @@ function SourcePanel({ lines }: { lines: string[] }) {
   return (
     <div className="mt-1">
       <button type="button" aria-expanded={open} aria-controls="invest-source-panel" data-testid="invest-source-button" onClick={() => setOpen((o) => !o)} className="inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-        출처·라이선스 · CC BY-SA 4.0<Info aria-hidden className="size-3.5" />
+        출처·라이선스 · <span className="whitespace-nowrap">CC BY-SA 4.0</span><Info aria-hidden className="size-3.5" />
         <ChevronDown aria-hidden className={`size-3.5 motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       <div id="invest-source-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
           <div data-testid="invest-source" className="space-y-1.5 pb-1 pt-1 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">
-            {lines.map((t, i) => <p key={i}>{t}</p>)}
+            {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
           </div>
         </div>
       </div>
@@ -173,7 +173,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         {/* R3: 모바일은 base 줄을 `크게 빠진 때` 카드 각주로 옮긴다(첫 화면 숫자 예산). 1280은 현행 */}
         {wide && <p data-testid="invest-base" className="mt-2 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>}
       </div>
-      <div data-testid="invest-readout" aria-live="polite" className="mt-2 min-h-[4.7rem]">
+      <div data-testid="invest-readout" aria-live="polite" className="mt-2 min-h-[3.75rem] max-[359px]:min-h-[4.7rem]">
         {ro && showLevels ? (
           <>
             <div className="flex flex-wrap items-center gap-x-1.5 text-sm" data-testid="readout-main">

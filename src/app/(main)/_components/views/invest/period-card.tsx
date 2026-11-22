@@ -137,7 +137,7 @@ export function PeriodCard({ view, period, onChange, question }: { view: IndexVi
       <div id="period-honest-def" {...(info ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${info ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
           <p data-testid="honest-def" className="text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">{APPROX_DEF}</p>
-          <p data-testid="honest-irr" className="mt-1.5 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep">{IRR_SENTENCE(t.irr)}</p>
+          <p data-testid="honest-irr" className="mt-1.5 text-2xs leading-relaxed text-muted-foreground text-pretty break-keep"><NoBreak text={IRR_SENTENCE(t.irr)} phrases={[]} tails={NOWRAP_TAIL} /></p>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground">

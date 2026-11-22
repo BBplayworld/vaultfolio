@@ -6,7 +6,7 @@ import type { Episode, EventPoint, IndexView, RateDir } from "@/lib/invest/calc"
 import { DIR_VERB, DIR_LABEL, LIST_NOTE_2, LIST_SUB, EMPTY_LIST, fmtPct, fmtRate, listNote } from "@/lib/invest/text";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { C } from "./chart-style";
-import { NOWRAP_PCT, NoBreak, EventName } from "./nowrap";
+import { NOWRAP_PCT, NOWRAP_TAIL, NoBreak, EventName } from "./nowrap";
 import { ZoomChart } from "./zoom-chart";
 
 /** 금리 방향 표식: 올라감 = 면, 내려감 = 빗금, 거의 그대로 = 짧은 선(색이 아니라 모양으로 구분) */
@@ -46,7 +46,7 @@ function EpisodeDetail({ data, view, ep, index, width }: { data: MarketHistoryDa
         </div>
       </div>
       <div className="-ml-0.5 mt-3"><ZoomChart data={data} view={view} ep={ep} width={width} /></div>
-      {notes && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{notes}</p>}
+      {notes && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground text-pretty break-keep"><NoBreak text={notes} phrases={[]} tails={NOWRAP_TAIL} /></p>}
       {ep.recs != null && (
         <div data-testid="detail-recession" className="mt-2.5 flex items-start gap-1.5 text-xs leading-relaxed text-pretty break-keep">
           <i aria-hidden className="mt-1 inline-block h-2.5 w-3 shrink-0 rounded-[2px]" style={{ background: "color-mix(in oklab, var(--foreground) 13%, transparent)", borderTop: `2px solid ${C.ink2}` }} />

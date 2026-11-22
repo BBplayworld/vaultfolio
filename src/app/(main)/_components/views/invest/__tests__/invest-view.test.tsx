@@ -130,7 +130,8 @@ describe("투자 탭 행·표·③ 마크업", () => {
     expect(html).toContain("월 지수 값 대신 연말 값의 평균으로 매달 산 것으로 어림했어요");
     expect(html).toContain('data-testid="calc-hold-dca"');
     expect(html).toContain('data-testid="honest-irr"');
-    expect(html).toContain("넣은 시점을 반영해 해마다 평균으로 바꾸면 +13.60%예요");
+    expect(html).toContain("넣은 시점을 반영해 해마다 평균으로 바꾸면 ");
+    expect(html).toContain("+13.60%예요.");
     expect(html).toContain("배당을 다시 넣었다면 결과는 이보다 커요.");
     expect(html).toContain("반올림하지 않은 값으로 계산해 마지막에 한 번만 반올림해요");
     expect(html).toContain('aria-expanded="false"');
