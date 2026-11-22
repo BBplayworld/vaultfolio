@@ -52,7 +52,7 @@ describe("해별 경제 이슈(1990~2026)", () => {
   it("qa 원문 대조 반영: 1991 걸프전 문장·1999 출처·2026 날짜 표기", () => {
     const by = Object.fromEntries(data.eventsYear.map((e) => [e.id, e]));
     expect(by["Y1991-1"].fact).toBe("1월에 걸프전이 시작됐어요.");
-    expect(by["Y1999-1"].urls).toEqual(["https://www.federalreserve.gov/fomc/minutes/19990202.htm"]);
+    expect(by["Y1999-1"].urls).toEqual(["https://www.federalreserve.gov/fomc/minutes/19990202.htm", "https://www.federalreserve.gov/fomc/minutes/19981222.htm"]);
     expect(by["Y2026-1"].date).toBe("2026년 초");
   });
   it("첫 화면 사건 점은 31건 그대로", () => {
