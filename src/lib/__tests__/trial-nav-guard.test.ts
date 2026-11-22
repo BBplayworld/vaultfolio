@@ -8,11 +8,11 @@ import {
 } from "@/app/(main)/_components/layout/navigation/navigation-context";
 
 describe("swipeOrderOf", () => {
-  it("체험: 홈·상세·성과만(더보기 없음)", () => {
-    expect(swipeOrderOf(true)).toEqual(["home", "detail", "activity"]);
+  it("체험: 홈·상세·성과·투자(더보기는 순서 밖)", () => {
+    expect(swipeOrderOf(true)).toEqual(["home", "detail", "activity", "invest"]);
   });
-  it("체험 아님: 기존 순서 그대로(더보기 포함)", () => {
-    expect(swipeOrderOf(false)).toEqual(["home", "detail", "activity", "more"]);
+  it("체험 아님: 같은 순서(더보기는 홈 헤더에서 여는 페이지라 순서 밖)", () => {
+    expect(swipeOrderOf(false)).toEqual(["home", "detail", "activity", "invest"]);
   });
 });
 

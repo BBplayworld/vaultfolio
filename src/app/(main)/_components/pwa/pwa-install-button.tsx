@@ -13,7 +13,8 @@ export function PwaInstallButton() {
       {({ onClick }) => (
         <button
           onClick={onClick}
-          className={`${ICON_BTN} border-none text-white`}
+          // 359px 이하에서는 숨겨 헤더 한 줄(상세|성과|투자)이 겹치지 않게 한다(#263 R-2). 설치 안내는 설정 > 알림·웰컴에 있다
+          className={`${ICON_BTN} border-none text-white max-[358px]:hidden`}
           style={{ backgroundColor: MAIN_PALETTE[0] }}
           aria-label="앱 설치"
           title="앱 설치"

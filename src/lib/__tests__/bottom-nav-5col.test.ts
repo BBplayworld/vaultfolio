@@ -7,14 +7,14 @@ const read = (p: string) => readFileSync(join(process.cwd(), "src", p), "utf8");
 
 describe("하단 네비 5칸 (#125)", () => {
   const nav = read("app/(main)/_components/pwa/bottom-nav.tsx");
-  it("순서: 홈·상세·업데이트·성과·더보기, 인증카드 칸 없음", () => {
+  it("순서: 홈·상세·업데이트·성과·투자, 인증카드 칸 없음(더보기는 홈 헤더 아이콘, #263)", () => {
     const ids = [...nav.matchAll(/\{ id: "(\w+)", label:/g)].map((m) => m[1]);
-    expect(ids).toEqual(["home", "detail", "update", "activity", "more"]);
+    expect(ids).toEqual(["home", "detail", "update", "activity", "invest"]);
     expect(nav).not.toContain("ShareScreenshotDialog");
     expect(nav).not.toContain("IdCard");
   });
-  it("균등 grid (5칸, 체험 3칸) + aria-current", () => {
-    expect(nav).toContain('"grid-cols-3" : "grid-cols-5"');
+  it("균등 grid (5칸, 체험 4칸: 홈·상세·성과·투자) + aria-current", () => {
+    expect(nav).toContain('"grid-cols-4" : "grid-cols-5"');
     expect(nav).toContain('aria-current={isActive ? "page" : undefined}');
   });
 });
@@ -61,9 +61,9 @@ describe("인증카드 상단 통일 (#125 v2)", () => {
     });
     expect(hub).not.toContain("text-white");
   });
-  it("인증카드 버튼은 pwa-hide-actions 밖, 설치·더보기·선택기는 안", () => {
+  it("인증카드 버튼·더보기는 pwa-hide-actions 밖(더보기는 PWA에서도 보임, #263), 설치·선택기는 안", () => {
     expect(top).toMatch(/<div className="contents pwa-hide-actions">\s*\{showInstall && <PwaInstallButton \/>\}/);
-    expect(top).toMatch(/\{showShare && <ShareScreenshotButton \/>\}\s*<div className="contents pwa-hide-actions">\s*\{showMore/);
+    expect(top).toMatch(/\{showShare && <ShareScreenshotButton \/>\}\s*(\{\/\*[^]*?\*\/\}\s*)?\{showMore && <MoreButton \/>\}/);
     expect(top).toMatch(/pwa-hide-actions">\s*<InlineSelector/);
   });
   it("홈 전용 PWA 헤더 CSS, 브라우저용 클래스 무변경", () => {

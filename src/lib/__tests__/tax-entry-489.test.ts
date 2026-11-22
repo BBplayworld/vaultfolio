@@ -24,15 +24,16 @@ describe("세금 행 보조줄 taxEntryLine", () => {
 });
 
 describe("활성 탭·스와이프 매핑", () => {
-  it("bottom-nav getActiveId: tax → detail, settings → more", () => {
+  it("bottom-nav getActiveId: tax → detail, invest → invest, 더보기·설정은 활성 칸 없음(#263)", () => {
     const nav = read("app/(main)/_components/pwa/bottom-nav.tsx");
     expect(nav).toContain('viewType === "detail" || viewType === "tax"');
     expect(nav).not.toMatch(/viewType === "more"[^\n]*"tax"/);
-    expect(nav).toContain('viewType === "more" || viewType === "settings"');
+    expect(nav).toContain('viewType === "invest") return "invest"');
+    expect(nav).not.toContain('viewType === "more" || viewType === "settings"');
   });
-  it("mainTypeOf: tax → detail, settings → more", () => {
+  it("mainTypeOf: tax → detail (more·settings는 스와이프 순서 밖, #263)", () => {
     expect(read("app/(main)/_components/layout/navigation/navigation-context.tsx"))
-      .toContain('t === "settings" ? "more" : t === "tax" ? "detail" : t');
+      .toContain('t === "tax" ? "detail" : t');
   });
 });
 

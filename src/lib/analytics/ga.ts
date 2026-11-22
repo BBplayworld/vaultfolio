@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push", "activity"],
-  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "guide_open", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab", "grow_pick", "grow_other_label", "home_tip_due", "stock_decision", "stock_check_tile", "stock_decision_view"],
+  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "guide_open", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab", "grow_pick", "grow_other_label", "home_tip_due", "stock_decision", "stock_check_tile", "stock_decision_view", "invest_index_spx", "invest_index_ndx", "invest_index_kospi", "invest_overlay", "invest_table", "invest_calc", "invest_rise_tab", "invest_pattern"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -141,6 +141,8 @@ const SCREEN_TITLES: Record<string, string> = {
   "guide:stock-ratio": "가이드·주식 비중",
   "guide:net-worth": "가이드·순자산 정리",
   "guide:year-end": "가이드·올해 결산",
+  "guide:market-history": "가이드·시장 역사",
+  invest: "투자",
   more: "더보기",
   settings: "설정",
   tax: "세금 관리",
@@ -205,6 +207,15 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   change_scope_stock: "성과·자산 변화·주식",
   change_week_all: "성과·자산 변화·최근 7일",
   year_settlement: "성과·자산 변화·올해 결산", // 연 탭 올해 결산 블록이 값과 함께 그려졌을 때 1회(5.124). 금액·비율·상태 미전송
+  // 투자 탭(#263): 지수 이름·동작만. 금액·배수·연도·보유 시장은 보내지 않는다
+  invest_index_spx: "투자·지수·S&P 500",
+  invest_index_ndx: "투자·지수·나스닥100",
+  invest_index_kospi: "투자·지수·코스피",
+  invest_overlay: "투자·겹쳐 보기",
+  invest_table: "투자·연도별 표",
+  invest_calc: "투자·넣었다면 계산",
+  invest_rise_tab: "투자·크게 오른 해",
+  invest_pattern: "투자·하락 전 12개월",
   stock_sort_rate: "상세·주식·등락률 순",
   relink: "끊긴 거래 다시 잇기",
   settlement_ics: "결산 캘린더 추가",

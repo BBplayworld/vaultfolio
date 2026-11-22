@@ -6,6 +6,7 @@ import { APP_CONFIG, OG_IMAGE } from "@/config/app";
 import { MAIN_PALETTE } from "@/config/theme";
 
 import { GuideArticle } from "./_components/guide-article";
+import { MarketHistoryArticle } from "./_components/market-history-article";
 import { GuideScreenTracker } from "./guide-actions";
 import { ChevronRight } from "lucide-react";
 
@@ -45,7 +46,7 @@ export function GuideShell({ slug }: { slug: GuideSlug }) {
           <span className="text-sm font-semibold text-foreground">{APP_CONFIG.name}</span>
         </header>
         <GuideScreenTracker slug={slug} />
-        <GuideArticle doc={doc} />
+        {slug === "market-history" ? <MarketHistoryArticle doc={doc} /> : <GuideArticle doc={doc} />}
         <nav aria-labelledby="guide-other-title" data-testid="guide-other-list" className="flex flex-col">
           <h2 id="guide-other-title" className="mb-1 text-sm font-semibold">
             다른 가이드
