@@ -18,7 +18,7 @@ const f0 = (v: number) => { const r = Math.round(v); return r > 0 ? `+${r}` : r 
 
 function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; sy: number; ey: number; width: number; cy: number | null; onPick: (y: number) => void }) {
   const r = periodResult(view, sy, ey), S = r.series, n = r.n;
-  const M = Math.max(...S.lump, ...S.dca, 1) * 1.08, H1 = 132, T1 = 28, yy = (v: number) => T1 + H1 - (v / M) * H1;
+  const M = Math.max(...S.lump, ...S.dca, 1) * 1.08, H1 = 132, T1 = 46, yy = (v: number) => T1 + H1 - (v / M) * H1;
   const st = stepAx(M), ticks: number[] = []; for (let v = 0; v <= M; v += st) ticks.push(v);
   const tl = (v: number) => (v === 0 ? "0" : `${Math.round(v * 10) / 10}배`);
   const G = Math.max(...ticks.map((v) => tl(v).length)) * 6.4 + 8, PW = W - G, bw = PW / (n + 1), X = (i: number) => bw * (i + 0.5);
@@ -38,28 +38,10 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
   const TH = T2 + H2 + 18;
   const pts = (A: number[]) => A.map((v, i) => `${X(i).toFixed(1)},${yy(v).toFixed(1)}`).join(" ");
   const ex = X(n), yl = yy(S.lump[n]), yd = yy(S.dca[n]);
-  // 끝 라벨은 두 선·넣은 돈 선·서로와 겹치지 않는 자리(점 위·아래로 번갈아)를 찾아 놓는다(R-1)
-  const segs: [number, number, number, number][] = [];
-  for (const A of [S.lump, S.dca, S.principal]) for (let i = 1; i < A.length; i++) segs.push([X(i - 1), yy(A[i - 1]), X(i), yy(A[i])]);
-  const hitRect = (x0: number, y0: number, x1: number, y1: number) => segs.some(([ax, ay, bx, by]) => {
-    const lo = Math.max(x0, Math.min(ax, bx)), hi = Math.min(x1, Math.max(ax, bx));
-    if (lo > hi) return false;
-    const f = (x: number) => (bx === ax ? ay : ay + ((by - ay) * (x - ax)) / (bx - ax));
-    const ya = bx === ax ? Math.min(ay, by) : f(lo), yb = bx === ax ? Math.max(ay, by) : f(hi);
-    return Math.max(ya, yb) >= y0 && Math.min(ya, yb) <= y1;
-  });
-  const lw = (s: string) => [...s].reduce((q, ch) => q + (/[0-9.]/.test(ch) ? 7 : ch === " " ? 3.5 : 12.5), 0);
-  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
-  const place = (py: number, text: string) => {
-    const w = lw(text), x1 = ex - 8, x0 = x1 - w;
-    for (const dy of [-9, 17, -25, 33, -41, 49, 0]) {
-      const y = Math.min(Math.max(py + dy, T1 + 4), T1 + H1 - 2), r = { x0: x0 - 2, x1: x1 + 2, y0: y - 12, y1: y + 3 };
-      if (hitRect(r.x0, r.y0, r.x1, r.y1) || placed.some((o) => !(o.x1 < r.x0 || r.x1 < o.x0 || o.y1 < r.y0 || r.y1 < o.y0))) continue;
-      placed.push(r); return y;
-    }
-    const y = py - 9; placed.push({ x0, x1, y0: y - 12, y1: y + 3 }); return y;
-  };
-  const labs = [yl <= yd ? ["lump", "한 번에", S.lump[n], C.ink2, yl] as const : ["dca", "매달", S.dca[n], C.brand, yd] as const, yl <= yd ? ["dca", "매달", S.dca[n], C.brand, yd] as const : ["lump", "한 번에", S.lump[n], C.ink2, yl] as const].map(([id, nm, v, c, py]) => ({ id, nm, v, c, py, y: place(py, `${nm} ${v.toFixed(2)}배`) }));
+  // 끝 라벨(R-1): 선과 겹칠 수 없게 그림 위 전용 줄에 둔다(마커 모양으로 선과 연결). 끝점 마커는 그대로 선 끝에 있다
+  const lw = (t: string) => [...t].reduce((q, ch) => q + (/[0-9.]/.test(ch) ? 7 : ch === " " ? 3.5 : 12.5), 0);
+  const tl1 = `한 번에 ${S.lump[n].toFixed(2)}배`, tl2 = `매달 ${S.dca[n].toFixed(2)}배`;
+  const x2 = 18 + lw(tl1) + 16;
   const alt = `${sy}년 말부터 ${ey}년 말까지 같은 총액을 한 번에 넣은 경우 ${r.lumpMult.toFixed(2)}배, 매달 나눠 넣은 경우 ${r.dcaMult.toFixed(2)}배. 값은 위 결과와 같아요`;
   return (
     <svg viewBox={`0 0 ${W} ${TH}`} width={W} height={TH} role="img" aria-label={alt} data-testid="period-chart" style={{ display: "block", touchAction: "pan-y", userSelect: "none", fontVariantNumeric: "tabular-nums" }}>
@@ -76,12 +58,14 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
         <polyline fill="none" stroke={C.brand} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" points={pts(S.dca)} />
         {bw >= 14 && S.dca.map((v, i) => <rect key={i} x={X(i) - 2.6} y={yy(v) - 2.6} width={5.2} height={5.2} transform={`rotate(45 ${X(i)} ${yy(v)})`} fill={C.card} stroke={C.brand} strokeWidth={1.5} />)}
       </g>
-      {labs.map(({ y, v, nm, c, py, id }) => (
-        <g key={id}>
-          <circle cx={ex} cy={py} r={3.6} fill={c} stroke={C.card} strokeWidth={2} />
-          <text data-testid={`end-${id}`} className="fill-foreground" style={HALO} x={ex - 8} y={y} textAnchor="end" fontSize={12} fontWeight={600}>{nm} {v.toFixed(2)}배</text>
-        </g>
-      ))}
+      <circle cx={ex} cy={yl} r={3.6} fill={C.ink2} stroke={C.card} strokeWidth={2} />
+      <circle cx={ex} cy={yd} r={3.6} fill={C.brand} stroke={C.card} strokeWidth={2} />
+      <g>
+        <circle cx={6} cy={27} r={3.6} fill={C.card} stroke={C.ink2} strokeWidth={2} />
+        <text data-testid="end-lump" className="fill-foreground" x={16} y={31} fontSize={12} fontWeight={600}>{tl1}</text>
+        <rect x={x2 - 4} y={24} width={7} height={7} transform={`rotate(45 ${x2} 27.5)`} fill={C.card} stroke={C.brand} strokeWidth={2} />
+        <text data-testid="end-dca" className="fill-foreground" x={x2 + 10} y={31} fontSize={12} fontWeight={600}>{tl2}</text>
+      </g>
       <text className={SVG_TEXT} fontSize={11} x={0} y={T2 - 10}>연간 등락(%)</text>
       <line x1={0} x2={PW} y1={z} y2={z} stroke={C.fg} strokeOpacity={0.32} />
       {rets.map((x, k) => {
