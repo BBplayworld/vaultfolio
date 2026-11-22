@@ -13,7 +13,7 @@ import { layoutMain, MainChart, retAxisCap, xLabelPlan } from "../main-chart";
 
 const views = { spx: buildIndexView(marketHistory, "spx"), ndx: buildIndexView(marketHistory, "ndx"), kospi: buildIndexView(marketHistory, "kospi") };
 const chart = (k: keyof typeof views, w: number) =>
-  renderToStaticMarkup(<MainChart data={marketHistory} view={views[k]} width={w} wide={false} selEp={null} selYear={null} overlayOn={false} onPickYear={() => {}} />);
+  renderToStaticMarkup(<MainChart data={marketHistory} view={views[k]} width={w} wide={false} selEp={null} selYear={null} overlay={null} onPickYear={() => {}} />);
 
 describe("x축 라벨 규칙 xLabelPlan(D-4·D-5)", () => {
   const plan = (k: keyof typeof views, w: number) => { const v = views[k]; return xLabelPlan(w - 50 - 24, v.last - v.start); };
@@ -37,13 +37,24 @@ describe("연간 등락 클립(D-7)", () => {
     expect(cap("ndx").up).toBe(60);
     expect(cap("kospi").up).toBe(80);
   });
-  it("자른 막대마다 실제 값 라벨(나스닥 3·코스피 2·S&P 0), 값 = fmtPct(실제)", () => {
+  it("자른 막대마다 값 라벨 또는 막대 끝 삼각(N-5): 라벨+삼각 = 나스닥 3·코스피 2·S&P 0, 첫 라벨은 글자 유지, 글자 라벨 값 = fmtPct(실제)", () => {
     for (const [k, n] of [["spx", 0], ["ndx", 3], ["kospi", 2]] as const) {
-      const html = chart(k, 326);
-      expect((html.match(/data-testid="clip-label"/g) || []).length, k).toBe(n);
+      for (const w of [264, 326, 928]) {
+        const html = chart(k, w);
+        const lab = (html.match(/data-testid="clip-label"/g) || []).length, mark = (html.match(/data-testid="clip-mark"/g) || []).length;
+        expect(lab + mark, `${k} ${w}`).toBe(n);
+        if (n) expect(lab, `${k} ${w}`).toBeGreaterThanOrEqual(1);
+      }
     }
-    const html = chart("ndx", 326);
-    for (const y of [1991, 1998, 1999]) expect(html).toContain(fmtPct(views.ndx.ret[y - views.ndx.start] as number));
+    for (const w of [264, 326, 928]) {
+      const html = chart("ndx", w);
+      for (const m of html.matchAll(/data-testid="clip-label" data-y="(\d+)".*?<text[^>]*>([^<]*)<\/text>/g)) expect(m[2], `${w} ${m[1]}`).toBe(fmtPct(views.ndx.ret[+m[1] - views.ndx.start] as number));
+    }
+  });
+  it("삼각을 쓴 폭(320 나스닥)은 글자 라벨이 줄고 같은 해의 값은 데이터에 있다", () => {
+    const html = chart("ndx", 264);
+    expect((html.match(/data-testid="clip-mark"/g) || []).length).toBeGreaterThanOrEqual(1);
+    expect(html).toMatch(/data-testid="clip-mark" data-y="\d{4}"/);
   });
 });
 

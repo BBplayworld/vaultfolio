@@ -11,6 +11,8 @@ export const fmtRate = (v: number) => (Math.round(v * 100) / 100).toString().rep
 export const fmtLevel = (v: number) => (v >= 10 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
 /** 금리차(%p) 음수는 부호만 */
 export const fmtSpread = (v: number | null) => (v == null ? "—" : (v < 0 ? MINUS : "") + Math.abs(v).toFixed(2));
+/** 1자리 % (물가·실업률 연평균, 값 없으면 —) */
+export const fmtPct1Plain = (v: number | null) => (v == null ? "—" : v.toFixed(1) + "%");
 export const fmtPctPlain = (v: number | null) => (v == null ? "—" : v.toFixed(2) + "%");
 
 /** 읽기 줄·표용 금리 방향 */
@@ -97,8 +99,8 @@ export function sourceLines(v: IndexView, revIds: Record<"spx" | "ndx" | "kospi"
       ? `지수 연말값: ${wiki.ndx}을 바탕으로 시크릿에셋이 다시 계산·가공했어요. 2003·2004년 연말값은 다른 공개 자료와 최대 0.6% 차이가 있어요 (위키 값 사용).`
       : `지수 연말값: ${wiki.kospi}를 바탕으로 시크릿에셋이 다시 계산·가공했어요. 1998년 등락률은 표의 %가 아니라 종가로 다시 계산했어요.`;
   const l2 = v.rate === "us"
-    ? "금리·침체: 미 기준금리는 미 연준 공개시장 표 · 미 국채 금리: 미 연준(H.15) · 경기침체 기간: NBER(미국 경제연구소) 경기순환 기준일을 가공했어요."
-    : `금리 출처: ECOS(한국은행, 기준금리·시장금리), ${KR_RECHECK_DATE}. 한국은행이 작성한 통계를 가공했어요.`;
+    ? "금리·침체: 미 기준금리는 미 연준 공개시장 표 · 미 국채 금리: 미 연준(H.15) · 경기침체 기간: NBER(미국 경제연구소) 경기순환 기준일을 가공했어요. " + BLS_SOURCE
+    : `금리 출처: ECOS(한국은행, 기준금리·시장금리), ${KR_RECHECK_DATE}. 한국은행이 작성한 통계를 가공했어요. 사건 1건(1997년)은 IMF 보도자료를 확인했어요.`;
   const l3 = `가격 지수(배당 제외) · ${v.currency === "달러" ? "미국 지수는 달러 기준 · " : ""}연말 종가 기준 · 기준일 ${v.last}.12.31 · 가공 데이터는 같은 조건(CC BY-SA 4.0)으로 공개해요`;
   const owner = v.key === "kospi" ? "KOSPI는 한국거래소" : v.key === "spx" ? "S&P 500은 S&P Dow Jones Indices" : "Nasdaq-100은 Nasdaq, Inc.";
   const l4 = `${owner}의 상표이며, 시크릿에셋은 이 기관과 제휴 관계가 아니에요. 과거 시장 사실이며 투자 권유가 아니에요.`;
@@ -120,5 +122,10 @@ export const QUESTION_HEAD = {
 } as const;
 
 /** R2: 미국 물가·실업률 출처·정의(화면 반영 전 문구 정본). 'BLS 공식' 표기·FRED 로고·제휴 표현 금지 */
-export const BLS_SOURCE = "물가·실업률: 미 노동통계국(BLS) · FRED(세인트루이스 연은) 경유, 원자료 시리즈 CUUR0000SA0·LNU04000000을 가공했어요.";
+export const BLS_SOURCE = "물가·실업률: 미 노동통계국(BLS) · FRED(세인트루이스 연은) 경유, 원자료 시리즈 CUUR0000SA0·LNU04000000을 가공했어요(공공 영역).";
 export const BLS_INFO = "연평균은 월 12개 평균이에요. 물가는 CPI-U(전 품목) 연평균의 전년 대비 %, 실업률은 연평균 %예요.";
+
+/** R2-3: 펼침 안 `같은 해` 줄 값(현재 지수 제외 나머지). 단위 표기만, 환산·인과 0 */
+export const SAME_YEAR_LABEL = "같은 해";
+/** R2-1: 2025 물가·실업률 빈 칸 각주 */
+export const BLS_GAP_NOTE = "2025년은 미 정부 업무 중단으로 10월 값이 발표되지 않아 비워 뒀어요.";

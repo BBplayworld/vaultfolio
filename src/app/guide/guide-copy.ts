@@ -6,7 +6,7 @@ import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 // 예외: market-history(#263)는 본문이 투자 탭 컴포넌트 1벌이라 지수 이름이 필요하다(문구 규칙은 투자 탭 R1~R11). 이 파일은 첫 화면 번들에 들어가므로 투자 데이터를 import하지 않는다 — 설명의 숫자(1961년·4번)는 테스트가 데이터와 대조한다.
 // 글을 고치면 lastModified도 함께 갱신한다(sitemap이 이 값을 그대로 쓴다).
 
-export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year"] as const;
+export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years"] as const;
 export type GuideSlug = (typeof GUIDE_SLUGS)[number];
 
 export interface GuideCta {
@@ -197,6 +197,36 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
     secondary: TRIAL_CTA,
     linkLabel: "해마다 오르내린 %, 한 격자로 보기",
+    lastModified: "2026-11-22",
+  },
+  "rate-hike-years": {
+    slug: "rate-hike-years",
+    title: "금리 인상기에 S&P 500·코스피는 어땠을까",
+    description: "1990년 이후 연준이 금리를 올린 6번의 국면이 걸친 해마다, S&P 500·나스닥100·코스피가 전년보다 올랐는지 세어 두었어요. 과거 사실이고 투자 권유가 아니에요.",
+    h1: "금리 인상기에 S&P 500·코스피는 어땠을까",
+    summary: "인상 국면이 걸친 해는 연준이 목표 금리를 처음 올린 해부터, 다음에 내리기 전 마지막으로 올린 해까지예요. 1990년 이후 이런 국면은 6번, 걸친 해는 14개였고 S&P 500과 코스피는 그중 9개 해에 연말 지수가 전년보다 올랐어요. 지수 등락은 1월부터 12월까지 한 해 전체 값이라 인상이 없던 달도 들어 있어요. 금리와 지수를 같은 해에 나란히 놓았을 뿐, 한쪽이 다른 쪽을 움직였다는 뜻은 아니에요.",
+    // 본문은 투자 탭 컴포넌트(MarketHistoryArticle) + 인상 국면 고유 표. 아래 steps·facts는 쓰지 않는다
+    steps: [],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [],
+    primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
+    secondary: TRIAL_CTA,
+    linkLabel: "금리 인상기의 지수",
+    lastModified: "2026-11-22",
+  },
+  "recession-years": {
+    slug: "recession-years",
+    title: "미국 경기침체 때 주가는 얼마나 빠졌나",
+    description: "1961년 이후 미국 경기침체 9번이 걸친 해마다 S&P 500·나스닥100·코스피가 전년보다 올랐는지 모았어요. 침체가 있었는데도 오른 해도 그대로 적었어요.",
+    h1: "미국 경기침체 때 주가는 얼마나 빠졌나",
+    summary: "경기침체가 걸친 해는 미국 경제연구소(NBER)가 정한 경기 고점 다음 달부터 저점 달까지의 기간이 한 달이라도 든 해예요. 1961년 이후 이런 해는 14개였고, S&P 500은 그중 6개 해에 내렸고 8개 해에는 올랐어요. 가장 크게 내린 해는 2008년(−38.5%)이었어요. 연말 값끼리 비교한 것이라 한 해 안에서 빠졌다가 돌아온 폭(2020년 3월 등)은 이 표에 나오지 않아요.",
+    // 본문은 투자 탭 컴포넌트(MarketHistoryArticle) + 침체 고유 표. 아래 steps·facts는 쓰지 않는다
+    steps: [],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [],
+    primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
+    secondary: TRIAL_CTA,
+    linkLabel: "경기침체 때의 지수",
     lastModified: "2026-11-22",
   },
 };

@@ -143,6 +143,8 @@ const SCREEN_TITLES: Record<string, string> = {
   "guide:year-end": "가이드·올해 결산",
   "guide:market-history": "가이드·시장 역사",
   "guide:index-returns-by-year": "가이드·연도별 수익률",
+  "guide:rate-hike-years": "가이드·금리 인상기",
+  "guide:recession-years": "가이드·경기침체",
   invest: "투자",
   more: "더보기",
   settings: "설정",

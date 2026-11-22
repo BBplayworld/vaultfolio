@@ -108,16 +108,19 @@ function validate(d) {
     if ([...e.fact].length > 40 || !e.fact.endsWith("요.")) throw new Error(`사실 1줄: ${e.id}`);
     if (e.cat !== "금리·통화 정책" || !e.urls.every((u) => u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`추가 사건 분류·출처: ${e.id}`);
   });
-  // 해별 이슈: 54행, 2006 비움, 연준 1차 출처만, 기존 정본(A)은 이름·사실 그대로
-  if (d.eventsYear.length !== 54) throw new Error(`해별 이슈는 54행이어야 해요: ${d.eventsYear.length}`);
+  // 해별 이슈: 93행(1990~ 54 + 1962~1989 38 + 한국 1차 원문 1), 빈 해(1963·1983·1988·2006), 연준 1차 출처만(한국 행은 IMF 보도자료), 기존 정본(A)은 이름·사실 그대로
+  if (d.eventsYear.length !== 93) throw new Error(`해별 이슈는 93행이어야 해요: ${d.eventsYear.length}`);
   const allEv = new Map([...d.events, ...d.eventsExtra].map((e) => [e.id, e]));
   d.eventsYear.forEach((e) => {
     if ([...e.fact].length > 40 || !e.fact.endsWith("요.")) throw new Error(`해별 이슈 사실 1줄: ${e.id}`);
     if (!CATEGORIES.includes(e.cat)) throw new Error(`해별 이슈 분류: ${e.id}`);
-    if (!e.urls.length || e.urls.some((u) => !u.startsWith("https://www.federalreserve.gov/"))) throw new Error(`해별 이슈 1차 출처: ${e.id}`);
+    const okUrl = (u) => u.startsWith("https://www.federalreserve.gov/") || (e.region === "한국" && u.startsWith("https://www.imf.org/"));
+    if (!e.urls.length || e.urls.some((u) => !okUrl(u))) throw new Error(`해별 이슈 1차 출처: ${e.id}`);
     if (e.ref) { const o = allEv.get(e.ref.replace(/^Y-/, "")); if (!o || o.name !== e.name || o.fact !== e.fact) throw new Error(`기존 정본과 다름: ${e.id}`); }
   });
-  for (let y = 1990; y <= 2025; y++) if (y !== 2006 && !d.eventsYear.some((e) => e.y === y)) throw new Error(`해별 이슈가 비었어요: ${y}`);
+  const EMPTY_YEARS = [1963, 1983, 1988, 2006];
+  for (let y = 1962; y <= 2025; y++) if (!EMPTY_YEARS.includes(y) && !d.eventsYear.some((e) => e.y === y)) throw new Error(`해별 이슈가 비었어요: ${y}`);
+  EMPTY_YEARS.forEach((y) => { if (d.eventsYear.some((e) => e.y === y)) throw new Error(`빈 해에 이슈가 있어요: ${y}`); });
   const usM = (m) => (monthIdx(m) >= monthIdx(d.ovl.us.from) ? d.ovl.us.v[monthIdx(m) - monthIdx(d.ovl.us.from)] : undefined);
   d.usYear.forEach((r) => { const m = usM(`${r.y}-12`); if (r.y10 != null && Math.abs(m - r.y10) > 0.005) throw new Error(`10년물 12월 월말 ≠ 연말: ${r.y}`); });
   d.usYear.forEach((r) => {
@@ -203,7 +206,7 @@ S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같�
 | \`recessions-us.csv\` | NBER 경기순환 기준일(고점·저점)과 침체 구간(고점 다음 달 ~ 저점 월) |
 | \`events.csv\` | 사건 ${ev.length}건: 표시명·날짜·분류·사실 1줄·1차 출처 URL·관련 지수 |
 | \`events-extra.csv\` | 연준 자산 매입·보유 축소 결정 10건(표시명·날짜·사실 1줄·연준 보도자료 URL) |
-| \`events-year.csv\` | 해별 경제 이슈 1990~2026(54행): 해·표시명·날짜·분류·지역·사실 1줄·연준 1차 출처 URL. 연준 공개 문서 기반이며 공개 문서는 출처 표기로 인용하고, 가공·정리한 이 표는 CC BY-SA 4.0 |
+| \`events-year.csv\` | 해별 경제 이슈 1962~2026(93행): 해·표시명·날짜·분류·지역·사실 1줄·연준 1차 출처 URL(한국 1건은 IMF 보도자료, 1997년 12월 4일). 1963·1983·1988·2006년은 원문을 찾지 못해 비워 뒀어요. 연준 공개 문서 기반이며 공개 문서는 출처 표기로 인용하고, 가공·정리한 이 표는 CC BY-SA 4.0 |
 
 ## 정의
 - 가격 지수(배당 제외), 미국 지수는 달러 기준, 연말 종가 기준이에요.
@@ -217,7 +220,7 @@ S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같�
 - 금리: 미 연준 공개시장 표·H.15(미 정부 저작물, 출처 표기), 한국은행 ECOS(한국은행이 작성한 통계, 출처 표기).
 - 물가·실업률: 미 노동통계국(BLS) 원자료 CPI-U(\`CUUR0000SA0\`)·실업률(\`LNU04000000\`)의 월값을 세인트루이스 연은 FRED(\`CPIAUCNS\`·\`UNRATENSA\`)에서 받아 연평균으로 가공했어요(2026-11-22 내려받음). 미 정부 저작물(17 U.S.C. §105)로 공공 영역이며 출처 표기만 해요. BLS·FRED 공식 발표 연평균 표와는 반올림 차이가 있을 수 있어요.
 - 경기침체: NBER 경기순환 기준일(출처 표기 조건으로 복사 허용). NBER 로고·상표는 쓰지 않아요.
-- 사건: 미 연준 공개 문서(1차 출처 URL은 \`events.csv\`·\`events-extra.csv\`·\`events-year.csv\`).
+- 사건: 미 연준 공개 문서와 IMF 보도자료 1건(1차 출처 URL은 \`events.csv\`·\`events-extra.csv\`·\`events-year.csv\`).
 - S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc., KOSPI는 한국거래소의 상표예요. 시크릿에셋은 이 기관들과 제휴 관계가 아니에요.
 
 ## 갱신

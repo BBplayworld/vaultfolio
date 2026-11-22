@@ -8,7 +8,7 @@ import type { PatternData, RiseYear } from "@/lib/invest/pattern";
 import { RISE_NOTE, RISE_SUB } from "@/lib/invest/pattern";
 import { DIR_LABEL, fmtPct, fmtRate } from "@/lib/invest/text";
 import { DirMark } from "./drop-list";
-import { NOWRAP_PCT, NoBreak, EventName } from "./nowrap";
+import { NOWRAP_PCT, NoBreak, EventName, SameYear } from "./nowrap";
 
 const pp = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2) + "%p";
 
@@ -27,6 +27,7 @@ export function RiseDetail({ view, r }: { view: IndexView; r: RiseYear }) {
         {us && <li data-testid="rise-recession">{r.recessionEndMonth != null ? `이 해 ${r.recessionEndMonth}월에 미국 경기침체가 끝났어요(NBER)` : "이 해에 미국 경기침체는 없었어요(NBER)"}</li>}
         {r.dropPeak && <li data-testid="rise-peak">{`이 해 말이 '${r.dropPeak}'의 고점이었어요.`}</li>}
       </ul>
+      <SameYear view={view} year={r.y} />
       <div data-testid="rise-events" className="mt-2.5 flex items-start gap-1.5">
         <i aria-hidden className="mt-1.5 inline-block size-2 shrink-0 rounded-full bg-foreground" />
         <div className="min-w-0">

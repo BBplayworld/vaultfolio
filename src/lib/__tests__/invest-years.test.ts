@@ -6,20 +6,20 @@ import { marketHistory as data } from "../invest/market-history";
 const V = { spx: buildIndexView(data, "spx"), ndx: buildIndexView(data, "ndx"), kospi: buildIndexView(data, "kospi") };
 const FORBID = ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "→", "↑", "↓", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등"];
 
-describe("해별 경제 이슈(1990~2026)", () => {
-  it("54행·사실 54/54이 40자 이하·금지어 0·연준 1차 출처만", () => {
-    expect(data.eventsYear).toHaveLength(54);
+describe("해별 경제 이슈(1962~2026)", () => {
+  it("93행·사실 93/93이 40자 이하·금지어 0·연준 1차 출처만(한국 1건은 IMF 보도자료)", () => {
+    expect(data.eventsYear).toHaveLength(93);
     for (const e of data.eventsYear) {
       expect([...e.fact].length, e.id).toBeLessThanOrEqual(40);
       for (const w of FORBID) expect(e.fact + e.name, `${e.id} ${w}`).not.toContain(w);
-      expect(e.urls.every((u) => u.startsWith("https://www.federalreserve.gov/")), e.id).toBe(true);
+      expect(e.urls.every((u) => u.startsWith("https://www.federalreserve.gov/") || (e.region === "한국" && u.startsWith("https://www.imf.org/"))), e.id).toBe(true);
     }
   });
-  it("1990~2025는 2006을 빼고 해마다 1건 이상(S&P·나스닥·코스피 모두)", () => {
+  it("1962~2025는 빈 해(1963·1983·1988·2006)를 빼고 해마다 1건 이상(S&P·나스닥·코스피 모두)", () => {
     for (const k of ["spx", "ndx", "kospi"] as const) {
-      for (let y = Math.max(1990, V[k].start + 1); y <= 2025; y++) {
+      for (let y = Math.max(1962, V[k].start + 1); y <= 2025; y++) {
         const n = yearIssues(V[k], y).length;
-        if (y === 2006) expect(n, `${k} ${y}`).toBe(0);
+        if ([1963, 1983, 1988, 2006].includes(y)) expect(n, `${k} ${y}`).toBe(0);
         else expect(n, `${k} ${y}`).toBeGreaterThan(0);
       }
     }
@@ -81,5 +81,21 @@ describe("분류 라벨 nowrap(qa D-7)", () => {
       const src = readFileSync(join(dir, f), "utf8");
       for (const m of src.matchAll(/(?<!text=)\{[a-zA-Z.]*\.cat\}/g)) throw new Error(`${f}: 분류를 NoBreak 없이 출력 ${m[0]}`);
     }
+  });
+});
+
+describe("R2 해별 이슈 1962~1989·한국 1차 원문", () => {
+  it("1962~1989 38행, 정부 대책 3건은 금리·통화 정책, 1963은 비움", () => {
+    expect(data.eventsYear.filter((e) => e.y <= 1989 && e.y >= 1962)).toHaveLength(38);
+    const by = Object.fromEntries(data.eventsYear.map((e) => [e.id, e]));
+    for (const id of ["Y1968-1", "Y1978-1", "Y1980-1"]) expect(by[id].cat, id).toBe("금리·통화 정책");
+    expect(data.eventsYear.some((e) => e.y === 1963)).toBe(false);
+  });
+  it("IMF 1997 1건은 코스피에만 보인다", () => {
+    const e = data.eventsYear.find((x) => x.id === "Y1997-K1")!;
+    expect(e.region).toBe("한국");
+    expect(e.urls).toEqual(["https://www.imf.org/en/News/Articles/2015/09/14/01/49/pr9755"]);
+    expect(yearIssues(V.kospi, 1997).some((x) => x.id === e.id)).toBe(true);
+    expect(yearIssues(V.spx, 1997).some((x) => x.id === e.id)).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { fmtPct, type Readout } from "@/lib/invest/text";
+import type { IndexView } from "@/lib/invest/calc";
+import { SAME_YEAR_LABEL, fmtPct, type Readout } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 
 /** 가운뎃점으로 이어진 어구가 줄 중간에서 끊기지 않게 묶는다(C25). 지정한 어구만 nowrap */
@@ -30,5 +31,17 @@ export function ReadoutChips({ ro, hideYear = false }: { ro: Readout; hideYear?:
       <span className="whitespace-nowrap text-muted-foreground">· {ro.dir}</span>
       {ro.recession && <span className="whitespace-nowrap text-muted-foreground">· 경기침체</span>}
     </>
+  );
+}
+
+/** R2-3: 펼침 안 1줄 `같은 해 나스닥100 −41.9% · 코스피 −40.7%`. 현재 지수 제외·자료 없는 지수 생략, 둘 다 없으면 줄 0. 단위만 표기(환산·인과·`함께` 0). 묶음(지수명+값) 단위로만 줄바꿈 */
+export function SameYear({ view, year, className = "mt-1.5" }: { view: IndexView; year: number; className?: string }) {
+  const o = view.same[year];
+  if (!o?.length) return null;
+  return (
+    <div data-testid="same-year" className={`${className} flex flex-wrap gap-x-1.5 text-xs tabular-nums break-keep`}>
+      <span className="text-muted-foreground">{SAME_YEAR_LABEL}</span>
+      {o.map((x, i) => <span key={x.label} className="whitespace-nowrap"><span className="text-muted-foreground">{i ? "· " : ""}{x.label}</span> <span className="text-foreground">{fmtPct(x.ret, 1)}</span></span>)}
+    </div>
   );
 }

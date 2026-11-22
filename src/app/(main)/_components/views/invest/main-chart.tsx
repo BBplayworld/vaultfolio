@@ -4,13 +4,14 @@
 // 공유 x축, 연말 세로선 관통. 관통 요소: 미국 경기침체 띠(data-rec)·사건 점(data-ev, C1 같은 해 점 합침)·하락 이름표(data-nm).
 // 선택 하락의 면은 C2(기본 숨김, 행 펼침·해 선택 때만), 선택선은 C3(글자 구간에서 끊고 글자에 후광).
 import { useId, useRef } from "react";
-import { episodeIndexOfYear, monthPos, rateAt, rateAxisMax, recessionSpan, type Episode, type IndexView } from "@/lib/invest/calc";
+import { blsYear, episodeIndexOfYear, monthPos, rateAt, rateAxisMax, recessionSpan, type Episode, type IndexView } from "@/lib/invest/calc";
 import { bandRect, logTicks, mergeEventDots, stepPath } from "@/lib/invest/chart";
 import { RISE_THRESHOLD } from "@/lib/invest/pattern";
 import { fmtLevel, fmtPct } from "@/lib/invest/text";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { BRAND_TEXT_FILL, C, HALO, LOSS_FILL, LOSS_STROKE, SVG_TEXT } from "./chart-style";
 
+export type OverlayKey = "y10" | "cpi" | "unemp";
 const GX = 50, RP = 24; // 왼쪽 축 글자 폭·오른쪽 여백(겹쳐 보기 오른쪽 축 글자 자리)
 
 // 글자 폭 근사(한글 12.2·영숫자 6.6, 11px 굵은 글자) — 이름표 단 배치용
@@ -85,7 +86,7 @@ export function yearAtX(view: IndexView, W: number, x: number): number {
 }
 
 export function MainChart({
-  data, view, width, wide, selEp, selYear, overlayOn, onPickYear,
+  data, view, width, wide, selEp, selYear, overlay, onPickYear,
 }: {
   data: MarketHistoryData;
   view: IndexView;
@@ -93,7 +94,8 @@ export function MainChart({
   wide: boolean;
   selEp: number | null;
   selYear: number | null;
-  overlayOn: boolean;
+  /** 겹쳐 보기 항목(null = 안 함). cpi·unemp는 연 값이라 계단선 */
+  overlay: OverlayKey | null;
   onPickYear: (year: number) => void;
 }) {
   const uid = useId().replace(/:/g, "");
@@ -128,8 +130,23 @@ export function MainChart({
   const dots = mergeEventDots(view.ev.map((e) => ({ id: e.id, x: X(Math.min(Math.max(e.t, y0 + 1), last + 1)), linked: view.eps.some((q) => e.t >= q.py + 1 && e.t < q.ty + 1) })));
   const xPlan = xLabelPlan(PW, span);
   const decs: number[] = []; for (let Y = Math.ceil((y0 + 1) / 10) * 10; Y <= last; Y += 10) decs.push(Y);
+  // 겹쳐 보기 선: y10은 월 이음선, cpi·unemp는 연 값 계단(해 Y 달력 구간 X(Y)~X(Y+1) 수평선 + 해 경계 수직 연결, 가운데 점). 값 없는 해(2025·2026)에서 끊긴다
+  const lastOv = useRef<OverlayKey>("y10");
+  if (overlay) lastOv.current = overlay;
+  const kind = overlay ?? lastOv.current;
+  const yearly = kind === "cpi" || kind === "unemp";
+  const ovYears: { Y: number; v: number }[] = [];
+  if (yearly) for (let Y = y0 + 1; Y <= last; Y++) { const v = blsYear(data, Y)[kind === "cpi" ? "cpi" : "un"]; if (v != null) ovYears.push({ Y, v }); }
   const ovPath = (() => {
     let q = "", st = false;
+    if (yearly) {
+      ovYears.forEach(({ Y, v }, i) => {
+        const adj = i > 0 && ovYears[i - 1].Y === Y - 1;
+        q += (adj ? "L" : "M") + X(Y).toFixed(1) + "," + Y3(v).toFixed(1) + "L" + X(Y + 1).toFixed(1) + "," + Y3(v).toFixed(1);
+      });
+      return q;
+    }
+    if (kind !== "y10") return q;
     data.ovl[R].v.forEach((v, i) => {
       const [yy, mm] = data.ovl[R].from.split("-").map(Number), mi = yy * 12 + (mm - 1) + i, t = (mi + 1) / 12;
       if (t < y0 + 1 || t > last + 1) return;
@@ -137,6 +154,7 @@ export function MainChart({
     });
     return q;
   })();
+  const ovSel = yearly && yr != null ? ovYears.find((q) => q.Y === yr) : undefined;
   const lgx = [0, 16 + capWidth("올라간 해") + 8, 16 + capWidth("올라간 해") + 8 + 16 + capWidth("내려간 해") + 8];
   const alt = `${view.label} 연말 지수, 연간 등락, ${rateLabel}를 같은 시간축에 세 줄로 나눈 그림. 같은 값은 아래 연도별 표에 있어요`;
 
@@ -263,23 +281,34 @@ export function MainChart({
         if (r > 0) return <rect key={Y} {...common} className="fill-rose-600 dark:fill-rose-400" opacity={big ? 1 : 0.35} data-rise={big ? "1" : undefined} />;
         return <rect key={Y} {...common} fill={C.ink2} opacity={0.55} />;
       })}
-      {/* D-7: 자른 막대 — 끝에서 4px 아래 카드색 사선(잘림 표시) + 실제 값. 오른쪽 여유가 모자라면 왼쪽에 쓴다. 3년 안 이웃이 또 잘리면 값을 13px 아래로 */}
+      {/* D-7: 자른 막대 — 끝에서 4px 아래 카드색 사선(잘림 표시) + 실제 값. 오른쪽 여유가 모자라면 왼쪽에 쓴다.
+          N-5: 첫(가장 이른) 라벨은 글자 유지, 그 뒤 라벨이 앞 라벨·사건 점·이름표와 닿거나 밀기(dy>0)가 필요하면 값 글자 대신 막대 끝 삼각(▲/▼)만. 값은 읽기 줄·펼침·표에 있다 */}
       {(() => {
         const placed: { x0: number; x1: number; y: number }[] = [];
+        const nameBottom = P2b + L.nameRows * TIER + 6;
+        let first = true;
         return view.years.slice(1).map((Y, j) => {
           const r = view.ret[j + 1] as number;
           if (!(r > bmax || r < bmin)) return null;
           const up = r > bmax, xa = X(Y) + 0.5, w = Math.max(1.2, BW - 1), yEnd = Y2(up ? bmax : bmin), txt = fmtPct(r), tw = labelWidth(txt);
           const left = xa + w + 3 + tw > W - RP + 2, tx = left ? xa - 3 : xa + w + 3, x0 = left ? tx - tw : tx, x1 = left ? tx : tx + tw;
-          // 먼저 놓인 값 라벨과 겹치면 15px씩 아래로(위쪽 끝은 위로) 밀어 겹침 0
           let dy = 0;
           while (placed.some((q) => x0 < q.x1 + 2 && x1 > q.x0 - 2 && Math.abs(q.y - (yEnd + dy)) < 15) && dy < 45) dy += 15;
+          const ty = (up ? yEnd + 11 : yEnd - 3) + (up ? dy : -dy), top = ty - 9, bot = ty + 2, mg = W < 360 ? 4 : 0; // 글자 상자(글리프 기준)와 사건 점 줄(P2-5, 반지름 3.3)·이름표 줄 사이 간격
+          const hitDot = dots.some((d) => d.x + 3.3 + mg > x0 && d.x - 3.3 - mg < x1 && P2 - 5 + 3.3 + mg > top && P2 - 5 - 3.3 - mg < bot);
+          const hitName = bot + mg > P2b && top - mg < nameBottom;
+          const cut = up ? yEnd + 4 : yEnd - 4, cx = xa + w / 2;
+          const cutLine = <line x1={xa - 1} x2={xa + w + 1} y1={cut + (up ? 1.5 : -1.5)} y2={cut - (up ? 1.5 : -1.5)} stroke={C.card} strokeWidth={2} />;
+          if (!first && (dy > 0 || hitDot || hitName)) {
+            const d = up ? `M${(cx - 3.5).toFixed(1)},${(yEnd - 3).toFixed(1)}L${(cx + 3.5).toFixed(1)},${(yEnd - 3).toFixed(1)}L${cx.toFixed(1)},${(yEnd - 9).toFixed(1)}Z` : `M${(cx - 3.5).toFixed(1)},${(yEnd + 3).toFixed(1)}L${(cx + 3.5).toFixed(1)},${(yEnd + 3).toFixed(1)}L${cx.toFixed(1)},${(yEnd + 9).toFixed(1)}Z`;
+            return <g key={`clip${Y}`} data-testid="clip-mark" data-y={Y}>{cutLine}<path d={d} className="fill-foreground" stroke={C.card} strokeWidth={1.5} paintOrder="stroke" /></g>;
+          }
+          first = false;
           placed.push({ x0, x1, y: yEnd + dy });
-          const cut = up ? yEnd + 4 : yEnd - 4;
           return (
             <g key={`clip${Y}`} data-testid="clip-label" data-y={Y}>
-              <line x1={xa - 1} x2={xa + w + 1} y1={cut + (up ? 1.5 : -1.5)} y2={cut - (up ? 1.5 : -1.5)} stroke={C.card} strokeWidth={2} />
-              <text className="fill-foreground" fontSize={12} fontWeight={600} x={tx} y={(up ? yEnd + 11 : yEnd - 3) + (up ? dy : -dy)} textAnchor={left ? "end" : "start"} style={HALO}>{txt}</text>
+              {cutLine}
+              <text className="fill-foreground" fontSize={12} fontWeight={600} x={tx} y={ty} textAnchor={left ? "end" : "start"} style={HALO}>{txt}</text>
             </g>
           );
         });
@@ -331,8 +360,10 @@ export function MainChart({
       })}
       <path d={stepPath(rate, X, Y3, tA, last + 1, null)} fill="none" stroke={C.fg} strokeWidth={1.3} strokeLinejoin="round" />
       {/* 겹쳐 보기 선: 항상 DOM에 두고 불투명도만 전환(재마운트 없음, 스케일은 켜기 전·후 같음) */}
-      <g data-testid="overlay-line" aria-hidden="true" style={{ opacity: overlayOn ? 1 : 0, pointerEvents: "none" }} className="motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-out">
+      <g data-testid="overlay-line" aria-hidden="true" style={{ opacity: overlay ? 1 : 0, pointerEvents: "none" }} className="motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-out">
         <path d={ovPath} fill="none" stroke={C.brand} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
+        {yearly && <path d={ovSel ? `M${X(ovSel.Y).toFixed(1)},${Y3(ovSel.v).toFixed(1)}L${X(ovSel.Y + 1).toFixed(1)},${Y3(ovSel.v).toFixed(1)}` : ""} fill="none" stroke={C.brand} strokeWidth={2.4} strokeLinecap="round" />}
+        {yearly && ovYears.map(({ Y, v }) => <circle key={Y} data-testid="overlay-dot" cx={((X(Y) + X(Y + 1)) / 2).toFixed(1)} cy={Y3(v).toFixed(1)} r={ovSel?.Y === Y ? 3.3 : 2} fill={C.brand} stroke={C.card} strokeWidth={1} />)}
         {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).filter((t) => (t / rst) % rateTickEvery === 0).map((t) => <text key={t} className={BRAND_TEXT_FILL} fontSize={12} x={W - RP + 4} y={Y3(t) + (t === 0 ? -1 : 4)} style={HALO}>{t}%</text>)}
       </g>
       {tA > y0 + 1 && <rect x={X(y0 + 1)} y={P3} width={X(tA) - X(y0 + 1)} height={H3} fill={C.sec} opacity={0.8} data-nodata="1" />}

@@ -984,3 +984,5 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - `/guide/year-end` 200·h1 1·단계 4·fact 7(앱 상수 import)·CTA 2. 하단 `guide-other-list`에 자기 제외 2행(3편 공통)
 - `curl /` `first-paint-shell` 안 `root-guide-links`와 링크 3(`year-end`·`net-worth`·`stock-ratio`) href. 웰컴 분기는 `CopyrightFooter` 직전, 보유자·체험·마법사 0
 - 링크 누름 = `웰컴·가이드 열기` 1건(연타 1회), sitemap 5행, 320px 링크 줄 2줄 이하·어구 끊김 0
+
+- ⚙ **투자 탭 R2(#267, 5.139)** — 겹쳐 보기 4항목(미국)·한국 1항목, 물가·실업률 계단선(점 해마다 1개, 2024에서 끝, 켜기 전후 ⓒ층·문서 높이 0), 연도별 표 1280 열 2개·모바일 `row-bls`, `same-year` 1줄(현재 지수 제외), 해별 이슈 93행(빈 해 1963·1983·1988·2006), 가이드 2·3편 표(2편 두 행 해 수 합=전체 해 수, 3편 침체 중 오른 해 표기), `clip-mark` 개수+`clip-label`=클립 막대 수.
