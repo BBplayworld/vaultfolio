@@ -118,6 +118,8 @@ export interface YearRow {
   rate: number | null;
   dir: RateDir;
   ev: EventPoint[];
+  /** R4 추가 사건(행 펼침·표 전용, 읽기 줄·점에는 없음) */
+  evx: EventPoint[];
   /** 미국 지수 전용 */
   y10: number | null;
   s2: number | null;
@@ -165,6 +167,9 @@ export function buildIndexView(d: MarketHistoryData, key: IndexKey, asof?: numbe
     .filter((e) => e.idx.includes(M.ev))
     .map((e) => ({ ...e, t: +e.pm.slice(0, 4) + (+e.pm.slice(5) - 0.5) / 12, y: +e.pm.slice(0, 4) }))
     .filter((e) => e.y <= last);
+  const evx: EventPoint[] = d.eventsExtra
+    .map((e) => ({ ...e, t: +e.pm.slice(0, 4) + (+e.pm.slice(5) - 0.5) / 12, y: +e.pm.slice(0, 4) }))
+    .filter((e) => e.y <= last);
   const eps: Episode[] = zigzag(close).map((z) => {
     const py = years[z.p], ty = years[z.t], nm = EPISODE_NAMES[key][py];
     const delta = rateDelta(d, r, py, ty);
@@ -182,7 +187,7 @@ export function buildIndexView(d: MarketHistoryData, key: IndexKey, asof?: numbe
   const tbl: YearRow[] = years.slice().reverse().map((y) => {
     const i = y - S.start, u = usRow(y), kr = d.krYear.find((q) => q.y === y);
     return {
-      y, close: close[i], ret: ret[i], rate: decRate(d, r, y), dir: yrDir[y].k, ev: ev.filter((q) => q.y === y),
+      y, close: close[i], ret: ret[i], rate: decRate(d, r, y), dir: yrDir[y].k, ev: ev.filter((q) => q.y === y), evx: evx.filter((q) => q.y === y),
       y10: r === "us" ? u?.y10 ?? null : null, s2: r === "us" ? u?.s2 ?? null : null, s3: r === "us" ? u?.s3 ?? null : null,
       rec: r === "us" ? recessionMonthsIn(d.rec, y) : null,
       k3: r === "kr" ? kr?.k3 ?? null : null, k10: r === "kr" ? kr?.k10 ?? null : null,

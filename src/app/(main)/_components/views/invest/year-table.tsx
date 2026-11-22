@@ -68,7 +68,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                           </>
                         )}
                         <td className="min-w-[220px] whitespace-normal border-b border-border bg-card px-2.5 py-1.5 text-left text-muted-foreground">
-                          {r.ev.length ? r.ev.map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground">{e.name}</span><div className="text-2xs leading-snug" data-testid="event-fact">{e.fact}</div></div>) : "—"}
+                          {r.ev.length + r.evx.length ? [...r.ev, ...r.evx].sort((x, z) => x.t - z.t).map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground">{e.name}</span><div className="text-2xs leading-snug" data-testid="event-fact">{e.fact}</div></div>) : "—"}
                         </td>
                       </tr>
                     ))}

@@ -18,6 +18,9 @@ import { DropList, EpisodeDetail } from "./drop-list";
 import { capWidth, layoutMain, MainChart } from "./main-chart";
 import { useElementWidth, useMediaQuery, useMounted } from "./use-width";
 import { YearTable } from "./year-table";
+import { PatternSection } from "./pattern-section";
+import { RiseDetail, RiseList } from "./rise-list";
+import { buildPattern } from "@/lib/invest/pattern";
 
 const OVERLAY = {
   us: { label: "10년물", full: "미 10년물 국채 금리", def: "매달 마지막 날 값" },
@@ -86,7 +89,7 @@ export interface InvestViewProps {
   asof?: number;
 }
 
-type InvestCategory = "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc";
+type InvestCategory = "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
@@ -94,6 +97,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const [yr, setYr] = useState<number | null>(null);
   const [ovOn, setOvOn] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [listTab, setListTab] = useState<"drop" | "rise">("drop");
+  const [riseSel, setRiseSel] = useState<number | null>(null);
   const mounted = useMounted();
   const wide = useMediaQuery("(min-width: 1280px)");
   const chartRef = useRef<HTMLDivElement>(null);
@@ -101,6 +106,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const view = useMemo(() => buildIndexView(marketHistory, idx, asof), [idx, asof]);
+  const pattern = useMemo(() => buildPattern(marketHistory, view), [view]);
   const deepest = useMemo(() => view.eps.reduce((b, e, k, a) => (e.dd < a[b].dd ? k : b), 0), [view]);
   const selEff = sel ?? (wide && view.eps.length ? deepest : null);
   const showLevels = variant === "app" || mounted;
@@ -117,7 +123,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   };
   const changeIndex = (k: IndexKey) => {
     if (k === idx) return;
-    setIdx(k); setSel(null); setYr(null); setOvOn(false); setMenu(false);
+    setIdx(k); setSel(null); setYr(null); setOvOn(false); setMenu(false); setRiseSel(null);
     once(`invest_index_${k}`);
   };
   // 그림 바깥을 탭하면 해 선택 해제, 겹쳐 보기 목록은 바깥 탭·Esc로 닫는다
@@ -141,6 +147,17 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   };
   const ro = yr != null ? readoutOf(view, yr) : null;
   const listW = width || 300;
+
+  const changeTab = (t: "drop" | "rise") => { setListTab(t); if (t === "rise") once("invest_rise_tab"); };
+  const riseDetailYear = riseSel ?? pattern.rise[pattern.rise.length - 1]?.y ?? null;
+  const listSegment = (
+    <div className="border-t border-border/60 pt-4 -mx-3 px-3 xl:mx-0 xl:border-t-0 xl:px-0 xl:pt-1">
+      <InlineSelector fullWidth value={listTab} onChange={changeTab} ariaLabel="목록 선택" options={[{ value: "drop", label: `크게 빠진 때 ${view.eps.length}`, testId: "list-tab-drop" }, { value: "rise", label: `크게 오른 해 ${pattern.rise.length}`, testId: "list-tab-rise" }]} />
+    </div>
+  );
+  const listBody = (inline: boolean) => (listTab === "drop"
+    ? <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail={inline} width={inline ? listW : 376} bare />
+    : <RiseList view={view} pattern={pattern} selYear={inline ? riseSel : riseDetailYear} onSelect={setRiseSel} inlineDetail={inline} />);
 
   const chartCard = (
     <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none" data-testid="invest-sec1">
@@ -199,7 +216,9 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       </div>
       {!wide && (
         <>
-          <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail width={listW} />
+          {listSegment}
+          {listBody(true)}
+          <PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} />
           <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
         </>
       )}
@@ -214,9 +233,16 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       {wide && (
         <>
           <div className="grid grid-cols-[400px_minmax(0,1fr)] items-start gap-4">
-            <div className="min-w-0 rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail={false} width={376} /></div>
+            <div className="min-w-0 rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(false)}</div>
             <div data-testid="invest-detail" className="sticky top-3 min-w-0 overflow-hidden rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
-              {selEff != null && view.eps[selEff] ? (
+              {listTab === "rise" ? (
+                pattern.rise.find((r) => r.y === riseDetailYear) ? (
+                  <>
+                    <div className="mb-1.5 flex items-baseline gap-2 text-base font-bold">{riseDetailYear}년<small className="text-2xs font-normal text-muted-foreground">크게 오른 해</small></div>
+                    <RiseDetail view={view} r={pattern.rise.find((r) => r.y === riseDetailYear)!} />
+                  </>
+                ) : <p className="text-sm text-muted-foreground">크게 오른 해가 없었어요</p>
+              ) : selEff != null && view.eps[selEff] ? (
                 <>
                   <div className="mb-1.5 flex items-baseline gap-2 text-base font-bold">{view.eps[selEff].name}<small className="text-2xs font-normal text-muted-foreground">{view.eps[selEff].py}~{view.eps[selEff].ty}년</small></div>
                   <MeasuredDetail view={view} ep={view.eps[selEff]} index={selEff} />
@@ -224,6 +250,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
               ) : <p className="text-sm text-muted-foreground">왼쪽에서 하락을 고르면 그 시기가 보여요</p>}
             </div>
           </div>
+          <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} /></div>
           <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><YearTable key={idx} view={view} onOpen={() => once("invest_table")} /></div>
         </>
       )}

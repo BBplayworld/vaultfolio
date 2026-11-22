@@ -73,7 +73,7 @@ function EpisodeDetail({ data, view, ep, index, width }: { data: MarketHistoryDa
 export { EpisodeDetail };
 
 export function DropList({
-  data, view, sel, yr, onSelect, inlineDetail, width,
+  data, view, sel, yr, onSelect, inlineDetail, width, bare = false,
 }: {
   data: MarketHistoryData;
   view: IndexView;
@@ -82,14 +82,16 @@ export function DropList({
   onSelect: (k: number | null) => void;
   inlineDetail: boolean;
   width: number;
+  /** 세그먼트(크게 빠진 때 | 크게 오른 해)가 제목을 대신할 때 제목 줄 없이 보조문만 */
+  bare?: boolean;
 }) {
   const dmax = Math.max(...view.eps.map((e) => -e.dd), 0) > 60 ? 80 : 60, dstep = 20;
   const ticks: number[] = []; for (let t = dstep; t <= dmax; t += dstep) ticks.push(t);
   return (
     <div data-testid="invest-list">
-      <div className="border-t border-border/60 pt-4 -mx-3 px-3 xl:mx-0 xl:border-t-0 xl:px-0 xl:pt-1">
-        <h3 className="text-base font-bold">크게 빠진 때</h3>
-        <p className="mt-0.5 text-2xs leading-snug text-muted-foreground text-pretty break-keep">{LIST_SUB}</p>
+      <div className={bare ? "" : "border-t border-border/60 pt-4 -mx-3 px-3 xl:mx-0 xl:border-t-0 xl:px-0 xl:pt-1"}>
+        {!bare && <h3 className="text-base font-bold">크게 빠진 때</h3>}
+        <p className={`${bare ? "mt-2" : "mt-0.5"} text-2xs leading-snug text-muted-foreground text-pretty break-keep`}>{LIST_SUB}</p>
       </div>
       {view.eps.length === 0 ? (
         <p data-testid="drop-empty" className="mt-3 text-sm text-muted-foreground">{EMPTY_LIST}</p>

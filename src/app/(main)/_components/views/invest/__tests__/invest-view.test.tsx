@@ -18,7 +18,7 @@ const chart = (k: keyof typeof views, w: number, o: { wide?: boolean; selEp?: nu
 const count = (html: string, re: RegExp) => (html.match(re) || []).length;
 
 // 문장 규칙(spec 6절) 자동 검사 목록. `~해서`·`~하세요`는 사람이 대조한다.
-export const FORBIDDEN = ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "→", "↑", "↓", "가데이터", "확인 중"];
+export const FORBIDDEN = ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등", "→", "↑", "↓", "가데이터", "확인 중"];
 const stripTags = (h: string) => h.replace(/<[^>]*>/g, " ");
 
 describe("투자 탭 그림: 이름표·점·침체 띠(AC9·AC11~13)", () => {
@@ -117,7 +117,7 @@ describe("투자 탭 행·표·③ 마크업", () => {
   it("연도별 표는 접힌 채 SSR에는 표 HTML 0(AC34)", () => {
     const html = renderToStaticMarkup(<YearTable view={views.spx} />);
     expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toContain("<table");
+    expect(html).not.toContain('data-testid="yearly-table"');
   });
   it("③ 기본 S&P: 2015→2025 3.35배 · +235% · +12.85%, 고정 1줄·배당 줄", () => {
     const html = renderToStaticMarkup(<CalcCard view={views.spx} />);
@@ -137,7 +137,9 @@ describe("투자 탭 공개 가이드 SSR 규칙(AC34)", () => {
     expect(html).toContain("invest-chart-skeleton");
     expect(html).not.toContain('data-testid="invest-chart"');
     expect(html).not.toContain('role="img"');
-    expect(html).not.toContain("<table");
+    expect(html).not.toContain('data-testid="yearly-table"');
+    expect(html).toContain("pattern-conclusion");
+    expect(html).toContain("크게 빠지기 전 12개월에 연준 금리가 올라간 때는 자료가 있는 3번 중 1번이었어요.");
     for (const level of ["6,846", "6846", "5,882", "903", "1,469", "1469", "4,766"]) expect(html).not.toContain(level);
   });
   it("지수 선택 3칸·출처 4줄이 있고 다운로드·복사·CSV 링크가 없다", () => {

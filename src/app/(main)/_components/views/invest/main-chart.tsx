@@ -6,6 +6,7 @@
 import { useId, useRef } from "react";
 import { episodeIndexOfYear, monthPos, rateAt, rateAxisMax, recessionSpan, type Episode, type IndexView } from "@/lib/invest/calc";
 import { bandRect, logTicks, mergeEventDots, stepPath } from "@/lib/invest/chart";
+import { RISE_THRESHOLD } from "@/lib/invest/pattern";
 import { fmtLevel, fmtPct } from "@/lib/invest/text";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { BRAND_TEXT_FILL, C, HALO, LOSS_FILL, LOSS_STROKE, SVG_TEXT } from "./chart-style";
@@ -206,18 +207,22 @@ export function MainChart({
         return (
           <g key={t}>
             <line x1={GX} x2={W - RP} y1={y} y2={y} stroke={t === 0 ? C.ink3 : C.hair} />
-            {(t === 0 || t === bmax || t === bmin) && <text className={SVG_TEXT} fontSize={11} x={GX - 6} y={y + 4} textAnchor="end">{t === 0 ? "0%" : fmtPct(t, 0)}</text>}
+            {(t === 0 || t === bmax || t === bmin || (t === 20 && bmax > 20)) && <text className={SVG_TEXT} fontSize={11} x={GX - 6} y={y + 4} textAnchor="end">{t === 0 ? "0%" : fmtPct(t, 0)}</text>}
           </g>
         );
       })}
       {view.eps.map((e, k) => e.ongoing && (
         <rect key={`ong${k}`} x={XE(e.py)} y={P2} width={XE(last) - XE(e.py)} height={H2} fill="none" stroke={C.ink2} strokeDasharray="3 3" strokeWidth={1} opacity={selEp == null || selEp === k ? 1 : 0.5} />
       ))}
+      {/* R4: +20% 점선(크게 오른 해 기준). 넘은 막대는 빨강 100%, 그 밖의 오른 막대는 옅게, 빠진 때는 파랑 */}
+      {bmax >= 20 && <line x1={GX} x2={W - RP} y1={Y2(20)} y2={Y2(20)} stroke={C.ink2} strokeDasharray="4 3" strokeWidth={1} data-testid="rise-line" />}
       {view.years.slice(1).map((Y, j) => {
         const i = j + 1, r = view.ret[i] as number, xa = X(Y) + 0.5, w = Math.max(1.2, BW - 1), y0b = Y2(0), y1b = Y2(r), k = inDown(Y), on = selEp == null || selEp === k;
-        return k >= 0
-          ? <rect key={Y} x={xa.toFixed(1)} y={Math.min(y0b, y1b).toFixed(1)} width={w.toFixed(1)} height={Math.max(0.8, Math.abs(y1b - y0b)).toFixed(1)} className={LOSS_FILL} opacity={on ? 1 : 0.45} />
-          : <rect key={Y} x={xa.toFixed(1)} y={Math.min(y0b, y1b).toFixed(1)} width={w.toFixed(1)} height={Math.max(0.8, Math.abs(y1b - y0b)).toFixed(1)} fill={C.ink2} opacity={0.55} />;
+        const big = view.close[i] / view.close[i - 1] - 1 > RISE_THRESHOLD;
+        const common = { x: xa.toFixed(1), y: Math.min(y0b, y1b).toFixed(1), width: w.toFixed(1), height: Math.max(0.8, Math.abs(y1b - y0b)).toFixed(1) };
+        if (k >= 0) return <rect key={Y} {...common} className={LOSS_FILL} opacity={on ? 1 : 0.45} />;
+        if (r > 0) return <rect key={Y} {...common} className="fill-rose-600 dark:fill-rose-400" opacity={big ? 1 : 0.35} data-rise={big ? "1" : undefined} />;
+        return <rect key={Y} {...common} fill={C.ink2} opacity={0.55} />;
       })}
       {/* 사건 점(C1: 6px 안 점은 합침). 크게 빠진 때와 연결된 사건이 있으면 큰 점 */}
       <g data-events="1">

@@ -110,7 +110,9 @@ describe("market-history 가이드(#263)", () => {
   it("SSR: 머리 3줄·목록 행은 있고 지수 수준값·연도별 표·다운로드·CSV 링크는 없다(AC34)", () => {
     expect(html).toContain("1961년 이후 연말 기준 15% 넘게 빠진 때는 4번이었어요");
     expect(html.match(/data-testid="drop-row"/g)).toHaveLength(4);
-    expect(html).not.toContain("<table");
+    expect(html).not.toContain('data-testid="yearly-table"');
+    expect(html).toContain("pattern-conclusion");
+    expect(html).toContain("크게 빠지기 전 12개월에 연준 금리가 올라간 때는 자료가 있는 3번 중 1번이었어요.");
     for (const level of ["6,846", "6846", "5,882", "903"]) expect(html).not.toContain(level);
     expect(html).not.toMatch(/\.csv|download|datasets\//i);
   });
@@ -121,7 +123,7 @@ describe("market-history 가이드(#263)", () => {
   });
   it("가이드 문구에 금지어(투자 탭 R1~R11) 0", () => {
     const t = [doc.title, doc.description, doc.h1, doc.summary, doc.primary.label, doc.secondary.label, doc.linkLabel].join("\n");
-    for (const w of ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면"]) expect(t).not.toContain(w);
+    for (const w of ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등"]) expect(t).not.toContain(w);
   });
   it("공개 데이터셋 링크는 없고 앱 본문 번들 격리: guide-copy는 투자 데이터를 import하지 않는다", () => {
     const src = readFileSync(join(__dirname, "../guide-copy.ts"), "utf8");
