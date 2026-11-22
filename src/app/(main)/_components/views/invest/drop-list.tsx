@@ -61,7 +61,7 @@ function EpisodeDetail({ data, view, ep, index, width }: { data: MarketHistoryDa
             {evs.map((q) => (
               <div key={q.id} className="mt-1" data-event-id={q.id}>
                 <span className="font-semibold">{q.name}</span> <span className="text-muted-foreground">{q.date} · <NoBreak text={q.cat} /></span>
-                <div className="text-muted-foreground" data-testid="event-fact">{q.fact}</div>
+                <div className="text-muted-foreground break-keep text-pretty" data-testid="event-fact">{q.fact}</div>
               </div>
             ))}
           </div>

@@ -69,7 +69,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                             </>
                           )}
                           <dt className="col-span-2 text-muted-foreground">사건</dt>
-                          <dd className="col-span-2 break-keep">{r.ev.length + r.evx.length ? [...r.ev, ...r.evx].sort((x, z) => x.t - z.t).map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium">{e.name}</span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-2xs text-muted-foreground" data-testid="event-fact">{e.fact}</div></div>) : "—"}</dd>
+                          <dd className="col-span-2 break-keep">{r.ev.length + r.evx.length ? [...r.ev, ...r.evx].sort((x, z) => x.t - z.t).map((e) => <div key={e.id} className="mb-1 last:mb-0"><span className="font-medium">{e.name}</span> <span className="text-muted-foreground">{e.date} · <NoBreak text={e.cat} /></span><div className="text-2xs text-muted-foreground break-keep text-pretty" data-testid="event-fact">{e.fact}</div></div>) : "—"}</dd>
                         </dl>
                       )}
                     </div>
@@ -109,7 +109,7 @@ export function YearTable({ view, onOpen }: { view: IndexView; onOpen?: () => vo
                           </>
                         )}
                         <td className="min-w-[220px] whitespace-normal border-b border-border bg-card px-2.5 py-1.5 text-left text-muted-foreground">
-                          {r.ev.length + r.evx.length ? [...r.ev, ...r.evx].sort((x, z) => x.t - z.t).map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground">{e.name}</span><div className="text-2xs leading-snug" data-testid="event-fact">{e.fact}</div></div>) : "—"}
+                          {r.ev.length + r.evx.length ? [...r.ev, ...r.evx].sort((x, z) => x.t - z.t).map((e) => <div key={e.id} className="mb-1 last:mb-0" data-event-id={e.id}><span className="font-medium text-foreground">{e.name}</span><div className="text-2xs leading-snug break-keep text-pretty" data-testid="event-fact">{e.fact}</div></div>) : "—"}
                         </td>
                       </tr>
                     ))}
