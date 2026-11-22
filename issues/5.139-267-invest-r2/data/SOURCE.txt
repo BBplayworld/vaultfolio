@@ -1,0 +1,1 @@
+받은 시각 2026-11-22T13:37Z; https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCNS , id=UNRATENSA (BLS 원자료 CUUR0000SA0·LNU04000000 비계절조정, FRED 경유)
