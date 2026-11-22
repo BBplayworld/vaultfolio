@@ -20,14 +20,20 @@ describe("투자 탭 GA(#263, 기존 page_title 패턴만)", () => {
     expect(t("invest_table")).toBe("투자·연도별 표");
     expect(t("invest_calc")).toBe("투자·넣었다면 계산");
   });
+  it("R4 제목 2종", () => {
+    expect(featureTitleOf("feature_use", { category: "invest_rise_tab" }, "invest")).toBe("투자·크게 오른 해");
+    expect(featureTitleOf("feature_use", { category: "invest_pattern" }, "invest")).toBe("투자·하락 전 12개월");
+  });
   it("새 파라미터 키 0: category 값만 추가됐고 연도·금액·배수 값 목록은 없다", () => {
     expect(Object.keys(PARAM_VALUES).sort()).toEqual(["asset_type", "category", "content_type", "method", "result", "source", "step", "theme"]);
-    expect(PARAM_VALUES.category.filter((c) => c.startsWith("invest_"))).toEqual(["invest_index_spx", "invest_index_ndx", "invest_index_kospi", "invest_overlay", "invest_table", "invest_calc"]);
+    expect(PARAM_VALUES.category.filter((c) => c.startsWith("invest_"))).toEqual(["invest_index_spx", "invest_index_ndx", "invest_index_kospi", "invest_overlay", "invest_table", "invest_calc", "invest_rise_tab", "invest_pattern"]);
   });
   it("투자 화면 소스는 track에 category만 넘긴다(보유 시장·연도·배수·금액 인자 0), 기본 지수 선택은 전송하지 않는다", () => {
     const src = read("app/(main)/_components/views/invest/invest-view.tsx");
     const calls = [...src.matchAll(/track\(([^)]*)\)/g)].map((m) => m[1]);
     expect(calls).toEqual(['"feature_use", { category }']);
+    expect(src).toContain('once("invest_rise_tab")');
+    expect(src).toContain('once("invest_pattern")');
     expect(src).toContain("once(`invest_index_${k}`)");
     expect(src).toMatch(/if \(k === idx\) return;/);
     // 기본 지수 판정(내 자산)은 GA 모듈을 쓰지 않는다
