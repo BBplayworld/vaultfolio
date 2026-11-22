@@ -26,7 +26,8 @@ export function ZoomChart({ data, view, ep, width }: { data: MarketHistoryData; 
   const rate = (Yr: number, m: number) => rateAt(data, R, `${Yr}-${String(m).padStart(2, "0")}`);
   const shift = (t: number) => X(t - 1); // 월 계열 t는 달력 연도 → 연말 위치 기준으로 한 해 당김
   const pth = (p: number, q: number) => { let r = ""; for (let Y = p; Y <= q; Y++) r += (Y === p ? "M" : "L") + XE(Y).toFixed(1) + "," + Y1(ix(Y)).toFixed(1); return r; };
-  const stepY = Math.max(1, Math.ceil(span / Math.max(2, Math.floor(PW / 40))));
+  // 확대 그림 x축: 가능하면 매년(해당 간격 ≥ 30px), 좁으면 2년·3년 간격(겹침 0)
+  const stepY = Math.max(1, Math.ceil(30 / (PW / span)));
   const dot = (Y: number, kind: "peak" | "trough" | "recover", txt: string, dy: number, an?: "start" | "middle" | "end") => (
     <g key={kind}>
       <circle cx={XE(Y)} cy={Y1(ix(Y))} r={4} fill={kind === "peak" ? C.fg : kind === "recover" ? C.sec : undefined} className={kind === "trough" ? LOSS_FILL : undefined} stroke={kind === "recover" ? C.fg : C.sec} strokeWidth={2} />

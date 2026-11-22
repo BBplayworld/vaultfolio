@@ -14,7 +14,7 @@ const GX = 44, RP = 24; // 왼쪽 축 글자 폭·오른쪽 여백(겹쳐 보기
 
 // 글자 폭 근사(한글 12.2·영숫자 6.6, 11px 굵은 글자) — 이름표 단 배치용
 const labelWidth = (s: string) => [...s].reduce((a, c) => a + (/[0-9a-zA-Z.%~]/.test(c) ? 6.6 : c === " " ? 3.8 : 12.2), 0);
-const capWidth = (s: string) => [...s].reduce((a, c) => a + (/[0-9a-zA-Z.%~()&]/.test(c) ? 6.3 : c === " " ? 3.2 : 11.2), 0);
+export const capWidth = (s: string) => [...s].reduce((a, c) => a + (/[0-9a-zA-Z.%~()&]/.test(c) ? 6.3 : c === " " ? 3.2 : 11.2), 0);
 const shortName = (s: string) => s.replace(" 버블 붕괴", "").replace("글로벌 ", "").replace(/(\d{4})년 하락/, "$1년").replace("1973~74년 하락", "73~74년").replace("1990~91년 하락", "90~91년");
 
 export interface MainLayout {
@@ -105,6 +105,7 @@ export function MainChart({
   const tR0 = monthPos(data.rate[R].from), tA = Math.max(y0 + 1, tR0);
   const recBands = !us ? [] : data.rec;
   const dots = mergeEventDots(view.ev.map((e) => ({ id: e.id, x: X(Math.min(Math.max(e.t, y0 + 1), last + 1)), linked: view.eps.some((q) => e.t >= q.py + 1 && e.t < q.ty + 1) })));
+  const five = (PW / span) * 5 >= 34; // 5년 라벨이 겹치지 않는 최소 간격(px)
   const decs: number[] = []; for (let Y = Math.ceil((y0 + 1) / 10) * 10; Y <= last; Y += 10) decs.push(Y);
   const ovPath = (() => {
     let q = "", st = false;
@@ -147,7 +148,7 @@ export function MainChart({
       <defs>
         <pattern id={`hz${uid}`} width={4} height={4} patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width={1.6} height={4} fill={C.fg} opacity={0.55} /></pattern>
       </defs>
-      <text className={SVG_TEXT} fontSize={11} x={0} y={11}>지수 · 해마다 연말 값 · {last}년 말까지<tspan dx={5}>ⓘ<title>가격 지수(배당 제외), 연말 종가 기준이에요</title></tspan></text>
+      <text className={SVG_TEXT} fontSize={11} x={0} y={11}>지수 · 해마다 연말 값 · {last}년 말까지</text>
       {/* 미국 경기침체 띠(NBER): 세 층을 관통하는 중립 면 + 위 2px 막대. 코스피에서는 그리지 않음 */}
       {us && (
         <g data-band="1">
@@ -231,7 +232,7 @@ export function MainChart({
         </g>
       ))}
       {/* ⓒ 기준금리 */}
-      <text className={SVG_TEXT} fontSize={11} x={0} y={cap3} style={HALO}>{rateLabel} · 매달 값<tspan dx={5}>ⓘ<title>{R === "us" ? "연준 목표금리(범위면 상단)" : "한국은행 기준금리(2008년 3월 전은 콜금리 목표)"}</title></tspan></text>
+      <text className={SVG_TEXT} fontSize={11} x={0} y={cap3} style={HALO}>{rateLabel} · 매달 값</text>
       <g style={HALO}>
         <rect x={0} y={lg - 9} width={12} height={9} rx={2} fill={C.ink2} /><text className={SVG_TEXT} fontSize={11} x={16} y={lg}>올라간 해</text>
         <rect x={74} y={lg - 9} width={12} height={9} rx={2} fill={`url(#hz${uid})`} stroke={C.ink3} /><text className={SVG_TEXT} fontSize={11} x={90} y={lg}>내려간 해</text>
@@ -267,11 +268,12 @@ export function MainChart({
         </g>
       )}
       {Array.from({ length: Math.floor((last - Math.ceil((y0 + 1) / 5) * 5) / 5) + 1 }, (_, i) => Math.ceil((y0 + 1) / 5) * 5 + i * 5).map((Y) => {
-        const x = XE(Y), major = Y % 10 === 0;
+        // x축 연도: 5년 간격 눈금, 라벨은 글자(4자리≈27px)가 겹치지 않는 폭이면 5년마다, 좁으면(390·320) 10년마다
+        const x = XE(Y), major = Y % 10 === 0, label = five ? true : major;
         return (
           <g key={Y}>
-            <line x1={x} x2={x} y1={P3b} y2={P3b + (major ? 5 : 3)} stroke={C.ink3} />
-            {major && <text className={SVG_TEXT} fontSize={11} x={x} y={AX} textAnchor="middle">{Y}</text>}
+            <line x1={x} x2={x} y1={P3b} y2={P3b + (label ? 5 : 3)} stroke={C.ink3} />
+            {label && <text className={SVG_TEXT} fontSize={11} x={x} y={AX} textAnchor="middle">{Y}</text>}
           </g>
         );
       })}
