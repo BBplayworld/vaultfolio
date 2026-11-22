@@ -10,7 +10,7 @@ import { C, HALO, LOSS_FILL, LOSS_STROKE, SVG_TEXT } from "./chart-style";
 
 export function ZoomChart({ data, view, ep, width }: { data: MarketHistoryData; view: IndexView; ep: Episode; width: number }) {
   const uid = useId().replace(/:/g, "");
-  const W = width, GX = 44, RP = 12, PW = W - GX - RP;
+  const W = width, GX = 44, RP = 16, PW = W - GX - RP;
   const a = Math.max(view.start, ep.py - 1), z = Math.min(view.last, (ep.ry ?? view.last) + 1), span = z - a;
   const X = (t: number) => GX + ((t - a) / span) * PW, XE = (Y: number) => X(Y);
   const R = view.rate, close = view.close, ix = (Y: number) => close[Y - view.start];
@@ -27,7 +27,7 @@ export function ZoomChart({ data, view, ep, width }: { data: MarketHistoryData; 
   const shift = (t: number) => X(t - 1); // 월 계열 t는 달력 연도 → 연말 위치 기준으로 한 해 당김
   const pth = (p: number, q: number) => { let r = ""; for (let Y = p; Y <= q; Y++) r += (Y === p ? "M" : "L") + XE(Y).toFixed(1) + "," + Y1(ix(Y)).toFixed(1); return r; };
   // 확대 그림 x축: 가능하면 매년(해당 간격 ≥ 30px), 좁으면 2년·3년 간격(겹침 0)
-  const stepY = Math.max(1, Math.ceil(30 / (PW / span)));
+  const stepY = Math.max(1, Math.ceil(32 / (PW / span)));
   const dot = (Y: number, kind: "peak" | "trough" | "recover", txt: string, dy: number, an?: "start" | "middle" | "end") => (
     <g key={kind}>
       <circle cx={XE(Y)} cy={Y1(ix(Y))} r={4} fill={kind === "peak" ? C.fg : kind === "recover" ? C.sec : undefined} className={kind === "trough" ? LOSS_FILL : undefined} stroke={kind === "recover" ? C.fg : C.sec} strokeWidth={2} />
@@ -67,7 +67,7 @@ export function ZoomChart({ data, view, ep, width }: { data: MarketHistoryData; 
         if ((Y - a) % stepY && Y !== z) return null;
         if (Y !== z && z - Y < stepY) return null;
         const x = XE(Y);
-        return <text key={Y} className={SVG_TEXT} fontSize={11} x={x} y={AX + 3} textAnchor={x < GX + 14 ? "start" : x > W - RP - 14 ? "end" : "middle"}>{Y}</text>;
+        return <text key={Y} className={SVG_TEXT} fontSize={11} x={x} y={AX + 3} textAnchor="middle">{Y}</text>;
       })}
     </svg>
   );
