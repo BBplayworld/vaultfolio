@@ -10,7 +10,9 @@ import { InvestView } from "../invest-view";
 import { layoutMain, MainChart, yearAtX } from "../main-chart";
 import { DropList } from "../drop-list";
 import { YearTable } from "../year-table";
-import { CalcCard } from "../calc-card";
+import { PeriodCard } from "../period-card";
+import { YearGrid } from "../year-grid";
+import { defaultPeriod } from "@/lib/invest/period";
 
 const views = { spx: buildIndexView(marketHistory, "spx"), ndx: buildIndexView(marketHistory, "ndx"), kospi: buildIndexView(marketHistory, "kospi") };
 const chart = (k: keyof typeof views, w: number, o: { wide?: boolean; selEp?: number | null; selYear?: number | null; ov?: boolean } = {}) =>
@@ -19,6 +21,8 @@ const count = (html: string, re: RegExp) => (html.match(re) || []).length;
 
 // 문장 규칙(spec 6절) 자동 검사 목록. `~해서`·`~하세요`는 사람이 대조한다.
 export const FORBIDDEN = ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등", "→", "↑", "↓", "가데이터", "확인 중"];
+// `수익률` 허용 위치(CEO R4.1): 카드 제목 2(연도별 수익률·기간 수익률)·격자 범례 1(아래 기간 수익률에서 고른 기간) — 그 밖의 `수익`은 0
+const allowRate = (t: string) => t.replaceAll("연도별 수익률", "").replaceAll("기간 수익률", "");
 const stripTags = (h: string) => h.replace(/<[^>]*>/g, " ");
 
 describe("투자 탭 그림: 이름표·점·침체 띠(AC9·AC11~13)", () => {
@@ -119,13 +123,37 @@ describe("투자 탭 행·표·③ 마크업", () => {
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('data-testid="yearly-table"');
   });
-  it("③ 기본 S&P: 2015→2025 3.35배 · +235% · +12.85%, 고정 1줄·배당 줄", () => {
-    const html = renderToStaticMarkup(<CalcCard view={views.spx} />);
-    expect(html).toContain("3.35배");
-    expect(html).toContain("+235%");
-    expect(html).toContain("+12.85%");
+  it("기간 수익률 카드 기본 S&P 2015→2025: 한 번에 3.35배·+235%·+12.85% / 매달 2.01배·+101%·평균 5.0년, 어림 1줄·ⓘ·고정 문장", () => {
+    const html = renderToStaticMarkup(<PeriodCard view={views.spx} period={defaultPeriod(views.spx)} onChange={() => {}} />);
+    for (const t of ["3.35배", "+235%", "+12.85%", "2.01배", "+101%", "넣은 돈이 들어가 있던 기간은 평균 5.0년이에요"]) expect(html).toContain(t);
+    expect(html).toContain("월 지수 값 대신 연말 값의 평균으로 매달 산 것으로 어림했어요");
+    expect(html).toContain('data-testid="calc-hold-dca"');
+    expect(html).toContain('data-testid="honest-irr"');
+    expect(html).toContain("넣은 시점을 반영해 해마다 평균으로 바꾸면 +13.60%예요");
     expect(html).toContain("배당을 다시 넣었다면 결과는 이보다 커요.");
     expect(html).toContain("반올림하지 않은 값으로 계산해 마지막에 한 번만 반올림해요");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain("가장 낮았던 해 말");
+    expect(html).not.toMatch(/한 번에<\/button>|해마다<\/button>/);
+    expect(html).toContain("S&amp;P 500 기간 수익률");
+  });
+  it("연도별 수익률 격자: S&P 7열·셀 65개·밑줄 2016~2025·범례 문구", () => {
+    const html = renderToStaticMarkup(<YearGrid view={views.spx} period={{ sy: 2015, ey: 2025 }} showLevels />);
+    expect(count(html, /data-testid="year-cell"/g)).toBe(65);
+    expect(html).toContain("grid-template-columns:12px repeat(7, minmax(0, 1fr))");
+    expect(count(html, /inset 0 -3px 0 var\(--brand\)/g)).toBe(10);
+    expect(html).toContain("S&amp;P 500 연도별 수익률");
+    expect(html).toContain("아래 기간 수익률에서 고른 기간");
+    expect(html).toContain("−38.5");
+    expect(count(renderToStaticMarkup(<YearGrid view={views.kospi} period={{ sy: 2015, ey: 2025 }} showLevels />), /role="columnheader"/g)).toBe(5);
+  });
+  it("모바일 섹션 순서(P2) first→drops→grid→period→deeper, 지수 선택기 상단 고정(P4)", () => {
+    const html = renderToStaticMarkup(<InvestView variant="guide" />);
+    const idx = ["first", "drops", "grid", "period", "deeper"].map((id) => html.indexOf(`data-section="${id}"`));
+    expect(idx.every((i) => i > 0)).toBe(true);
+    expect([...idx].sort((a, b) => a - b)).toEqual(idx);
+    expect(html).toContain('data-testid="invest-index-sticky"');
+    expect(html).toContain("sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))]");
   });
 });
 
@@ -158,15 +186,26 @@ describe("투자 탭 문장 규칙·번들 격리", () => {
       texts.push(h.l1, h.l2 ? h.l2.lead + h.l2.bold + h.l2.rest : "", h.l3, ...sourceLines(views[k], rev));
       for (const e of views[k].ev) texts.push(e.name, e.date, e.cat, e.fact);
     }
-    for (const t of texts) for (const w of FORBIDDEN) expect(t, `금지어 ${w}`).not.toContain(w);
+    for (const t of texts) for (const w of FORBIDDEN) expect(allowRate(t), `금지어 ${w}`).not.toContain(w);
   });
   it("금지어 0: 화면·계산 소스의 문장(주석 제외)", () => {
     const root = path.join(__dirname, "..");
     const files = [...fs.readdirSync(root).filter((f) => /\.(tsx?|ts)$/.test(f)).map((f) => path.join(root, f)), path.join(__dirname, "../../../../../../lib/invest/text.ts"), path.join(__dirname, "../../../../../../lib/invest/calc.ts")];
     for (const f of files) {
       const src = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
-      for (const w of FORBIDDEN) expect(src, `${path.basename(f)}의 금지어 ${w}`).not.toContain(w);
+      for (const w of FORBIDDEN) expect(allowRate(src), `${path.basename(f)}의 금지어 ${w}`).not.toContain(w);
     }
+  });
+  it("`수익률`은 허용 위치(격자 제목·범례, 기간 카드 제목)에만 있다", () => {
+    const root = path.join(__dirname, "..");
+    const hits: string[] = [];
+    for (const f of fs.readdirSync(root).filter((n) => /\.tsx?$/.test(n))) {
+      const src = fs.readFileSync(path.join(root, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+      for (const m of src.matchAll(/.{0,8}수익률.{0,8}/g)) hits.push(`${f}:${m[0]}`);
+    }
+    expect(hits.every((h) => /^(year-grid|period-card)\.tsx:/.test(h))).toBe(true);
+    expect(hits.filter((h) => h.startsWith("year-grid")).length).toBe(3);
+    expect(hits.filter((h) => h.startsWith("period-card")).length).toBe(1);
   });
   it("투자 데이터·화면 본체를 정적 import하는 파일은 투자 폴더·가이드뿐이다(첫 화면 JS 증가 0)", () => {
     const srcRoot = path.join(__dirname, "../../../../../..");

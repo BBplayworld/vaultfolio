@@ -13,7 +13,9 @@ import { headlineLines, READOUT_HINT, readoutOf, sourceLines, fmtPct } from "@/l
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
-import { CalcCard } from "./calc-card";
+import { PeriodCard } from "./period-card";
+import { YearGrid } from "./year-grid";
+import { defaultPeriod } from "@/lib/invest/period";
 import { DropList, EpisodeDetail } from "./drop-list";
 import { capWidth, layoutMain, MainChart } from "./main-chart";
 import { useElementWidth, useMediaQuery, useMounted } from "./use-width";
@@ -99,6 +101,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const [menu, setMenu] = useState(false);
   const [listTab, setListTab] = useState<"drop" | "rise">("drop");
   const [riseSel, setRiseSel] = useState<number | null>(null);
+  const [periodOverride, setPeriodOverride] = useState<{ sy: number; ey: number } | null>(null);
   const mounted = useMounted();
   const wide = useMediaQuery("(min-width: 1280px)");
   const chartRef = useRef<HTMLDivElement>(null);
@@ -123,7 +126,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   };
   const changeIndex = (k: IndexKey) => {
     if (k === idx) return;
-    setIdx(k); setSel(null); setYr(null); setOvOn(false); setMenu(false); setRiseSel(null);
+    setIdx(k); setSel(null); setYr(null); setOvOn(false); setMenu(false); setRiseSel(null); setPeriodOverride(null);
     once(`invest_index_${k}`);
   };
   // 그림 바깥을 탭하면 해 선택 해제, 겹쳐 보기 목록은 바깥 탭·Esc로 닫는다
@@ -150,8 +153,10 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
 
   const changeTab = (t: "drop" | "rise") => { setListTab(t); if (t === "rise") once("invest_rise_tab"); };
   const riseDetailYear = riseSel ?? pattern.rise[pattern.rise.length - 1]?.y ?? null;
+  const period = periodOverride ?? defaultPeriod(view);
+  const onPeriod = (p: { sy: number; ey: number }) => { setPeriodOverride(p); once("invest_calc"); };
   const listSegment = (
-    <div className="border-t border-border/60 pt-4 -mx-3 px-3 xl:mx-0 xl:border-t-0 xl:px-0 xl:pt-1">
+    <div>
       <InlineSelector fullWidth value={listTab} onChange={changeTab} ariaLabel="목록 선택" options={[{ value: "drop", label: `크게 빠진 때 ${view.eps.length}`, testId: "list-tab-drop" }, { value: "rise", label: `크게 오른 해 ${pattern.rise.length}`, testId: "list-tab-rise" }]} />
     </div>
   );
@@ -214,24 +219,41 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
           </>
         ) : <ChartSkeleton wide={wide} />}
       </div>
-      {!wide && (
-        <>
-          {listSegment}
-          {listBody(true)}
-          <PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} />
-          <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
-        </>
-      )}
     </div>
   );
 
   const src = sourceLines(view, { spx: marketHistory.idx.spx.rev, ndx: marketHistory.idx.ndx.rev, kospi: marketHistory.idx.kospi.rev });
+  const dropsCard = (
+    <div data-testid="invest-drops" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(true)}</div>
+  );
+  const deeperCard = (
+    <div data-testid="invest-deeper" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
+      <h3 className="text-base font-bold">더 깊이 보기</h3>
+      <PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} />
+      <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
+    </div>
+  );
+  const gridNode = <YearGrid key={`g-${idx}`} view={view} period={period} showLevels={showLevels} />;
+  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} />;
+  // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
+  // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
+  const MOBILE_SECTIONS: { id: string; node: React.ReactNode }[] = [
+    { id: "first", node: chartCard },
+    { id: "drops", node: dropsCard },
+    { id: "grid", node: gridNode },
+    { id: "period", node: periodNode },
+    { id: "deeper", node: deeperCard },
+  ];
   return (
     <div data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:gap-4">
-      <InlineSelector fullWidth value={idx} onChange={changeIndex} options={INDEX_OPTIONS} ariaLabel="지수 선택" className="w-full" />
-      {chartCard}
+      {/* P4: 지수 선택기 상단 고정(모바일). 체험 배너·PWA safe-area 아래에 붙는다 */}
+      <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-1 backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
+        <InlineSelector fullWidth value={idx} onChange={changeIndex} options={INDEX_OPTIONS} ariaLabel="지수 선택" className="w-full" />
+      </div>
+      {!wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
       {wide && (
         <>
+          {chartCard}
           <div className="grid grid-cols-[400px_minmax(0,1fr)] items-start gap-4">
             <div className="min-w-0 rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(false)}</div>
             <div data-testid="invest-detail" className="sticky top-3 min-w-0 overflow-hidden rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
@@ -252,9 +274,9 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
           </div>
           <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} /></div>
           <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><YearTable key={idx} view={view} onOpen={() => once("invest_table")} /></div>
+          <div className="grid grid-cols-[440px_minmax(0,1fr)] items-start gap-4"><div className="min-w-0">{gridNode}</div><div className="min-w-0">{periodNode}</div></div>
         </>
       )}
-      <div className={wide ? "max-w-[560px]" : ""}><CalcCard key={idx} view={view} onFirstChange={() => once("invest_calc")} /></div>
       <SourcePanel lines={src} />
     </div>
   );

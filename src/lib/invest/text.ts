@@ -1,6 +1,6 @@
 // 투자 탭(#263) 숫자·문장 서식. 문장 규칙 R1~R11(spec 6절): 과거형·같은 시기 표현만, 권유·예측·인과 단정 0.
 // 화면·공개 가이드(SSR)·테스트가 같은 문장을 쓴다.
-import { DROP_THRESHOLD, episodeDirCounts, type CalcMethod, type CalcResult, type EventPoint, type IndexView, type RateDir, cagrPct, totalPct } from "./calc";
+import { DROP_THRESHOLD, episodeDirCounts, type EventPoint, type IndexView, type RateDir } from "./calc";
 
 export const MINUS = "−";
 /** 부호 있는 % (0은 부호 없음) */
@@ -74,25 +74,8 @@ export function listNote(v: IndexView): string {
 export const LIST_NOTE_2 = "같은 시기에 있었다는 기록이고, 무엇이 원인인지는 말하지 않아요.";
 export const LIST_SUB = `연말 기준 고점 대비 ${Math.round(DROP_THRESHOLD * 100)}% 넘게 빠진 때예요. 연말만 재서 장중 저점보다 얕게 나와요`;
 
-export interface CalcText {
-  sentence: string;
-  mult: string;
-  total: string;
-  sub: { kind: "cagr"; pct: string; verb: string; neg: boolean } | { kind: "low"; year: number; pct: string; neg: boolean };
-}
 export const CALC_FOOT = "과거 연말 지수 값으로 계산한 결과예요. 배당·세금·수수료는 빼고, 반올림하지 않은 값으로 계산해 마지막에 한 번만 반올림해요. 앞으로도 같다는 뜻은 아니에요.";
 export const CALC_DIV = "배당을 다시 넣었다면 결과는 이보다 커요.";
-/** 반올림은 여기서 한 번만: 배수 2자리, 총 변화 0자리, 연평균 2자리 */
-export function calcText(v: IndexView, sy: number, ey: number, method: CalcMethod, r: CalcResult): CalcText {
-  const lump = method === "lump";
-  const sentence = lump ? `${sy}년 말에 한 번에 넣었다면, ${ey}년 말 ${v.label} 지수 기준 넣은 돈의` : `${sy}년 말부터 해마다 같은 금액을 ${r.n}번 넣었다면, ${ey}년 말 ${v.label} 지수 기준 넣은 돈 합계의`;
-  const cagr = cagrPct(r.mult, r.n);
-  return {
-    sentence, mult: r.mult.toFixed(2) + "배", total: fmtPct(totalPct(r.mult), 0),
-    sub: lump ? { kind: "cagr", pct: fmtPct(cagr, 2), verb: cagr < 0 ? "내린" : "오른", neg: cagr < 0 } : { kind: "low", year: r.minYear!, pct: fmtPct(r.minPct!, 1), neg: r.minPct! < 0 },
-  };
-}
-
 export const EMPTY_LIST = "없었어요";
 export const LOAD_ERROR = "잠시 뒤 다시 열어 주세요";
 export const READOUT_HINT = "해를 누르거나 끌면 그해 말 값이 나와요";

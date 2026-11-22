@@ -105,7 +105,7 @@ describe("market-history 가이드(#263)", () => {
   it("설명의 숫자(시작 연도·건수)는 투자 데이터에서 파생한 값과 같다", () => {
     const v = buildIndexView(marketHistory, "spx");
     expect(doc.description).toContain(`${v.start + 1}년 이후 S&P 500이 연말 기준 15% 넘게 빠진 ${v.eps.length}번을`);
-    expect(doc.description).toBe(`${v.start + 1}년 이후 S&P 500이 연말 기준 15% 넘게 빠진 ${v.eps.length}번을 기준금리, 미국 경기침체, 같은 시기 사건과 한 장에 모았어요. 바닥까지·전고점까지 걸린 기간도 볼 수 있어요.`);
+    expect(doc.description).toBe(`${v.start + 1}년 이후 S&P 500이 연말 기준 15% 넘게 빠진 ${v.eps.length}번을 기준금리, 미국 경기침체, 같은 시기 사건과 한 장에 모았어요. 바닥까지·전고점까지 걸린 기간과 연도별 수익률도 볼 수 있어요.`);
   });
   it("SSR: 머리 3줄·목록 행은 있고 지수 수준값·연도별 표·다운로드·CSV 링크는 없다(AC34)", () => {
     expect(html).toContain("1961년 이후 연말 기준 15% 넘게 빠진 때는 4번이었어요");
@@ -123,7 +123,8 @@ describe("market-history 가이드(#263)", () => {
   });
   it("가이드 문구에 금지어(투자 탭 R1~R11) 0", () => {
     const t = [doc.title, doc.description, doc.h1, doc.summary, doc.primary.label, doc.secondary.label, doc.linkLabel].join("\n");
-    for (const w of ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등"]) expect(t).not.toContain(w);
+    const tt = t.replace("연도별 수익률", ""); // meta description 1회 허용(CEO R4.1)
+    for (const w of ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등"]) expect(tt).not.toContain(w);
   });
   it("공개 데이터셋 링크는 없고 앱 본문 번들 격리: guide-copy는 투자 데이터를 import하지 않는다", () => {
     const src = readFileSync(join(__dirname, "../guide-copy.ts"), "utf8");

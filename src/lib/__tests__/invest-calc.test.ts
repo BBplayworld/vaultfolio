@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { bandRect, logTicks, mergeEventDots } from "../invest/chart";
 import {
-  buildIndexView, calcInvest, classifyDelta, clampCalcRange, defaultCalcStart, episodeIndexOfYear, pickDefaultIndex, rateAxisMax, recessionLabel, recessionMonthsIn, zigzag, cagrPct, totalPct,
+  buildIndexView, classifyDelta, episodeIndexOfYear, pickDefaultIndex, rateAxisMax, recessionLabel, recessionMonthsIn, zigzag,
 } from "../invest/calc";
-import { headlineLines, calcText, readoutOf, sourceLines, fmtPct, listNote, LIST_NOTE_2 } from "../invest/text";
+import { headlineLines, readoutOf, sourceLines, fmtPct, listNote, LIST_NOTE_2 } from "../invest/text";
 import { marketHistory as data } from "../invest/market-history";
 
 const views = { spx: buildIndexView(data, "spx"), ndx: buildIndexView(data, "ndx"), kospi: buildIndexView(data, "kospi") };
@@ -117,38 +117,6 @@ describe("투자 탭 계산: 사건 점·연결", () => {
   it("해가 하락 구간 안이면 그 행 인덱스", () => {
     expect(episodeIndexOfYear(views.spx.eps, 2008)).toBe(2);
     expect(episodeIndexOfYear(views.spx.eps, 2015)).toBe(-1);
-  });
-});
-
-describe("투자 탭 계산: ③ 그해 말에 넣었다면(반올림 전 값, 4-13)", () => {
-  it("S&P 2015→2025 한 번에 = 3.35배 · +235% · 해마다 평균 +12.85%", () => {
-    const r = calcInvest(views.spx, 2015, 2025, "lump");
-    expect(r.mult).toBeCloseTo(3.3492, 3);
-    const t = calcText(views.spx, 2015, 2025, "lump", r);
-    expect(t.mult).toBe("3.35배");
-    expect(t.total).toBe("+235%");
-    expect(t.sub).toMatchObject({ kind: "cagr", pct: "+12.85%", verb: "오른" });
-  });
-  it("반올림 전 값으로 계산: 배수를 1.09로 먼저 올리면 연평균이 +4.40%가 돼 달라진다(경계 사례, S&P 1960→1962)", () => {
-    const r = calcInvest(views.spx, 1960, 1962, "lump");
-    expect(r.mult).toBeCloseTo(1.08587, 4);
-    const t = calcText(views.spx, 1960, 1962, "lump", r);
-    expect([t.mult, t.total, t.sub]).toEqual(["1.09배", "+9%", { kind: "cagr", pct: "+4.21%", verb: "오른", neg: false }]);
-    expect(fmtPct(cagrPct(+r.mult.toFixed(2), r.n), 2)).toBe("+4.40%");
-  });
-  it("해마다: 같은 금액을 n번 넣고 끝 연말에 평가, 가장 낮았던 해 말", () => {
-    const v = { ...views.spx, close: [100, 50, 100], years: [2000, 2001, 2002], start: 2000 };
-    const r = calcInvest(v, 2000, 2002, "yearly");
-    // 2000말 1, 2001말 1 투입: 유닛 0.01 + 0.02 = 0.03, 2002말 평가 3 → 배수 1.5
-    expect(r.mult).toBeCloseTo(1.5, 10);
-    expect(r.minYear).toBe(2001);
-    expect(r.minPct).toBeCloseTo(-50, 10);
-    expect(r.n).toBe(2);
-  });
-  it("기본 시작 = 마지막 연도 − 10, 범위 조정", () => {
-    expect(defaultCalcStart(data.last)).toBe(2015);
-    expect(clampCalcRange(views.ndx, 1980, 2030)).toEqual({ sy: 1985, ey: 2025 });
-    expect(clampCalcRange(views.spx, 2025, 2025)).toEqual({ sy: 2024, ey: 2025 });
   });
 });
 

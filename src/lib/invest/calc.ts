@@ -212,40 +212,6 @@ export function rateAxisMax(d: MarketHistoryData, r: RateKey): number {
   return Math.ceil(mx / 2) * 2;
 }
 
-export type CalcMethod = "lump" | "yearly";
-export interface CalcResult {
-  /** 배수(반올림 전) */
-  mult: number;
-  n: number;
-  /** 해마다 방식: 가장 낮았던 해 말과 그때의 총 변화 % */
-  minYear?: number;
-  minPct?: number;
-}
-/** ③ 그해 말에 넣었다면(4-13). 반올림하지 않는다 — 표시 때 한 번만 반올림 */
-export function calcInvest(v: IndexView, sy: number, ey: number, method: CalcMethod): CalcResult {
-  const c = v.close, i0 = sy - v.start, i1 = ey - v.start, n = ey - sy;
-  if (method === "lump") return { mult: c[i1] / c[i0], n };
-  let min = Infinity, minI = i0 + 1, lastR = 1;
-  for (let t = i0 + 1; t <= i1; t++) {
-    let units = 0;
-    for (let k = i0; k < t; k++) units += 1 / c[k];
-    const r = (units * c[t]) / (t - i0);
-    if (r < min) { min = r; minI = t; }
-    lastR = r;
-  }
-  return { mult: lastR, n, minYear: v.years[minI], minPct: (min - 1) * 100 };
-}
-export const totalPct = (mult: number) => (mult - 1) * 100;
-export const cagrPct = (mult: number, n: number) => (Math.pow(mult, 1 / n) - 1) * 100;
-
-/** ③ 기본 시작 = 데이터 마지막 연도 − 10(고정 규칙), 끝 = 마지막 연도. 지수 범위 안으로 조정 */
-export function clampCalcRange(v: IndexView, sy: number, ey: number): { sy: number; ey: number } {
-  const e = Math.min(Math.max(ey, v.start + 1), v.last);
-  const s = Math.min(Math.max(sy, v.start), e - 1);
-  return { sy: s, ey: e };
-}
-export const defaultCalcStart = (last: number) => last - 10;
-
 /** 3-3 기본 지수: 국내 주식 평가액 > 해외면 코스피, 아니면 S&P 500. 값은 기기 안에서만 쓰고 저장·전송하지 않는다 */
 export function pickDefaultIndex(holding: { domestic: number; overseas: number } | null): IndexKey {
   if (!holding) return "spx";
