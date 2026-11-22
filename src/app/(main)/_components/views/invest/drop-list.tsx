@@ -34,11 +34,11 @@ function EpisodeDetail({ data, view, ep, index, width }: { data: MarketHistoryDa
         <div data-testid="detail-dd" className="text-2xl font-bold leading-tight tabular-nums text-blue-600 dark:text-blue-400">{fmtPct(ep.dd)}</div>
         <div className="text-xs text-muted-foreground tabular-nums">고점 {ep.py}년 말 · 바닥 {ep.ty}년 말{ep.ongoing ? " · 진행 중" : ""}</div>
       </div>
-      <div className="mt-2.5 grid grid-cols-[1fr_1fr_1.25fr] gap-2.5">
-        <div><div className="text-2xs leading-snug text-muted-foreground">고점에서 바닥까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ty - ep.py}년</div></div>
-        <div><div className="text-2xs leading-snug text-muted-foreground">고점에서 전고점까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ry ? `${ep.ry - ep.py}년` : "아직이에요"}</div></div>
+      <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)] gap-2.5">
+        <div><div className="text-2xs leading-snug text-muted-foreground break-keep">고점에서 바닥까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ty - ep.py}년</div></div>
+        <div><div className="text-2xs leading-snug text-muted-foreground break-keep">고점에서 전고점까지</div><div className="mt-0.5 text-sm font-semibold tabular-nums">{ep.ry ? `${ep.ry - ep.py}년` : "아직이에요"}</div></div>
         <div>
-          <div className="text-2xs leading-snug text-muted-foreground">그 사이 금리</div>
+          <div className="text-2xs leading-snug text-muted-foreground break-keep">그 사이 금리</div>
           {ep.dir === "none" ? <div className="mt-0.5 text-sm text-muted-foreground">자료가 없어요</div> : (
             <div className="mt-0.5 text-sm font-semibold"><span className="inline-flex items-center gap-1.5"><DirMark dir={ep.dir} />{DIR_VERB[ep.dir as Exclude<RateDir, "none">]}</span><span className="block text-xs font-normal text-muted-foreground tabular-nums">{fmtRate(ep.rf as number)}에서 {fmtRate(ep.rt as number)}로</span></div>
           )}
@@ -108,8 +108,8 @@ export function DropList({
                     className={`relative block min-h-14 w-full rounded-xl px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform active:scale-[0.99] ${hl ? "ring-2 ring-brand ring-inset" : ""}`}
                   >
                     <div className="flex min-h-[22px] items-center justify-between gap-2">
-                      <span className="text-base font-semibold break-keep">{e.name}{e.ongoing && <span className="ml-1.5 rounded-md border border-dashed px-1.5 text-2xs font-semibold text-muted-foreground" style={{ borderColor: C.ink2 }}>진행 중</span>}</span>
-                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"><DirMark dir={e.dir} />{DIR_LABEL[e.dir]}<ChevronRight aria-hidden className={`size-4 transition-transform duration-200 ${open ? "rotate-90" : ""}`} /></span>
+                      <span className="min-w-0 text-base font-semibold break-keep">{e.name}{e.ongoing && <span className="ml-1.5 rounded-md border border-dashed px-1.5 text-2xs font-semibold text-muted-foreground" style={{ borderColor: C.ink2 }}>진행 중</span>}</span>
+                      <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground"><DirMark dir={e.dir} />{DIR_LABEL[e.dir]}<ChevronRight aria-hidden className={`size-4 transition-transform duration-200 ${open ? "rotate-90" : ""}`} /></span>
                     </div>
                     <div className="mt-2 flex items-center">
                       <div className={`relative h-2 flex-1 rounded ${open ? "bg-card" : "bg-secondary"}`}>
