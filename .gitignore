@@ -12,7 +12,9 @@
 # next.js
 /.next/
 /out/
-/data
+/data/*
+!/data/market-history/
+/data/market-history/ecos-raw/
 
 # production
 /build
