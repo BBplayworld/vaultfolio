@@ -59,7 +59,7 @@ export function YearGrid({ view, period, showLevels, question }: { view: IndexVi
         <span className="text-balance break-keep">−40% 이하 ~ +40% 이상, 진할수록 많이 움직인 해</span>
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-2xs text-muted-foreground"><i aria-hidden className="inline-block h-[3px] w-4 rounded-sm bg-brand" /><span data-testid="yearly-legend-period">아래 기간 수익률에서 고른 기간</span></div>
-      <div data-testid="invest-readout-grid" aria-live="polite" className="mt-2 min-h-[3.25rem] text-sm">
+      <div data-testid="invest-readout-grid" aria-live="polite" className="mt-2 min-h-[4.7rem] text-sm">
         {ro && showLevels ? (
           <div className="flex flex-wrap items-center gap-x-1.5">
             <span>{ro.year}년 말 <b className="font-bold tabular-nums">{ro.level}</b></span><span>·</span>
