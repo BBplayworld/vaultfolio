@@ -6,11 +6,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseCsv } from "./csv.mjs";
+import { parseCsv, toCsv } from "./csv.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const CSV_DIR = path.join(root, "data/market-history");
 export const OUT_JSON = path.join(root, "src/lib/invest/data/market-history.generated.json");
+export const PUBLIC_DIR = path.join(root, "public/datasets/market-history");
 const csv = (f) => parseCsv(fs.readFileSync(path.join(CSV_DIR, f), "utf8"));
 const num = (v) => (v === "" || v == null ? null : +v);
 
@@ -99,15 +100,98 @@ function validate(d) {
 
 export const serialize = (data) => JSON.stringify(data) + "\n";
 
+// ---------- 공개 가공 데이터셋(CC BY-SA 4.0) ----------
+// S&P 500 연말 지수 수준값(Damodaran 공개 자료)은 재배포 범위 밖이라 공개 파일에 넣지 않는다(spec 9절·AC8). S&P는 등락률만.
+// verify_status 열과 시안 메모 열도 없다. 나스닥100·코스피 등락률은 종가로 다시 계산한 값(출처 문구와 같음).
+const round2 = (x) => Math.round(x * 100) / 100;
+export function buildPublic() {
+  const last = build().last;
+  const wiki = csv("index-annual.csv").filter((r) => +r.year <= last);
+  const idxRows = wiki.map((r, i) => {
+    let ret = r.ret_pct;
+    if (r.index !== "SPX") {
+      const prev = wiki.find((q) => q.index === r.index && +q.year === +r.year - 1);
+      ret = prev ? round2((+r.close / +prev.close - 1) * 100).toFixed(2) : "";
+    }
+    return { year: r.year, index: r.index, close: r.index === "SPX" ? "" : r.close, ret_pct: ret, source_page: r.source_page, rev_id: r.rev_id };
+  });
+  const rates = csv("rates-monthly.csv").filter((r) => r.month <= `${last}-12`);
+  const macro = csv("macro-us-annual.csv").filter((r) => +r.year <= last);
+  const kr = csv("kr-annual.csv").filter((r) => +r.year <= last);
+  const rec = csv("recessions-us.csv");
+  const ev = csv("events.csv");
+  const H = (rows) => Object.keys(rows[0]);
+  const files = {
+    "index-annual.csv": toCsv(H(idxRows), idxRows),
+    "rates-monthly.csv": toCsv(H(rates), rates),
+    "macro-us-annual.csv": toCsv(H(macro), macro),
+    "kr-annual.csv": toCsv(["year", "bok_base_end", "bok_regime", "kr3y_end", "kr10y_end", "kr_bond_end_date"], kr),
+    "recessions-us.csv": toCsv(H(rec), rec),
+    "events.csv": toCsv(H(ev), ev),
+  };
+  const ccText = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "cc-by-sa-4.0.txt"), "utf8");
+  files["LICENSE"] = `시크릿에셋 시장 역사 데이터셋 — Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+
+이 폴더의 가공 데이터(CSV)는 CC BY-SA 4.0 조건으로 공개합니다. 사용할 때는
+  1) 출처를 "시크릿에셋(secretasset) 시장 역사 데이터셋, 기준일 ${last}.12.31"로 밝히고,
+  2) 변경한 내용이 있으면 변경했다고 알리고,
+  3) 같은 조건(CC BY-SA 4.0)으로 공개해 주세요.
+원자료의 출처와 권리는 README.md의 '출처' 절에 있습니다. 위키백과 문서는 해당 문서의 CC BY-SA 4.0 조건을 따릅니다.
+이 저장소의 나머지 코드는 저장소 최상위 LICENSE(MIT)를 따릅니다. 이 폴더만 아래 라이선스가 적용됩니다.
+
+----------------------------------------------------------------------
+${ccText}`;
+  files["README.md"] = `# 시크릿에셋 시장 역사 데이터셋
+
+S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같은 기간의 **기준금리·국채 금리·미국 경기침체 기간·사건 ${ev.length}건**을 가공한 CSV예요. 과거 시장 사실이며 투자 권유가 아니에요. 기준일은 ${last}.12.31이고 매년 1월에 갱신해요.
+
+라이선스: **CC BY-SA 4.0**(\`LICENSE\`). 출처 표기·변경 표시·같은 조건 공개가 필요해요.
+
+## 파일
+| 파일 | 내용 |
+|---|---|
+| \`index-annual.csv\` | 지수 연말 값(나스닥100 1985~, 코스피 1981~)·연간 등락률(%). **S&P 500은 연말 지수 값 없이 등락률만** 있어요. 나스닥100·코스피 등락률은 연말 값으로 다시 계산한 값이에요 |
+| \`rates-monthly.csv\` | 월 단위: 연준 기준금리 목표(범위면 상·하단), 미 10년물 월말 값, 한국은행 기준금리(2008년 3월 전은 콜금리 목표), 국고채 10년 월평균 |
+| \`macro-us-annual.csv\` | 미국 연 단위: 10년·2년·3개월물 연말 값과 연평균, 장단기 금리차(%p), 그해 경기침체 월 수 |
+| \`kr-annual.csv\` | 한국 연 단위: 기준금리·국고채 3년·10년 연말 값과 기준일 |
+| \`recessions-us.csv\` | NBER 경기순환 기준일(고점·저점)과 침체 구간(고점 다음 달 ~ 저점 월) |
+| \`events.csv\` | 사건 ${ev.length}건: 표시명·날짜·분류·사실 1줄·1차 출처 URL·관련 지수 |
+
+## 정의
+- 가격 지수(배당 제외), 미국 지수는 달러 기준, 연말 종가 기준이에요.
+- 연간 등락 = 그해 연말 값 ÷ 전년 연말 값 − 1.
+- 사건의 날짜는 1차 출처가 확인해 주는 정밀도까지만 적었고, 사실 1줄은 일어난 일만 담았어요(원인·영향 해석 없음).
+
+## 출처
+- 지수: 위키백과 「S&P 500」(영문, 리비전 ${wiki.find((r) => r.index === "SPX").rev_id})·「Nasdaq-100」(영문, 리비전 ${wiki.find((r) => r.index === "NDX").rev_id})·「코스피」(한국어, 리비전 ${wiki.find((r) => r.index === "KOSPI").rev_id}), CC BY-SA 4.0.
+- 금리: 미 연준 공개시장 표·H.15(미 정부 저작물, 출처 표기), 한국은행 ECOS(한국은행이 작성한 통계, 출처 표기).
+- 경기침체: NBER 경기순환 기준일(출처 표기 조건으로 복사 허용). NBER 로고·상표는 쓰지 않아요.
+- 사건: 미 연준 공개 문서(1차 출처 URL은 \`events.csv\`).
+- S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc., KOSPI는 한국거래소의 상표예요. 시크릿에셋은 이 기관들과 제휴 관계가 아니에요.
+
+## 갱신
+매년 1월에 정본 CSV를 갱신하고 생성 스크립트(\`scripts/market-history/build.mjs\`)로 다시 만들어요. 이 폴더의 파일은 직접 고치지 않아요.
+`;
+  return files;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const text = serialize(build());
+  const pub = buildPublic();
   if (process.argv.includes("--check")) {
     const cur = fs.existsSync(OUT_JSON) ? fs.readFileSync(OUT_JSON, "utf8") : "";
-    if (cur !== text) { console.error("생성물이 CSV와 달라요. node scripts/market-history/build.mjs 를 다시 실행하세요."); process.exit(1); }
+    let bad = cur !== text;
+    for (const [name, body] of Object.entries(pub)) {
+      const p = path.join(PUBLIC_DIR, name);
+      if (!fs.existsSync(p) || fs.readFileSync(p, "utf8") !== body) bad = true;
+    }
+    if (bad) { console.error("생성물이 CSV와 달라요. node scripts/market-history/build.mjs 를 다시 실행하세요."); process.exit(1); }
     console.log("생성물 = CSV 기준 결과");
   } else {
     fs.mkdirSync(path.dirname(OUT_JSON), { recursive: true });
     fs.writeFileSync(OUT_JSON, text);
-    console.log(`생성: ${path.relative(root, OUT_JSON)} (${text.length} bytes)`);
+    fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+    for (const [name, body] of Object.entries(pub)) fs.writeFileSync(path.join(PUBLIC_DIR, name), body);
+    console.log(`생성: ${path.relative(root, OUT_JSON)} (${text.length} bytes) + ${path.relative(root, PUBLIC_DIR)}/ ${Object.keys(pub).length}개`);
   }
 }

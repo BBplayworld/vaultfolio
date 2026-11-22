@@ -2,10 +2,11 @@ import { RATIO_PREVIEW_UPLOAD_NOTICE, SECURITY_COPY } from "@/config/security-co
 import { CARD_UNTIL_DAY, FIRST_RECORD_MIN_DAYS } from "@/lib/report/settlement";
 import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 
-// 가이드 3편 문구 정본(#77). 금액·예시 %·종목명·권유어·세금 0, 새 보안 문장 0(보안 문장은 security-copy 원문 import).
+// 가이드 문구 정본(#77). 금액·예시 %·종목명·권유어·세금 0, 새 보안 문장 0(보안 문장은 security-copy 원문 import).
+// 예외: market-history(#263)는 본문이 투자 탭 컴포넌트 1벌이라 지수 이름이 필요하다(문구 규칙은 투자 탭 R1~R11). 이 파일은 첫 화면 번들에 들어가므로 투자 데이터를 import하지 않는다 — 설명의 숫자(1961년·4번)는 테스트가 데이터와 대조한다.
 // 글을 고치면 lastModified도 함께 갱신한다(sitemap이 이 값을 그대로 쓴다).
 
-export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end"] as const;
+export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history"] as const;
 export type GuideSlug = (typeof GUIDE_SLUGS)[number];
 
 export interface GuideCta {
@@ -167,5 +168,20 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
       `'${YEAR_SETTLE_COPY.periodSub}'`,
     ],
     lastModified: "2026-11-21",
+  },
+  "market-history": {
+    slug: "market-history",
+    title: "S&P 500·나스닥100·코스피, 크게 빠진 때와 금리 한 장으로 보기",
+    description: "1961년 이후 S&P 500이 연말 기준 15% 넘게 빠진 4번을 기준금리, 미국 경기침체, 같은 시기 사건과 한 장에 모았어요. 바닥까지·전고점까지 걸린 기간도 볼 수 있어요.",
+    h1: "S&P 500·나스닥100·코스피, 크게 빠진 때와 금리 한 장으로 보기",
+    summary: "연말 지수가 크게 빠진 때를 그때의 기준금리, 미국 경기침체 기간, 같은 시기 사건과 한 장에 모았어요. 과거 시장 사실이고 투자 권유가 아니에요.",
+    // 본문은 투자 탭 컴포넌트(MarketHistoryArticle). 아래 steps·facts는 쓰지 않는다
+    steps: [],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [],
+    primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
+    secondary: TRIAL_CTA,
+    linkLabel: "크게 빠진 때와 금리, 한 장으로 보기",
+    lastModified: "2026-11-22",
   },
 };

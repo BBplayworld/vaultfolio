@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { CATEGORIES, CSV_DIR, OUT_JSON, build, serialize } from "../../../scripts/market-history/build.mjs";
+import { CATEGORIES, CSV_DIR, OUT_JSON, PUBLIC_DIR, build, buildPublic, serialize } from "../../../scripts/market-history/build.mjs";
 import { parseCsv } from "../../../scripts/market-history/csv.mjs";
 import type { MarketEvent, MarketHistoryData } from "../invest/types";
 
@@ -163,5 +163,41 @@ describe("투자 탭 데이터: 금리·침체 단언(AC3·AC7, 4-14)", () => {
     const last = rm[rm.length - 1];
     expect(last.month).toBe("2025-12");
     expect(data.rate.us.v[data.rate.us.v.length - 1]).toBe(+last.fed_target_upper);
+  });
+});
+
+describe("공개 가공 데이터셋(CC BY-SA 4.0)", () => {
+  const files = buildPublic() as Record<string, string>;
+  it("커밋된 공개 파일이 CSV에서 다시 만든 결과와 같다", () => {
+    for (const [name, body] of Object.entries(files)) expect(fs.readFileSync(path.join(PUBLIC_DIR, name), "utf8"), name).toBe(body);
+    expect(fs.readdirSync(PUBLIC_DIR).sort()).toEqual(Object.keys(files).sort());
+  });
+  it("Damodaran 수준값 열·verify_status 열이 없고 S&P 연말 지수 값 칸은 비어 있다(AC8)", () => {
+    for (const [name, body] of Object.entries(files)) {
+      if (!name.endsWith(".csv")) continue;
+      expect(body.split("\n")[0], name).not.toMatch(/damodaran|spx_close|verify_status|evidence|unverified/);
+    }
+    const rows = parseCsv(files["index-annual.csv"]) as Record<string, string>[];
+    const spx = rows.filter((r) => r.index === "SPX");
+    expect(spx.length).toBeGreaterThan(60);
+    expect(spx.every((r) => r.close === "")).toBe(true);
+    // 수준값이 파일 어디에도 없다: Damodaran CSV의 값(예: 6845.5)이 공개 파일에 나오지 않는다
+    const dam = parseCsv(fs.readFileSync(path.join(CSV_DIR, "spx-level-damodaran.csv"), "utf8")).map((r) => (r as Record<string, string>).spx_close_damodaran);
+    const all = Object.values(files).join("\n");
+    for (const v of dam.slice(-5)) expect(all).not.toContain(`,${v},`);
+    expect(files["index-annual.csv"]).not.toContain("6845.5");
+  });
+  it("LICENSE에 CC BY-SA 4.0 전문과 귀속 문구, README에 출처·상표·제휴 아님", () => {
+    expect(files["LICENSE"]).toContain("Creative Commons Attribution-ShareAlike 4.0 International Public");
+    expect(files["LICENSE"]).toContain("기준일 2025.12.31");
+    expect(files["LICENSE"].length).toBeGreaterThan(15000);
+    expect(files["README.md"]).toContain("CC BY-SA 4.0");
+    expect(files["README.md"]).toContain("제휴 관계가 아니에요");
+    expect(files["README.md"]).toContain("S&P 500은 연말 지수 값 없이 등락률만");
+  });
+  it("나스닥100·코스피 등락률은 종가로 다시 계산한 값(코스피 1998)", () => {
+    const rows = parseCsv(files["index-annual.csv"]) as { year: string; index: string; close: string; ret_pct: string }[];
+    const k98 = rows.find((r) => r.index === "KOSPI" && r.year === "1998")!, k97 = rows.find((r) => r.index === "KOSPI" && r.year === "1997")!;
+    expect(+k98.ret_pct).toBeCloseTo((+k98.close / +k97.close - 1) * 100, 2);
   });
 });

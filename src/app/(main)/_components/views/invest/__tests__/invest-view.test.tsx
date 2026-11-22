@@ -167,7 +167,7 @@ describe("투자 탭 문장 규칙·번들 격리", () => {
     }
   });
   it("투자 데이터·화면 본체를 정적 import하는 파일은 투자 폴더·가이드뿐이다(첫 화면 JS 증가 0)", () => {
-    const srcRoot = path.join(__dirname, "../../../../..");
+    const srcRoot = path.join(__dirname, "../../../../../..");
     const hits: string[] = [];
     const walk = (dir: string) => {
       for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
