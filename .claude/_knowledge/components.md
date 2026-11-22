@@ -537,3 +537,8 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 
 - **NetworthBenchmarkBlock (#5.102, 로컬)**: `views/activity/networth-benchmark-block.tsx` — 성적표 "가계 통계와 나란히". props `{ netAsset, realEstateCount, stats? }`(stats 기본 = `HOUSEHOLD_NETWORTH_STATS`, 테스트만 주입), 훅·상태·버튼 0. `SECTION`+`SectionHeader(tone=brand)` + 문장/안내 + 라벨 줄 + 경계 금액 목록 10행(라벨 단일 열, `~` 앞에서만 줄바꿈, 내 구간 행 `bg-muted/40`·굵은 글씨·칩 `내 구간`·`aria-current`, 막대·값 칸 없음) + 출처 줄. 색은 foreground/muted 명도만(손익색·주황·brand 미사용). 상수가 비었거나 검증 실패면 null. testId `benchmark-*`. views/activity 전용.
   - v2: props에 `mine?`(= `getAssetSummary()` 결과) 추가. 10행 목록 아래·출처 줄 위에 자산 구성 표(`benchmark-comp-*`, 4행 × 가구 평균·가구 비중·내 비중, 부동산 0건이면 전체 가구 2열) + 주석 2줄. 신규 공용 컴포넌트 0.
+
+### 투자 탭 (`views/invest/*`, #5.137 #263)
+- `InvestView`(invest-view.tsx): 지수 선택(InlineSelector fullWidth `invest-index`) → 머리 3줄·읽기 줄 → 그림 3층(`MainChart` main-chart.tsx, 자체 SVG·침체 띠·사건 점·이름표·겹쳐 보기 선·터치 스크럽 pan-y) → `DropList`(행 펼침 `EpisodeDetail`·`ZoomChart`) → `YearTable`(접힘, 처음 펼칠 때 그림) → `CalcCard`(③) → 출처 4줄. 앱(`InvestTab`, invest-lazy.tsx: next/dynamic ssr:false·스켈레톤·`다시 시도`)과 공개 가이드(`MarketHistoryArticle`, variant=guide·SSR에는 파생값만)가 1벌을 공유. 정적 import는 투자 폴더·가이드만(테스트가 막음)
+- 색은 `chart-style.ts`(foreground·muted·card·secondary·brand 변수 + color-mix, 손실색 `blue-600/400` 클래스). 새 토큰 0
+- 네비: `AssetView {type:"invest"}`·`#invest`, PWA 하단 `홈·상세·업데이트·성과·투자`(체험 4칸), 브라우저 선택기 `상세|성과|투자`, 더보기는 홈 헤더 `MoreButton`(PWA 포함)·PWA 더보기 페이지 뒤로 헤더(isNestedView more)

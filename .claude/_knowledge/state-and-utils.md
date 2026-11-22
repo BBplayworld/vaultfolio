@@ -1071,3 +1071,8 @@ computePriceChange(points) → % | null
 - `computeCounts(index, valid)` → `{n, m, isTop, nText, mText}`: 누적을 `sharePct × 10^shareDecimals` 정수로 더해 반올림, `N = U − L`·`M = 100 − U`, 최상위(`max === null`)는 U=100·`mText` null, `N === 0 || sharePct < 0.5`·비최상위 `M === 0`은 `약 1곳 미만`. `benchmarkSentence(counts)`.
 - `bracketLabel(b, boundary)`(경계를 만원 단위 그대로 `1억 296만`으로 표기·반올림 없음, `label` 우선), `buildNetworthBenchmark({netAsset, realEstateCount, stats})` → 행(라벨·mine)·`columnLabel`(비중이 모두 같으면 `순자산 구간(가구 10%씩)`)·`hidden`(부동산 0건이 음수 판정보다 먼저)·문장·라벨/출처 조각, 검증 실패면 null.
   - v2 구성 표: `mapMyComposition`(앱 → 통계 분류), `sharePctOf`, `quintileOf`(10분위 → 5분위 올림), `buildCompositionView`, `boundaryText`(export, 억·만 표기 재사용). 상수 `HOUSEHOLD_COMPOSITION`(전체 1 + 5분위 5, 원 단위·원문 그대로)은 `config/household-networth-stats.ts`.
+
+## 투자 탭 유틸 (`src/lib/invest/`, #5.137 #263)
+- `types.ts`·`calc.ts`(지그재그 −15%·금리 방향 0.25%p·NBER 겹침·`buildIndexView`·`calcInvest`(반올림 전 값)·`pickDefaultIndex`·`rateAxisMax`), `text.ts`(문장·출처 4줄·금지어 규칙 R1~R11), `chart.ts`(logTicks·`mergeEventDots` C1·`bandRect`·`stepPath`), `default-index.ts`(`holdingSplit` 기기 안 계산), `market-history.ts`(정적 데이터 진입점, 투자 번들 전용)
+- 데이터: `data/market-history/*.csv` 정본 → `scripts/market-history/build.mjs`(`--check`) → `data/market-history.generated.json` + `public/datasets/market-history/`(CC BY-SA, Damodaran 수준값 제외). `verify-h15.mjs`는 H.15 XML과 10년물 월말 전 월 대조. 갱신 절차 `docs/ops/market-history-refresh.md`
+- 저장 키 0·서버 전송 0·새 API 0. GA는 `invest_*` category 6종(page_title만)
