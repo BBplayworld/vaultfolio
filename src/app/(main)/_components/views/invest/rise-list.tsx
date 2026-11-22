@@ -7,6 +7,7 @@ import type { PatternData, RiseYear } from "@/lib/invest/pattern";
 import { RISE_NOTE, RISE_SUB } from "@/lib/invest/pattern";
 import { DIR_LABEL, fmtPct, fmtRate } from "@/lib/invest/text";
 import { DirMark } from "./drop-list";
+import { NoBreak } from "./nowrap";
 
 const pp = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2) + "%p";
 
@@ -33,7 +34,7 @@ export function RiseDetail({ view, r }: { view: IndexView; r: RiseYear }) {
               <span className="text-muted-foreground">같은 시기 사건</span>
               {r.events.map((q) => (
                 <div key={q.id} className="mt-1" data-event-id={q.id}>
-                  <span className="font-semibold">{q.name}</span> <span className="text-muted-foreground">{q.date} · {q.cat}</span>
+                  <span className="font-semibold">{q.name}</span> <span className="text-muted-foreground">{q.date} · <NoBreak text={q.cat} /></span>
                   <div className="text-muted-foreground" data-testid="event-fact">{q.fact}</div>
                 </div>
               ))}

@@ -14,18 +14,27 @@ function BaseTable({ title, hit, rows, label }: { title: string; hit: string; ro
   return (
     <div className="mt-3">
       <h4 className="text-sm font-semibold">{title}</h4>
-      <div tabIndex={0} role="region" aria-label={`${label} 표, 가로로 밀어 볼 수 있어요`} className="mt-1.5 overflow-x-auto rounded-xl shadow-[inset_0_0_0_1px_var(--border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+      {/* 모바일(<768): 가로 스크롤 없이 행 카드(핵심 값 2줄) */}
+      <ul className="mt-1.5 flex flex-col md:hidden" data-testid="pattern-base-cards">
+        {rows.map((r) => (
+          <li key={r.label} className="border-b border-border py-2 text-xs leading-relaxed last:border-b-0">
+            <div className="font-medium break-keep">{r.label} <span className="whitespace-nowrap font-normal tabular-nums text-muted-foreground">{r.from}~{r.to}년</span></div>
+            <div className="break-keep tabular-nums text-muted-foreground"><span className="whitespace-nowrap">조건이 있던 해 {r.years}년 중 {r.nCond}년</span> · <span className="whitespace-nowrap">{hit} {r.kHit}년</span> · <span className="whitespace-nowrap">기간 전체 {r.years}년 중 {r.baseHit}년</span></div>
+          </li>
+        ))}
+      </ul>
+      <div tabIndex={0} role="region" aria-label={`${label} 표, 가로로 밀어 볼 수 있어요`} className="mt-1.5 hidden overflow-x-auto md:block rounded-xl shadow-[inset_0_0_0_1px_var(--border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
         <table className="w-full min-w-[420px] border-separate border-spacing-0 text-xs tabular-nums">
           <caption className="sr-only">{label}</caption>
           <thead><tr><th scope="col" className={`${TH} text-left`}>조건</th><th scope="col" className={`${TH} text-right`}>기간</th><th scope="col" className={`${TH} text-right`}>조건이 있던 해</th><th scope="col" className={`${TH} text-right`}>{hit}</th><th scope="col" className={`${TH} text-right`}>기간 전체</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.label}>
-                <th scope="row" className={`${TD} text-left font-medium`}>{r.label}</th>
-                <td className={`${TD} text-right text-muted-foreground`}>{r.from}~{r.to}년</td>
-                <td className={`${TD} text-right`}>{r.years}년 중 {r.nCond}년</td>
+                <th scope="row" className={`${TD} text-left font-medium break-keep`}>{r.label}</th>
+                <td className={`${TD} whitespace-nowrap text-right text-muted-foreground`}>{r.from}~{r.to}년</td>
+                <td className={`${TD} whitespace-nowrap text-right`}>{r.years}년 중 {r.nCond}년</td>
                 <td className={`${TD} text-right`}>{r.kHit}년</td>
-                <td className={`${TD} text-right`}>{r.years}년 중 {r.baseHit}년</td>
+                <td className={`${TD} whitespace-nowrap text-right`}>{r.years}년 중 {r.baseHit}년</td>
               </tr>
             ))}
           </tbody>
@@ -51,15 +60,27 @@ export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData
           </div>
           <div className="mt-3">
             <h4 className="text-sm font-semibold">크게 빠지기 전 12개월</h4>
-            <div tabIndex={0} role="region" aria-label="하락별 조건 표, 가로로 밀어 볼 수 있어요" data-testid="pattern-predrop" className="mt-1.5 overflow-x-auto rounded-xl shadow-[inset_0_0_0_1px_var(--border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+            <ul className="mt-1.5 flex flex-col md:hidden" data-testid="pattern-predrop-cards">
+              {pattern.preDrop.map((r) => (
+                <li key={r.py} className="border-b border-border py-2 last:border-b-0">
+                  <div className="text-xs font-medium break-keep">{r.name} <span className="font-normal tabular-nums text-muted-foreground">{r.py}년</span></div>
+                  <dl className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 text-xs">
+                    {pattern.condLabels.map((c, i) => (
+                      <div key={c} className="contents"><dt className="break-keep text-muted-foreground">{c}</dt><dd className={`text-right tabular-nums ${r.cells[i].state === "none" ? "text-muted-foreground" : ""}`}>{r.cells[i].text}</dd></div>
+                    ))}
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            <div tabIndex={0} role="region" aria-label="하락별 조건 표, 가로로 밀어 볼 수 있어요" data-testid="pattern-predrop" className="mt-1.5 hidden overflow-x-auto md:block rounded-xl shadow-[inset_0_0_0_1px_var(--border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
               <table className="w-full min-w-[420px] border-separate border-spacing-0 text-xs">
                 <caption className="sr-only">크게 빠진 때 직전 12개월에 있었던 조건</caption>
-                <thead><tr><th scope="col" className={`${TH} sticky left-0 text-left`}>고점 해</th>{pattern.condLabels.map((c) => <th key={c} scope="col" className={`${TH} text-left`}>{c}</th>)}</tr></thead>
+                <thead><tr><th scope="col" className={`${TH} sticky left-0 text-left`}>고점 해</th>{pattern.condLabels.map((c) => <th key={c} scope="col" className={`${TH} break-keep text-left`}>{c}</th>)}</tr></thead>
                 <tbody>
                   {pattern.preDrop.map((r) => (
                     <tr key={r.py}>
                       <th scope="row" className={`${TD} sticky left-0 bg-card text-left font-medium`}>{r.name}<span className="block text-2xs font-normal text-muted-foreground tabular-nums">{r.py}년</span></th>
-                      {r.cells.map((c, i) => <td key={i} className={`${TD} ${c.state === "none" ? "text-muted-foreground" : ""}`}>{c.text}</td>)}
+                      {r.cells.map((c, i) => <td key={i} className={`${TD} break-keep ${c.state === "none" ? "text-muted-foreground" : ""}`}>{c.text}</td>)}
                     </tr>
                   ))}
                 </tbody>
