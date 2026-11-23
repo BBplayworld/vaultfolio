@@ -26,6 +26,7 @@ import { RiseDetail, RiseList } from "./rise-list";
 import { buildPattern } from "@/lib/invest/pattern";
 import { episodeIndexOfYear } from "@/lib/invest/calc";
 import { ThreeView } from "./three-view";
+import type { RegionSplit } from "@/lib/xray/region-split";
 
 // 겹쳐 보기 항목: 한국 지수는 10년물만. 물가·실업률은 연 값(계단선)이라 미국 지수에만 둔다(R2-1)
 const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: string; def: string }[]> = {
@@ -143,11 +144,15 @@ export interface InvestViewProps {
   ratioLink?: boolean;
   /** B1(5.142): 내 첫 매입 해(기기 안 계산, 보유 주식 있고 체험 아닐 때만 호출부가 준다). 가이드는 없음 = 숨김 */
   firstBuyYear?: number;
+  /** B2(5.142): 내 주식 국내·해외(X-Ray 지역 축 값). 없으면 숨김 */
+  mySplit?: RegionSplit | null;
+  /** B2를 누르면 주식 X-Ray 지역 축으로 이동(호출부가 이동·축 지정) */
+  onOpenXray?: () => void;
 }
 
-type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table" | "invest_recession" | "invest_range" | "invest_my_start";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table" | "invest_recession" | "invest_range" | "invest_my_start" | "invest_my_xray";
 
-export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false, firstBuyYear }: InvestViewProps) {
+export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false, firstBuyYear, mySplit, onOpenXray }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
   // 세 지수 보기(#270): 앱은 해시 `#invest/three`로 바로 열린다(마운트 때 1회 읽기, 앱 전용 dynamic이라 SSR 불일치 0). 가이드는 URL을 만지지 않는다
   const [three, setThree] = useState(() => variant === "app" && typeof window !== "undefined" && window.location.hash === THREE_HASH);
@@ -368,7 +373,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
       <div ref={selectorRef} data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
-      {threeViews && <ThreeView data={marketHistory} views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} a2Go={a2Go} onBasis={() => once("invest_phase_table")} onPattern={toPattern} onRecession={() => once("invest_recession")} />}
+      {threeViews && <ThreeView data={marketHistory} views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} mySplit={variant === "app" ? mySplit : null} onMine={onOpenXray ? () => { once("invest_my_xray"); onOpenXray(); } : undefined} a2Go={a2Go} onBasis={() => once("invest_phase_table")} onPattern={toPattern} onRecession={() => once("invest_recession")} />}
       {!three && !wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
       {!three && wide && (
         <>

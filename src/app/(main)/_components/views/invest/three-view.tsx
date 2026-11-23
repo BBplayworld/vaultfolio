@@ -9,6 +9,7 @@ import { A1_ROWS, A2_BASES, DECADE_METRICS, a1RowOf, classifyYears, criterionRow
 import { A2_TEXT, A3_TEXT, CALC_PAST, THREE_TEXT, fmtPct } from "@/lib/invest/text";
 import { INDEX_META } from "@/lib/invest/calc";
 import type { MarketHistoryData } from "@/lib/invest/types";
+import type { RegionSplit } from "@/lib/xray/region-split";
 import { getProfitLossColor } from "@/config/theme";
 import { FoldNote } from "./fold-note";
 import { NOWRAP_TAIL, NoBreak, ThreeYear } from "./nowrap";
@@ -251,12 +252,28 @@ export function ThreeA3({ data, views, onOpen }: { data: MarketHistoryData; view
   );
 }
 
-/** 세 지수 보기 본문(모바일 세로 gap-3, 1280은 두 열: A1 좌·A5 우, 아래 A2·A3 전폭). 순서: A1 → A3(접힘) → A2(펼침) → A5(펼침). 보유 상태 첫 화면(접지 844)에 A2·A5 숫자가 들어오지 않게 하는 순서 조정(5.141 게이트: 간격이 아니라 순서) */
-export function ThreeView({ data, views, yr, onYear, onMetric, a2Go, onBasis, onPattern, onRecession }: { data: MarketHistoryData; views: ThreeViews; yr: number | null; onYear: (y: number | null) => void; onMetric?: () => void; a2Go?: number; onBasis?: () => void; onPattern: () => void; onRecession?: () => void }) {
+/** B2 한 줄(5.142 #278): 내 주식 국내·해외(주식 X-Ray 지역 축과 같은 값) → 누르면 X-Ray 지역 축. 비교 문장·손익색 0 */
+export function ThreeMine({ split, onOpen }: { split: RegionSplit; onOpen: () => void }) {
+  const seg = [`국내 ${split.domestic}%`, `해외 ${split.overseas}%`, ...(split.other > 0 ? [`기타 ${split.other}%`] : [])];
+  return (
+    <button
+      type="button" data-testid="invest-mine-split" onClick={onOpen} aria-label={`내 주식 ${seg.join(" ")}, 주식 X-Ray 지역 보기`}
+      className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl bg-card px-4 py-1 text-left text-sm font-medium shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.98] dark:shadow-none xl:col-span-2 xl:row-start-1"
+    >
+      <span className="break-keep tabular-nums">내 주식{" "}{seg.map((t, i) => <span key={t}>{i > 0 && <span aria-hidden>{i === 1 ? "·" : " · "}</span>}<b className="whitespace-nowrap font-semibold">{t}</b></span>)}</span>
+      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+/** 세 지수 보기 본문(모바일 세로 gap-3, 1280은 두 열: A1 좌·A5 우, 아래 A2·A3 전폭). 순서: B2 → A1 → A3(접힘) → A2(펼침) → A5(펼침). 보유 상태 첫 화면(접지 844)에 A2·A5 숫자가 들어오지 않게 하는 순서 조정(5.141 게이트: 간격이 아니라 순서) */
+export function ThreeView({ data, views, yr, onYear, onMetric, mySplit, onMine, a2Go, onBasis, onPattern, onRecession }: { data: MarketHistoryData; views: ThreeViews; yr: number | null; onYear: (y: number | null) => void; onMetric?: () => void; mySplit?: RegionSplit | null; onMine?: () => void; a2Go?: number; onBasis?: () => void; onPattern: () => void; onRecession?: () => void }) {
   // 1280(두 열)에서는 A1 좌·A5 우를 같은 줄에 두고(5.141 배치 유지) 나머지는 DOM 순서대로 전폭으로 쌓는다
-  const rowA = "xl:row-start-1", rowB = "xl:row-start-2", rowC = "xl:row-start-3";
+  const R = mySplit && onMine ? 1 : 0;
+  const rowA = R ? "xl:row-start-2" : "xl:row-start-1", rowB = R ? "xl:row-start-3" : "xl:row-start-2", rowC = R ? "xl:row-start-4" : "xl:row-start-3";
   return (
     <div data-testid="invest-three" className="flex min-w-0 flex-col gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150 xl:grid xl:grid-cols-[400px_minmax(0,1fr)] xl:items-start xl:gap-4">
+      {mySplit && onMine && <ThreeMine split={mySplit} onOpen={onMine} />}
       <div className={`min-w-0 xl:col-start-1 ${rowA}`}><ThreeA1 views={views} yr={yr} onYear={onYear} /></div>
       <div className={`min-w-0 xl:col-span-2 ${rowB}`}><ThreeA3 data={data} views={views} onOpen={onRecession} /></div>
       <div className={`min-w-0 xl:col-span-2 ${rowC}`}><ThreeA2 data={data} views={views} go={a2Go} onBasis={onBasis} onPattern={onPattern} /></div>
