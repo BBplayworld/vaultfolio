@@ -6,7 +6,10 @@ import { Component, useMemo, useState, type ReactNode } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { isTrialMode } from "@/lib/trial/trial-mode";
-import { holdingSplit } from "@/lib/invest/default-index";
+import { firstBuyYear, holdingSplit } from "@/lib/invest/default-index";
+import { regionSplit } from "@/lib/xray/region-split";
+import { useXrayViewStore } from "@/stores/xray-view-store";
+import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { pickDefaultIndex } from "@/lib/invest/calc";
 import { LOAD_ERROR } from "@/lib/invest/text";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
@@ -51,9 +54,13 @@ export function InvestTab() {
   }, []);
   // T1(5.141): 자산 0개이거나 체험일 때만 `캡처로 내 비중 보기` 1줄. 보유 여부는 기기 안에서 노출만 정하고 값은 보내지 않는다(체험은 데모 자산이 있어 둘 다 본다)
   const ratioLink = isTrialMode() || !hasAnyAssets(assetData);
+  // B1·B2(5.142): 보유 주식이 있고 체험이 아닐 때만. 값은 기기 안에서 계산해 화면에만 쓰고 저장·전송·GA에 넣지 않는다(B2는 X-Ray 지역 축과 같은 계산, 네트워크 0)
+  const { navigate } = useAssetNavigation();
+  const mine = useMemo(() => (isTrialMode() ? { year: undefined, split: null } : { year: firstBuyYear(assetData.stocks) ?? undefined, split: regionSplit(assetData.stocks, exchangeRates) }), [assetData.stocks, exchangeRates]);
+  const openXray = () => { useXrayViewStore.getState().setInitialAxis("region"); navigate({ type: "detail", tab: "stocks-xray" }); };
   return (
     <LoadBoundary key={boundaryKey} onRetry={() => { setComp(() => makeDynamic()); setBoundaryKey((k) => k + 1); }}>
-      <Comp variant="app" defaultIndex={defaultIndex} asof={asof} ratioLink={ratioLink} />
+      <Comp variant="app" defaultIndex={defaultIndex} asof={asof} ratioLink={ratioLink} firstBuyYear={mine.year} mySplit={mine.split} onOpenXray={openXray} />
     </LoadBoundary>
   );
 }

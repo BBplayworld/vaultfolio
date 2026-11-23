@@ -1,6 +1,7 @@
 // 가이드 2·3편(rate-hike-years·recession-years) 고유 표 계산: 연간 등락의 개수(오른 해/전체 해)만 센다. 지수 수준값·% 비율은 쓰지 않는다(R4 ⑤).
 // 인상 국면 = 연준 목표(범위면 상단)를 올린 첫 결정부터, 그 뒤 처음 내리기 전의 마지막 인상까지. 국면이 걸친 해 = 첫 인상 해~마지막 인상 해의 모든 해(한 해는 한 행에만 센다).
-import { buildIndexView, INDEX_KEYS, INDEX_META, recessionMonthsIn, yearIssues } from "./calc";
+import { buildIndexView, INDEX_META, INDEX_KEYS, recessionMonthsIn, yearIssues } from "./calc";
+import { averageHoldYears, periodResult } from "./period";
 import type { IndexKey } from "./types";
 import type { MarketHistoryData } from "./types";
 
@@ -67,4 +68,23 @@ export function kospiDropYears(d: MarketHistoryData): { rows: KospiYearRow[]; n:
   const all = v.years.filter((y) => v.ret[y - v.start] != null);
   const rows = all.filter((y) => (v.ret[y - v.start] as number) <= -15).map((y) => ({ y, ret: v.ret[y - v.start] as number, issues: yearIssues(v, y).map((e) => e.name) }));
   return { rows, n: all.length, up: all.filter((y) => (v.ret[y - v.start] as number) > 0).length, from: all[0], worst: rows.reduce((b, r) => (r.ret < b.ret ? r : b), rows[0]) };
+}
+
+/** G2 `monthly-buying` 표(5.142 #279): S&P 500·나스닥100, 시작 = 마지막 해 −5k(k=1~5)년 말 → 마지막 해 말. 값은 기간 카드와 같은 periodResult(소수 2자리) */
+export const MONTHLY_INDEXES: IndexKey[] = ["spx", "ndx"];
+export const MONTHLY_STEPS = [5, 4, 3, 2, 1] as const;
+export interface MonthlyBuyingRow { index: IndexKey; label: string; start: number; years: number; lump: string; dca: string }
+export function monthlyBuyingRows(d: MarketHistoryData): { rows: MonthlyBuyingRow[]; starts: number[]; last: number; holds: string[] } {
+  const rows: MonthlyBuyingRow[] = [];
+  for (const k of MONTHLY_INDEXES) {
+    const v = buildIndexView(d, k);
+    for (const m of MONTHLY_STEPS) {
+      const sy = v.last - 5 * m;
+      if (sy < v.start) continue;
+      const r = periodResult(v, sy, v.last);
+      rows.push({ index: k, label: INDEX_META[k].label, start: sy, years: 5 * m, lump: r.lumpMult.toFixed(2), dca: r.dcaMult.toFixed(2) });
+    }
+  }
+  const last = d.last;
+  return { rows, starts: MONTHLY_STEPS.map((m) => last - 5 * m), last, holds: [5, 10, 15, 20, 25].map((n) => averageHoldYears(n).toFixed(1)) };
 }

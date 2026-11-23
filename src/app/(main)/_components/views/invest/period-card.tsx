@@ -2,12 +2,12 @@
 
 // R4.1: 기간 수익률 카드(③ 통합) — 같은 기간·같은 총액(=1)을 한 번에 vs 매달 나눠 넣었을 때. 기간 알약·시작/끝·결과 2줄·어림 1줄+ⓘ·그림.
 // 계산은 lib/invest/period(연말값 평균 가격, 보간 0). 입력은 메모리에만(저장 0). 평가·유불리 문구 0.
-import { Info } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
-import { APPROX_DEF, APPROX_LINE, HOLD_LINE, IRR_SENTENCE, PERIOD_FOOT_1, dcaSentence, fixPeriod, lumpSentence, periodPresets, periodResult, periodText } from "@/lib/invest/period";
-import { CALC_DIV, CALC_FOOT, CALC_PAST, MINUS, RATIO_LINK_LABEL, fmtPct } from "@/lib/invest/text";
+import { APPROX_DEF, APPROX_LINE, HOLD_LINE, IRR_SENTENCE, PERIOD_FOOT_1, dcaSentence, fixPeriod, lumpSentence, periodPresets, periodResult, periodText, rollingRange } from "@/lib/invest/period";
+import { A6_TEXT, B1_OPTION, CALC_DIV, CALC_FOOT, CALC_PAST, MINUS, RATIO_LINK_LABEL, a6Bounds, fmtPct } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 import { C, HALO, SVG_TEXT } from "./chart-style";
 import { NOWRAP_TAIL, NoBreak } from "./nowrap";
@@ -86,10 +86,29 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
   );
 }
 
-export function PeriodCard({ view, period, onChange, question, ratioLink }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void; question?: string; /** T1: 있으면 `/ratio` 링크 1줄을 보이고 누를 때 호출(GA) */ ratioLink?: () => void }) {
+/** A6(5.142) 본문: 현재 기간 길이로 모든 시작 해를 계산한 범위(접힘 안). 버튼은 `period-honest` 줄 끝에 인라인으로 붙어 높이를 더하지 않는다 */
+function PeriodRangeBody({ view, n, r, open, id }: { view: IndexView; n: number; r: NonNullable<ReturnType<typeof rollingRange>>; open: boolean; id: string }) {
+  const b = a6Bounds(r.min, r.max);
+  return (
+    <div id={id} data-testid="period-range" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
+      <div className="min-h-0 overflow-hidden">
+        <div className="mt-1 rounded-xl bg-secondary px-3 py-2 text-xs leading-relaxed text-pretty break-keep">
+          <p data-testid="period-range-body" className="tabular-nums">{A6_TEXT.body(view.label, n, r.n, b.min, b.max, r.loss)}</p>
+          <p className="mt-1.5 text-muted-foreground"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} /></p>
+          <p data-testid="period-range-info" className="mt-1.5 text-muted-foreground">{A6_TEXT.info(n)}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PeriodCard({ view, period, onChange, question, ratioLink, mine, onRange }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void; question?: string; /** T1: 있으면 `/ratio` 링크 1줄을 보이고 누를 때 호출(GA) */ ratioLink?: () => void; /** B1(5.142): 시작 연도 선택지 `내 첫 매입 해 {Y}년` — 고르면 시작 = Y−1, 끝 = 마지막 해(기존 fixPeriod). 이 지수 범위 밖이면 숨김 */ mine?: { year: number; onUse: () => void }; /** A6 첫 펼침(GA) */ onRange?: () => void }) {
   const { sy, ey } = fixPeriod(view, period.sy, period.ey);
   const r = periodResult(view, sy, ey), t = periodText(r);
   const [info, setInfo] = useState(false);
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const rangeId = useId();
+  const range = useMemo(() => rollingRange(view, ey - sy), [view, ey, sy]);
   const [cy, setCy] = useState<number | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const w = useElementWidth(boxRef);
@@ -97,6 +116,7 @@ export function PeriodCard({ view, period, onChange, question, ratioLink }: { vi
   const presets = periodPresets(view);
   const sOpts = view.years.filter((y) => y < view.last), eOpts = view.years.filter((y) => y > sy);
   const rowCls = "rounded-xl";
+  const mineOk = mine != null && mine.year - 1 >= view.start && mine.year - 1 < view.last;
   const cyRet = cy != null && cy > sy ? (view.ret[cy - view.start] as number) : null;
   return (
     <section data-testid="invest-sec3" className="rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
@@ -111,7 +131,8 @@ export function PeriodCard({ view, period, onChange, question, ratioLink }: { vi
         {([["start", "시작", sy, sOpts], ["end", "끝", ey, eOpts]] as const).map(([k, l, v, opts]) => (
           <label key={k} className="relative flex min-w-0 flex-1 items-center">
             <span className="pointer-events-none absolute left-2.5 z-10 text-xs text-muted-foreground">{l}</span>
-            <select aria-label={`${l} 연도 말`} data-testid={`period-${k}`} value={v} className={SELECT_CLS} onChange={(e) => set(k === "start" ? +e.target.value : sy, k === "end" ? +e.target.value : ey)}>
+            <select aria-label={`${l} 연도 말`} data-testid={`period-${k}`} value={v} className={SELECT_CLS} onChange={(e) => { if (e.target.value === "mine") { if (mine) { mine.onUse(); set(mine.year - 1, view.last); } return; } set(k === "start" ? +e.target.value : sy, k === "end" ? +e.target.value : ey); }}>
+              {k === "start" && mineOk && <option value="mine">{B1_OPTION(mine!.year)}</option>}
               {opts.map((y) => <option key={y} value={y}>{y}년 말</option>)}
             </select>
             <span aria-hidden className="pointer-events-none absolute right-2 text-muted-foreground">⌄</span>
@@ -134,13 +155,19 @@ export function PeriodCard({ view, period, onChange, question, ratioLink }: { vi
       <p data-testid="calc-past" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} />
         {/* T1(5.141): 별도 줄이 아니라 이 단락 끝에 잇는다(높이 증가 최소). 히트영역 40px은 after로 확보(레이아웃 높이 0) */}
         {ratioLink && (
-          <> <Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="relative inline-block whitespace-nowrap rounded-sm font-semibold text-primary outline-none after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50">{RATIO_LINK_LABEL} <span aria-hidden>›</span></Link></>
+          <>{" "}<Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="relative ml-1 inline-block whitespace-nowrap rounded-sm font-semibold text-primary outline-none after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50">{RATIO_LINK_LABEL} <span aria-hidden>›</span></Link></>
         )}
       </p>
       <p data-testid="period-honest" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">
         {APPROX_LINE}
         {/* ⓘ는 끝 어절 바로 뒤(40px 히트, 줄 높이는 음수 마진으로 유지) */}
         <button type="button" aria-expanded={info} aria-controls="period-honest-def" aria-label="어림 방식 보기" data-testid="honest-info" onClick={() => setInfo((o) => !o)} className="-my-3.5 ml-0.5 inline-flex size-10 items-center justify-center rounded-full align-middle text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><Info aria-hidden className="size-4" /></button>
+        {/* A6(5.142): 같은 줄 끝에 이어 붙인다(높이 +0). 히트영역 40px은 after로 확보 */}
+        {range && (
+          <button type="button" aria-expanded={rangeOpen} aria-controls={rangeId} data-testid="period-range-button" onClick={() => { const o = !rangeOpen; setRangeOpen(o); if (o) onRange?.(); }} className="relative ml-1 whitespace-nowrap rounded-sm align-baseline text-xs font-medium text-foreground/80 outline-none after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50">
+            <ChevronDown aria-hidden className={`mr-0.5 inline size-3.5 align-[-3px] motion-safe:transition-transform motion-safe:duration-200 ${rangeOpen ? "rotate-180" : ""}`} />{A6_TEXT.button}
+          </button>
+        )}
       </p>
       <div id="period-honest-def" {...(info ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${info ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
@@ -151,6 +178,7 @@ export function PeriodCard({ view, period, onChange, question, ratioLink }: { vi
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep" data-testid="calc-foot"><NoBreak text={CALC_FOOT} /></p>
         </div>
       </div>
+      {range && <PeriodRangeBody view={view} n={ey - sy} r={range} open={rangeOpen} id={rangeId} />}
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1"><svg width="14" height="12" aria-hidden><line x1="0" x2="14" y1="6" y2="6" stroke={C.ink2} strokeWidth="2" /><circle cx="7" cy="6" r="2.6" fill="var(--card)" stroke={C.ink2} strokeWidth="1.5" /></svg>한 번에 넣기</span>
         <span className="inline-flex items-center gap-1"><svg width="14" height="12" aria-hidden><line x1="0" x2="14" y1="6" y2="6" stroke={C.brand} strokeWidth="2" /><rect x="4.4" y="3.4" width="5.2" height="5.2" transform="rotate(45 7 6)" fill="var(--card)" stroke={C.brand} strokeWidth="1.5" /></svg>매달 나눠 넣기</span>

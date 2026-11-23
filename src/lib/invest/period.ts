@@ -43,6 +43,9 @@ export function moneyWeightedAnnual(V: number, n: number): number {
 /** 넣은 돈이 끝 연말까지 들어가 있던 기간의 평균(년): 납입 j번째(월 말)가 (12n−j)개월 → 평균 (12n−1)/2개월 ÷ 12 */
 export const averageHoldYears = (n: number): number => (12 * n - 1) / 24;
 
+/** 한 번에 넣기 배수 → 해마다 평균(%) — 기간 카드·A6가 같은 식 */
+export const lumpCagrOf = (mult: number, n: number): number => (Math.pow(mult, 1 / n) - 1) * 100;
+
 export interface PeriodResult {
   sy: number;
   ey: number;
@@ -57,7 +60,23 @@ export interface PeriodResult {
 export function periodResult(v: IndexView, sy: number, ey: number): PeriodResult {
   const s = periodSeries(v, sy, ey), n = s.n;
   const lumpMult = s.lump[n], dcaMult = s.dca[n];
-  return { sy, ey, n, lumpMult, lumpCagr: (Math.pow(lumpMult, 1 / n) - 1) * 100, dcaMult, dcaIrr: moneyWeightedAnnual(dcaMult, n), holdYears: averageHoldYears(n), series: s };
+  return { sy, ey, n, lumpMult, lumpCagr: lumpCagrOf(lumpMult, n), dcaMult, dcaIrr: moneyWeightedAnnual(dcaMult, n), holdYears: averageHoldYears(n), series: s };
+}
+
+/** A6(5.142): 기간 길이 N년으로 모든 시작 해(지수 시작 해 ~ 마지막 해−N)의 한 번에 넣기 해마다 평균 범위와 손실로 끝난 시작 해 수.
+ *  periodSeries의 한 번에 넣기 배수(= periodResult와 같은 값)만 쓴다. 시작 해가 2개 미만이면 null */
+export function rollingRange(v: IndexView, N: number): { n: number; min: number; max: number; loss: number } | null {
+  if (N < 1) return null;
+  const n = v.last - N - v.start + 1;
+  if (n < 2) return null;
+  let min = Infinity, max = -Infinity, loss = 0;
+  for (let s = v.start; s <= v.last - N; s++) {
+    const m = periodSeries(v, s, s + N).lump[N], c = lumpCagrOf(m, N);
+    if (c < min) min = c;
+    if (c > max) max = c;
+    if (m < 1) loss++;
+  }
+  return { n, min, max, loss };
 }
 
 /** 기간 알약: 5·10·20년·전체(지수 데이터가 모자라면 뺀다). 끝 = 마지막 연도 */

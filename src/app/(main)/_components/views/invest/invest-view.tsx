@@ -26,6 +26,7 @@ import { RiseDetail, RiseList } from "./rise-list";
 import { buildPattern } from "@/lib/invest/pattern";
 import { episodeIndexOfYear } from "@/lib/invest/calc";
 import { ThreeView } from "./three-view";
+import type { RegionSplit } from "@/lib/xray/region-split";
 
 // 겹쳐 보기 항목: 한국 지수는 10년물만. 물가·실업률은 연 값(계단선)이라 미국 지수에만 둔다(R2-1)
 const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: string; def: string }[]> = {
@@ -141,11 +142,17 @@ export interface InvestViewProps {
   asof?: number;
   /** T1: 기간 카드 아래 `캡처로 내 비중 보기 ›` 1줄(앱·자산 0개 또는 체험일 때만 호출부가 true). 기본 숨김 */
   ratioLink?: boolean;
+  /** B1(5.142): 내 첫 매입 해(기기 안 계산, 보유 주식 있고 체험 아닐 때만 호출부가 준다). 가이드는 없음 = 숨김 */
+  firstBuyYear?: number;
+  /** B2(5.142): 내 주식 국내·해외(X-Ray 지역 축 값). 없으면 숨김 */
+  mySplit?: RegionSplit | null;
+  /** B2를 누르면 주식 X-Ray 지역 축으로 이동(호출부가 이동·축 지정) */
+  onOpenXray?: () => void;
 }
 
-type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table" | "invest_recession" | "invest_range" | "invest_my_start" | "invest_my_xray";
 
-export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false }: InvestViewProps) {
+export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false, firstBuyYear, mySplit, onOpenXray }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
   // 세 지수 보기(#270): 앱은 해시 `#invest/three`로 바로 열린다(마운트 때 1회 읽기, 앱 전용 dynamic이라 SSR 불일치 0). 가이드는 URL을 만지지 않는다
   const [three, setThree] = useState(() => variant === "app" && typeof window !== "undefined" && window.location.hash === THREE_HASH);
@@ -191,10 +198,10 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
   // 칸 전환은 replaceState만(history 추가 0·state 미사용) — 뒤로 가기는 투자 탭 진입 전 화면으로 간다
   const setHash = (h: string) => { if (variant === "app" && window.location.hash !== h) window.history.replaceState(null, "", h); };
   // 세 지수 → 한 지수 X: 고른 해를 X의 해 선택으로 넘긴다(X의 범위 밖이면 해제). 지수 → 세 지수: 고른 해는 그대로(공통 범위 안이면 그 분류 행이 열린다)
-  const changeMode = (m: Mode) => {
+  const changeMode = (m: Mode, fromHash = false) => {
     if (m === "three") {
       if (three) return;
-      setThree(true); setMenu(false); once("invest_three"); setHash(THREE_HASH);
+      setThree(true); setMenu(false); once("invest_three"); if (!fromHash) setHash(THREE_HASH);
       return;
     }
     if (!three) { changeIndex(m); return; }
@@ -202,8 +209,26 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
     const keep = yr != null && yr >= nv.start + 1 && yr <= nv.last ? yr : null;
     const ep = keep != null ? episodeIndexOfYear(nv.eps, keep) : -1;
     setThree(false); setIdx(m); setYr(keep); setSel(ep >= 0 ? ep : null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
-    once(`invest_index_${m}`); setHash("#invest");
+    once(`invest_index_${m}`); if (!fromHash) setHash("#invest");
   };
+  // D3(5.141 이월): 투자 탭 안에서 주소창으로 해시만 바꿔도 칸이 따라 바뀐다(replaceState는 이 이벤트를 만들지 않는다). 다른 탭 해시는 건드리지 않는다
+  const hashRef = useRef({ three, idx, changeMode });
+  useEffect(() => { hashRef.current = { three, idx, changeMode }; });
+  useEffect(() => {
+    if (variant !== "app") return;
+    const on = () => {
+      const h = window.location.hash, cur = hashRef.current;
+      if (h === THREE_HASH) { if (!cur.three) cur.changeMode("three", true); }
+      else if (h === "#invest" || h.startsWith("#invest/")) { if (cur.three) cur.changeMode(cur.idx, true); }
+    };
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, [variant]);
+  // A2 ↔ 하락 전 12개월 양방향 링크(5.142): 번호가 올라가면 대상이 펼쳐지고 화면 위로 온다
+  const [patternGo, setPatternGo] = useState(0);
+  const [a2Go, setA2Go] = useState(0);
+  const toPattern = () => { changeMode(idx); setPatternGo((g) => g + 1); };
+  const toThree = () => { changeMode("three"); setA2Go((g) => g + 1); };
   const pickThreeYear = (y: number | null) => { setYr(y); if (y != null) once("invest_year_pick"); };
   // 해시로 바로 열린 경우도 진입 1회
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -340,12 +365,12 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
   const deeperCard = (
     <div data-testid="invest-deeper" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
       <h3 className="text-base font-bold">더 깊이 보기</h3>
-      <PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} />
+      <PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} go={patternGo} onThree={toThree} />
       <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
     </div>
   );
   const gridNode = <YearGrid key={`g-${idx}`} onYear={() => once("invest_year_pick")} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
-  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} ratioLink={variant === "app" && ratioLink ? () => once("invest_ratio") : undefined} />;
+  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} ratioLink={variant === "app" && ratioLink ? () => once("invest_ratio") : undefined} mine={variant === "app" && firstBuyYear != null ? { year: firstBuyYear, onUse: () => once("invest_my_start") } : undefined} onRange={() => once("invest_range")} />;
   // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
   // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
   const MOBILE_SECTIONS: { id: string; node: React.ReactNode }[] = [
@@ -361,7 +386,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
       <div ref={selectorRef} data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
-      {threeViews && <ThreeView views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} />}
+      {threeViews && <ThreeView data={marketHistory} views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} mySplit={variant === "app" ? mySplit : null} onMine={onOpenXray ? () => { once("invest_my_xray"); onOpenXray(); } : undefined} a2Go={a2Go} onBasis={() => once("invest_phase_table")} onPattern={toPattern} onRecession={() => once("invest_recession")} />}
       {!three && !wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
       {!three && wide && (
         <>
@@ -384,7 +409,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
               ) : <p className="text-sm text-muted-foreground">왼쪽에서 하락을 고르면 그 시기가 보여요</p>}
             </div>
           </div>
-          <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} /></div>
+          <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} go={patternGo} onThree={toThree} /></div>
           <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><YearTable key={idx} view={view} onOpen={() => once("invest_table")} /></div>
           <div className="grid grid-cols-[440px_minmax(0,1fr)] items-stretch gap-4"><div className="min-w-0 [&>section]:h-full">{gridNode}</div><div className="min-w-0 [&>section]:h-full">{periodNode}</div></div>
         </>

@@ -3,10 +3,11 @@
 // R4: 새 접힘 섹션 `하락 전 12개월과 크게 오른 해에 있었던 일`. 결론 3줄(템플릿+데이터) → 하락별 조건 표 → 기준선 표 → 오른 해 기준선 표 → 각주.
 // 같은 시기에 있었다는 기록만 보인다. 비율 %·평가 어휘 0. 내용은 SSR에도 있다(파생값만 — 지수 수준값 없음).
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BaseRow, PatternData } from "@/lib/invest/pattern";
 import { NOWRAP_TAIL, NoBreak } from "./nowrap";
 import { PATTERN_TITLE, patternNote } from "@/lib/invest/pattern";
+import { A2_TEXT, TERMS } from "@/lib/invest/text";
 
 const TH = "border-b border-border bg-card px-2 py-1.5 text-xs font-semibold leading-snug text-muted-foreground align-bottom";
 const TD = "border-b border-border px-2 py-1.5 align-top";
@@ -45,12 +46,19 @@ function BaseTable({ title, hit, rows, label }: { title: string; hit: string; ro
   );
 }
 
-export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData; last: number; onOpen?: () => void }) {
-  const [open, setOpen] = useState(false);
+export function PatternSection({ pattern, last, onOpen, go = 0, onThree }: { pattern: PatternData; last: number; onOpen?: () => void; /** A2 링크로 들어오면 값이 올라가고(5.142), 펼친 채 이 섹션이 화면 위로 온다 */ go?: number; /** 각주 아래 `세 지수를 같은 기준으로 본 표 ›` */ onThree?: () => void }) {
+  const [open, setOpen] = useState(go > 0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (go <= 0) return;
+    setOpen(true);
+    const t = setTimeout(() => rootRef.current?.scrollIntoView({ block: "start" }), 0);
+    return () => clearTimeout(t);
+  }, [go]);
   const [epOpen, setEpOpen] = useState<number | null>(null);
   const toggle = () => { const n = !open; setOpen(n); if (n) onOpen?.(); };
   return (
-    <div data-testid="invest-pattern" className="mt-4 border-t border-border/60 pt-1 xl:mt-0 xl:border-t-0">
+    <div ref={rootRef} data-testid="invest-pattern" className="scroll-mt-14 mt-4 border-t border-border/60 pt-1 xl:mt-0 xl:border-t-0">
       <button type="button" aria-expanded={open} aria-controls="invest-pattern-panel" data-testid="pattern-button" onClick={toggle} className="flex min-h-12 w-full items-center justify-between gap-2 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform active:scale-[0.99]">
         <span><b className="block text-base font-semibold text-balance break-keep">{PATTERN_TITLE}</b><small className="block text-xs font-normal leading-snug text-muted-foreground">결과를 알 수 있는 해까지 세어 표로 모았어요</small></span>
         <ChevronDown aria-hidden className={`size-5 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
@@ -94,7 +102,10 @@ export function PatternSection({ pattern, last, onOpen }: { pattern: PatternData
           </div>
           <BaseTable title="같은 조건이 있던 모든 해" hit="그중 고점이 된 해" rows={pattern.preDropBase} label="조건별 기준선" />
           <BaseTable title="크게 오른 해" hit="그중 20% 넘게 오른 해" rows={pattern.riseBase} label="크게 오른 해 기준선" />
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep" data-testid="pattern-note">{patternNote(last)}</p>
+          {/* 5.142: 금리 방향 정의 1문장(용어 사전과 같은 문장) + 세 지수 표 링크 1줄. 결론·표·계산은 그대로 */}
+          <p data-testid="pattern-rate-def" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{TERMS.rateDir.def}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep" data-testid="pattern-note">{patternNote(last)}</p>
+          {onThree && <button type="button" data-testid="pattern-link-three" onClick={onThree} className="inline-flex min-h-10 items-center rounded-sm text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.98]">{A2_TEXT.linkThree} <span aria-hidden className="ml-1">›</span></button>}
         </div>
       </div>
     </div>

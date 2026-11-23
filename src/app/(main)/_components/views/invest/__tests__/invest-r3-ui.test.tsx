@@ -53,7 +53,7 @@ describe("#270 세 지수 칸·A1", () => {
     expect(h).toContain('role="radiogroup"');
   });
   it("세 지수 본문: 분류 5행·합 40·질문 머리·요약·칩 1줄 슬롯", () => {
-    const h = renderToStaticMarkup(<ThreeView views={views} yr={2008} onYear={() => {}} />);
+    const h = renderToStaticMarkup(<ThreeView data={marketHistory} onPattern={() => {}} views={views} yr={2008} onYear={() => {}} />);
     const t = text(h);
     expect(t).toContain("같은 해에 세 지수는 같은 쪽으로 움직였나요?");
     expect(t).toContain("같은 해 세 지수 오르내림");
@@ -72,19 +72,19 @@ describe("#270 세 지수 칸·A1", () => {
     expect(h).toContain('data-testid="three-year"');
   });
   it("행 접근성: aria-expanded·aria-controls, 칩 aria-label·히트 40(after)", () => {
-    const h = renderToStaticMarkup(<ThreeView views={views} yr={null} onYear={() => {}} />);
+    const h = renderToStaticMarkup(<ThreeView data={marketHistory} onPattern={() => {}} views={views} yr={null} onYear={() => {}} />);
     expect(h.match(/aria-expanded="false"/g)!.length).toBeGreaterThanOrEqual(5);
     expect(h).toContain('aria-label="2008년"');
     expect(h).toContain("after:-inset-y-1");
     expect(h).toContain("해를 누르면 그해 세 지수 값이 보여요");
   });
   it("자료 없음 1줄", () => {
-    const h = renderToStaticMarkup(<ThreeView views={{ ...views, spx: { ...views.spx, last: 1980 } }} yr={null} onYear={() => {}} />);
+    const h = renderToStaticMarkup(<ThreeView data={marketHistory} onPattern={() => {}} views={{ ...views, spx: { ...views.spx, last: 1980 } }} yr={null} onYear={() => {}} />);
     expect(h).toContain('data-testid="a1-empty"');
     expect(text(h)).toContain("해당 지수 자료 없음");
   });
   it("금지 어휘 0(세 지수 화면 문장)", () => {
-    const t = text(renderToStaticMarkup(<ThreeView views={views} yr={2011} onYear={() => {}} />)) + text(app()).replaceAll("년 말 → ", "년 말 ");
+    const t = text(renderToStaticMarkup(<ThreeView data={marketHistory} onPattern={() => {}} views={views} yr={2011} onYear={() => {}} />)) + text(app()).replaceAll("년 말 → ", "년 말 ");
     for (const w of ["상관", "예측", "전망", "신호", "전조", "경고", "앞두고", "기회", "타이밍", "유리", "불리", "추천", "안전", "결국", "장기", "오래 들고", "때문", "덕분", "로 인해", "영향으로", "여파", "함께", "확률", "비율", "하세요", "→"]) {
       // 브랜드·기존 화면의 `장기`·`안전` 등은 아래 정확히 센 문장만 검사
       if (["안전", "장기"].includes(w)) continue;
@@ -102,7 +102,7 @@ describe("#270 세 지수 칸·A1", () => {
 });
 
 describe("#271 A5 연대별 요약", () => {
-  const h = renderToStaticMarkup(<ThreeView views={views} yr={null} onYear={() => {}} />);
+  const h = renderToStaticMarkup(<ThreeView data={marketHistory} onPattern={() => {}} views={views} yr={null} onYear={() => {}} />);
   it("표 머리·행 7·지표 칸 3칸(기본 해마다 평균)·정의 문장", () => {
     const t = text(h);
     expect(t).toContain("10년씩 묶으면 어땠나요?");
