@@ -11,7 +11,7 @@ import { SameYear } from "../nowrap";
 import { MainChart } from "../main-chart";
 
 const views = { spx: buildIndexView(marketHistory, "spx"), ndx: buildIndexView(marketHistory, "ndx"), kospi: buildIndexView(marketHistory, "kospi") };
-const chart = (k: keyof typeof views, ov: "y10" | "cpi" | "unemp" | null, selYear: number | null = null) =>
+const chart = (k: keyof typeof views, ov: "y10" | "cpi" | "unemp" | "fx" | null, selYear: number | null = null) =>
   renderToStaticMarkup(<MainChart data={marketHistory} view={views[k]} width={326} wide={false} selEp={null} selYear={selYear} overlay={ov} onPickYear={() => {}} />);
 
 describe("SameYear 1줄", () => {
@@ -51,5 +51,24 @@ describe("겹쳐 보기 계단선", () => {
     expect(h(chart("spx", null))).toBe(h(chart("spx", "unemp")));
     const sel = chart("spx", "cpi", 2008);
     expect((sel.match(/data-testid="overlay-dot"[^>]*r="3.3"/g) || []).length).toBe(1);
+  });
+});
+
+describe("겹쳐 보기 원/달러(5.143)", () => {
+  const chartW = (ov: "fx" | "y10" | null, wide: boolean) => renderToStaticMarkup(<MainChart data={marketHistory} view={views.kospi} width={wide ? 700 : 326} wide={wide} selEp={null} selYear={null} overlay={ov} onPickYear={() => {}} />);
+  it("점 44개(1982~2025), 눈금 좁은 폭 3개·넓은 폭 4개, 원 단위 쉼표", () => {
+    const n = (chart("kospi", "fx").match(/data-testid="overlay-dot"/g) || []).length;
+    expect(n).toBe(44);
+    const t = (h: string) => [...h.matchAll(/data-testid="fx-tick"[^>]*>([^<]+)</g)].map((m) => m[1]);
+    expect(t(chartW("fx", false))).toEqual(["600원", "1,000원", "1,500원"]);
+    expect(t(chartW("fx", true))).toEqual(["600원", "900원", "1,200원", "1,500원"]);
+    expect(t(chartW("fx", false)).every((x) => /^[0-9,]+원$/.test(x))).toBe(true);
+  });
+  it("켜기 전후 SVG 높이 같고, 원 눈금이 켜면 % 글자는 숨고 끄면 눈금 0", () => {
+    const h = (s: string) => s.match(/viewBox="[^"]+"/)![0];
+    expect(h(chart("kospi", null))).toBe(h(chart("kospi", "fx")));
+    expect(chart("kospi", "y10")).not.toContain("fx-tick");
+    const on = chart("kospi", "fx");
+    expect(on).not.toMatch(/textAnchor="end"[^>]*>\d+%</);
   });
 });

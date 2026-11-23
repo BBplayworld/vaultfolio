@@ -105,7 +105,7 @@ export function sourceLines(v: IndexView, revIds: Record<"spx" | "ndx" | "kospi"
       : `지수 연말값: ${wiki.kospi}를 바탕으로 시크릿에셋이 다시 계산·가공했어요. 1998년 등락률은 표의 %가 아니라 종가로 다시 계산했어요.`;
   const l2 = v.rate === "us"
     ? "금리·침체: 미 기준금리는 미 연준 공개시장 표 · 미 국채 금리: 미 연준(H.15) · 경기침체 기간: NBER(미국 경제연구소) 경기순환 기준일을 가공했어요. " + BLS_SOURCE
-    : `금리 출처: ECOS(한국은행, 기준금리·시장금리), ${KR_RECHECK_DATE}. 한국은행이 작성한 통계를 가공했어요. 사건 1건(1997년)은 IMF 보도자료를 확인했어요.`;
+    : `금리 출처: ECOS(한국은행, 기준금리·시장금리), ${KR_RECHECK_DATE}. 한국은행이 작성한 통계를 가공했어요. 사건 1건(1997년)은 IMF 보도자료를 확인했어요. ${FX_SOURCE}`;
   const l3 = `가격 지수(배당 제외) · ${v.currency === "달러" ? "미국 지수는 달러 기준 · " : ""}연말 종가 기준 · 기준일 ${v.last}.12.31 · 가공 데이터는 같은 조건(CC BY-SA 4.0)으로 공개해요`;
   const owner = v.key === "kospi" ? "KOSPI는 한국거래소" : v.key === "spx" ? "S&P 500은 S&P Dow Jones Indices" : "Nasdaq-100은 Nasdaq, Inc.";
   const l4 = `${owner}의 상표이며, 시크릿에셋은 이 기관과 제휴 관계가 아니에요. 과거 시장 사실이며 투자 권유가 아니에요.`;
@@ -176,6 +176,14 @@ export const QUESTION_HEAD = {
 /** R2: 미국 물가·실업률 출처·정의(화면 반영 전 문구 정본). 'BLS 공식' 표기·FRED 로고·제휴 표현 금지 */
 export const BLS_SOURCE = "물가·실업률: 미 노동통계국(BLS) · FRED(세인트루이스 연은) 경유(CPIAUCNS·UNRATENSA) 자료를 가공했어요(공공 영역).";
 export const BLS_INFO = "연평균은 월 12개 평균이에요. 물가는 CPI-U(전 품목) 연평균의 전년 대비 %, 실업률은 연평균 %예요.";
+
+/** R3-3: 원/달러 출처·정의(정본). 'FRED 로고·제휴·공식' 표기 금지. G.5가 정본(CEO 정정, H.10 아님) */
+export const FX_SOURCE = "원/달러: 미 연준 이사회(G.5) · FRED(세인트루이스 연은) 경유(EXKOUS) 자료를 가공했어요(공공 영역, 출처 표기).";
+export const FX_INFO = "원/\u2060달러는 1달러에 몇 원인지예요. 매일 뉴욕 정오 시세를 달마다 평균하고, 그 12개를 다시 평균했어요. 1982년부터 있고, 지수는 원화 값 그대로예요.";
+/** FX_INFO의 \u2060(단어 결합자)은 320 팝오버에서 '원/'·'달러' 사이 줄바꿈 방지(C113) */
+/** R3-3: 원/달러 연평균 공개 CSV(정확한 값은 화면이 아니라 이 파일로 제공) */
+export const FX_DATASET_HREF = "/datasets/market-history/fx-krw-usd-annual.csv";
+export const FX_DATASET_LABEL = "원/달러 연평균 CSV 열기";
 
 /** R2-3: 펼침 안 `같은 해` 줄 값(현재 지수 제외 나머지). 단위 표기만, 환산·인과 0 */
 export const SAME_YEAR_LABEL = "같은 해";

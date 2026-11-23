@@ -248,3 +248,15 @@ export function blsYear(d: MarketHistoryData, y: number): { cpi: number | null; 
   const r = d.bls.find((q) => q.y === y);
   return { cpi: r?.cpi ?? null, un: r?.un ?? null };
 }
+
+/** R3-3: 해별 원/달러 연평균(1달러당 원). 12개월이 다 있는 해(1982~)만, 없으면 null. 그림 선·축 글자 전용(원화 환산에 쓰지 않음) */
+export function fxYear(d: MarketHistoryData, y: number): number | null {
+  return d.fx.find((q) => q.y === y)?.v ?? null;
+}
+
+/** R3-3: 원/달러 오른쪽 축 — 데이터 최소·최대를 100원 단위로 내림·올림. 눈금은 좁은 폭 3개(가운데는 500원 단위 반올림)·넓은 폭 4개(100원 단위) */
+export function fxAxis(d: MarketHistoryData): { lo: number; hi: number; ticks3: number[]; ticks4: number[] } {
+  const v = d.fx.map((q) => q.v), lo = Math.floor(Math.min(...v) / 100) * 100, hi = Math.ceil(Math.max(...v) / 100) * 100;
+  const at = (f: number) => lo + Math.round(((hi - lo) * f) / 100) * 100;
+  return { lo, hi, ticks3: [lo, Math.round((lo + hi) / 2 / 500) * 500, hi], ticks4: [lo, at(1 / 3), at(2 / 3), hi] };
+}

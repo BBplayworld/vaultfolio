@@ -66,6 +66,8 @@ export interface MarketHistoryData {
   usYear: UsYearRow[];
   /** R2: 1961~ 미국 물가·실업률 연평균 */
   bls: BlsYearRow[];
+  /** R3-3: 1982~ 원/달러 연평균(연준 G.5 EXKOUS) */
+  fx: { y: number; v: number }[];
   krYear: KrYearRow[];
   events: MarketEvent[];
   /** R4: 행 펼침·표 전용 사건(점 없음) */

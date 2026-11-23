@@ -11,6 +11,7 @@ S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같�
 | `rates-monthly.csv` | 월 단위: 연준 기준금리 목표(범위면 상·하단), 미 10년물 월말 값, 한국은행 기준금리(2008년 3월 전은 콜금리 목표), 국고채 10년 월평균 |
 | `macro-us-annual.csv` | 미국 연 단위: 10년·2년·3개월물 연말 값과 연평균, 장단기 금리차(%p), 그해 경기침체 월 수 |
 | `macro-us-bls.csv` | 미국 연 단위(1961~): 소비자물가지수(CPI-U, 전 품목, 비계절조정) 연평균·전년 대비(%)와 실업률(비계절조정) 연평균(%). 연평균은 월 12개의 단순 평균. 해당 해에 공표되지 않은 달이 있으면 빈 칸(2025: 10월 미공표) |
+| `fx-krw-usd-annual.csv` | 원/달러 연평균(1982~): 1달러당 원. 월 값(일별 뉴욕 정오 시세의 달 평균) 12개의 단순 평균(소수 1자리). 12개월이 다 있는 해만 담았어요 |
 | `kr-annual.csv` | 한국 연 단위: 기준금리·국고채 3년·10년 연말 값과 기준일 |
 | `recessions-us.csv` | NBER 경기순환 기준일(고점·저점)과 침체 구간(고점 다음 달 ~ 저점 월) |
 | `events.csv` | 사건 31건: 표시명·날짜·분류·사실 1줄·1차 출처 URL·관련 지수 |
@@ -28,6 +29,7 @@ S&P 500·나스닥100·코스피의 **연 단위 지수 값과 등락률**, 같�
 - 나스닥100 2003·2004년 연말 값은 다른 공개 자료와 최대 0.6% 차이가 있어요(위키 값 사용).
 - 금리: 미 연준 공개시장 표·H.15(미 정부 저작물, 출처 표기), 한국은행 ECOS(한국은행이 작성한 통계, 출처 표기).
 - 물가·실업률: 미 노동통계국(BLS) 원자료 CPI-U·실업률의 월값을 세인트루이스 연은 FRED(`CPIAUCNS`·`UNRATENSA`)에서 받아 연평균으로 가공했어요(2026-11-22 내려받음). BLS 원 시리즈 ID(`CUUR0000SA0`·`LNU04000000`)는 BLS 사이트에서 직접 대조하지 못했어요(미대조). 미 정부 저작물(17 U.S.C. §105)로 공공 영역이며 출처 표기만 해요. 연평균은 월 값을 정수로 합산해 반올림(0.5는 올림)했고, BLS·FRED 공식 발표 연평균 표와는 반올림 차이가 있을 수 있어요.
+- 원/달러: Board of Governors of the Federal Reserve System (US), South Korean Won to U.S. Dollar Spot Exchange Rate [EXKOUS], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/EXKOUS (2026-11-23 내려받음). 월 값(일별 정오 시세 평균)을 12개 단순 평균했어요. 공공 영역(Public Domain: Citation Requested), 출처 표기만 해요.
 - 경기침체: NBER 경기순환 기준일(출처 표기 조건으로 복사 허용). NBER 로고·상표는 쓰지 않아요.
 - 사건: 미 연준 공개 문서와 IMF 보도자료 1건(1차 출처 URL은 `events.csv`·`events-extra.csv`·`events-year.csv`).
 - S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc., KOSPI는 한국거래소의 상표예요. 시크릿에셋은 이 기관들과 제휴 관계가 아니에요.

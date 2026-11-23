@@ -11,6 +11,8 @@ import { A2_TEXT, TERMS } from "@/lib/invest/text";
 
 const TH = "border-b border-border bg-card px-2 py-1.5 text-xs font-semibold leading-snug text-muted-foreground align-bottom";
 const TD = "border-b border-border px-2 py-1.5 align-top";
+// 하락별 조건 표는 열이 많아 1280 가이드 폭(424)을 넘으므로 가로 여백만 줄인다(5.143 p2, 값·문구 변경 0)
+const TH_C = TH.replace("px-2", "px-1.5"), TD_C = TD.replace("px-2", "px-1.5");
 
 function BaseTable({ title, hit, rows, label }: { title: string; hit: string; rows: BaseRow[]; label: string }) {
   return (
@@ -34,9 +36,9 @@ function BaseTable({ title, hit, rows, label }: { title: string; hit: string; ro
               <tr key={r.label}>
                 <th scope="row" className={`${TD} text-left font-medium break-keep`}>{r.label}</th>
                 <td className={`${TD} whitespace-nowrap text-right text-muted-foreground`}>{r.from}~{r.to}년</td>
-                <td className={`${TD} whitespace-nowrap text-right`}>{r.years}년 중 {r.nCond}년</td>
+                <td className={`${TD} text-right break-keep`}>{r.years}년 중 {r.nCond}년</td>
                 <td className={`${TD} text-right`}>{r.kHit}년</td>
-                <td className={`${TD} whitespace-nowrap text-right`}>{r.years}년 중 {r.baseHit}년</td>
+                <td className={`${TD} text-right break-keep`}>{r.years}년 중 {r.baseHit}년</td>
               </tr>
             ))}
           </tbody>
@@ -88,12 +90,12 @@ export function PatternSection({ pattern, last, onOpen, go = 0, onThree }: { pat
             <div tabIndex={0} role="region" aria-label="하락별 조건 표, 가로로 밀어 볼 수 있어요" data-testid="pattern-predrop" className="mt-1.5 hidden overflow-x-auto md:block rounded-xl shadow-[inset_0_0_0_1px_var(--border)] outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
               <table className="w-full min-w-[420px] border-separate border-spacing-0 text-xs">
                 <caption className="sr-only">크게 빠진 때 직전 12개월에 있었던 조건</caption>
-                <thead><tr><th scope="col" className={`${TH} sticky left-0 text-left`}>고점 해</th>{pattern.condLabels.map((c) => <th key={c} scope="col" className={`${TH} break-keep text-left`}>{c}</th>)}</tr></thead>
+                <thead><tr><th scope="col" className={`${TH_C} sticky left-0 text-left`}>고점 해</th>{pattern.condLabels.map((c) => <th key={c} scope="col" className={`${TH_C} break-keep text-left`}>{c}</th>)}</tr></thead>
                 <tbody>
                   {pattern.preDrop.map((r) => (
                     <tr key={r.py}>
-                      <th scope="row" className={`${TD} sticky left-0 bg-card text-left font-medium`}>{r.name}<span className="block text-xs font-normal text-muted-foreground tabular-nums">{r.py}년</span></th>
-                      {r.cells.map((c, i) => <td key={i} className={`${TD} break-keep ${c.state === "none" ? "text-muted-foreground" : ""}`}>{c.text}</td>)}
+                      <th scope="row" className={`${TD_C} sticky left-0 bg-card text-left font-medium`}>{r.name}<span className="block text-xs font-normal text-muted-foreground tabular-nums">{r.py}년</span></th>
+                      {r.cells.map((c, i) => <td key={i} className={`${TD_C} break-keep ${c.state === "none" ? "text-muted-foreground" : ""}`}>{c.text}</td>)}
                     </tr>
                   ))}
                 </tbody>

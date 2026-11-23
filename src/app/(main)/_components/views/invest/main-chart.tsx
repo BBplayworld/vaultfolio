@@ -4,14 +4,14 @@
 // 공유 x축, 연말 세로선 관통. 관통 요소: 미국 경기침체 띠(data-rec)·사건 점(data-ev, C1 같은 해 점 합침)·하락 이름표(data-nm).
 // 선택 하락의 면은 C2(기본 숨김, 행 펼침·해 선택 때만), 선택선은 C3(글자 구간에서 끊고 글자에 후광).
 import { useId, useRef } from "react";
-import { blsYear, episodeIndexOfYear, monthPos, rateAt, rateAxisMax, recessionSpan, type Episode, type IndexView } from "@/lib/invest/calc";
+import { blsYear, episodeIndexOfYear, fxAxis, fxYear, monthPos, rateAt, rateAxisMax, recessionSpan, type Episode, type IndexView } from "@/lib/invest/calc";
 import { bandRect, logTicks, mergeEventDots, stepPath } from "@/lib/invest/chart";
 import { RISE_THRESHOLD } from "@/lib/invest/pattern";
 import { fmtLevel, fmtPct } from "@/lib/invest/text";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { BRAND_TEXT_FILL, C, HALO, LOSS_FILL, LOSS_STROKE, SVG_TEXT } from "./chart-style";
 
-export type OverlayKey = "y10" | "cpi" | "unemp";
+export type OverlayKey = "y10" | "cpi" | "unemp" | "fx";
 const GX = 50, RP = 24; // 왼쪽 축 글자 폭·오른쪽 여백(겹쳐 보기 오른쪽 축 글자 자리)
 
 // 글자 폭 근사(한글 12.2·영숫자 6.6, 11px 굵은 글자) — 이름표 단 배치용
@@ -94,7 +94,7 @@ export function MainChart({
   wide: boolean;
   selEp: number | null;
   selYear: number | null;
-  /** 겹쳐 보기 항목(null = 안 함). cpi·unemp는 연 값이라 계단선 */
+  /** 겹쳐 보기 항목(null = 안 함). cpi·unemp·fx는 연 값이라 계단선(fx는 전용 오른쪽 축) */
   overlay: OverlayKey | null;
   onPickYear: (year: number) => void;
 }) {
@@ -134,15 +134,18 @@ export function MainChart({
   const lastOv = useRef<OverlayKey>("y10");
   if (overlay) lastOv.current = overlay;
   const kind = overlay ?? lastOv.current;
-  const yearly = kind === "cpi" || kind === "unemp";
+  const yearly = kind === "cpi" || kind === "unemp" || kind === "fx";
+  const isFx = kind === "fx", fxA = fxAxis(data), fxTicks = wide ? fxA.ticks4 : fxA.ticks3;
+  // 원/달러는 % 눈금과 섞이지 않게 전용 스케일(오른쪽 축 600~1,500원 등)을 ⓒ층 높이에 선형 매핑한다. 금리 층 스케일은 그대로
+  const YO = (v: number) => (isFx ? P3b - ((v - fxA.lo) / (fxA.hi - fxA.lo)) * H3 : Y3(v));
   const ovYears: { Y: number; v: number }[] = [];
-  if (yearly) for (let Y = y0 + 1; Y <= last; Y++) { const v = blsYear(data, Y)[kind === "cpi" ? "cpi" : "un"]; if (v != null) ovYears.push({ Y, v }); }
+  if (yearly) for (let Y = y0 + 1; Y <= last; Y++) { const v = isFx ? fxYear(data, Y) : blsYear(data, Y)[kind === "cpi" ? "cpi" : "un"]; if (v != null) ovYears.push({ Y, v }); }
   const ovPath = (() => {
     let q = "", st = false;
     if (yearly) {
       ovYears.forEach(({ Y, v }, i) => {
         const adj = i > 0 && ovYears[i - 1].Y === Y - 1;
-        q += (adj ? "L" : "M") + X(Y).toFixed(1) + "," + Y3(v).toFixed(1) + "L" + X(Y + 1).toFixed(1) + "," + Y3(v).toFixed(1);
+        q += (adj ? "L" : "M") + X(Y).toFixed(1) + "," + YO(v).toFixed(1) + "L" + X(Y + 1).toFixed(1) + "," + YO(v).toFixed(1);
       });
       return q;
     }
@@ -362,9 +365,10 @@ export function MainChart({
       {/* 겹쳐 보기 선: 항상 DOM에 두고 불투명도만 전환(재마운트 없음, 스케일은 켜기 전·후 같음) */}
       <g data-testid="overlay-line" aria-hidden="true" style={{ opacity: overlay ? 1 : 0, pointerEvents: "none" }} className="motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-out">
         <path d={ovPath} fill="none" stroke={C.brand} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
-        {yearly && <path d={ovSel ? `M${X(ovSel.Y).toFixed(1)},${Y3(ovSel.v).toFixed(1)}L${X(ovSel.Y + 1).toFixed(1)},${Y3(ovSel.v).toFixed(1)}` : ""} fill="none" stroke={C.brand} strokeWidth={2.4} strokeLinecap="round" />}
-        {yearly && ovYears.map(({ Y, v }) => <circle key={Y} data-testid="overlay-dot" cx={((X(Y) + X(Y + 1)) / 2).toFixed(1)} cy={Y3(v).toFixed(1)} r={ovSel?.Y === Y ? 3.3 : 2} fill={C.brand} stroke={C.card} strokeWidth={1} />)}
-        {Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).filter((t) => (t / rst) % rateTickEvery === 0).map((t) => <text key={t} className={BRAND_TEXT_FILL} fontSize={12} x={W - 1} textAnchor="end" y={Y3(t) + (t === 0 ? -1 : 4)} style={HALO}>{t}%</text>)}
+        {yearly && <path d={ovSel ? `M${X(ovSel.Y).toFixed(1)},${YO(ovSel.v).toFixed(1)}L${X(ovSel.Y + 1).toFixed(1)},${YO(ovSel.v).toFixed(1)}` : ""} fill="none" stroke={C.brand} strokeWidth={2.4} strokeLinecap="round" />}
+        {yearly && ovYears.map(({ Y, v }) => <circle key={Y} data-testid="overlay-dot" cx={((X(Y) + X(Y + 1)) / 2).toFixed(1)} cy={YO(v).toFixed(1)} r={ovSel?.Y === Y ? 3.3 : 2} fill={C.brand} stroke={C.card} strokeWidth={1} />)}
+        {isFx && fxTicks.map((t) => <text key={t} data-testid="fx-tick" className={BRAND_TEXT_FILL} fontSize={12} x={W - 1} textAnchor="end" y={YO(t) + (t === fxA.lo ? -0.5 : 4)} style={HALO}>{t.toLocaleString("en-US")}원</text>)}
+        {!isFx && Array.from({ length: Math.floor(rmax / rst) + 1 }, (_, i) => i * rst).filter((t) => (t / rst) % rateTickEvery === 0).map((t) => <text key={t} className={BRAND_TEXT_FILL} fontSize={12} x={W - 1} textAnchor="end" y={Y3(t) + (t === 0 ? -1 : 4)} style={HALO}>{t}%</text>)}
       </g>
       {tA > y0 + 1 && <rect x={X(y0 + 1)} y={P3} width={X(tA) - X(y0 + 1)} height={H3} fill={C.sec} opacity={0.8} data-nodata="1" />}
       {ep && <rect x={XE(ep.py)} y={P3 - 1} width={XE(ep.ty) - XE(ep.py)} height={H3 + 2} rx={3} fill="none" stroke={C.brand} strokeWidth={2} />}

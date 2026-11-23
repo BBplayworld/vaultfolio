@@ -6,7 +6,7 @@ import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 // 예외: market-history(#263)는 본문이 투자 탭 컴포넌트 1벌이라 지수 이름이 필요하다(문구 규칙은 투자 탭 R1~R11). 이 파일은 첫 화면 번들에 들어가므로 투자 데이터를 import하지 않는다 — 설명의 숫자(1961년·4번)는 테스트가 데이터와 대조한다.
 // 글을 고치면 lastModified도 함께 갱신한다(sitemap이 이 값을 그대로 쓴다).
 
-export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying"] as const;
+export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying", "yield-spread-years"] as const;
 export type GuideSlug = (typeof GUIDE_SLUGS)[number];
 
 export interface GuideCta {
@@ -274,15 +274,31 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     linkLabel: "한 번에 넣기와 매달 나눠 넣기, 시작 해별 결과",
     lastModified: "2026-11-23",
   },
+  "yield-spread-years": {
+    slug: "yield-spread-years",
+    title: "장단기 금리차가 마이너스였던 해와 그해·다음 해 S&P 500 연말 등락",
+    description: "1976~2025년 중 장단기 금리차(10년−2년)가 마이너스인 달이 있던 해와 없던 해로 나눠, 그해와 다음 해 S&P 500 연말 등락을 같은 표에 놓았어요. 과거 사실이고 투자 권유가 아니에요.",
+    h1: "장단기 금리차가 마이너스였던 해와 그해·다음 해 S&P 500 연말 등락",
+    summary: "1976~2025년 중 금리차가 마이너스인 달이 있던 해는 14해, 없던 해는 36해였어요. 있던 해는 그해 14해 중 10해, 다음 해 14해 중 10해에 S&P 500이 올랐어요. 없던 해는 그해 36해 중 28해, 다음 해 35해 중 27해에 올랐어요. 두 값을 같은 해에 나란히 놓았을 뿐, 한쪽이 다른 쪽을 움직였다는 뜻은 아니에요.",
+    // 본문은 투자 탭 컴포넌트(MarketHistoryArticle, 기본 지수 S&P 500) + 금리차 고유 표 2개. 아래 steps·facts는 쓰지 않는다. 범위·해 수(1976~2025·14·10·36·28·35·27)는 정적 문자열이라 테스트가 데이터와 대조한다(연간 갱신 때 함께 고친다)
+    steps: [],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [],
+    primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
+    secondary: TRIAL_CTA,
+    linkLabel: "금리차가 마이너스였던 해의 S&P 500",
+    lastModified: "2026-11-23",
+  },
 };
 
-/** 시장 가이드 7편의 `관련 글` 줄(5.141 #274): 모든 편이 다른 편에서 1번 이상 링크된다 */
+/** 시장 가이드 8편의 `관련 글` 줄(5.141 #274·5.143 #282): 모든 편이 다른 편에서 1번 이상 링크된다 */
 export const GUIDE_RELATED: Partial<Record<GuideSlug, GuideSlug[]>> = {
   "market-history": ["rate-hike-years", "recession-years"],
   "index-returns-by-year": ["kospi-by-year", "market-history"],
-  "rate-hike-years": ["recession-years", "market-history"],
+  "rate-hike-years": ["recession-years", "market-history", "yield-spread-years"],
   "recession-years": ["recovery-years", "rate-hike-years"],
   "recovery-years": ["market-history", "monthly-buying"],
   "kospi-by-year": ["index-returns-by-year", "recovery-years"],
   "monthly-buying": ["index-returns-by-year", "recovery-years"],
+  "yield-spread-years": ["rate-hike-years", "index-returns-by-year"],
 };

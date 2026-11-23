@@ -13,7 +13,7 @@ import { ChevronRight } from "lucide-react";
 import { GUIDE_BRAND_LINE, GUIDES, GUIDE_SLUGS, type GuideSlug } from "./guide-copy";
 
 /** 본문이 투자 탭 컴포넌트(MarketHistoryArticle)인 편 */
-const MARKET_ARTICLE_SLUGS: GuideSlug[] = ["market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying"];
+const MARKET_ARTICLE_SLUGS: GuideSlug[] = ["market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying", "yield-spread-years"];
 
 /** 가이드 metadata — 자식 openGraph/twitter가 부모를 통째로 대체하므로 images까지 재선언한다(/ratio와 동일 규칙) */
 export function guideMetadata(slug: GuideSlug): Metadata {

@@ -175,7 +175,7 @@ export function ThreeA2({ data, views, go = 0, onBasis, onPattern }: { data: Mar
           <span className="hidden text-xs font-semibold md:block">{A2_TEXT.head[0]}</span>
           {A2_TEXT.head.slice(1).map((h) => <span key={h} role="columnheader" className="text-right text-xs font-semibold break-keep">{h}</span>)}
         </div>
-        <p className="text-right text-xs text-muted-foreground">{A2_TEXT.sub}</p>
+        <p data-testid="a2-sub" className="text-left text-xs text-muted-foreground">{A2_TEXT.sub}</p>
         {res.rows.map((r, j) => (
           <div key={r.id} role="row" data-testid={`a2-row-${j}`} className={`${COLS} items-center gap-y-0.5 border-t border-border/60 py-2 md:min-h-11`}>
             <span role="rowheader" className="col-span-3 text-sm font-medium text-pretty break-keep md:col-span-1">{r.label}</span>
