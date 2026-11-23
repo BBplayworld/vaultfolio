@@ -2,6 +2,7 @@
 // 모두 데이터에서 계산한다(결론 문장 숫자 하드코딩 0). 결과 정의는 O2만 쓴다: 그해 말이 '크게 빠진 때'의 고점이 된 해.
 // 분모는 결과를 알 수 있는 {last−1}년까지. 비율 %는 만들지 않는다('N년 중 k년'만). 해석·인과 문장 0.
 import { classifyDelta, decRate, INDEX_META, monthIndex, rateDelta, yearIssues, type IndexView, type RateDir } from "./calc";
+import { TERMS } from "./text";
 import type { IndexKey, MarketHistoryData, YearEvent } from "./types";
 
 /** 크게 오른 해 기준: 연간 등락(반올림 전) > +20% */
@@ -10,7 +11,8 @@ const EPS = 1e-9;
 
 type Cond = (y: number) => boolean | null;
 
-const spreadNegMonths = (d: MarketHistoryData, y: number, which: "a" | "b"): number[] | null => {
+/** 그해 금리차 월평균이 0 미만인 달 목록(없으면 []; 자료가 없는 해는 null). A2(세 지수 보기)가 같은 함수를 쓴다 */
+export const spreadNegMonths = (d: MarketHistoryData, y: number, which: "a" | "b"): number[] | null => {
   const base = monthIndex(d.spread.from);
   let any = false;
   const neg: number[] = [];
@@ -143,7 +145,7 @@ export function buildPattern(d: MarketHistoryData, view: IndexView): PatternData
 }
 
 export const PATTERN_TITLE = "하락 전 12개월과 크게 오른 해에 있었던 일";
-export const patternNote = (last: number) => `같은 시기에 있었다는 기록이고, 무엇이 원인인지는 말하지 않아요. 결과를 알 수 있는 ${last - 1}년까지만 셌어요. 금리차는 월평균이 0보다 낮은 달이 1개 이상이면 셌어요(연준 H.15).`;
+export const patternNote = (last: number) => `같은 시기에 있었다는 기록이고, 무엇이 원인인지는 말하지 않아요. 결과를 알 수 있는 ${last - 1}년까지만 셌어요. ${TERMS.spreadNeg.def}`;
 export const RISE_NOTE = "사건은 1차 원문으로 확인한 것만 적어요.";
 export const RISE_SUB = "크게 빠진 때는 여러 해를 재고, 오른 해는 한 해만 재요";
 export const INDEX_LABEL = (k: IndexKey) => INDEX_META[k].label;

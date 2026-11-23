@@ -1,9 +1,10 @@
 // 투자 탭 `세 지수` 보기(5.141 #270·#271) 순수 계산. 데이터는 이미 만든 IndexView 3개만 쓴다(저장·전송 0).
 // A1: 같은 해 세 지수의 오른 해/내린 해 5분류(배타, 합 = 공통 해 수). A5: 연대별 요약(기간 카드와 같은 periodResult 재사용).
-import { INDEX_KEYS, INDEX_META, type IndexView } from "./calc";
+import { INDEX_KEYS, INDEX_META, blsYear, classifyDelta, rateDelta, type IndexView } from "./calc";
+import { spreadNegMonths } from "./pattern";
 import { periodResult } from "./period";
 import { MINUS, fmtPct } from "./text";
-import type { IndexKey } from "./types";
+import type { IndexKey, MarketHistoryData } from "./types";
 
 export type ThreeViews = Record<IndexKey, IndexView>;
 const list = (v: ThreeViews) => INDEX_KEYS.map((k) => v[k]);
@@ -119,3 +120,65 @@ export function decadeText(c: DecadeCell | null, m: DecadeMetric): string {
 /** 셀 값 부호(색 판정용, −15% 열은 색 없음) */
 export const decadeSign = (c: DecadeCell | null, m: DecadeMetric): number => (!c || m === "dd15" ? 0 : m === "avg" ? c.avg : c.cum);
 export const decadeLabel = (d: number) => `${String(d).slice(2)}년대`;
+
+// ---- 5.142 A2 지표로 나눠 본 오른 해(#275) ----
+// 기준 4종의 분류는 `하락 전 12개월`(PatternSection)과 같은 함수(classifyDelta·rateDelta·blsYear·spreadNegMonths)를 쓴다.
+// 오른 해 = 연간 등락 > 0(A1과 같음). 한 행은 배타이고 행 n의 합 = 그 지수에서 기준 자료와 연간 등락이 모두 있는 해 수.
+export type A2Basis = "rate" | "cpi" | "unemp" | "spread";
+export const A2_BASES: { value: A2Basis; label: string }[] = [
+  { value: "rate", label: "금리" },
+  { value: "cpi", label: "물가" },
+  { value: "unemp", label: "실업률" },
+  { value: "spread", label: "금리차" },
+];
+/** 기준별 행(순서 고정) */
+export const A2_ROWS: Record<A2Basis, { id: string; label: string }[]> = {
+  rate: [{ id: "up", label: "금리 올라간 해" }, { id: "down", label: "금리 내려간 해" }, { id: "flat", label: "금리 거의 그대로인 해" }],
+  cpi: [{ id: "hi", label: "물가 4% 이상 오른 해" }, { id: "lo", label: "그 밖의 해" }],
+  unemp: [{ id: "up", label: "실업률 오른 해" }, { id: "lo", label: "그 밖의 해" }],
+  spread: [{ id: "neg", label: "금리차 마이너스인 달이 있던 해" }, { id: "none", label: "없던 해" }],
+};
+/** 물가 4% 이상 기준(전년 대비 %, 저장값 소수 1자리) */
+export const A2_CPI_HI = 4.0;
+/** 해 y가 속한 행 id(기준 자료가 없으면 null) */
+export function a2Class(d: MarketHistoryData, basis: A2Basis, y: number): string | null {
+  if (basis === "rate") { const k = classifyDelta(rateDelta(d, "us", y - 1, y)); return k === "none" ? null : k; }
+  if (basis === "cpi") { const c = blsYear(d, y).cpi; return c == null ? null : c >= A2_CPI_HI ? "hi" : "lo"; }
+  if (basis === "unemp") { const a = blsYear(d, y - 1).un, b = blsYear(d, y).un; return a == null || b == null ? null : b > a ? "up" : "lo"; }
+  const m = spreadNegMonths(d, y, "a");
+  return m == null ? null : m.length > 0 ? "neg" : "none";
+}
+/** 금리차(10년−2년) 월평균 자료가 처음 있는 달(YYYY-MM). 정의 줄의 `{1976년 6월}부터`가 데이터에서 나온다 */
+export function spreadFirstMonth(d: MarketHistoryData): string {
+  const i = d.spread.a.findIndex((v) => v != null), [y, m] = d.spread.from.split("-").map(Number), t = y * 12 + (m - 1) + Math.max(i, 0);
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+}
+export interface A2Cell { n: number; k: number }
+export interface A2Result {
+  rows: { id: string; label: string; cells: (A2Cell | null)[] }[];
+  /** 지수별 센 해의 범위(없으면 null) */
+  ranges: ({ from: number; to: number } | null)[];
+  /** 지수별 센 해 수(행 n의 합) */
+  totals: number[];
+}
+export function criterionRows(d: MarketHistoryData, v: ThreeViews, basis: A2Basis): A2Result {
+  const defs = A2_ROWS[basis], vs = list(v);
+  const counts = defs.map(() => vs.map(() => ({ n: 0, k: 0 })));
+  const ranges: A2Result["ranges"] = vs.map(() => null);
+  vs.forEach((x, i) => {
+    for (let y = x.start + 1; y <= x.last; y++) {
+      const r = x.ret[y - x.start];
+      if (r == null) continue;
+      const id = a2Class(d, basis, y);
+      if (id == null) continue;
+      const c = counts[defs.findIndex((q) => q.id === id)][i];
+      c.n++; if (r > 0) c.k++;
+      const g = ranges[i]; ranges[i] = g ? { from: g.from, to: y } : { from: y, to: y };
+    }
+  });
+  return {
+    rows: defs.map((q, j) => ({ ...q, cells: vs.map((_, i) => (counts[j][i].n ? counts[j][i] : null)) })),
+    ranges,
+    totals: vs.map((_, i) => defs.reduce((a, _q, j) => a + counts[j][i].n, 0)),
+  };
+}

@@ -143,7 +143,7 @@ export interface InvestViewProps {
   ratioLink?: boolean;
 }
 
-type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
@@ -204,6 +204,11 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
     setThree(false); setIdx(m); setYr(keep); setSel(ep >= 0 ? ep : null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
     once(`invest_index_${m}`); setHash("#invest");
   };
+  // A2 ↔ 하락 전 12개월 양방향 링크(5.142): 번호가 올라가면 대상이 펼쳐지고 화면 위로 온다
+  const [patternGo, setPatternGo] = useState(0);
+  const [a2Go, setA2Go] = useState(0);
+  const toPattern = () => { changeMode(idx); setPatternGo((g) => g + 1); };
+  const toThree = () => { changeMode("three"); setA2Go((g) => g + 1); };
   const pickThreeYear = (y: number | null) => { setYr(y); if (y != null) once("invest_year_pick"); };
   // 해시로 바로 열린 경우도 진입 1회
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -340,7 +345,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
   const deeperCard = (
     <div data-testid="invest-deeper" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
       <h3 className="text-base font-bold">더 깊이 보기</h3>
-      <PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} />
+      <PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} go={patternGo} onThree={toThree} />
       <YearTable key={idx} view={view} onOpen={() => once("invest_table")} />
     </div>
   );
@@ -361,7 +366,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
       <div ref={selectorRef} data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
-      {threeViews && <ThreeView views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} />}
+      {threeViews && <ThreeView data={marketHistory} views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} a2Go={a2Go} onBasis={() => once("invest_phase_table")} onPattern={toPattern} />}
       {!three && !wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
       {!three && wide && (
         <>
@@ -384,7 +389,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
               ) : <p className="text-sm text-muted-foreground">왼쪽에서 하락을 고르면 그 시기가 보여요</p>}
             </div>
           </div>
-          <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} /></div>
+          <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><PatternSection key={`p-${idx}`} pattern={pattern} last={view.last} onOpen={() => once("invest_pattern")} go={patternGo} onThree={toThree} /></div>
           <div className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none"><YearTable key={idx} view={view} onOpen={() => once("invest_table")} /></div>
           <div className="grid grid-cols-[440px_minmax(0,1fr)] items-stretch gap-4"><div className="min-w-0 [&>section]:h-full">{gridNode}</div><div className="min-w-0 [&>section]:h-full">{periodNode}</div></div>
         </>

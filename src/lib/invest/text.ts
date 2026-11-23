@@ -118,7 +118,7 @@ export const TERM_PRICE_INDEX = "지수에 든 종목의 가격만으로 낸 값
 export const TERM_YEAR_END = "해마다 마지막 날(연말) 종가 기준이에요. 한 해 안의 움직임은 담지 않아요.";
 const TERM_DIV_HEAD = "받은 배당을 다시 넣지 않고 계산했어요.";
 const TERM_DROP_TAIL = "한 해 연간 등락이 −15% 이하인 해와는 다른 기준이에요.";
-export type TermId = "priceIndex" | "exDividend" | "yearEnd" | "bigDrop" | "nber" | "spread" | "lumpDca" | "y10" | "fedRate" | "fedBs";
+export type TermId = "priceIndex" | "exDividend" | "yearEnd" | "bigDrop" | "nber" | "spread" | "lumpDca" | "y10" | "fedRate" | "fedBs" | "rateDir" | "spreadNeg";
 export const TERMS: Record<TermId, { term: string; def: string }> = {
   priceIndex: { term: "가격 지수", def: TERM_PRICE_INDEX },
   exDividend: { term: "배당 제외", def: `${TERM_DIV_HEAD} ${CALC_DIV}` },
@@ -130,6 +130,9 @@ export const TERMS: Record<TermId, { term: string; def: string }> = {
   y10: { term: "10년물", def: "10년 만기 미국 국채의 금리예요." },
   fedRate: { term: "연준 금리", def: "미국 중앙은행(연준)의 기준금리예요." },
   fedBs: { term: "연준 대차대조표 사건", def: "연준이 채권을 사들이거나 줄인 결정이에요." },
+  // 5.142(#275): 지표별 오른 해 표(A2)와 `하락 전 12개월` 각주가 같은 문장을 쓴다(새 문장 0, 용어 패널 7개에는 넣지 않는다)
+  rateDir: { term: "금리 방향", def: "전년 12월 말과 그해 12월 말 기준금리를 비교해 0.25%p 이상 오르면 올라간 해, 0.25%p 이상 내리면 내려간 해, 그 사이면 거의 그대로인 해로 셌어요." },
+  spreadNeg: { term: "금리차 마이너스 달", def: "금리차는 월평균이 0보다 낮은 달이 1개 이상이면 셌어요(연준 H.15)." },
 };
 /** 출처 패널 `용어` 7개(순서 고정) */
 export const PANEL_TERM_IDS: TermId[] = ["priceIndex", "exDividend", "yearEnd", "bigDrop", "nber", "spread", "lumpDca"];
@@ -183,6 +186,8 @@ export const BLS_GAP_NOTE = "2025년은 미 정부 업무 중단으로 10월 값
 const hasBatchim = (ch: string) => (/[가-힣]/.test(ch) ? (ch.charCodeAt(0) - 0xac00) % 28 !== 0 : "0136780".includes(ch));
 /** 주제 조사 `은/는`(S&P 500은·나스닥100은·코스피는) */
 export const topic = (label: string) => label + (hasBatchim(label.slice(-1)) ? "은" : "는");
+/** 오른 해 정의 문장(A1 ⓘ·A2 정의 줄이 같은 문장을 쓴다) */
+export const A1_INFO_FIRST = "오른 해는 연간 등락이 0보다 큰 해이고, 그 밖은 내린 해로 셌어요.";
 export const THREE_LABEL = "세 지수";
 export const THREE_TEXT = {
   qA1: "같은 해에 세 지수는 같은 쪽으로 움직였나요?",
@@ -191,7 +196,7 @@ export const THREE_TEXT = {
   rowValue: (k: number) => `${k}해`,
   slotHint: "해를 누르면 그해 세 지수 값이 보여요",
   infoLabel: "오른 해·내린 해를 센 기준",
-  info: "오른 해는 연간 등락이 0보다 큰 해이고, 그 밖은 내린 해로 셌어요. 미국 지수는 달러, 코스피는 원 기준이고 서로 환산하지 않았어요.",
+  info: `${A1_INFO_FIRST} 미국 지수는 달러, 코스피는 원 기준이고 서로 환산하지 않았어요.`,
   zeroNote: (y: number, label: string) => `${y}년 ${topic(label)} 0.0%로 보이지만 반올림 전 값이 0보다 작아 내린 해로 셌어요.`,
   empty: "해당 지수 자료 없음",
   qA5: "10년씩 묶으면 어땠나요?",
@@ -212,3 +217,29 @@ export function threeSourceLines(vs: Record<IndexKey, IndexView>, revIds: Record
 
 /** T1: 기간 카드 아래 링크 문구. 가이드 RATIO_CTA(`/guide/guide-copy.ts`)와 같은 문구 — 두 곳이 어긋나면 테스트가 막는다 */
 export const RATIO_LINK_LABEL = "캡처로 내 비중 보기";
+
+// ---- 5.142 R3-2 정본 문장(spec 4절). 화면·테스트가 같은 문장을 쓴다. 해 수 비율 %·상관·예측·권유·평가 어휘 0 ----
+const ymKo = (ym: string) => `${+ym.slice(0, 4)}년 ${+ym.slice(5)}월`;
+export const A2_TEXT = {
+  q: "금리·물가가 이랬던 해에 세 지수는 어땠나요?",
+  title: "지표로 나눠 본 오른 해",
+  summary: "미국 지표 기준으로 해를 나눠, 지수가 오른 해를 셌어요.",
+  basisLabel: "기준 선택",
+  head: ["기준", "S&P 500", "나스닥100", "코스피"],
+  sub: "오른 해",
+  cell: (n: number, k: number) => `${n}해 중 ${k}해`,
+  empty: "—",
+  range: (labels: string[], rs: ({ from: number; to: number } | null)[]) => labels.map((l, i) => (rs[i] ? `${l} ${rs[i]!.from}~${rs[i]!.to}년` : `${l} —`)).join(" · "),
+  defLabel: "이 기준을 센 방법",
+  /** 정의 줄: 공통 오른 해 정의 → 기준별 문장 → 같은 시기 고지. 자료 시작 달은 데이터에서 읽는다 */
+  def: (basis: "rate" | "cpi" | "unemp" | "spread", d: { rateFrom: string; spreadFrom: string }) => {
+    const part = basis === "rate"
+      ? `${TERMS.rateDir.def} 미 연준 목표금리(범위면 위쪽 값) 자료가 ${ymKo(d.rateFrom)}부터라 ${+d.rateFrom.slice(0, 4) + 1}년부터 셌어요.`
+      : basis === "cpi" ? `${BLS_INFO} 물가 4% 이상 오른 해는 물가 연평균이 전년보다 4.0% 이상 오른 해예요. ${BLS_GAP_NOTE}`
+        : basis === "unemp" ? `${BLS_INFO} 실업률 오른 해는 연평균 실업률이 전년보다 높았던 해예요. ${BLS_GAP_NOTE}`
+          : `${TERMS.spread.def} ${TERMS.spreadNeg.def} 10년−2년 금리차이고 ${ymKo(d.spreadFrom)}부터 있어요.`;
+    return `${A1_INFO_FIRST} ${part} ${LIST_NOTE_2}`;
+  },
+  linkPattern: "지수 하나로 본 하락 전 12개월",
+  linkThree: "세 지수를 같은 기준으로 본 표",
+} as const;
