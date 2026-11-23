@@ -2,6 +2,7 @@
 // 인상 국면 = 연준 목표(범위면 상단)를 올린 첫 결정부터, 그 뒤 처음 내리기 전의 마지막 인상까지. 국면이 걸친 해 = 첫 인상 해~마지막 인상 해의 모든 해(한 해는 한 행에만 센다).
 import { buildIndexView, INDEX_META, INDEX_KEYS, recessionMonthsIn, yearIssues } from "./calc";
 import { averageHoldYears, periodResult } from "./period";
+import { spreadNegMonths } from "./pattern";
 import type { IndexKey } from "./types";
 import type { MarketHistoryData } from "./types";
 
@@ -87,4 +88,25 @@ export function monthlyBuyingRows(d: MarketHistoryData): { rows: MonthlyBuyingRo
   }
   const last = d.last;
   return { rows, starts: MONTHLY_STEPS.map((m) => last - 5 * m), last, holds: [5, 10, 15, 20, 25].map((n) => averageHoldYears(n).toFixed(1)) };
+}
+
+/** G4 `yield-spread-years`(5.143 #282): 금리차(10년−2년) 월평균이 0 미만인 달이 있던 해 / 없던 해 × S&P 500 그해·다음 해 오른 해 수.
+ *  있고 없음은 투자 탭 A2 금리차 행·PatternSection과 같은 `spreadNegMonths(d,y,"a")`, 오른 해는 A1 규칙(`ret > 0`)이다. 다음 해 열은 마지막 해 행이 `—`(자료 없음)이라 센 해에서 빠진다 */
+export interface SpreadYearRow { y: number; months: number[]; ret: number | null; next: number | null }
+export interface SpreadCount { n: number; up: number; nNext: number; upNext: number }
+export function spreadYearRows(d: MarketHistoryData): { from: number; last: number; has: SpreadCount; none: SpreadCount; years: SpreadYearRow[] } {
+  const v = buildIndexView(d, "spx");
+  const retOf = (y: number): number | null => (y > v.start && y <= v.last ? v.ret[y - v.start] ?? null : null);
+  const first = Math.min(...Array.from({ length: d.last - 1900 + 1 }, (_, i) => 1900 + i).filter((y) => spreadNegMonths(d, y, "a") != null));
+  const has: SpreadCount = { n: 0, up: 0, nNext: 0, upNext: 0 }, none: SpreadCount = { n: 0, up: 0, nNext: 0, upNext: 0 };
+  const years: SpreadYearRow[] = [];
+  for (let y = first; y <= d.last; y++) {
+    const m = spreadNegMonths(d, y, "a");
+    if (m == null) continue;
+    const c = m.length ? has : none, r = retOf(y), nx = retOf(y + 1);
+    if (r != null) { c.n++; if (r > 0) c.up++; }
+    if (nx != null) { c.nNext++; if (nx > 0) c.upNext++; }
+    if (m.length) years.push({ y, months: m, ret: r, next: nx });
+  }
+  return { from: first, last: d.last, has, none, years };
 }

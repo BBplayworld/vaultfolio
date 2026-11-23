@@ -2,7 +2,7 @@ import { GUIDES, GUIDE_RELATED, type GuideDoc } from "../guide-copy";
 import { GuideActions } from "../guide-actions";
 import Link from "next/link";
 import { NoBreak } from "@/app/(main)/_components/views/invest/nowrap";
-import { DecadeTable, GUIDE_TABLE_DISCLAIMER, HikeTable, KospiYearTable, MonthlyBuyingFootnotes, MonthlyBuyingTable, RecessionTable, RecoveryTable } from "./decade-table";
+import { DecadeTable, GUIDE_TABLE_DISCLAIMER, HikeTable, KospiYearTable, MonthlyBuyingFootnotes, MonthlyBuyingTable, RecessionTable, RecoveryTable, SpreadYearsFootnotes, SpreadYearsTables } from "./decade-table";
 import { APPROX_LINE } from "@/lib/invest/period";
 import { KOSPI_DEF, LIST_NOTE_2, LIST_SUB_SENTENCE, TERMS } from "@/lib/invest/text";
 import { InvestView } from "@/app/(main)/_components/views/invest/invest-view";
@@ -10,9 +10,9 @@ import { InvestView } from "@/app/(main)/_components/views/invest/invest-view";
 /** 공개 가이드 `/guide/market-history`(#263): 본문 = 앱 투자 탭 컴포넌트 1벌. 기본 지수 S&P 500 고정(내 자산 판정 0), 가이드 전용 블록 0.
  *  SSR HTML에는 머리 3줄·목록 행 같은 파생값만 나가고, 지수 수준값을 쓰는 그림·표는 마운트 뒤에 그린다(InvestView variant="guide"). */
 export function MarketHistoryArticle({ doc }: { doc: GuideDoc }) {
-  const Table = doc.slug === "index-returns-by-year" ? DecadeTable : doc.slug === "rate-hike-years" ? HikeTable : doc.slug === "recession-years" ? RecessionTable : doc.slug === "recovery-years" ? RecoveryTable : doc.slug === "kospi-by-year" ? KospiYearTable : doc.slug === "monthly-buying" ? MonthlyBuyingTable : null;
+  const Table = doc.slug === "index-returns-by-year" ? DecadeTable : doc.slug === "rate-hike-years" ? HikeTable : doc.slug === "recession-years" ? RecessionTable : doc.slug === "recovery-years" ? RecoveryTable : doc.slug === "kospi-by-year" ? KospiYearTable : doc.slug === "monthly-buying" ? MonthlyBuyingTable : doc.slug === "yield-spread-years" ? SpreadYearsTables : null;
   // 제목 아래 정의 1줄(5.141): G1 = 크게 빠진 때 정의(LIST_SUB 한 문장), G3 = −15% 이하 해 정의 + 같은 시기 기록 고지
-  const def = doc.slug === "recovery-years" ? LIST_SUB_SENTENCE : doc.slug === "kospi-by-year" ? `${KOSPI_DEF} ${LIST_NOTE_2}` : doc.slug === "monthly-buying" ? `${TERMS.lumpDca.def} ${APPROX_LINE}.` : null;
+  const def = doc.slug === "recovery-years" ? LIST_SUB_SENTENCE : doc.slug === "kospi-by-year" ? `${KOSPI_DEF} ${LIST_NOTE_2}` : doc.slug === "monthly-buying" ? `${TERMS.lumpDca.def} ${APPROX_LINE}.` : doc.slug === "yield-spread-years" ? `${TERMS.spread.def} ${TERMS.spreadNeg.def} ${TERMS.yearEnd.def}` : null;
   const related = GUIDE_RELATED[doc.slug] ?? [];
   return (
     <>
@@ -27,7 +27,8 @@ export function MarketHistoryArticle({ doc }: { doc: GuideDoc }) {
       </div>
       {Table && <Table />}
       {doc.slug === "monthly-buying" && <MonthlyBuyingFootnotes />}
-      {["rate-hike-years", "recession-years", "recovery-years", "kospi-by-year"].includes(doc.slug) && <p data-testid="guide-table-disclaimer" className="-mt-2 text-xs text-muted-foreground text-pretty break-keep">{GUIDE_TABLE_DISCLAIMER}</p>}
+      {doc.slug === "yield-spread-years" && <SpreadYearsFootnotes />}
+      {["rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "yield-spread-years"].includes(doc.slug) && <p data-testid="guide-table-disclaimer" className="-mt-2 text-xs text-muted-foreground text-pretty break-keep">{GUIDE_TABLE_DISCLAIMER}</p>}
       <InvestView variant="guide" defaultIndex={doc.slug === "kospi-by-year" ? "kospi" : "spx"} />
       <GuideActions primary={doc.primary} secondary={doc.secondary} />
       {related.length > 0 && (

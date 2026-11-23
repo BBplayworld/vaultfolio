@@ -12,7 +12,7 @@ import { featureTitleOf, screenPath, trackScreen, trackThenNavigate, __resetGaSt
 vi.mock("@/components/logo", () => ({ Logo: () => null })); // next/font 의존 제거(node 환경)
 
 import { GUIDES, GUIDE_RELATED, GUIDE_SLUGS, GUIDE_BRAND_LINE } from "../guide-copy";
-import { decadeCounts } from "../_components/decade-table";
+import { decadeCounts, GUIDE_TABLE_DISCLAIMER as GUIDE_TABLE_DISCLAIMER_TEXT } from "../_components/decade-table";
 import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 import { CARD_UNTIL_DAY, FIRST_RECORD_MIN_DAYS } from "@/lib/report/settlement";
 import { GuideShell, guideMetadata } from "../guide-shell";
@@ -20,13 +20,15 @@ import { buildIndexView } from "@/lib/invest/calc";
 import { marketHistory } from "@/lib/invest/market-history";
 import { hikeYearRows, kospiDropYears, recessionYearRows, recoveryRows } from "@/lib/invest/guide-tables";
 import { APPROX_LINE, periodResult } from "@/lib/invest/period";
-import { monthlyBuyingRows } from "@/lib/invest/guide-tables";
+import { monthlyBuyingRows, spreadYearRows } from "@/lib/invest/guide-tables";
+import { monthsLabel, spreadNegMonths } from "@/lib/invest/pattern";
+import { criterionRows } from "@/lib/invest/three";
 import { CALC_DIV, CALC_FOOT, CALC_PAST, TERMS, fmtPct } from "@/lib/invest/text";
 
 // 가이드(#77) 정적 규칙 — node 환경, 서버 렌더 마크업·문구 상수·메타 대상
 const WWW = "https://www.secretasset.xyz";
 // 본문이 글 3편(단계·fact 구조)인 가이드. market-history(#263)는 본문이 투자 탭 컴포넌트라 따로 검사한다
-const ARTICLE_SLUGS = GUIDE_SLUGS.filter((s) => !["market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying"].includes(s));
+const ARTICLE_SLUGS = GUIDE_SLUGS.filter((s) => !["market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying", "yield-spread-years"].includes(s));
 const FORBIDDEN = /[0-9]\s*(원|만|억|%)|줄이세요|늘리세요|리밸런싱|사세요|파세요|추천|절대|완벽|원천|서버로 아무것도|세금|엑셀|시트|노션|절세/;
 
 describe("정본 호스트", () => {
@@ -41,9 +43,9 @@ describe("정본 호스트", () => {
 
 describe("sitemap", () => {
   const a = sitemap();
-  it("12건(가이드 10편), 모두 www 접두(시장 가이드 7편 포함)", () => {
-    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`, `${WWW}/guide/year-end`, `${WWW}/guide/market-history`, `${WWW}/guide/index-returns-by-year`, `${WWW}/guide/rate-hike-years`, `${WWW}/guide/recession-years`, `${WWW}/guide/recovery-years`, `${WWW}/guide/kospi-by-year`, `${WWW}/guide/monthly-buying`]);
-    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6]);
+  it("13건(가이드 11편), 모두 www 접두(시장 가이드 8편 포함)", () => {
+    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`, `${WWW}/guide/year-end`, `${WWW}/guide/market-history`, `${WWW}/guide/index-returns-by-year`, `${WWW}/guide/rate-hike-years`, `${WWW}/guide/recession-years`, `${WWW}/guide/recovery-years`, `${WWW}/guide/kospi-by-year`, `${WWW}/guide/monthly-buying`, `${WWW}/guide/yield-spread-years`]);
+    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6]);
   });
   it("lastModified는 호출마다 같은 고정 날짜", () => {
     vi.useFakeTimers();
@@ -222,7 +224,7 @@ describe("문구 규칙", () => {
     expect(d.steps[1].inlineLink).toEqual({ label: "월말 순자산 정리하는 법", href: "/guide/net-worth" });
   });
   it("linkLabel 4종·GUIDE_SLUGS 순서", () => {
-    expect(GUIDE_SLUGS).toEqual(["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying"]);
+    expect(GUIDE_SLUGS).toEqual(["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying", "yield-spread-years"]);
     expect(GUIDES["index-returns-by-year"].linkLabel).toBe("해마다 오르내린 %, 한 격자로 보기");
     expect(GUIDES["market-history"].linkLabel).toBe("크게 빠진 때와 금리, 한 장으로 보기");
     expect(GUIDES["year-end"].linkLabel).toBe("올해 자산 결산");
@@ -409,15 +411,16 @@ describe("recovery-years·kospi-by-year 가이드(5.141 #274)", () => {
     expect(h3).toContain('data-variant="guide"');
     expect(h3).toContain("1982년 이후 연말 기준 15% 넘게 빠진 때는 6번이었어요");
   });
-  it("관련 글 줄: 7편 모두 있고 링크 대상이 spec 대응표와 같으며 모든 편이 다른 편에서 1번 이상 링크된다", () => {
+  it("관련 글 줄: 8편 모두 있고 링크 대상이 spec 대응표와 같으며 모든 편이 다른 편에서 1번 이상 링크된다", () => {
     const expected: Record<string, string[]> = {
       "market-history": ["rate-hike-years", "recession-years"],
       "index-returns-by-year": ["kospi-by-year", "market-history"],
-      "rate-hike-years": ["recession-years", "market-history"],
+      "rate-hike-years": ["recession-years", "market-history", "yield-spread-years"],
       "recession-years": ["recovery-years", "rate-hike-years"],
       "recovery-years": ["market-history", "monthly-buying"],
       "kospi-by-year": ["index-returns-by-year", "recovery-years"],
       "monthly-buying": ["index-returns-by-year", "recovery-years"],
+      "yield-spread-years": ["rate-hike-years", "index-returns-by-year"],
     };
     expect(GUIDE_RELATED).toEqual(expected);
     const incoming = new Map<string, number>();
@@ -507,11 +510,83 @@ describe("monthly-buying 가이드(5.142 #279)", () => {
   it("관련 글 줄(index-returns-by-year·recovery-years)·모든 편 역링크 ≥1·첫 화면 가이드 링크 4개·SSR 기본 지수 S&P 500", () => {
     expect(GUIDE_RELATED["monthly-buying"]).toEqual(["index-returns-by-year", "recovery-years"]);
     const incoming = new Set(Object.values(GUIDE_RELATED).flat());
-    for (const s of ["market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying"]) expect(incoming.has(s as never), s).toBe(true);
+    for (const s of ["market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying", "yield-spread-years"]) expect(incoming.has(s as never), s).toBe(true);
     for (const [s, rel] of Object.entries(GUIDE_RELATED)) expect(rel, s).not.toContain(s as never);
     expect(readFileSync(join(__dirname, "../../(main)/_components/layout/onboarding/root-guide-links.tsx"), "utf8")).toContain('const ORDER: GuideSlug[] = ["year-end", "net-worth", "stock-ratio", "market-history"];');
     expect(featureTitleOf("page_view", {}, "guide:monthly-buying")).toBe("가이드·매달 나눠 넣기");
     expect(html).toContain('data-variant="guide"');
     expect(guideMetadata("monthly-buying").alternates?.canonical).toBe(`${WWW}/guide/monthly-buying`);
+  });
+});
+
+describe("yield-spread-years 가이드(5.143 #282, G4)", () => {
+  const G4 = GUIDES["yield-spread-years"];
+  const html = renderToStaticMarkup(<GuideShell slug="yield-spread-years" />);
+  const t = html.replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+  const r = spreadYearRows(marketHistory);
+  const spx = buildIndexView(marketHistory, "spx");
+  it("정적 문자열 = 데이터(범위·해 수·오른 해 수, 연간 갱신 때 이 테스트가 막는다)", () => {
+    const { from, last, has: h, none: o } = r;
+    expect([from, last]).toEqual([1976, 2025]);
+    expect([h.n, h.up, h.nNext, h.upNext]).toEqual([14, 10, 14, 10]);
+    expect([o.n, o.up, o.nNext, o.upNext]).toEqual([36, 28, 35, 27]);
+    expect(G4.description).toBe(`${from}~${last}년 중 장단기 금리차(10년−2년)가 마이너스인 달이 있던 해와 없던 해로 나눠, 그해와 다음 해 S&P 500 연말 등락을 같은 표에 놓았어요. 과거 사실이고 투자 권유가 아니에요.`);
+    expect(G4.summary).toBe(`${from}~${last}년 중 금리차가 마이너스인 달이 있던 해는 ${h.n}해, 없던 해는 ${o.n}해였어요. 있던 해는 그해 ${h.n}해 중 ${h.up}해, 다음 해 ${h.nNext}해 중 ${h.upNext}해에 S&P 500이 올랐어요. 없던 해는 그해 ${o.n}해 중 ${o.up}해, 다음 해 ${o.nNext}해 중 ${o.upNext}해에 올랐어요. 두 값을 같은 해에 나란히 놓았을 뿐, 한쪽이 다른 쪽을 움직였다는 뜻은 아니에요.`);
+    expect(G4.title).toBe(G4.h1);
+    expect(G4.h1).toBe("장단기 금리차가 마이너스였던 해와 그해·다음 해 S&P 500 연말 등락");
+    expect(G4.linkLabel).toBe("금리차가 마이너스였던 해의 S&P 500");
+  });
+  it("요약 4칸 = 5.142 A2 S&P 셀과 같은 값(같은 함수 spreadNegMonths)", () => {
+    const a2 = criterionRows(marketHistory, { spx: spx, ndx: buildIndexView(marketHistory, "ndx"), kospi: buildIndexView(marketHistory, "kospi") } as never, "spread").rows;
+    expect([a2[0].cells[0], a2[1].cells[0]]).toEqual([{ n: 14, k: 10 }, { n: 36, k: 28 }]);
+    const has = Array.from({ length: 50 }, (_, i) => 1976 + i).filter((y) => (spreadNegMonths(marketHistory, y, "a") ?? []).length > 0);
+    expect(has).toEqual([1978, 1979, 1980, 1981, 1982, 1989, 1990, 1998, 2000, 2006, 2007, 2022, 2023, 2024]);
+    expect(r.years.map((y) => y.y)).toEqual(has);
+  });
+  it("해별 14행: 달·그해·다음 해(마지막 해 다음 해 `—`) = 재계산, 1990·1998은 1개월", () => {
+    const tb = html.slice(html.indexOf('data-testid="g4-year-table"'), html.indexOf("</table>", html.indexOf('data-testid="g4-year-table"')));
+    expect(tb.match(/<th scope="row"/g)).toHaveLength(14);
+    expect(tb.match(/<th scope="col"/g)).toHaveLength(4);
+    r.years.forEach((y) => {
+      expect(tb).toContain(`>${monthsLabel(y.months)}<`);
+      expect(y.ret).toBe(spx.ret[y.y - spx.start]);
+      expect(tb).toContain(fmtPct(y.ret as number));
+    });
+    expect(r.years.find((y) => y.y === 1990)!.months).toEqual([3]);
+    expect(r.years.find((y) => y.y === 1998)!.months).toEqual([6]);
+    expect(r.years.find((y) => y.y === 2024)!.next).toBe(spx.ret[2025 - spx.start]);
+  });
+  it("요약 표: 두 행 같은 굵기·색·배경(강조 0), `n해 중 k해`만, 비율 % 0, 머리 정본", () => {
+    const tb = html.slice(html.indexOf('data-testid="g4-summary-table"'), html.indexOf("</table>", html.indexOf('data-testid="g4-summary-table"')));
+    for (const h of ["구분", "그해 오른 해", "다음 해 오른 해"]) expect(tb).toContain(h);
+    expect(tb.match(/<th scope="col"/g)).toHaveLength(3);
+    const cells = [...tb.matchAll(/<td class="([^"]*)">/g)].map((m) => m[1]);
+    expect(cells).toHaveLength(4);
+    expect(new Set(cells).size).toBe(1);
+    const rowHeads = [...tb.matchAll(/<th scope="row" class="([^"]*)">/g)].map((m) => m[1]);
+    expect(new Set(rowHeads).size).toBe(1);
+    expect(tb.replace(/<[^>]*>/g, " ")).not.toMatch(/%/);
+    expect(tb.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ")).toMatch(/14해 중 10해.*14해 중 10해.*36해 중 28해.*35해 중 27해/);
+  });
+  it("정의·각주 정본 글자 일치, 지수 수준값 SSR 0", () => {
+    expect(t).toContain(`${TERMS.spread.def} ${TERMS.spreadNeg.def} ${TERMS.yearEnd.def}`);
+    expect(t).toContain("금리차가 마이너스인 해가 이어지면, 앞 해의 다음 해 값과 뒤 해의 그해 값이 같아요. 해마다 따로 센 값이 아니에요.");
+    expect(t).toContain(CALC_PAST);
+    for (const w of ["CC BY-SA 4.0", "상표", "제휴 관계가 아니에요", "투자 권유가 아니에요"]) expect(t, w).toContain(w);
+    for (const level of ["6,846", "6846", "5,882", "903", "25,000"]) expect(html).not.toContain(level);
+  });
+  it("G4 본문 금지 어휘 0(제목·설명·요약·정의·표·각주만, 공통 고지·관련 글 줄 제외)", () => {
+    const main = html.slice(html.indexOf('data-testid="guide-title"'), html.indexOf('data-variant="guide"'));
+    const body = [G4.title, G4.summary, G4.description, G4.linkLabel, main.replace(/<[^>]*>/g, " ")].join(" ");
+    const body2 = body.replace(GUIDE_TABLE_DISCLAIMER_TEXT, "");
+    for (const w of ["신호", "전조", "경고", "예측", "앞두고", "역전", "침체", "경기", "선행", "미리", "뒤따", "이어졌", "보다 컸", "보다 많", "앞섰", "나았", "상관", "전망", "때문", "덕분", "영향으로", "여파", "함께", "확률", "비율", "하세요", "추천"]) expect(body2, w).not.toContain(w);
+    expect(body2).not.toMatch(/\d+해 중 \d+%/);
+  });
+  it("GA 화면 제목·기본 지수 S&P 500·첫 화면 가이드 링크 4개", () => {
+    expect(featureTitleOf("page_view", {}, "guide:yield-spread-years")).toBe("가이드·금리차");
+    expect(screenPath("guide:yield-spread-years")).toBe("/v/guide/yield-spread-years");
+    expect(html).toContain('data-variant="guide"');
+    expect(guideMetadata("yield-spread-years").alternates?.canonical).toBe(`${WWW}/guide/yield-spread-years`);
+    expect(readFileSync(join(__dirname, "../../(main)/_components/layout/onboarding/root-guide-links.tsx"), "utf8")).toContain('const ORDER: GuideSlug[] = ["year-end", "net-worth", "stock-ratio", "market-history"];');
   });
 });
