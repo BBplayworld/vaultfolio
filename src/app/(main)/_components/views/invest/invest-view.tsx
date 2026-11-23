@@ -143,7 +143,7 @@ export interface InvestViewProps {
   ratioLink?: boolean;
 }
 
-type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table" | "invest_recession";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
@@ -366,7 +366,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
       <div ref={selectorRef} data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
-      {threeViews && <ThreeView data={marketHistory} views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} a2Go={a2Go} onBasis={() => once("invest_phase_table")} onPattern={toPattern} />}
+      {threeViews && <ThreeView data={marketHistory} views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} a2Go={a2Go} onBasis={() => once("invest_phase_table")} onPattern={toPattern} onRecession={() => once("invest_recession")} />}
       {!three && !wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
       {!three && wide && (
         <>

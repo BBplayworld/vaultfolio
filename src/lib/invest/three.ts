@@ -1,10 +1,10 @@
 // 투자 탭 `세 지수` 보기(5.141 #270·#271) 순수 계산. 데이터는 이미 만든 IndexView 3개만 쓴다(저장·전송 0).
 // A1: 같은 해 세 지수의 오른 해/내린 해 5분류(배타, 합 = 공통 해 수). A5: 연대별 요약(기간 카드와 같은 periodResult 재사용).
-import { INDEX_KEYS, INDEX_META, blsYear, classifyDelta, rateDelta, type IndexView } from "./calc";
+import { INDEX_KEYS, INDEX_META, blsYear, classifyDelta, rateDelta, recessionLabel, type IndexView } from "./calc";
 import { spreadNegMonths } from "./pattern";
 import { periodResult } from "./period";
 import { MINUS, fmtPct } from "./text";
-import type { IndexKey, MarketHistoryData } from "./types";
+import type { IndexKey, MarketHistoryData, Recession } from "./types";
 
 export type ThreeViews = Record<IndexKey, IndexView>;
 const list = (v: ThreeViews) => INDEX_KEYS.map((k) => v[k]);
@@ -181,4 +181,16 @@ export function criterionRows(d: MarketHistoryData, v: ThreeViews, basis: A2Basi
     ranges,
     totals: vs.map((_, i) => defs.reduce((a, _q, j) => a + counts[j][i].n, 0)),
   };
+}
+
+// ---- 5.142 A3 경기침체 앞뒤 연말 등락(#276) ----
+export interface A3Cell { year: number; ret: number | null }
+export interface A3Row { label: string; cells: [A3Cell, A3Cell, A3Cell] }
+/** 침체 구간마다 전해(시작 해−1)·시작 해·끝난 다음 해(저점 달이 든 해+1)의 연간 등락. 지수 자료 밖(첫 해 이전·마지막 해 뒤)은 null */
+export function recessionAround(x: IndexView, rec: Recession[]): A3Row[] {
+  const cell = (year: number): A3Cell => ({ year, ret: year >= x.start + 1 && year <= x.last ? (x.ret[year - x.start] ?? null) : null });
+  return rec.map((r) => {
+    const sy = +r.s.slice(0, 4), ey = +r.e.slice(0, 4);
+    return { label: recessionLabel(r), cells: [cell(sy - 1), cell(sy), cell(ey + 1)] };
+  });
 }

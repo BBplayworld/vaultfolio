@@ -5,8 +5,8 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
-import { A1_ROWS, A2_BASES, DECADE_METRICS, a1RowOf, classifyYears, criterionRows, decadeLabel, decadeRows, decadeSign, decadeText, sameYearRets, spreadFirstMonth, type A2Basis, type DecadeMetric, type ThreeViews } from "@/lib/invest/three";
-import { A2_TEXT, CALC_PAST, THREE_TEXT, fmtPct } from "@/lib/invest/text";
+import { A1_ROWS, A2_BASES, DECADE_METRICS, a1RowOf, classifyYears, criterionRows, decadeLabel, decadeRows, decadeSign, decadeText, recessionAround, sameYearRets, spreadFirstMonth, type A2Basis, type DecadeMetric, type ThreeViews } from "@/lib/invest/three";
+import { A2_TEXT, A3_TEXT, CALC_PAST, THREE_TEXT, fmtPct } from "@/lib/invest/text";
 import { INDEX_META } from "@/lib/invest/calc";
 import type { MarketHistoryData } from "@/lib/invest/types";
 import { getProfitLossColor } from "@/config/theme";
@@ -202,13 +202,63 @@ export function ThreeA2({ data, views, go = 0, onBasis, onPattern }: { data: Mar
   );
 }
 
-/** 세 지수 보기 본문(모바일 세로 gap-3, 1280은 두 열: A1 좌·A5 우, 아래 A2·A3 전폭). 순서: A1 → A2(펼침) → A5(펼침). 보유 상태 첫 화면(접지 844)에 A2·A5 숫자가 들어오지 않게 하는 순서 조정(5.141 게이트: 간격이 아니라 순서) */
-export function ThreeView({ data, views, yr, onYear, onMetric, a2Go, onBasis, onPattern }: { data: MarketHistoryData; views: ThreeViews; yr: number | null; onYear: (y: number | null) => void; onMetric?: () => void; a2Go?: number; onBasis?: () => void; onPattern: () => void }) {
+const A3_OPTIONS = (["spx", "ndx"] as const).map((k) => ({ value: k, label: INDEX_META[k].label, testId: `a3-index-${k}` }));
+
+/** A3 경기침체 앞뒤 연말 등락(5.142 #276): 기본 접힘. NBER 9구간 × 전해·시작 해·끝난 다음 해, S&P 500·나스닥100(카드 안 로컬 상태·저장 0) */
+export function ThreeA3({ data, views, onOpen }: { data: MarketHistoryData; views: ThreeViews; onOpen?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [ix, setIx] = useState<"spx" | "ndx">("spx");
+  const id = useId();
+  const rows = useMemo(() => recessionAround(views[ix], data.rec), [views, ix, data.rec]);
+  const COLS = "grid grid-cols-3 md:grid-cols-[minmax(0,1fr)_repeat(3,7.5rem)]";
+  return (
+    <section data-testid="three-a3" className={CARD}>
+      <button type="button" aria-expanded={open} aria-controls={id} data-testid="a3-button" onClick={() => { const o = !open; setOpen(o); if (o) onOpen?.(); }} className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.99]">
+        <span className="min-w-0"><span className="mb-1 block text-xs text-muted-foreground text-balance break-keep">{A3_TEXT.q}</span><span className="block text-base font-bold">{A3_TEXT.title}</span></span>
+        <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <div id={id} {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="pt-2">
+            <p className="mb-1.5 text-xs text-muted-foreground text-pretty break-keep">{A3_TEXT.pick}</p>
+            <InlineSelector fullWidth tight value={ix} onChange={setIx} options={A3_OPTIONS} ariaLabel={A3_TEXT.pickLabel} />
+            <div role="table" aria-label={A3_TEXT.title} data-testid="a3-table" className="mt-1">
+              <div role="row" data-testid="a3-head" className={`${COLS} items-end pt-2`}>
+                <span className="hidden text-xs font-semibold md:block">{A3_TEXT.head[0]}</span>
+                {A3_TEXT.head.slice(1).map((h) => <span key={h} role="columnheader" className="min-h-10 text-right text-xs font-semibold break-keep">{h}</span>)}
+              </div>
+              {rows.map((r, j) => (
+                <div key={r.label} role="row" data-testid={`a3-row-${j}`} className={`${COLS} items-start gap-y-0.5 border-t border-border/60 py-2 md:min-h-11`}>
+                  <span role="rowheader" className="col-span-3 text-sm font-medium text-pretty break-keep md:col-span-1">{r.label}</span>
+                  {r.cells.map((c, i) => (
+                    <span key={i} role="cell" aria-label={c.ret == null ? `${A3_TEXT.head[i + 1]} —` : `${A3_TEXT.head[i + 1]} ${fmtPct(c.ret, 1)} ${c.year}년`} className="min-h-9 text-right tabular-nums">
+                      {c.ret == null ? <span className="text-muted-foreground">—</span> : (
+                        <>
+                          <span className={`block text-sm font-bold md:inline ${getProfitLossColor(c.ret)}`}>{fmtPct(c.ret, 1)}</span>{" "}
+                          <small className="block text-xs text-muted-foreground md:ml-1 md:inline">{c.year}년</small>
+                        </>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <p data-testid="a3-def" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{A3_TEXT.def}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** 세 지수 보기 본문(모바일 세로 gap-3, 1280은 두 열: A1 좌·A5 우, 아래 A2·A3 전폭). 순서: A1 → A3(접힘) → A2(펼침) → A5(펼침). 보유 상태 첫 화면(접지 844)에 A2·A5 숫자가 들어오지 않게 하는 순서 조정(5.141 게이트: 간격이 아니라 순서) */
+export function ThreeView({ data, views, yr, onYear, onMetric, a2Go, onBasis, onPattern, onRecession }: { data: MarketHistoryData; views: ThreeViews; yr: number | null; onYear: (y: number | null) => void; onMetric?: () => void; a2Go?: number; onBasis?: () => void; onPattern: () => void; onRecession?: () => void }) {
   // 1280(두 열)에서는 A1 좌·A5 우를 같은 줄에 두고(5.141 배치 유지) 나머지는 DOM 순서대로 전폭으로 쌓는다
   const rowA = "xl:row-start-1", rowB = "xl:row-start-2", rowC = "xl:row-start-3";
   return (
     <div data-testid="invest-three" className="flex min-w-0 flex-col gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150 xl:grid xl:grid-cols-[400px_minmax(0,1fr)] xl:items-start xl:gap-4">
       <div className={`min-w-0 xl:col-start-1 ${rowA}`}><ThreeA1 views={views} yr={yr} onYear={onYear} /></div>
+      <div className={`min-w-0 xl:col-span-2 ${rowB}`}><ThreeA3 data={data} views={views} onOpen={onRecession} /></div>
       <div className={`min-w-0 xl:col-span-2 ${rowC}`}><ThreeA2 data={data} views={views} go={a2Go} onBasis={onBasis} onPattern={onPattern} /></div>
       <div className={`min-w-0 xl:col-start-2 ${rowA}`}><ThreeA5 views={views} onMetric={onMetric} /></div>
     </div>
