@@ -612,6 +612,7 @@ describe("4.88 홍보 도착 퍼널 page_title·체험·결산 캘린더 (C90)",
     };
     expect(hits("ratio_preview")).toEqual(["app/(main)/_components/ratio/ratio-handoff-host.tsx", "app/ratio/ratio-preview.tsx"]);
     expect(hits("demo")).toEqual(["app/(main)/_components/layout/onboarding/welcome-guide.tsx", "app/guide/guide-actions.tsx"]);
+    expect(hits("guide_move")).toEqual(["app/guide/guide-actions.tsx"]);
     expect(hits("settlement_ics")).toEqual(["app/(main)/_components/views/activity/settlement-view.tsx"]);
   });
 });

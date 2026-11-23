@@ -1,0 +1,94 @@
+year,id,linked_id,name,date_display,category,region,fact,source_urls,rule,status,order_month
+1962,Y1962-1,,주가 급락(1962),1962년 5월,시장 급락,미국,5월 말 미국 주식시장이 크게 떨어졌어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19620619.pdf,B,확정,5
+1962,Y1962-2,,쿠바 위기,1962년 10월,전쟁·지정학,글로벌,쿠바의 공격용 무기 배치를 둘러싼 위기가 있었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19621023.pdf,B,확정,10
+1964,Y1964-1,,동남아 군사 충돌,1964년 8월,전쟁·지정학,글로벌,동남아시아에서 군사 충돌이 있었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19640818.pdf,B,확정,8
+1964,Y1964-2,,파운드 위기(1964),1964년 11월,금융위기,글로벌,영국이 파운드화 압력 속에 할인율을 5%에서 7%로 올렸어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19641124.pdf,B,확정,11
+1965,Y1965-1,,베트남전 확대,1965년 7월 28일,전쟁·지정학,미국,미국 대통령이 베트남 군사 활동 확대 계획을 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19650810.pdf,B,확정,7
+1966,Y1966-1,,북베트남 폭격 재개,1966년 1~2월,전쟁·지정학,미국,북베트남 폭격이 다시 시작됐어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19660208.pdf,B,확정,2
+1966,Y1966-2,,주택금융 경색,1966년 5~7월,금융위기,미국,주택담보대출 시장이 큰 압박을 받았어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19660726.pdf,B,확정,7
+1967,Y1967-1,,중동 전쟁(1967),1967년 6월,전쟁·지정학,글로벌,6월 초 중동에서 전쟁이 벌어졌어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19670620.pdf,B,확정,6
+1967,Y1967-2,,파운드 평가절하,1967년 11월 18일,금리·통화 정책,글로벌,영국이 파운드화의 공식 가치를 내렸어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19671212.pdf,B,확정,11
+1968,Y1968-1,,국제수지 대책,1968년 1월 1일,금리·통화 정책,미국,미국 대통령이 국제수지 개선 계획을 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19680109.pdf,B,확정,1
+1968,Y1968-2,,금 투기 위기,1968년 3월 14일,금융위기,글로벌,런던 금시장에 투기가 몰렸고 영국이 시장을 임시로 닫았어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19680314.pdf,B,확정,3
+1969,Y1969-1,,프랑 평가절하,1969년 8월 8일,금리·통화 정책,글로벌,프랑스가 프랑화의 가치를 내린다고 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19690909.pdf,B,확정,8
+1969,Y1969-2,,마르크 평가절상,1969년 10월 24일,금리·통화 정책,글로벌,독일이 마르크화 공식 가치를 9.3% 올린다고 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19691028.pdf,B,확정,10
+1970,Y1970-1,,주가 급락(1970),1970년 4~5월,시장 급락,미국,4월 초부터 미국 주가가 크게 계속 내렸어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19700526.pdf,B,확정,5
+1970,Y1970-2,,펜센트럴 지급불능,1970년 6월,금융위기,미국,철도회사 펜센트럴이 지급불능을 밝혔고 기업어음을 못 갚았어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19700623.pdf ; https://www.federalreserve.gov/monetarypolicy/files/fomcmod19700623.pdf,B,확정,6
+1971,Y-E01,E01,닉슨 쇼크,1971년 8월 15일,금리·통화 정책,미국,미국 대통령이 물가·임금 동결과 달러의 금 태환 정지를 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19710824.pdf,A,확정,8
+1972,Y1972-1,,파운드 변동환율,1972년 6월 23일,금리·통화 정책,글로벌,영국이 파운드화 환율을 시장에 맡기기로 했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19720718.pdf,B,확정,6
+1973,Y-E02,E02,1차 오일쇼크,1973년 10월,에너지,글로벌,아랍 산유국이 미국으로 가는 원유 수출 금지를 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19731120.pdf,A,확정,10
+1974,Y1974-1,E02,원유 금수 해제,1974년 3월,에너지,글로벌,아랍 산유국의 대미 원유 수출 금지가 끝났어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19740319.pdf,A2,확정,3
+1975,Y1975-1,,뉴욕시 재정위기,1975년 8~9월,금융위기,미국,뉴욕시가 재정 위기를 겪었고 9월 9일 주 정부 지원책이 제정됐어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19750916.pdf,B,확정,9
+1976,Y1976-1,,프랑 공동변동 이탈,1976년 3월 15일,금리·통화 정책,글로벌,프랑과 유럽 통화 사이 고정 변동폭 유지가 멈췄어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19760316.pdf,B,확정,3
+1976,Y1976-2,,멕시코 페소 절하,1976년 8월 31일,금리·통화 정책,글로벌,멕시코가 페소화의 가치를 내렸어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19760921.pdf,B,확정,8
+1977,Y1977-1,,천연가스 부족,1977년 1월,에너지,미국,1월 한파 속에 산업용 천연가스가 모자랐어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19770215.pdf,B,확정,1
+1978,Y1978-1,,달러 방어 대책,1978년 11월 1일,금리·통화 정책,미국,미국 정부가 외환시장 달러 대책을 시행했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19781121.pdf,B,확정,11
+1978,Y1978-2,,OPEC 유가 인상,1978년 12월 17일,에너지,글로벌,OPEC이 예상보다 큰 이듬해 유가 인상을 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19790206.pdf,B,확정,12
+1979,Y-E03,E03,2차 오일쇼크,1979년 6월,에너지,글로벌,6월 말 OPEC이 원유 가격을 예상보다 크게 올렸어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19790711.pdf,A,확정,6
+1979,Y-E04,E04,볼커 긴축,1979년 10월 6일,금리·통화 정책,미국,연준 FOMC가 회의를 열어 통화정책 운용 방식을 바꿨어요.,https://www.federalreserve.gov/monetarypolicy/files/FOMC19791006meeting.pdf,A,확정,10
+1980,Y1980-1,,물가 대책(1980),1980년 3월 14일,금리·통화 정책,미국,미국 대통령이 재정·에너지·신용 대책을 묶어 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19800318.pdf,B,확정,3
+1981,Y1981-1,,유가 통제 해제,1981년 1~2월,에너지,미국,미국의 원유 가격 통제가 풀렸어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19810331.pdf,B,확정,2
+1982,Y1982-1,,드라이스데일 사태,1982년 5월,금융위기,미국,국채 딜러 드라이스데일과 채권 금융사들에 문제가 생겼어요.,https://www.federalreserve.gov/monetarypolicy/files/FOMC19820518meeting.pdf,B,확정,5
+1982,Y1982-2,,멕시코 외채 위기,1982년 8월,금융위기,글로벌,멕시코가 대외 자금 조달에 큰 어려움을 겪었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19821005.pdf ; https://www.federalreserve.gov/monetarypolicy/files/fomcropa19820824.pdf,B,확정,8
+1984,Y1984-1,,페르시아만 분쟁,1984년 4~5월,전쟁·지정학,글로벌,페르시아만 지역에서 무력 충돌이 있었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19840522.pdf,B,확정,5
+1984,Y1984-2,,콘티넨털 일리노이,1984년 5월,금융위기,미국,미국 당국이 콘티넨털 일리노이 은행 사태에 대응했어요.,https://www.federalreserve.gov/monetarypolicy/files/FOMC19840522meeting.pdf,B,확정,5
+1985,Y-E05,E05,플라자 합의,1985년 9월 22일,금리·통화 정책,글로벌,G5 재무장관·총재가 비달러 통화 절상이 바람직하다고 발표했어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19851001.pdf,A,확정,9
+1986,Y1986-1,,유가 급락(1986),1986년 1~2월,에너지,글로벌,연초 원유 가격이 크게 내렸어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19860401.pdf,B,확정,2
+1987,Y-E06,E06,블랙먼데이,1987년 10월 19일,시장 급락,미국,미국 주식시장이 크게 떨어졌어요.,https://www.federalreserve.gov/monetarypolicy/files/FOMC19871103meeting.pdf,A,확정,10
+1989,Y1989-1,,저축대부조합 정리,1989년 8~10월,금융위기,미국,정리신탁공사가 부실 저축대부조합에 자금을 넣었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19891003.pdf,B,확정,10
+1989,Y1989-2,,주가 급락(1989),1989년 10월 13일,시장 급락,미국,10월 13일 미국 주가가 가파르게 떨어졌어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19891114.pdf,B,확정,10
+1990,Y-E08,E08,걸프전,1990년 8월,전쟁·지정학,글로벌,이라크가 쿠웨이트를 침공했어요.,https://www.federalreserve.gov/monetarypolicy/files/FOMC19900821meeting.pdf,A,확정,8
+1991,Y1991-1,E08,걸프전(1991),1991년 1월,전쟁·지정학,글로벌,1월에 걸프전이 시작됐어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19910206.pdf,A2,확정,1
+1991,Y1991-2,,소련 쿠데타 시도,1991년 8월,전쟁·지정학,글로벌,소련에서 쿠데타 시도가 있었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19910820.pdf,B,확정,8
+1992,Y1992-1,,유럽 통화 위기,1992년 9월,금융위기,글로벌,9월 중순 유럽 외환시장에 큰 혼란이 있었어요.,https://www.federalreserve.gov/monetarypolicy/files/fomcropa19921006.pdf,B,확정,9
+1993,Y1993-1,,유럽 환율 변동폭 확대,1993년 7~8월,금리·통화 정책,글로벌,유럽 환율조정장치가 통화 변동 허용 폭을 넓혔어요.,https://www.federalreserve.gov/fomc/MINUTES/1993/19930817min.htm,B,확정,8
+1994,Y-E10,E10,멕시코 페소 위기,1994년 12월,금융위기,글로벌,1995년 1월 미국이 멕시코에 최대 200억 달러 지원을 밝혔어요.,https://www.federalreserve.gov/monetarypolicy/files/FOMC19950201meeting.pdf,A,확정,1
+1994,Y-E09,E09,연준 인상(1994),1994년 2월 4일,금리·통화 정책,미국,연준이 1995년 2월까지 7번 올려 목표가 3%에서 6%가 됐어요.,https://www.federalreserve.gov/monetarypolicy/openmarket_archive.htm,A,확정,2
+1995,Y1995-1,E10,멕시코 지원 발표,1995년 1월 31일,금융위기,글로벌,미국 대통령이 멕시코 금융 안정 지원 계획을 발표했어요.,https://www.federalreserve.gov/fomc/minutes/19960130.htm,A2,확정,1
+1996,Y1996-1,,연준 의장 연설,1996년 12월 5일,금리·통화 정책,미국,연준 의장이 자산 가격 변동을 통화정책에서 어떻게 볼지 연설했어요.,https://www.federalreserve.gov/boarddocs/speeches/1996/19961205.htm,B,확정,12
+1997,Y-E11,E11,아시아 외환위기,1997년 11월,금융위기,글로벌,동남아에서 시작된 금융 불안이 그해 말 한국으로 번졌어요.,https://www.federalreserve.gov/boarddocs/testimony/1997/19971113.htm ; https://www.federalreserve.gov/fomc/minutes/19971216.htm,A,확정,11
+1997,Y1997-K1,,IMF 신용 승인,1997년 12월 4일,금융위기,한국,IMF가 한국에 3년 스탠드바이 신용 SDR 155억을 승인했어요.,https://www.imf.org/en/News/Articles/2015/09/14/01/49/pr9755,B,확정,12
+1998,Y-E12,E12,러시아·LTCM 위기,1998년 8월,금융위기,글로벌,"러시아가 채무 지급을 유예했고, 뉴욕 연준이 LTCM 재편을 도왔어요.",https://www.federalreserve.gov/fomc/minutes/19980929.htm ; https://www.federalreserve.gov/boarddocs/testimony/1998/19981001.htm,A,확정,8
+1999,Y1999-1,,유로화 도입,1999년 1월 1일,금리·통화 정책,글로벌,유럽 단일 통화인 유로가 도입됐어요.,https://www.federalreserve.gov/fomc/minutes/19990202.htm ; https://www.federalreserve.gov/fomc/minutes/19981222.htm,B,확정,1
+2000,Y-E13,E13,닷컴 버블 붕괴,2000~2002년,기술 거품,미국,많은 인터넷 기업이 무너지고 첨단기술 업종이 어려움을 겪었어요.,https://www.federalreserve.gov/boarddocs/hh/2002/july/testimony.htm,A,확정,3
+2001,Y-E14,E14,9·11 테러,2001년 9월 11일,전쟁·지정학,미국,같은 날 연준이 정상 운영 중이고 재할인 창구가 열려 있다고 했어요.,https://www.federalreserve.gov/boarddocs/press/general/2001/20010911/,A,확정,9
+2002,Y2002-1,,아르헨티나 페소 하락,2001년 12월~2002년 1월,금융위기,글로벌,아르헨티나 페소 가치가 내려갔어요.,https://www.federalreserve.gov/fomc/minutes/20020130.htm,B,확정,12
+2003,Y-E17,E17,사스,2003년 3~4월,팬데믹,글로벌,아시아의 사스 확산이 연준 4월 베이지북에 기록됐어요.,https://www.federalreserve.gov/fomc/beigebook/2003/20030423/default.htm,A,확정,3
+2003,Y-E18,E18,이라크 전쟁,2003년 3월,전쟁·지정학,글로벌,미국과 이라크의 전쟁이 시작됐어요.,https://www.federalreserve.gov/fomc/beigebook/2003/20030423/default.htm,A,확정,3
+2004,Y-E19,E19,연준 인상(2004),2004년 6월 30일,금리·통화 정책,미국,연준이 2006년 6월까지 17번 연속 올려 목표가 5.25%가 됐어요.,https://www.federalreserve.gov/boarddocs/press/monetary/2004/20040630/default.htm ; https://www.federalreserve.gov/monetarypolicy/openmarket.htm,A,확정,6
+2004,Y2004-1,,고유가(2004),2004년 9~11월,에너지,글로벌,원유 가격이 올랐고 멕시코만 석유 시설이 허리케인 피해를 입었어요.,https://www.federalreserve.gov/fomc/minutes/20041110.htm,B,확정,11
+2005,Y2005-1,,위안화 절상(2005),2005년 여름,금리·통화 정책,글로벌,중국 인민은행이 환율 제도를 바꾸고 위안화를 2.1% 올렸어요.,https://www.federalreserve.gov/fomc/minutes/20050809.htm,B,확정,7
+2007,Y2007-1,,서브프라임 사태,2007년 8월,금융위기,미국,은행 간 자금시장이 불안해졌고 연준이 유동성을 공급했어요.,https://www.federalreserve.gov/fomc/minutes/20070918.htm,B,확정,8
+2008,Y-E20,E20,글로벌 금융위기,2008년 9월,금융위기,미국,리먼 브라더스가 파산 보호를 신청했어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20080916.htm,A,확정,9
+2008,Y-R01,R01,연준 자산 매입 시작,2008년 11월 25일,금리·통화 정책,미국,연준이 주택저당증권 등을 사들이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20081125b.htm,A,확정,11
+2009,Y2009-1,,은행 스트레스 테스트,2009년 5월 7일,금융위기,미국,연준 등이 대형 은행지주 19곳의 자본 평가 결과를 발표했어요.,https://www.federalreserve.gov/newsevents/pressreleases/bcreg20090507a.htm,B,확정,5
+2010,Y-E21,E21,유럽 재정위기,2010년 5월,금융위기,글로벌,EU·IMF가 그리스 지원안을 확정했고 연준은 달러 스와프를 재개했어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20100623.htm ; https://www.federalreserve.gov/newsevents/pressreleases/monetary20100509a.htm,A,확정,5
+2010,Y-R02,R02,연준 국채 매입(2010),2010년 11월 3일,금리·통화 정책,미국,연준이 장기 국채를 더 사들이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20101103a.htm,A,확정,11
+2011,Y-E22,E22,미국 신용등급 강등,2011년 8월 5일,금융위기,미국,S&P가 미국 장기 신용등급을 AAA에서 AA+로 낮췄어요.,https://www.federalreserve.gov/newsevents/pressreleases/bcreg20110805a.htm,A,확정,8
+2012,Y-R03,R03,연준 매입 재개(2012),2012년 9월 13일,금리·통화 정책,미국,연준이 주택저당증권을 매달 사들이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20120913a.htm,A,확정,9
+2012,Y2012-1,,ECB 국채 매입 계획,2012년 8~9월,금리·통화 정책,글로벌,유럽중앙은행이 국채를 더 사들이는 계획을 내놨어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20120913.htm,B,확정,9
+2013,Y2013-1,,키프로스 구제금융,2013년 1~3월,금융위기,글로벌,키프로스가 유로존·IMF 지원 과정에서 예금 과세안을 내놨어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20130320.htm,B,확정,3
+2013,Y-E23,E23,테이퍼 탠트럼,2013년 5월 22일,금리·통화 정책,미국,연준 의장이 의회에서 자산매입 속도를 늘리거나 줄일 수 있다고 말했어요.,https://www.federalreserve.gov/newsevents/testimony/bernanke20130522a.htm,A,확정,5
+2014,Y-R04,R04,연준 매입 종료(2014),2014년 10월 29일,금리·통화 정책,미국,연준이 10월로 자산 매입을 끝내기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20141029a.htm,A,확정,10
+2014,Y2014-1,,유가 하락(2014),2014년 10~12월,에너지,글로벌,세계 원유 가격이 계속 내렸어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20141217.htm,B,확정,12
+2015,Y-E24,E24,중국 위안화 절하,2015년 여름,금리·통화 정책,글로벌,"위안화 가치가 내려갔고, 연준은 9월 금리를 그대로 뒀어요.",https://www.federalreserve.gov/monetarypolicy/fomcminutes20150917.htm ; https://www.federalreserve.gov/newsevents/pressreleases/monetary20150917a.htm,A,확정,9
+2015,Y-E25,E25,연준 첫 인상,2015년 12월 16일,금리·통화 정책,미국,연준이 2006년 뒤 처음으로 목표범위를 0.25~0.5%로 올렸어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20151216a.htm ; https://www.federalreserve.gov/monetarypolicy/openmarket.htm,A,확정,12
+2016,Y-E26,E26,브렉시트 국민투표,2016년 6월,전쟁·지정학,글로벌,영국이 EU 회원 자격을 묻는 국민투표를 치렀어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20160624a.htm,A,확정,6
+2017,Y-R05,R05,연준 보유 축소 시작(2017),2017년 9월 20일,금리·통화 정책,미국,연준이 10월에 보유 자산 정상화를 시작하기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20170920a.htm,A,확정,9
+2017,Y2017-1,,북한 긴장(2017),2017년 8~9월,전쟁·지정학,한국,북한과 관련된 지정학적 긴장이 높아졌어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20170920.htm,B,확정,9
+2018,Y-E27,E27,미중 무역분쟁,2018년 3~4월,전쟁·지정학,글로벌,미국과 중국 사이에 무역 갈등이 일었어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20180502.htm,A,확정,3
+2018,Y-E28,E28,연준 인상(2018),2018년 12월 19일,금리·통화 정책,미국,연준이 목표범위를 2.25~2.50%로 올렸어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20181219a.htm,A,확정,12
+2019,Y2019-1,E27,미중 관세(2019),2019년 5월,전쟁·지정학,글로벌,5월 초 미국이 중국산 수입품 관세 인상을 발표했어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20190619.htm,A2,확정,5
+2019,Y-E29,E29,연준 인하 전환,2019년 7월 31일,금리·통화 정책,미국,연준이 2008년 뒤 처음으로 목표범위를 2~2.25%로 내렸어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20190731a.htm ; https://www.federalreserve.gov/monetarypolicy/openmarket.htm,A,확정,7
+2019,Y-R06,R06,연준 보유 축소 종료(2019),2019년 7월 31일,금리·통화 정책,미국,연준이 8월에 보유 채권 축소를 끝내기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20190731a.htm,A,확정,7
+2020,Y-E30,E30,코로나19,2020년 3월,팬데믹,글로벌,코로나19가 미국을 포함한 여러 나라에 퍼졌어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20200315a.htm,A,확정,3
+2020,Y-R07,R07,연준 매입 재개(2020),2020년 3월 15일,금리·통화 정책,미국,연준이 국채와 주택저당증권 보유를 늘리기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20200315a.htm,A,확정,3
+2021,Y2021-1,E30,오미크론 변이,2021년 11~12월,팬데믹,글로벌,오미크론 변이가 나타났고 여러 나라가 입국을 제한했어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20211215.htm,B,확정,12
+2022,Y-R08,R08,연준 매입 종료(2022),2022년 1월 26일,금리·통화 정책,미국,연준이 3월 초에 순매입을 끝내기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20220126a.htm,A,확정,1
+2022,Y-E31,E31,러시아-우크라이나 전쟁,2022년 2월,전쟁·지정학,글로벌,러시아가 우크라이나를 침공했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20220316a.htm,A,확정,2
+2022,Y-R09,R09,연준 보유 축소 시작(2022),2022년 5월 4일,금리·통화 정책,미국,연준이 6월 1일부터 보유 채권을 줄이기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20220504a.htm,A,확정,5
+2023,Y-E32,E32,미국 지역은행 위기,2023년 3월,금융위기,미국,실리콘밸리은행·시그니처은행이 정리되고 5월 퍼스트리퍼블릭이 인수됐어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20230312a.htm ; https://www.federalreserve.gov/monetarypolicy/fomcminutes20230503.htm,A,확정,3
+2024,Y-E33,E33,엔 캐리 청산,2024년 8월,시장 급락,글로벌,8월 초 미국·해외 주가지수와 달러-엔 환율이 크게 움직였어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20240918.htm,A,확정,8
+2025,Y-E34,E34,미국 상호관세 발표,2025년 4월 2일,전쟁·지정학,미국,"미국이 예상보다 높은 관세를 발표했고, 뒤에 일부를 유예했어요.",https://www.federalreserve.gov/monetarypolicy/fomcminutes20250507.htm,A,확정,4
+2025,Y-R10,R10,연준 보유 축소 종료(2025),2025년 10월 29일,금리·통화 정책,미국,연준이 12월 1일에 보유 채권 축소를 끝내기로 했어요.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20251029a.htm,A,확정,10
+2026,Y2026-1,,중동 분쟁(2026),2026년 초,전쟁·지정학,글로벌,중동에서 분쟁이 시작됐고 원유 선물 가격이 크게 올랐어요.,https://www.federalreserve.gov/monetarypolicy/fomcminutes20260318.htm,B,진행 중,3

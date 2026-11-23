@@ -6,10 +6,14 @@ import { APP_CONFIG, OG_IMAGE } from "@/config/app";
 import { MAIN_PALETTE } from "@/config/theme";
 
 import { GuideArticle } from "./_components/guide-article";
+import { MarketHistoryArticle } from "./_components/market-history-article";
 import { GuideScreenTracker } from "./guide-actions";
 import { ChevronRight } from "lucide-react";
 
 import { GUIDE_BRAND_LINE, GUIDES, GUIDE_SLUGS, type GuideSlug } from "./guide-copy";
+
+/** 본문이 투자 탭 컴포넌트(MarketHistoryArticle)인 편 */
+const MARKET_ARTICLE_SLUGS: GuideSlug[] = ["market-history", "index-returns-by-year", "rate-hike-years", "recession-years"];
 
 /** 가이드 metadata — 자식 openGraph/twitter가 부모를 통째로 대체하므로 images까지 재선언한다(/ratio와 동일 규칙) */
 export function guideMetadata(slug: GuideSlug): Metadata {
@@ -45,7 +49,7 @@ export function GuideShell({ slug }: { slug: GuideSlug }) {
           <span className="text-sm font-semibold text-foreground">{APP_CONFIG.name}</span>
         </header>
         <GuideScreenTracker slug={slug} />
-        <GuideArticle doc={doc} />
+        {MARKET_ARTICLE_SLUGS.includes(slug) ? <MarketHistoryArticle doc={doc} /> : <GuideArticle doc={doc} />}
         <nav aria-labelledby="guide-other-title" data-testid="guide-other-list" className="flex flex-col">
           <h2 id="guide-other-title" className="mb-1 text-sm font-semibold">
             다른 가이드

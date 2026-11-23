@@ -18,10 +18,11 @@ import { track } from "@/lib/analytics/ga";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { useStockPageStore } from "@/stores/stock-page-store";
 
-type HomeTop = "detail" | "activity";
+type HomeTop = "detail" | "activity" | "invest";
 const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
   { value: "detail", label: "상세", dataTutorial: "tutorial-detail-tab" },
   { value: "activity", label: "성과", dataTutorial: "tutorial-activity-tab" },
+  { value: "invest", label: "투자" },
 ];
 
 // 상단 아이콘 버튼 공용 크기 (한 단계 ↑) — menu-styles.ts의 HEADER_ICON_BTN
@@ -120,13 +121,16 @@ export function TopBar() {
   const onHomeTabChange = (tab: HomeTop) => {
     if (tab === "detail") navigate({ type: "detail", tab: "hub" });
     if (tab === "activity") navigate({ type: "activity", tab: "hub" });
+    if (tab === "invest") navigate({ type: "invest" });
   };
 
   // 웰컴가이드 페이지에선 헤더 영역 자체를 렌더하지 않아 공간을 차지하지 않게 함
   if (isWelcomeGuide) return null;
 
   // 1차 허브 페이지(홈, 상세 허브, 성과 허브, 더보기)를 제외한 2단계/3단계 서브페이지는 pwa-show-header 클래스 부여
+  // 더보기(more)는 PWA 하단 칸이 아니라 홈 헤더 아이콘으로 여는 페이지라 뒤로가기 헤더가 필요하다(#263)
   const isNestedView =
+    view.type === "more" ||
     view.type === "settings" ||
     (view.type === "detail" && view.tab !== "hub") ||
     (view.type === "activity" && view.tab !== "hub");
@@ -179,9 +183,8 @@ export function TopBar() {
           {showInstall && <InstallNudge />}
         </div>
         {showShare && <ShareScreenshotButton />}
-        <div className="contents pwa-hide-actions">
-          {showMore && <MoreButton />}
-        </div>
+        {/* 더보기 아이콘은 PWA에서도 보인다(하단 칸이 투자로 바뀜, #263) */}
+        {showMore && <MoreButton />}
       </div>
     </div>
     </header>

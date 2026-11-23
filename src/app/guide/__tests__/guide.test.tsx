@@ -12,12 +12,18 @@ import { featureTitleOf, screenPath, trackScreen, trackThenNavigate, __resetGaSt
 vi.mock("@/components/logo", () => ({ Logo: () => null })); // next/font 의존 제거(node 환경)
 
 import { GUIDES, GUIDE_SLUGS, GUIDE_BRAND_LINE } from "../guide-copy";
+import { decadeCounts } from "../_components/decade-table";
 import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 import { CARD_UNTIL_DAY, FIRST_RECORD_MIN_DAYS } from "@/lib/report/settlement";
 import { GuideShell, guideMetadata } from "../guide-shell";
+import { buildIndexView } from "@/lib/invest/calc";
+import { marketHistory } from "@/lib/invest/market-history";
+import { hikeYearRows, recessionYearRows } from "@/lib/invest/guide-tables";
 
 // 가이드(#77) 정적 규칙 — node 환경, 서버 렌더 마크업·문구 상수·메타 대상
 const WWW = "https://www.secretasset.xyz";
+// 본문이 글 3편(단계·fact 구조)인 가이드. market-history(#263)는 본문이 투자 탭 컴포넌트라 따로 검사한다
+const ARTICLE_SLUGS = GUIDE_SLUGS.filter((s) => !["market-history", "index-returns-by-year", "rate-hike-years", "recession-years"].includes(s));
 const FORBIDDEN = /[0-9]\s*(원|만|억|%)|줄이세요|늘리세요|리밸런싱|사세요|파세요|추천|절대|완벽|원천|서버로 아무것도|세금|엑셀|시트|노션|절세/;
 
 describe("정본 호스트", () => {
@@ -32,9 +38,9 @@ describe("정본 호스트", () => {
 
 describe("sitemap", () => {
   const a = sitemap();
-  it("5건, 모두 www 접두", () => {
-    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`, `${WWW}/guide/year-end`]);
-    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6, 0.6]);
+  it("9건, 모두 www 접두(market-history·index-returns-by-year·rate-hike-years·recession-years 포함)", () => {
+    expect(a.map((e) => e.url)).toEqual([WWW, `${WWW}/ratio`, `${WWW}/guide/stock-ratio`, `${WWW}/guide/net-worth`, `${WWW}/guide/year-end`, `${WWW}/guide/market-history`, `${WWW}/guide/index-returns-by-year`, `${WWW}/guide/rate-hike-years`, `${WWW}/guide/recession-years`]);
+    expect(a.map((e) => e.priority)).toEqual([1, 0.8, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6]);
   });
   it("lastModified는 호출마다 같은 고정 날짜", () => {
     vi.useFakeTimers();
@@ -43,6 +49,7 @@ describe("sitemap", () => {
     vi.useRealTimers();
     expect(b.map((e) => e.lastModified)).toEqual(a.map((e) => e.lastModified));
     expect(String(a[0].lastModified instanceof Date ? a[0].lastModified.toISOString() : "")).toContain("2026-11-21");
+    expect(String(a[5].lastModified instanceof Date ? a[5].lastModified.toISOString() : "")).toContain("2026-11-22");
   });
 });
 
@@ -65,7 +72,7 @@ describe("metadata", () => {
 });
 
 describe("JS 없는 본문", () => {
-  it.each(GUIDE_SLUGS)("%s: h1·h2·행동 링크·브랜드 문장이 HTML에 있다", (slug) => {
+  it.each(ARTICLE_SLUGS)("%s: h1·h2·행동 링크·브랜드 문장이 HTML에 있다", (slug) => {
     const doc = GUIDES[slug];
     const html = renderToStaticMarkup(<GuideShell slug={slug} />);
     expect(html.match(/<h1/g)).toHaveLength(1);
@@ -74,7 +81,7 @@ describe("JS 없는 본문", () => {
     expect(html).toContain('href="/?trial=1"');
     expect(html).toContain(GUIDE_BRAND_LINE);
     const others = GUIDE_SLUGS.filter((x) => x !== slug);
-    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(2);
+    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(GUIDE_SLUGS.length - 1);
     others.forEach((o) => expect(html).toContain(`data-testid="guide-other-link-${o}"`));
     expect(html.indexOf(`guide-other-link-${others[0]}`)).toBeLessThan(html.indexOf(`guide-other-link-${others[1]}`));
     for (const id of ["guide-page", "guide-title", "guide-summary", "guide-steps", "guide-step-1", "guide-fact-box", "guide-cta-primary", "guide-cta-secondary", "guide-other-list", "guide-brand"]) {
@@ -85,13 +92,92 @@ describe("JS 없는 본문", () => {
   });
 });
 
+describe("market-history 가이드(#263)", () => {
+  const doc = GUIDES["market-history"];
+  const html = renderToStaticMarkup(<GuideShell slug="market-history" />);
+  it("SEO 제목·설명(spec 9절)과 h1 1개, 내 자산 정리 CTA·다른 가이드", () => {
+    expect(doc.title).toBe("S&P 500·나스닥100·코스피, 크게 빠진 때와 금리 한 장으로 보기");
+    expect(guideMetadata("market-history").title).toBe(`${doc.title} — ${APP_CONFIG.name}`);
+    expect(html.match(/<h1/g)).toHaveLength(1);
+    expect(html).toContain("내 자산도 정리해 보기");
+    expect(html).toContain('data-testid="guide-cta-primary"');
+    expect(html).toContain(GUIDE_BRAND_LINE);
+    expect(html.match(/data-testid="guide-other-link-/g)).toHaveLength(GUIDE_SLUGS.length - 1);
+  });
+  it("설명의 숫자(시작 연도·건수)는 투자 데이터에서 파생한 값과 같다", () => {
+    const v = buildIndexView(marketHistory, "spx");
+    expect(doc.description).toContain(`${v.start + 1}년 이후 S&P 500이 연말 기준 15% 넘게 빠진 ${v.eps.length}번을`);
+    expect(doc.description).toBe(`${v.start + 1}년 이후 S&P 500이 연말 기준 15% 넘게 빠진 ${v.eps.length}번을 기준금리, 미국 경기침체, 같은 시기 사건과 한 장에 모았어요. 바닥까지·전고점까지 걸린 기간과 연도별 수익률도 볼 수 있어요.`);
+  });
+  it("SSR: 머리 3줄·목록 행은 있고 지수 수준값·연도별 표·다운로드·CSV 링크는 없다(AC34)", () => {
+    expect(html).toContain("1961년 이후 연말 기준 15% 넘게 빠진 때는 4번이었어요");
+    expect(html.match(/data-testid="drop-row"/g)).toHaveLength(4);
+    expect(html).not.toContain('data-testid="yearly-table"');
+    expect(html).toContain("pattern-conclusion");
+    expect(html).toContain("크게 빠지기 전 12개월에 연준 금리가 올라간 때는 자료가 있는 3번 중 1번이었어요.");
+    for (const level of ["6,846", "6846", "5,882", "903"]) expect(html).not.toContain(level);
+    expect(html).not.toMatch(/\.csv|download|datasets\//i);
+  });
+  it("기본 지수 S&P 500 고정(내 자산 판정 0): 가이드 소스에 자산 컨텍스트 import 0", () => {
+    const src = readFileSync(join(__dirname, "../_components/market-history-article.tsx"), "utf8");
+    expect(src).toContain('defaultIndex="spx"');
+    expect(src).not.toMatch(/asset-data-context|useAssetData/);
+  });
+  it("가이드 문구에 금지어(투자 탭 R1~R11) 0", () => {
+    const t = [doc.title, doc.description, doc.h1, doc.summary, doc.primary.label, doc.secondary.label, doc.linkLabel].join("\n");
+    const tt = t.replace("연도별 수익률", ""); // meta description 1회 허용(CEO R4.1)
+    for (const w of ["때문", "덕분", "로 인해", "영향으로", "촉발", "여파", "역전", "신호", "예고", "기회", "타이밍", "유리", "추천", "수익", "로그", "지금 사면", "전조", "조심", "경고", "과열", "붐", "기대", "연착륙", "반등"]) expect(tt).not.toContain(w);
+  });
+  it("공개 데이터셋 링크는 없고 앱 본문 번들 격리: guide-copy는 투자 데이터를 import하지 않는다", () => {
+    const src = readFileSync(join(__dirname, "../guide-copy.ts"), "utf8");
+    expect(src).not.toMatch(/from\s+["'][^"']*invest/);
+  });
+});
+
+describe("index-returns-by-year 가이드(5.138)", () => {
+  const doc = GUIDES["index-returns-by-year"];
+  const html = renderToStaticMarkup(<GuideShell slug="index-returns-by-year" />);
+  const mh = GUIDES["market-history"];
+  it("SEO·canonical·h1 1개·고유 표 1개(연대 × 3지수, 오른 해/전체 해)", () => {
+    expect(guideMetadata("index-returns-by-year").alternates?.canonical).toBe(`${WWW}/guide/index-returns-by-year`);
+    expect(html.match(/<h1/g)).toHaveLength(1);
+    expect(html.match(/data-testid="guide-unique-table"/g)).toHaveLength(1);
+    expect(html).toContain('<th scope="row"');
+    expect(html).toContain("<caption");
+    expect(html).toContain("내 자산도 정리해 보기");
+  });
+  it("표 값: 연대별 오른 해 수가 투자 데이터에서 파생된다(S&P 1961~69, 나스닥 60·70년대 `—`)", () => {
+    const rows = decadeCounts();
+    const v = buildIndexView(marketHistory, "spx");
+    const d60 = rows.find((r) => r.decade === 1960)!.cells[0]!;
+    let up = 0; for (let y = 1961; y <= 1969; y++) if ((v.ret[y - v.start] as number) > 0) up++;
+    expect(d60).toEqual({ up, n: 9 });
+    expect(rows.find((r) => r.decade === 1960)!.cells[1]).toBeNull();
+    expect(rows.at(-1)!.cells[0]!.n).toBe(6);
+  });
+  it("SSR에 지수 수준값 0, 요약·제목이 market-history와 겹치지 않고 금지어 0", () => {
+    for (const level of ["6,846", "6846", "5,882"]) expect(html).not.toContain(level);
+    expect(doc.summary).not.toBe(mh.summary);
+    expect(doc.title).not.toBe(mh.title);
+    const sentences = (t: string) => t.split(/[.]/).map((x) => x.trim()).filter((x) => x.length > 8);
+    const mhs = new Set(sentences(mh.summary));
+    for (const x of sentences(doc.summary)) expect(mhs.has(x), x).toBe(false);
+    const t = [doc.summary, doc.primary.label, doc.linkLabel].join("\n");
+    for (const w of ["때문", "덕분", "추천", "수익", "과열", "기대", "반등", "신호", "기회"]) expect(t).not.toContain(w);
+  });
+  it("첫 화면 가이드 링크는 4개 그대로(새 편은 루트 링크 줄에 없다)", () => {
+    const src = readFileSync(join(__dirname, "../../(main)/_components/layout/onboarding/root-guide-links.tsx"), "utf8");
+    expect(src).toContain('const ORDER: GuideSlug[] = ["year-end", "net-worth", "stock-ratio", "market-history"];');
+  });
+});
+
 describe("문구 규칙", () => {
   const local = SECURITY_COPY.find((c) => c.id === "local")!.desc;
   const text = (slug: (typeof GUIDE_SLUGS)[number]) => {
     const d = GUIDES[slug];
     return [d.title, d.description, d.h1, d.summary, ...d.steps.flatMap((s) => [s.title, s.body, s.inlineLink?.label ?? ""]), ...d.facts, d.primary.label, d.secondary.label].join("\n");
   };
-  it.each(GUIDE_SLUGS)("%s: 금지어 0·분량 800~1,500자", (slug) => {
+  it.each(ARTICLE_SLUGS)("%s: 금지어 0·분량 800~1,500자", (slug) => {
     const d = GUIDES[slug];
     expect(text(slug)).not.toMatch(FORBIDDEN);
     const body = [d.summary, ...d.steps.flatMap((s) => [s.title, s.body]), ...d.facts].join("").length;
@@ -100,7 +186,7 @@ describe("문구 규칙", () => {
   });
   it("보안 문장은 security-copy 원문과 일치", () => {
     expect(GUIDES["stock-ratio"].facts).toContain(RATIO_PREVIEW_UPLOAD_NOTICE);
-    for (const slug of GUIDE_SLUGS) expect(GUIDES[slug].facts).toContain(local);
+    for (const slug of ARTICLE_SLUGS) expect(GUIDES[slug].facts).toContain(local);
     expect(local).toBe("자산 데이터는 동기화를 켜지 않는 한 이 기기의 브라우저에만 저장돼요.");
   });
   it("year-end: 앱 상수와 같은 글자·fact 순서·보안 문장", () => {
@@ -132,8 +218,10 @@ describe("문구 규칙", () => {
     for (const x of sentences("year-end")) if (x !== local.replace(/\.$/, "") && x !== GUIDES["net-worth"].title && x !== GUIDES["year-end"].primary.label && x !== GUIDES["year-end"].secondary.label) expect(nw.has(x), x).toBe(false);
     expect(d.steps[1].inlineLink).toEqual({ label: "월말 순자산 정리하는 법", href: "/guide/net-worth" });
   });
-  it("linkLabel 3종·GUIDE_SLUGS 순서", () => {
-    expect(GUIDE_SLUGS).toEqual(["stock-ratio", "net-worth", "year-end"]);
+  it("linkLabel 4종·GUIDE_SLUGS 순서", () => {
+    expect(GUIDE_SLUGS).toEqual(["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years"]);
+    expect(GUIDES["index-returns-by-year"].linkLabel).toBe("해마다 오르내린 %, 한 격자로 보기");
+    expect(GUIDES["market-history"].linkLabel).toBe("크게 빠진 때와 금리, 한 장으로 보기");
     expect(GUIDES["year-end"].linkLabel).toBe("올해 자산 결산");
     expect(GUIDES["net-worth"].linkLabel).toBe("월말 순자산 정리");
     expect(GUIDES["stock-ratio"].linkLabel).toBe("주식 비중 한 번에 보기");
@@ -198,5 +286,68 @@ describe("JSON-LD", () => {
   it("layout head에 ld+json 1개", () => {
     const src = readFileSync(join(__dirname, "../../layout.tsx"), "utf8");
     expect(src.match(/application\/ld\+json/g)).toHaveLength(1);
+  });
+});
+
+describe("rate-hike-years·recession-years 가이드(5.139)", () => {
+  const RH = GUIDES["rate-hike-years"], RC = GUIDES["recession-years"];
+  const hRH = renderToStaticMarkup(<GuideShell slug="rate-hike-years" />);
+  const hRC = renderToStaticMarkup(<GuideShell slug="recession-years" />);
+  const hMH = renderToStaticMarkup(<GuideShell slug="market-history" />);
+  const hIR = renderToStaticMarkup(<GuideShell slug="index-returns-by-year" />);
+  const { rows: rhRows, phases } = hikeYearRows(marketHistory);
+  const { rows: rcRows, spxUpInRecession } = recessionYearRows(marketHistory);
+  it("canonical·h1 1개·고유 표 1개(th scope·caption)·고지(CC BY-SA·상표·제휴 아님·투자 권유 아님)", () => {
+    for (const [slug, h] of [["rate-hike-years", hRH], ["recession-years", hRC]] as const) {
+      expect(guideMetadata(slug).alternates?.canonical).toBe(`${WWW}/guide/${slug}`);
+      expect(h.match(/<h1/g)).toHaveLength(1);
+      expect(h.match(/data-testid="guide-unique-table"/g)).toHaveLength(1);
+      expect(h).toContain('<th scope="row"');
+      expect(h).toContain("<caption");
+      for (const w of ["CC BY-SA 4.0", "상표", "제휴 관계가 아니에요", "투자 권유가 아니에요"]) expect(h, w).toContain(w);
+    }
+  });
+  it("2편: 정의 문장이 요약 첫 문장, 국면 6개·걸친 해 14개·9/14가 데이터와 같고 두 행의 해 수 합 = 전체 해 수", () => {
+    expect(RH.summary.startsWith("인상 국면이 걸친 해는")).toBe(true);
+    expect(phases.map((p) => `${p.from}~${p.to}`)).toEqual(["1994-02~1995-02", "1997-03~1997-03", "1999-06~2000-05", "2004-06~2006-06", "2015-12~2018-12", "2022-03~2023-07"]);
+    expect(rhRows[0].years).toHaveLength(14);
+    expect(rhRows[0].years.length + rhRows[1].years.length).toBe(marketHistory.last - 1990 + 1);
+    expect(new Set([...rhRows[0].years, ...rhRows[1].years]).size).toBe(marketHistory.last - 1990 + 1);
+    expect(rhRows[0].cells.map((c) => `${c!.up}/${c!.n}`)).toEqual(["9/14", "11/14", "9/14"]);
+    expect(rhRows[1].cells.map((c) => `${c!.up}/${c!.n}`)).toEqual(["17/22", "18/22", "14/22"]);
+    expect(RH.summary).toContain("6번, 걸친 해는 14개였고 S&P 500과 코스피는 그중 9개 해");
+    expect(hRH).toContain("9/14");
+    expect(hRH.slice(hRH.indexOf("<table"), hRH.indexOf("</table>"))).not.toContain("%");
+  });
+  it("3편: 침체 중 오른 해 표기(8개 연도)·요약 숫자(14개·6내림·8오름·2008 −38.5%)가 데이터와 같다", () => {
+    expect(spxUpInRecession).toEqual([1961, 1970, 1975, 1980, 1982, 1991, 2009, 2020]);
+    expect(hRC).toContain("침체 달이 있던 해 중 S&amp;P 500이 오른 해: 1961·1970·1975·1980·1982·1991·2009·2020년");
+    expect(rcRows[0].years).toHaveLength(14);
+    expect(rcRows[0].cells.map((c) => `${c!.up}/${c!.n}`)).toEqual(["8/14", "3/6", "3/7"]);
+    expect(rcRows[1].cells.map((c) => `${c!.up}/${c!.n}`)).toEqual(["40/51", "30/34", "26/37"]);
+    const v = buildIndexView(marketHistory, "spx");
+    const worst = rcRows[0].years.reduce((b, y) => ((v.ret[y - v.start] as number) < (v.ret[b - v.start] as number) ? y : b));
+    expect(worst).toBe(2008);
+    expect(RC.summary).toContain("2008년(−38.5%)");
+    expect(RC.summary).toContain("14개였고, S&P 500은 그중 6개 해에 내렸고 8개 해에는 올랐어요");
+  });
+  it("SSR에 지수 수준값 0, 1편·market-history와 문장 겹침 0, 금지어·인과·예측 0", () => {
+    for (const h of [hRH, hRC]) for (const level of ["6,846", "6846", "5,882"]) expect(h).not.toContain(level);
+    const sentences = (t: string) => t.split(/[.]/).map((x) => x.trim()).filter((x) => x.length > 8);
+    const others = new Set([...sentences(GUIDES["market-history"].summary), ...sentences(GUIDES["index-returns-by-year"].summary), ...sentences(RC.summary)]);
+    for (const x of sentences(RH.summary)) expect(others.has(x), x).toBe(false);
+    for (const d of [RH, RC]) {
+      const t = [d.title, d.summary, d.description, d.primary.label, d.linkLabel].join("\n");
+      for (const w of ["때문", "덕분", "추천", "수익", "과열", "기대", "반등", "신호", "기회", "영향", "역전", "해서", "→"]) expect(t, w).not.toContain(w);
+    }
+  });
+  it("market-history 편 '관련 글' 줄은 두 편으로 링크, 첫 화면 가이드 링크는 4개 그대로", () => {
+    expect(hMH).toContain('href="/guide/rate-hike-years"');
+    expect(hMH).toContain('href="/guide/recession-years"');
+    expect(hIR).not.toContain('data-testid="guide-related"');
+    const src = readFileSync(join(__dirname, "../../(main)/_components/layout/onboarding/root-guide-links.tsx"), "utf8");
+    expect(src).toContain('const ORDER: GuideSlug[] = ["year-end", "net-worth", "stock-ratio", "market-history"];');
+    expect(GUIDES["rate-hike-years"].linkLabel).toBe("금리 인상기의 지수");
+    expect(GUIDES["recession-years"].linkLabel).toBe("경기침체 때의 지수");
   });
 });
