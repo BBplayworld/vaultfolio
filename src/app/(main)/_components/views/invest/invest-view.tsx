@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { BLS_INFO, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, THREE_LABEL, headlineLines, readoutOf, recoverySummary, sourceLines, threeSourceLines, fmtPct } from "@/lib/invest/text";
+import { BLS_INFO, FX_DATASET_HREF, FX_DATASET_LABEL, FX_INFO, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, THREE_LABEL, headlineLines, readoutOf, recoverySummary, sourceLines, threeSourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -28,14 +28,17 @@ import { episodeIndexOfYear } from "@/lib/invest/calc";
 import { ThreeView } from "./three-view";
 import type { RegionSplit } from "@/lib/xray/region-split";
 
-// 겹쳐 보기 항목: 한국 지수는 10년물만. 물가·실업률은 연 값(계단선)이라 미국 지수에만 둔다(R2-1)
+// 겹쳐 보기 항목: 물가·실업률은 연 값(계단선)이라 미국 지수에만, 원/달러(연평균 계단선)는 코스피에만 둔다(R2-1·R3-3)
 const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: string; def: string }[]> = {
   us: [
     { key: "y10", label: "10년물", full: "미 10년물 국채 금리", def: "매달 마지막 날 값 · 오른쪽 축" },
     { key: "cpi", label: "물가", full: "미 소비자물가 상승률", def: "연평균 · 전년 대비 % · 오른쪽 축" },
     { key: "unemp", label: "실업률", full: "미 실업률", def: "연평균 % · 오른쪽 축" },
   ],
-  kr: [{ key: "y10", label: "10년물", full: "국고채 10년 금리", def: "매달 평균 · 오른쪽 축" }],
+  kr: [
+    { key: "y10", label: "10년물", full: "국고채 10년 금리", def: "매달 평균 · 오른쪽 축" },
+    { key: "fx", label: "원/달러", full: "원/달러 환율", def: "연평균 · 1달러당 원 · 오른쪽 축" },
+  ],
 };
 /** 칸 라벨: <360은 약칭(`S&P`·`나스닥`)으로 줄이고 접근 이름은 항상 정식 이름(SameYear 약칭 관행, C25) */
 function ShortLabel({ full, short }: { full: string; short: string }) {
@@ -83,7 +86,7 @@ function InfoDot({ left, top, label, children }: { left: number; top: number; la
 }
 
 /** 용어·출처 패널(접힘 기본). 안쪽: `용어` 7개(TERMS) → `출처` 줄. 용어 정의는 TERMS 참조 — 새 문장 0 */
-function SourcePanel({ lines }: { lines: string[] }) {
+function SourcePanel({ lines, datasetHref }: { lines: string[]; datasetHref?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="mt-1">
@@ -102,6 +105,7 @@ function SourcePanel({ lines }: { lines: string[] }) {
               <p className="font-semibold text-foreground">출처</p>
               <div data-testid="invest-source" className="mt-1 space-y-1.5">
                 {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
+                {datasetHref && <p><a href={datasetHref} data-testid="fx-dataset-link" className="inline-flex min-h-10 items-center rounded-md text-brand underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:text-indigo-300">{FX_DATASET_LABEL}</a></p>}
               </div>
             </div>
           </div>
@@ -313,7 +317,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
           <>
             <MainChart data={marketHistory} view={view} width={width} wide={wide} selEp={selEff} selYear={yr} overlay={ov} onPickYear={pickYear} />
             <InfoDot left={capWidth(`지수 · 해마다 연말 값 · ${view.last}년 말까지`) + 2} top={-2} label="지수 값 설명">{INDEX_INFO}</InfoDot>
-            <InfoDot left={capWidth(`${view.rate === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값`) + 2} top={L.cap3 - 14} label="기준금리 설명">{(view.rate === "us" ? "연준 목표금리(범위면 상단)를 매달 이어서 그렸어요. 1982년 9월부터 자료가 있어요." : "한국은행 기준금리를 매달 이어서 그렸어요(2008년 3월 전은 콜금리 목표). 1999년 5월부터 자료가 있어요.") + (ov === "cpi" || ov === "unemp" ? ` 겹쳐 본 선: ${BLS_INFO}` : "")}</InfoDot>
+            <InfoDot left={capWidth(`${view.rate === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값`) + 2} top={L.cap3 - 14} label="기준금리 설명">{(view.rate === "us" ? "연준 목표금리(범위면 상단)를 매달 이어서 그렸어요. 1982년 9월부터 자료가 있어요." : "한국은행 기준금리를 매달 이어서 그렸어요(2008년 3월 전은 콜금리 목표). 1999년 5월부터 자료가 있어요.") + (ov === "cpi" || ov === "unemp" ? ` 겹쳐 본 선: ${BLS_INFO}` : ov === "fx" ? ` 겹쳐 본 선: ${FX_INFO}` : "")}</InfoDot>
             <button
               ref={btnRef} type="button" aria-haspopup="listbox" aria-expanded={menu} aria-label={ovCur ? `겹쳐 보기, ${ovCur.label} 켜짐` : "겹쳐 보기"} data-testid="overlay-button"
               onClick={() => setMenu((m) => !m)}
@@ -414,7 +418,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
           <div className="grid grid-cols-[440px_minmax(0,1fr)] items-stretch gap-4"><div className="min-w-0 [&>section]:h-full">{gridNode}</div><div className="min-w-0 [&>section]:h-full">{periodNode}</div></div>
         </>
       )}
-      <SourcePanel lines={src} />
+      <SourcePanel lines={src} datasetHref={view.rate === "kr" ? FX_DATASET_HREF : undefined} />
     </div>
   );
 }

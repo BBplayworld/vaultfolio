@@ -3,7 +3,7 @@ import { bandRect, logTicks, mergeEventDots } from "../invest/chart";
 import {
   buildIndexView, classifyDelta, episodeIndexOfYear, pickDefaultIndex, rateAxisMax, recessionLabel, recessionMonthsIn, zigzag,
 } from "../invest/calc";
-import { headlineLines, readoutOf, sourceLines, fmtPct, listNote, LIST_NOTE_2 } from "../invest/text";
+import { headlineLines, readoutOf, sourceLines, fmtPct, listNote, LIST_NOTE_2, FX_SOURCE } from "../invest/text";
 import { marketHistory as data } from "../invest/market-history";
 
 const views = { spx: buildIndexView(data, "spx"), ndx: buildIndexView(data, "ndx"), kospi: buildIndexView(data, "kospi") };
@@ -152,7 +152,8 @@ describe("투자 탭 출처 4줄(7절)", () => {
     const s = sourceLines(views.spx, revs), n = sourceLines(views.ndx, revs), k = sourceLines(views.kospi, revs);
     expect(s[3]).toContain("S&P Dow Jones Indices");
     expect(n.join("")).not.toContain("S&P");
-    expect(k.join("")).not.toMatch(/H\.15|연준|NBER|미국 지수는 달러/);
+    expect(k.join("").replace(FX_SOURCE, "")).not.toMatch(/H\.15|연준|NBER|미국 지수는 달러/); // 코스피 출처에는 원/달러 정본 문구(연준 G.5)만 허용
+    expect(k[1]).toContain(FX_SOURCE);
     expect(k[1]).toMatch(/^금리 출처: ECOS\(한국은행, 기준금리·시장금리\), \d{4}\.\d{2}\.\d{2}\./);
     expect(n[0]).toContain("리비전 1381716602");
   });
