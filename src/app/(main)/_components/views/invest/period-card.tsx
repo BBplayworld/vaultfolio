@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useId, useMemo, useRef, useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
 import { APPROX_DEF, APPROX_LINE, HOLD_LINE, IRR_SENTENCE, PERIOD_FOOT_1, dcaSentence, fixPeriod, lumpSentence, periodPresets, periodResult, periodText, rollingRange } from "@/lib/invest/period";
-import { A6_TEXT, CALC_DIV, CALC_FOOT, CALC_PAST, MINUS, RATIO_LINK_LABEL, a6Bounds, fmtPct } from "@/lib/invest/text";
+import { A6_TEXT, B1_OPTION, CALC_DIV, CALC_FOOT, CALC_PAST, MINUS, RATIO_LINK_LABEL, a6Bounds, fmtPct } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 import { C, HALO, SVG_TEXT } from "./chart-style";
 import { NOWRAP_TAIL, NoBreak } from "./nowrap";
@@ -102,7 +102,7 @@ function PeriodRangeBody({ view, n, r, open, id }: { view: IndexView; n: number;
   );
 }
 
-export function PeriodCard({ view, period, onChange, question, ratioLink, onRange }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void; question?: string; /** T1: 있으면 `/ratio` 링크 1줄을 보이고 누를 때 호출(GA) */ ratioLink?: () => void; /** A6 첫 펼침(GA) */ onRange?: () => void }) {
+export function PeriodCard({ view, period, onChange, question, ratioLink, mine, onRange }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void; question?: string; /** T1: 있으면 `/ratio` 링크 1줄을 보이고 누를 때 호출(GA) */ ratioLink?: () => void; /** B1(5.142): 시작 연도 선택지 `내 첫 매입 해 {Y}년` — 고르면 시작 = Y−1, 끝 = 마지막 해(기존 fixPeriod). 이 지수 범위 밖이면 숨김 */ mine?: { year: number; onUse: () => void }; /** A6 첫 펼침(GA) */ onRange?: () => void }) {
   const { sy, ey } = fixPeriod(view, period.sy, period.ey);
   const r = periodResult(view, sy, ey), t = periodText(r);
   const [info, setInfo] = useState(false);
@@ -116,6 +116,7 @@ export function PeriodCard({ view, period, onChange, question, ratioLink, onRang
   const presets = periodPresets(view);
   const sOpts = view.years.filter((y) => y < view.last), eOpts = view.years.filter((y) => y > sy);
   const rowCls = "rounded-xl";
+  const mineOk = mine != null && mine.year - 1 >= view.start && mine.year - 1 < view.last;
   const cyRet = cy != null && cy > sy ? (view.ret[cy - view.start] as number) : null;
   return (
     <section data-testid="invest-sec3" className="rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
@@ -130,7 +131,8 @@ export function PeriodCard({ view, period, onChange, question, ratioLink, onRang
         {([["start", "시작", sy, sOpts], ["end", "끝", ey, eOpts]] as const).map(([k, l, v, opts]) => (
           <label key={k} className="relative flex min-w-0 flex-1 items-center">
             <span className="pointer-events-none absolute left-2.5 z-10 text-xs text-muted-foreground">{l}</span>
-            <select aria-label={`${l} 연도 말`} data-testid={`period-${k}`} value={v} className={SELECT_CLS} onChange={(e) => set(k === "start" ? +e.target.value : sy, k === "end" ? +e.target.value : ey)}>
+            <select aria-label={`${l} 연도 말`} data-testid={`period-${k}`} value={v} className={SELECT_CLS} onChange={(e) => { if (e.target.value === "mine") { if (mine) { mine.onUse(); set(mine.year - 1, view.last); } return; } set(k === "start" ? +e.target.value : sy, k === "end" ? +e.target.value : ey); }}>
+              {k === "start" && mineOk && <option value="mine">{B1_OPTION(mine!.year)}</option>}
               {opts.map((y) => <option key={y} value={y}>{y}년 말</option>)}
             </select>
             <span aria-hidden className="pointer-events-none absolute right-2 text-muted-foreground">⌄</span>

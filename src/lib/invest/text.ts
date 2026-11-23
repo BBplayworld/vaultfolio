@@ -256,6 +256,8 @@ export const A6_TEXT = {
   body: (label: string, N: number, n: number, min: string, max: string, k: number) => `${label}에 ${N}년 동안 넣어 둔 경우를 시작 해 ${n}개로 나눠 계산했어요. 해마다 평균은 ${min}~${max}였고, 손실로 끝난 시작 해는 ${k}개였어요.`,
   info: (N: number) => `시작 해마다 그해 말에 한 번에 넣고 ${N}년 뒤 말까지 둔 경우를 따로 계산했어요. 시작 해가 겹쳐 서로 독립된 결과가 아니에요. 손실로 끝난 시작 해는 끝 연말 값이 시작 연말 값보다 낮았던 해예요(배당 제외).`,
 } as const;
+/** B1: 시작 연도 선택지 1개 */
+export const B1_OPTION = (y: number) => `내 첫 매입 해 ${y}년`;
 /** A6 범위 두 수: 부호 포함 소수 1자리(반올림한 값 기준 부호), `%`는 끝에 1번만 */
 export function a6Bounds(min: number, max: number): { min: string; max: string } {
   const f = (x: number) => { const r = Math.round(x * 10) / 10; return (r > 0 ? "+" : r < 0 ? MINUS : "") + Math.abs(r).toFixed(1); };

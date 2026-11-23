@@ -14,3 +14,18 @@ export function holdingSplit(stocks: readonly StockLike[], rates: { USD: number;
   }
   return n ? { domestic, overseas } : null;
 }
+
+type DatedStock = Pick<AssetData["stocks"][number], "quantity" | "inactiveStatus" | "purchaseDate">;
+
+/** B1(5.142): 현재 보유 주식(상장폐지·수량 0 제외) 중 유효한 매입일의 가장 이른 해. 없으면 null. 기기 안 계산 전용 — 저장·전송·GA 0 */
+export function firstBuyYear(stocks: readonly DatedStock[]): number | null {
+  let min: number | null = null;
+  for (const s of stocks) {
+    if (s.inactiveStatus === "delisted" || !(s.quantity > 0)) continue;
+    const m = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])/.exec(s.purchaseDate ?? "");
+    if (!m) continue;
+    const y = +m[1];
+    if (y >= 1900 && (min == null || y < min)) min = y;
+  }
+  return min;
+}
