@@ -1,6 +1,7 @@
 // 투자 탭(#263) 숫자·문장 서식. 문장 규칙 R1~R11(spec 6절): 과거형·같은 시기 표현만, 권유·예측·인과 단정 0.
 // 화면·공개 가이드(SSR)·테스트가 같은 문장을 쓴다.
-import { DROP_THRESHOLD, episodeDirCounts, type EventPoint, type IndexView, type RateDir } from "./calc";
+import { DROP_THRESHOLD, INDEX_KEYS, episodeDirCounts, type EventPoint, type IndexView, type RateDir } from "./calc";
+import type { IndexKey } from "./types";
 
 export const MINUS = "−";
 /** 부호 있는 % (0은 부호 없음) */
@@ -173,3 +174,34 @@ export const BLS_INFO = "연평균은 월 12개 평균이에요. 물가는 CPI-U
 export const SAME_YEAR_LABEL = "같은 해";
 /** R2-1: 2025 물가·실업률 빈 칸 각주 */
 export const BLS_GAP_NOTE = "2025년은 미 정부 업무 중단으로 10월 값이 발표되지 않아 비워 뒀어요.";
+
+// ---- 5.141 R3-1 `세 지수` 보기 정본 문장(spec 4절). 화면·테스트가 같은 문장을 쓴다. 해 수 비율 %·상관·예측·권유·평가 어휘 0 ----
+const hasBatchim = (ch: string) => (/[가-힣]/.test(ch) ? (ch.charCodeAt(0) - 0xac00) % 28 !== 0 : "0136780".includes(ch));
+/** 주제 조사 `은/는`(S&P 500은·나스닥100은·코스피는) */
+export const topic = (label: string) => label + (hasBatchim(label.slice(-1)) ? "은" : "는");
+export const THREE_LABEL = "세 지수";
+export const THREE_TEXT = {
+  qA1: "같은 해에 세 지수는 같은 쪽으로 움직였나요?",
+  titleA1: "같은 해 세 지수 오르내림",
+  summary: (from: number, to: number, n: number) => `${from}~${to}년, 세 지수 모두 연말 값이 있는 ${n}해를 나눠 셌어요`,
+  rowValue: (k: number) => `${k}해`,
+  slotHint: "해를 누르면 그해 세 지수 값이 보여요",
+  infoLabel: "오른 해·내린 해를 센 기준",
+  info: "오른 해는 연간 등락이 0보다 큰 해이고, 그 밖은 내린 해로 셌어요. 미국 지수는 달러, 코스피는 원 기준이고 서로 환산하지 않았어요.",
+  zeroNote: (y: number, label: string) => `${y}년 ${topic(label)} 0.0%로 보이지만 반올림 전 값이 0보다 작아 내린 해로 셌어요.`,
+  empty: "해당 지수 자료 없음",
+  qA5: "10년씩 묶으면 어땠나요?",
+  titleA5: "연대별 요약",
+  a5Head: ["연대", "S&P 500", "나스닥100", "코스피"],
+  a5Def: "해마다 평균과 누적은 연대 첫 해의 전년 말부터 마지막 해 말까지 계산했어요. −15% 이하 해는 한 해 연간 등락이 −15% 이하였던 해의 수예요.",
+} as const;
+
+/** 세 지수 출처: 지수별 연말값 줄 3개 + 공통 1줄 + 상표 1줄(spec 4절) */
+export function threeSourceLines(vs: Record<IndexKey, IndexView>, revIds: Record<IndexKey, string>): string[] {
+  const to = Math.min(...INDEX_KEYS.map((k) => vs[k].last));
+  return [
+    ...INDEX_KEYS.map((k) => sourceLines(vs[k], revIds)[0]),
+    `가격 지수(배당 제외) · 미국 지수는 달러, 코스피는 원 기준 · 연말 종가 기준 · 기준일 ${to}.12.31 · 가공 데이터는 같은 조건(CC BY-SA 4.0)으로 공개해요`,
+    "KOSPI는 한국거래소, S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc.의 상표이며, 시크릿에셋은 이 기관들과 제휴 관계가 아니에요. 과거 시장 사실이며 투자 권유가 아니에요.",
+  ];
+}

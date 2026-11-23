@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { BLS_INFO, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, headlineLines, readoutOf, recoverySummary, sourceLines, fmtPct } from "@/lib/invest/text";
+import { BLS_INFO, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, THREE_LABEL, headlineLines, readoutOf, recoverySummary, sourceLines, threeSourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -24,6 +24,8 @@ import { YearTable } from "./year-table";
 import { PatternSection } from "./pattern-section";
 import { RiseDetail, RiseList } from "./rise-list";
 import { buildPattern } from "@/lib/invest/pattern";
+import { episodeIndexOfYear } from "@/lib/invest/calc";
+import { ThreeView } from "./three-view";
 
 // 겹쳐 보기 항목: 한국 지수는 10년물만. 물가·실업률은 연 값(계단선)이라 미국 지수에만 둔다(R2-1)
 const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: string; def: string }[]> = {
@@ -34,7 +36,17 @@ const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: strin
   ],
   kr: [{ key: "y10", label: "10년물", full: "국고채 10년 금리", def: "매달 평균 · 오른쪽 축" }],
 };
-const INDEX_OPTIONS = INDEX_KEYS.map((k) => ({ value: k, label: INDEX_META[k].label, testId: `invest-index-${k}` }));
+/** 칸 라벨: <360은 약칭(`S&P`·`나스닥`)으로 줄이고 접근 이름은 항상 정식 이름(SameYear 약칭 관행, C25) */
+function ShortLabel({ full, short }: { full: string; short: string }) {
+  return <><span className="max-[359px]:sr-only">{full}</span><span aria-hidden className="min-[360px]:hidden">{short}</span></>;
+}
+type Mode = IndexKey | "three";
+const SHORT: Record<IndexKey, string> = { spx: "S&P", ndx: "나스닥", kospi: "코스피" };
+const MODE_OPTIONS: { value: Mode; label: React.ReactNode; testId: string }[] = [
+  ...INDEX_KEYS.map((k) => ({ value: k as Mode, label: <ShortLabel full={INDEX_META[k].label} short={SHORT[k]} />, testId: `invest-index-${k}` })),
+  { value: "three", label: THREE_LABEL, testId: "invest-index-three" },
+];
+const THREE_HASH = "#invest/three";
 
 /** 층 높이를 고정한 스켈레톤(회색 면 3개, CLS 0) */
 export function ChartSkeleton({ wide }: { wide: boolean }) {
@@ -128,10 +140,12 @@ export interface InvestViewProps {
   asof?: number;
 }
 
-type InvestCategory = "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
+type InvestCategory = "invest_three" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
+  // 세 지수 보기(#270): 앱은 해시 `#invest/three`로 바로 열린다(마운트 때 1회 읽기, 앱 전용 dynamic이라 SSR 불일치 0). 가이드는 URL을 만지지 않는다
+  const [three, setThree] = useState(() => variant === "app" && typeof window !== "undefined" && window.location.hash === THREE_HASH);
   const [sel, setSel] = useState<number | null>(null);
   const [yr, setYr] = useState<number | null>(null);
   const [ov, setOv] = useState<OverlayKey | null>(null);
@@ -147,6 +161,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const view = useMemo(() => buildIndexView(marketHistory, idx, asof), [idx, asof]);
+  const threeViews = useMemo(() => (three ? { spx: buildIndexView(marketHistory, "spx", asof), ndx: buildIndexView(marketHistory, "ndx", asof), kospi: buildIndexView(marketHistory, "kospi", asof) } : null), [three, asof]);
   const pattern = useMemo(() => buildPattern(marketHistory, view), [view]);
   const deepest = useMemo(() => view.eps.reduce((b, e, k, a) => (e.dd < a[b].dd ? k : b), 0), [view]);
   const selEff = sel ?? (wide && view.eps.length ? deepest : null);
@@ -168,6 +183,33 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     setIdx(k); setSel(null); setYr(null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
     once(`invest_index_${k}`);
   };
+  // 칸 전환은 replaceState만(history 추가 0·state 미사용) — 뒤로 가기는 투자 탭 진입 전 화면으로 간다
+  const setHash = (h: string) => { if (variant === "app" && window.location.hash !== h) window.history.replaceState(null, "", h); };
+  // 세 지수 → 한 지수 X: 고른 해를 X의 해 선택으로 넘긴다(X의 범위 밖이면 해제). 지수 → 세 지수: 고른 해는 그대로(공통 범위 안이면 그 분류 행이 열린다)
+  const changeMode = (m: Mode) => {
+    if (m === "three") {
+      if (three) return;
+      setThree(true); setMenu(false); once("invest_three"); setHash(THREE_HASH);
+      return;
+    }
+    if (!three) { changeIndex(m); return; }
+    const nv = buildIndexView(marketHistory, m, asof);
+    const keep = yr != null && yr >= nv.start + 1 && yr <= nv.last ? yr : null;
+    const ep = keep != null ? episodeIndexOfYear(nv.eps, keep) : -1;
+    setThree(false); setIdx(m); setYr(keep); setSel(ep >= 0 ? ep : null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
+    once(`invest_index_${m}`); setHash("#invest");
+  };
+  const pickThreeYear = (y: number | null) => { setYr(y); if (y != null) once("invest_year_pick"); };
+  // 해시로 바로 열린 경우도 진입 1회
+  useEffect(() => { if (three) once("invest_three"); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  // 모드 전환 뒤 본문 상단이 화면 위로 지나가 있으면 선택기 바로 아래로 즉시 올린다
+  const rootRef = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const r = rootRef.current?.getBoundingClientRect();
+    if (r && r.top < 0) window.scrollTo({ top: window.scrollY + r.top - 8, behavior: "instant" });
+  }, [three]);
   // 그림 바깥을 탭하면 해 선택 해제, 겹쳐 보기 목록은 바깥 탭·Esc로 닫는다
   useEffect(() => {
     const down = (e: PointerEvent) => {
@@ -273,7 +315,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     </div>
   );
 
-  const src = sourceLines(view, { spx: marketHistory.idx.spx.rev, ndx: marketHistory.idx.ndx.rev, kospi: marketHistory.idx.kospi.rev });
+  const revs = { spx: marketHistory.idx.spx.rev, ndx: marketHistory.idx.ndx.rev, kospi: marketHistory.idx.kospi.rev };
+  const src = threeViews ? threeSourceLines(threeViews, revs) : sourceLines(view, revs);
   const dropsCard = (
     <div data-testid="invest-drops" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
       <p data-testid="q-drops" className="mb-2 text-xs text-muted-foreground text-balance break-keep">{QUESTION_HEAD.drops}</p>
@@ -307,13 +350,14 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     { id: "deeper", node: deeperCard },
   ];
   return (
-    <div data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:mx-auto xl:w-full xl:max-w-[960px] xl:gap-4">
+    <div ref={rootRef} data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:mx-auto xl:w-full xl:max-w-[960px] xl:gap-4">
       {/* P4: 지수 선택기 상단 고정(모바일). 체험 배너·PWA safe-area 아래에 붙는다 */}
       <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
-        <InlineSelector fullWidth value={idx} onChange={changeIndex} options={INDEX_OPTIONS} ariaLabel="지수 선택" className="w-full" />
+        <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
-      {!wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
-      {wide && (
+      {threeViews && <ThreeView views={threeViews} yr={yr} onYear={pickThreeYear} />}
+      {!three && !wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
+      {!three && wide && (
         <>
           {chartCard}
           <div className="grid grid-cols-[400px_minmax(0,1fr)] items-stretch gap-4">

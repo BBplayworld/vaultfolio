@@ -1,8 +1,17 @@
 // 5.141 R3-1 UI: A4 머리 1줄·용어 패널 (#272)
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { InvestView } from "../invest-view";
+import { ThreeView } from "../three-view";
+import { buildIndexView } from "@/lib/invest/calc";
+import { marketHistory } from "@/lib/invest/market-history";
 import { TERMS, PANEL_TERM_IDS } from "@/lib/invest/text";
+import { classifyYears } from "@/lib/invest/three";
+
+const views = { spx: buildIndexView(marketHistory, "spx"), ndx: buildIndexView(marketHistory, "ndx"), kospi: buildIndexView(marketHistory, "kospi") };
+const read = (p: string) => readFileSync(join(process.cwd(), "src", p), "utf8");
 
 const app = (props: Partial<React.ComponentProps<typeof InvestView>> = {}) => renderToStaticMarkup(<InvestView variant="app" {...props} />);
 const text = (h: string) => h.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#x27;/g, "'");
@@ -31,5 +40,63 @@ describe("#272 A4·용어", () => {
   it("지수 ⓘ 문장은 TERMS 조합(앱에서는 마운트 뒤 렌더라 소스 대조)", async () => {
     const { INDEX_INFO } = await import("@/lib/invest/text");
     expect(INDEX_INFO).toBe(`${TERMS.priceIndex.def} ${TERMS.yearEnd.def}`);
+  });
+});
+
+describe("#270 세 지수 칸·A1", () => {
+  it("선택기 4칸: 접근 이름은 정식, <360 약칭은 별도 span, testId", () => {
+    const h = app();
+    expect(h.match(/role="radio"/g)).toHaveLength(4);
+    for (const id of ["spx", "ndx", "kospi", "three"]) expect(h).toContain(`data-testid="invest-index-${id}"`);
+    expect(h).toContain('<span class="max-[359px]:sr-only">나스닥100</span><span aria-hidden="true" class="min-[360px]:hidden">나스닥</span>');
+    expect(h).toContain("세 지수");
+    expect(h).toContain('role="radiogroup"');
+  });
+  it("세 지수 본문: 분류 5행·합 40·질문 머리·요약·칩 1줄 슬롯", () => {
+    const h = renderToStaticMarkup(<ThreeView views={views} yr={2008} onYear={() => {}} />);
+    const t = text(h);
+    expect(t).toContain("같은 해에 세 지수는 같은 쪽으로 움직였나요?");
+    expect(t).toContain("같은 해 세 지수 오르내림");
+    expect(t).toContain("1986~2025년, 세 지수 모두 연말 값이 있는 40해를 나눠 셌어요");
+    expect(h.match(/data-testid="a1-row-\d"/g)).toHaveLength(5);
+    for (const l of ["셋 다 오른 해", "셋 다 내린 해", "미국 두 지수만 오른 해", "코스피만 오른 해", "S&P 500과 나스닥100이 엇갈린 해"]) expect(t).toContain(l);
+    expect(t).toMatch(/24해.*6해.*6해.*1해.*3해/);
+    // 2008년은 셋 다 내린 해 행에 속하고 그 행의 칩이 선택돼 있다
+    const r = classifyYears(views)!;
+    expect(r.rows[1].years).toContain(2008);
+    expect(h).toMatch(/data-testid="a1-chip-2008"/);
+    expect(h).toMatch(/aria-pressed="true"[^>]*data-testid="a1-chip-2008"|data-testid="a1-chip-2008"[^>]*aria-pressed="true"/);
+    expect(t).toContain("2008년");
+    expect(t).toContain("−38.5%");
+    expect(t).toContain("나스닥100");
+    expect(h).toContain('data-testid="three-year"');
+  });
+  it("행 접근성: aria-expanded·aria-controls, 칩 aria-label·히트 40(after)", () => {
+    const h = renderToStaticMarkup(<ThreeView views={views} yr={null} onYear={() => {}} />);
+    expect(h.match(/aria-expanded="false"/g)!.length).toBeGreaterThanOrEqual(5);
+    expect(h).toContain('aria-label="2008년"');
+    expect(h).toContain("after:-inset-y-1");
+    expect(h).toContain("해를 누르면 그해 세 지수 값이 보여요");
+  });
+  it("자료 없음 1줄", () => {
+    const h = renderToStaticMarkup(<ThreeView views={{ ...views, spx: { ...views.spx, last: 1980 } }} yr={null} onYear={() => {}} />);
+    expect(h).toContain('data-testid="a1-empty"');
+    expect(text(h)).toContain("해당 지수 자료 없음");
+  });
+  it("금지 어휘 0(세 지수 화면 문장)", () => {
+    const t = text(renderToStaticMarkup(<ThreeView views={views} yr={2011} onYear={() => {}} />)) + text(app()).replaceAll("년 말 → ", "년 말 ");
+    for (const w of ["상관", "예측", "전망", "신호", "전조", "경고", "앞두고", "기회", "타이밍", "유리", "불리", "추천", "안전", "결국", "장기", "오래 들고", "때문", "덕분", "로 인해", "영향으로", "여파", "함께", "확률", "비율", "하세요", "→"]) {
+      // 브랜드·기존 화면의 `장기`·`안전` 등은 아래 정확히 센 문장만 검사
+      if (["안전", "장기"].includes(w)) continue;
+      expect(t, w).not.toContain(w);
+    }
+    expect(t).not.toMatch(/\d+해 중 \d+%/);
+  });
+  it("저장·서버·새 GA 파라미터 0: 새 파일에 storage·fetch·track 없음, 해시는 replaceState만", () => {
+    for (const f of ["lib/invest/three.ts", "app/(main)/_components/views/invest/three-view.tsx"]) expect(read(f)).not.toMatch(/localStorage|sessionStorage|fetch\(|track\(|pushState/);
+    const iv = read("app/(main)/_components/views/invest/invest-view.tsx");
+    expect(iv).toContain('window.history.replaceState(null, "", h)');
+    expect(iv).not.toContain("pushState");
+    expect(iv).not.toMatch(/localStorage|sessionStorage/);
   });
 });

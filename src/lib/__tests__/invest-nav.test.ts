@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  getBackLabel, guardTrialView, parseHash, swipeOrderOf, toHash,
+  getBackLabel, guardTrialView, isSameNavHash, parseHash, swipeOrderOf, toHash,
 } from "@/app/(main)/_components/layout/navigation/navigation-context";
 import { viewToKey } from "@/lib/feature-usage";
 import { WHATS_NEW } from "@/config/whats-new";
@@ -10,11 +10,45 @@ import { WHATS_NEW } from "@/config/whats-new";
 const read = (p: string) => readFileSync(join(process.cwd(), "src", p), "utf8");
 
 describe("투자 탭 네비(#263)", () => {
-  it("#invest 해시 왕복, 하위 해시는 홈", () => {
+  it("#invest 해시 왕복, 하위 해시(#invest/three·모르는 값)도 투자 탭 — toHash는 #invest 그대로", () => {
     expect(parseHash("#invest")).toEqual({ type: "invest" });
     expect(toHash({ type: "invest" })).toBe("#invest");
     expect(parseHash(toHash({ type: "invest" }))).toEqual({ type: "invest" });
-    expect(parseHash("#invest/anything")).toEqual({ type: "home" });
+    expect(parseHash("#invest/three")).toEqual({ type: "invest" });
+    expect(parseHash("#invest/anything")).toEqual({ type: "invest" });
+    expect(parseHash("#investx")).toEqual({ type: "home" });
+  });
+  it("재탭 push 0: 투자 탭 해시면 #invest/three에서도 같은 화면, 다른 화면은 그대로 비교", () => {
+    expect(isSameNavHash("#invest/three", { type: "invest" })).toBe(true);
+    expect(isSameNavHash("#invest", { type: "invest" })).toBe(true);
+    expect(isSameNavHash("", { type: "invest" })).toBe(false);
+    expect(isSameNavHash("#detail", { type: "invest" })).toBe(false);
+    expect(isSameNavHash("#invest/three", { type: "home" })).toBe(false);
+    expect(isSameNavHash("", { type: "home" })).toBe(true);
+    expect(isSameNavHash("#detail", { type: "detail", tab: "hub" })).toBe(true);
+    expect(isSameNavHash("#invest/three", { type: "detail", tab: "hub" })).toBe(false);
+  });
+  it("전 탭 해시 회귀: 홈·상세·활동·성과·더보기·설정·세금 해시는 5.141 전과 같다", () => {
+    expect(parseHash("")).toEqual({ type: "home" });
+    expect(parseHash("#home")).toEqual({ type: "home" });
+    expect(parseHash("#more")).toEqual({ type: "more" });
+    expect(parseHash("#settings")).toEqual({ type: "settings" });
+    expect(parseHash("#tax")).toEqual({ type: "tax" });
+    expect(parseHash("#detail")).toEqual({ type: "detail", tab: "hub" });
+    expect(parseHash("#activity")).toEqual({ type: "activity", tab: "hub" });
+    for (const t of ["hub", "stocks", "stocks-xray", "stocks-trades", "stocks-item", "real-estate", "physical", "crypto", "crypto-transactions", "cash", "cash-transactions", "loans", "loan-transactions"] as const) {
+      const v = parseHash(`#detail/${t}`);
+      expect(v).toEqual({ type: "detail", tab: t });
+      expect(parseHash(toHash(v))).toEqual(v);
+    }
+    for (const t of ["hub", "change", "change-market", "dividend", "report"] as const) {
+      const v = parseHash(`#activity/${t}`);
+      expect(v).toEqual({ type: "activity", tab: t });
+      expect(parseHash(toHash(v))).toEqual(v);
+    }
+    expect(parseHash("#detail/nope")).toEqual({ type: "home" });
+    expect(parseHash("#share=abc")).toEqual({ type: "home" });
+    expect(parseHash("#sync=abc")).toEqual({ type: "home" });
   });
   it("기존 #more·#settings 북마크는 그대로 더보기·설정(구버전 혼재: 구버전이 #invest를 받으면 홈)", () => {
     expect(parseHash("#more")).toEqual({ type: "more" });
