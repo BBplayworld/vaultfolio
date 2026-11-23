@@ -126,7 +126,7 @@ export function ThreeA5({ views, onMetric }: { views: ThreeViews; onMetric?: () 
               </th>
               {r.cells.map((c, i) => (
                 <td key={i} data-testid={`a5-cell-${r.decade}-${i}`} className="h-10 border-t border-border py-1 text-right align-middle">
-                  <span className={`font-medium ${metric === "dd15" ? "" : getProfitLossColor(decadeSign(c, metric))}`}>{decadeText(c, metric)}</span>
+                  <span className={`font-medium ${!c ? "text-muted-foreground" : metric === "dd15" ? "" : getProfitLossColor(decadeSign(c, metric))}`}>{decadeText(c, metric)}</span>
                   {c?.from != null && <small className="block text-xs text-muted-foreground">{c.from}~</small>}
                 </td>
               ))}

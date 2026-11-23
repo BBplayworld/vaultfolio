@@ -428,7 +428,7 @@ describe("recovery-years·kospi-by-year 가이드(5.141 #274)", () => {
       rel.forEach((r) => { expect(r).not.toBe(slug); incoming.set(r, (incoming.get(r) ?? 0) + 1); });
     }
     for (const slug of Object.keys(expected)) expect(incoming.get(slug) ?? 0, slug).toBeGreaterThanOrEqual(1);
-    for (const [slug, rel] of Object.entries(expected)) for (const r of rel) expect(GUIDES[r as never].linkLabel.length, `${slug}→${r}`).toBeGreaterThan(0);
+    for (const [slug, rel] of Object.entries(expected)) for (const r of rel) expect(GUIDES[r as keyof typeof GUIDES].linkLabel.length, `${slug}→${r}`).toBeGreaterThan(0);
   });
   it("금지 어휘 0(제목·요약·설명·정의·링크 라벨)", () => {
     for (const d of [G1, G3]) {

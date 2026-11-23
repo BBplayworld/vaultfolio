@@ -133,7 +133,7 @@ export function PeriodCard({ view, period, onChange, question, ratioLink }: { vi
       </div>
       <p data-testid="calc-past" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} /></p>
       {ratioLink && (
-        <Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="mt-1 inline-flex min-h-10 items-center gap-1 rounded-md text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.98]">
+        <Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="inline-flex min-h-10 items-center gap-1 rounded-md text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.98]">
           {RATIO_LINK_LABEL} <span aria-hidden>›</span>
         </Link>
       )}
