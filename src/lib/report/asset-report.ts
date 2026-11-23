@@ -139,6 +139,8 @@ export interface PeriodAttribution {
   // 기록이 없으면 0이다. 기록 없이 잔액이 변한 부분은 별도 "cash" 원인으로 분리된다.
   incomeEffect: number;
   debtEffect: number;    // 부채 증감 (−Δ대출: 상환=+, 증가=−)
+  // Hero 경로에서 시작일 당일 현금·대출 기록을 createdAt로 걸러냈는가(#252) — 기록 목록이 원인과 같은 술어를 쓰게 한다(저장 안 함)
+  startDayGated?: boolean;
   // 시작 스냅샷이 v2 미만 → 예측 분해: Δ순자산·과거 순자산은 실측(스냅샷) 그대로 쓰되,
   // 저축·부채는 현재 자산 정보의 매수일·대출일로, 환율은 환율 이력 + 현재 외화노출로 추정
   estimated: boolean;
@@ -516,7 +518,7 @@ export function getAttributionRecords(
 
   // 현금·대출: [from, to] (전체 기간 첫 구간 규칙), 주식·코인: (from, to]
   for (const t of assetData.cashTransactions || []) {
-    if (!t.reflected || !inFlowWindow(t.date, from, to, true)) continue;
+    if (!t.reflected || !inCashLoanWindow(t, from, to, true, !!attr.startDayGated)) continue;
     const amount = (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates);
     const title = (assetData.cash ?? []).find((c) => c.id === t.cashId)?.name ?? "삭제된 계좌";
     push({ id: t.id, date: t.date, createdAt: t.createdAt, causeKey: "income", title, amount });
@@ -542,7 +544,7 @@ export function getAttributionRecords(
     });
   }
   for (const t of assetData.loanTransactions || []) {
-    if (!t.reflected || !inFlowWindow(t.date, from, to, true)) continue;
+    if (!t.reflected || !inCashLoanWindow(t, from, to, true, !!attr.startDayGated)) continue;
     const title = (assetData.loans ?? []).find((l) => l.id === t.loanId)?.name ?? "삭제된 대출";
     push({
       id: t.id, date: t.date, createdAt: t.createdAt, causeKey: "debt", title,
@@ -795,22 +797,25 @@ function resolveAttribution(
   // 하이브리드(older+newer)의 두 번째 구간은 반드시 false여야 mid 당일 거래가 중복 계상되지 않는다
   // (inFlowWindow ② 참조). 단일 구간 호출은 기본값 true.
   isFirstSegment: boolean = true,
+  // Hero 경로 전용(#252) — 시작점이 정밀일 때만 시작일 당일 현금·대출 기록을 createdAt로 걸러낸다
+  startDayGate: boolean = false,
 ): PeriodAttribution {
   const deltaNet = curr.netAsset - prev.netAsset;
   const fromDate = prev._display;
   const toDate = curr._display;
 
   const bothEnriched = isFullyEnriched(prev) && isFullyEnriched(curr);
+  const startGate = startDayGate && bothEnriched && !prev._isMonthly; // 월 행은 편집 때 갱신되지 않아 보정 대상 아님
 
   // 기간 내 현금 순유입(입금−출금, KRW 환산) — 월급·목돈 등을 saving에서 분리
-  const incomeEffect = reflectedCashInflow(assetData, prev._date, curr._date, rates, isFirstSegment);
+  const incomeEffect = reflectedCashInflow(assetData, prev._date, curr._date, rates, isFirstSegment, startGate);
 
   if (bothEnriched) {
     // 정밀 분해. saving은 총원가 증감이라 현금 유입(income)을 포함 → income을 떼어내 투자자산 매수만 남긴다.
     const savingFull = curr.cost!.total - prev.cost!.total;                   // Δ총원가(현금 포함)
     // 외화 원가(주식·현금)는 cost.total이 현재 환율로 환산돼 환율만 움직여도 savingFull에 잡힌다 —
     // 신규 투입이 아니므로 제외한다. (fxEffect가 평가액 기준으로 환차익을 이미 잡으므로 saving에 남기면 이중 귀속)
-    const costFx = costFxRevaluation(assetData, prev.fx!, curr.fx!, prev._date, curr._date, rates, isFirstSegment);
+    const costFx = costFxRevaluation(assetData, prev.fx!, curr.fx!, prev._date, curr._date, rates, isFirstSegment, startGate);
     const savingFullReal = savingFull - (costFx.stock + costFx.cash);
     // 구간 안 외화 매수·입출금의 (끝 환율 − 체결 환율) 몫(4.65 #122) — 환율 원인으로 옮기고 manual 잔차에서 같은 금액을 뺀다
     // (키 간 이동, 합계 불변). 시세·시작 보유분 환율 계산(fxEffectBase)은 건드리지 않는다.
@@ -901,7 +906,7 @@ function resolveAttribution(
       { key: "deposit", amount: depositEffect },
       { key: "debt", amount: debtEffect },
     ]);
-    return { fromDate, toDate, windowFrom: prev._date, windowTo: curr._date, deltaNet, priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect, estimated: false, effects, topCauses, restEffect, restCauses };
+    return { fromDate, toDate, windowFrom: prev._date, windowTo: curr._date, deltaNet, priceEffect, fxEffect, savingEffect, buyEffect, sellEffect, incomeEffect, debtEffect, estimated: false, effects, topCauses, restEffect, restCauses, ...(startGate ? { startDayGated: true } : {}) };
   }
 
   // 예측 분해: 시작 스냅샷이 레거시(netAsset만) — Δ순자산은 실측 그대로 쓰고,
@@ -993,6 +998,32 @@ export const tradeKrwRate = (
 const inFlowWindow = (date: string, fromDate: string, toDate: string, includeFrom: boolean): boolean =>
   (includeFrom ? date >= fromDate : date > fromDate) && date <= toDate;
 
+// 기록 입력 시각(createdAt)의 KST 날짜 — 없거나 해석 불가면 null(옛 기록)
+const createdKstDate = (createdAt: string | undefined): string | null => {
+  if (!createdAt) return null;
+  const ms = new Date(createdAt).getTime();
+  return Number.isFinite(ms) ? new Date(ms + 9 * 60 * 60 * 1000).toISOString().split("T")[0] : null;
+};
+
+// 현금·대출 기록 윈도우 판정 — inFlowWindow에 시작일 당일 보정(#252)을 더한다.
+// startGate=true(Hero 경로 + 시작점이 정밀 스냅샷)이면 시작일 당일 기록은 **그날 행이 닫힌 뒤 입력된 것**
+// (createdAt KST 날짜 > 시작일)만 포함한다: 편집 시 오늘 행을 재계산하므로 그날 기록은 행에 이미 반영돼 있다
+// (포함하면 '입금+정리' 유령 짝). createdAt 없는 옛 기록은 종전대로 포함. 거래 날짜(사용자 입력)는 판정에 쓰지 않는다.
+const inCashLoanWindow = (
+  t: { date: string; createdAt?: string },
+  fromDate: string,
+  toDate: string,
+  includeFrom: boolean,
+  startGate: boolean,
+): boolean => {
+  if (!inFlowWindow(t.date, fromDate, toDate, includeFrom)) return false;
+  if (startGate && includeFrom && t.date === fromDate) {
+    const c = createdKstDate(t.createdAt);
+    if (c !== null && c <= fromDate) return false;
+  }
+  return true;
+};
+
 // 외화 원가(주식 매입원가·현금 잔액)가 환율 변동으로만 재평가된 KRW 증감 — 신규 투입이 아님.
 // computeAssetCost와 동일 원가 기준(주식=수량×평균단가, 현금=잔액), delisted 제외.
 // 주식 몫은 자산군별 시세 분해에서 따로 쓰이므로 나눠 반환한다.
@@ -1009,6 +1040,7 @@ function costFxRevaluation(
   toDate: string,
   rates: { USD: number; JPY: number },
   includeFromCash: boolean,
+  startGate: boolean = false,
 ): { stock: number; cash: number; flowFxStock: number; flowFxCash: number } {
   const d = (cur: string | undefined) => krwMul(cur, currFx) - krwMul(cur, prevFx); // KRW은 0
   let stock = 0;
@@ -1038,7 +1070,7 @@ function costFxRevaluation(
   }
   let cash = 0;
   let flowFxCash = 0;
-  const cashTxs = (data.cashTransactions || []).filter((t) => t.reflected && inFlowWindow(t.date, fromDate, toDate, includeFromCash));
+  const cashTxs = (data.cashTransactions || []).filter((t) => t.reflected && inCashLoanWindow(t, fromDate, toDate, includeFromCash, startGate));
   for (const c of data.cash ?? []) {
     let bal = c.balance;
     if (c.currency !== "KRW") {
@@ -1067,11 +1099,12 @@ function reflectedCashInflow(
   toDate: string,
   rates: { USD: number; JPY: number },
   includeFrom: boolean,
+  startGate: boolean = false,
 ): number {
   const txns = assetData.cashTransactions || [];
   let reflected = 0;
   for (const t of txns) {
-    if (!t.reflected || !inFlowWindow(t.date, fromDate, toDate, includeFrom)) continue;
+    if (!t.reflected || !inCashLoanWindow(t, fromDate, toDate, includeFrom, startGate)) continue;
     reflected += (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates);
   }
   return reflected;
@@ -1379,6 +1412,8 @@ export function computeAttributionSince(
   assetData: AssetData,
   rates: { USD: number; JPY: number },
   liveCurr?: AttributionPoint,
+  // 홈 Hero·7일 카드 경로만 true(#252) — 시작일 당일 현금·대출 기록을 createdAt로 거른다. 기본 false = 종전 동작
+  startDayGate: boolean = false,
 ): PeriodAttribution | null {
   const { dailyPoints, monthlyPoints } = buildAttributionPoints(daily, monthly);
   const curr = liveCurr ?? pickAttributionCurr(dailyPoints);
@@ -1391,7 +1426,7 @@ export function computeAttributionSince(
   if (candidates.length === 0) return null;
 
   const prev = [...candidates].reverse().find((s) => s._date <= sinceDate) ?? candidates[0];
-  return resolveAttribution(prev, curr, exchangeHistory, assetData, rates);
+  return resolveAttribution(prev, curr, exchangeHistory, assetData, rates, true, startDayGate);
 }
 
 // 월말 결산(#32)용: 과거 두 시점(월 스냅샷 → 월 스냅샷 또는 실시간 끝점) 사이의 단일 구간 분해.

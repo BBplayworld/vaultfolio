@@ -32,7 +32,7 @@ export function computeAttributionView({ assetData, rates, summary, daily, month
   sinceDate: string;
 }): AttributionView | null {
   const liveCurr = buildLiveAttributionCurr(assetData, rates, summary);
-  const attr = computeAttributionSince(daily, monthly, exchangeHistory, sinceDate, assetData, rates, liveCurr);
+  const attr = computeAttributionSince(daily, monthly, exchangeHistory, sinceDate, assetData, rates, liveCurr, true); // 시작일 당일 기록 createdAt 보정(#252) — Hero 경로만
   if (!attr) return null;
   const records = getAttributionRecords(attr, assetData, rates);
   // 내부 이동 상쇄(#103): 결산과 같은 짝 함수의 내역을 넘긴다. 기록 짝이 없어도 잔차 짝(매수↔현금 정리 등)은 상쇄된다
