@@ -7,7 +7,7 @@ import { InvestView } from "../invest-view";
 import { ThreeView } from "../three-view";
 import { buildIndexView } from "@/lib/invest/calc";
 import { marketHistory } from "@/lib/invest/market-history";
-import { TERMS, PANEL_TERM_IDS } from "@/lib/invest/text";
+import { TERMS, PANEL_TERM_IDS, RATIO_LINK_LABEL } from "@/lib/invest/text";
 import { classifyYears } from "@/lib/invest/three";
 
 const views = { spx: buildIndexView(marketHistory, "spx"), ndx: buildIndexView(marketHistory, "ndx"), kospi: buildIndexView(marketHistory, "kospi") };
@@ -127,5 +127,30 @@ describe("#271 A5 연대별 요약", () => {
     const iv = read("app/(main)/_components/views/invest/invest-view.tsx");
     expect(iv).toContain('onMetric={() => once("invest_decade")}');
     expect(read("lib/analytics/ga.ts")).toContain('invest_decade: "투자·연대별"');
+  });
+});
+
+describe("#273 T1 `/ratio` 1줄", () => {
+  const link = (props: Partial<React.ComponentProps<typeof InvestView>>) => renderToStaticMarkup(<InvestView variant="app" {...props} />);
+  it("ratioLink 켠 앱: 기간 카드 calc-past 바로 아래 1줄, 문구는 가이드 RATIO_CTA와 같다, 히트 40", () => {
+    const h = link({ ratioLink: true });
+    expect(h).toContain('data-testid="invest-ratio-link"');
+    expect(h).toContain('href="/ratio"');
+    expect(text(h)).toContain("캡처로 내 비중 보기 ›");
+    expect(h.indexOf('data-testid="calc-past"')).toBeLessThan(h.indexOf('data-testid="invest-ratio-link"'));
+    expect(h.indexOf('data-testid="invest-ratio-link"')).toBeLessThan(h.indexOf('data-testid="period-honest"'));
+    expect(h).toContain("min-h-10");
+    expect(h.match(/data-testid="invest-ratio-link"/g)).toHaveLength(1);
+  });
+  it("보유 기기(기본값)·가이드(variant guide)는 DOM 0", () => {
+    expect(link({})).not.toContain("invest-ratio-link");
+    expect(renderToStaticMarkup(<InvestView variant="guide" ratioLink />)).not.toContain("invest-ratio-link");
+  });
+  it("RATIO_LINK_LABEL = 가이드 RATIO_CTA 문구(같은 기능 두 모양 방지)", () => {
+    const src = read("app/guide/guide-copy.ts");
+    expect(src).toContain(`label: "${RATIO_LINK_LABEL}"`);
+  });
+  it("노출 판정: 체험 또는 자산 0개(InvestTab)", () => {
+    expect(read("app/(main)/_components/views/invest/invest-lazy.tsx")).toContain("const ratioLink = isTrialMode() || !hasAnyAssets(assetData);");
   });
 });

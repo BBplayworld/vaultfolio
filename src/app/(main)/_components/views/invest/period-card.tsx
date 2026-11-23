@@ -3,10 +3,11 @@
 // R4.1: 기간 수익률 카드(③ 통합) — 같은 기간·같은 총액(=1)을 한 번에 vs 매달 나눠 넣었을 때. 기간 알약·시작/끝·결과 2줄·어림 1줄+ⓘ·그림.
 // 계산은 lib/invest/period(연말값 평균 가격, 보간 0). 입력은 메모리에만(저장 0). 평가·유불리 문구 0.
 import { Info } from "lucide-react";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import type { IndexView } from "@/lib/invest/calc";
 import { APPROX_DEF, APPROX_LINE, HOLD_LINE, IRR_SENTENCE, PERIOD_FOOT_1, dcaSentence, fixPeriod, lumpSentence, periodPresets, periodResult, periodText } from "@/lib/invest/period";
-import { CALC_DIV, CALC_FOOT, CALC_PAST, MINUS, fmtPct } from "@/lib/invest/text";
+import { CALC_DIV, CALC_FOOT, CALC_PAST, MINUS, RATIO_LINK_LABEL, fmtPct } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 import { C, HALO, SVG_TEXT } from "./chart-style";
 import { NOWRAP_TAIL, NoBreak } from "./nowrap";
@@ -85,7 +86,7 @@ function PeriodChart({ view, sy, ey, width: W, cy, onPick }: { view: IndexView; 
   );
 }
 
-export function PeriodCard({ view, period, onChange, question }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void; question?: string }) {
+export function PeriodCard({ view, period, onChange, question, ratioLink }: { view: IndexView; period: { sy: number; ey: number }; onChange: (p: { sy: number; ey: number }) => void; question?: string; /** T1: 있으면 `/ratio` 링크 1줄을 보이고 누를 때 호출(GA) */ ratioLink?: () => void }) {
   const { sy, ey } = fixPeriod(view, period.sy, period.ey);
   const r = periodResult(view, sy, ey), t = periodText(r);
   const [info, setInfo] = useState(false);
@@ -131,6 +132,11 @@ export function PeriodCard({ view, period, onChange, question }: { view: IndexVi
         </div>
       </div>
       <p data-testid="calc-past" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} /></p>
+      {ratioLink && (
+        <Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="mt-1 inline-flex min-h-10 items-center gap-1 rounded-md text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.98]">
+          {RATIO_LINK_LABEL} <span aria-hidden>›</span>
+        </Link>
+      )}
       <p data-testid="period-honest" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">
         {APPROX_LINE}
         {/* ⓘ는 끝 어절 바로 뒤(40px 히트, 줄 높이는 음수 마진으로 유지) */}

@@ -138,11 +138,13 @@ export interface InvestViewProps {
   defaultIndex?: IndexKey;
   /** 진행 중 하락 모의(데이터 마지막 연도를 이 해로 자름). preview 점검용 */
   asof?: number;
+  /** T1: 기간 카드 아래 `캡처로 내 비중 보기 ›` 1줄(앱·자산 0개 또는 체험일 때만 호출부가 true). 기본 숨김 */
+  ratioLink?: boolean;
 }
 
-type InvestCategory = "invest_three" | "invest_decade" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
 
-export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
+export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
   // 세 지수 보기(#270): 앱은 해시 `#invest/three`로 바로 열린다(마운트 때 1회 읽기, 앱 전용 dynamic이라 SSR 불일치 0). 가이드는 URL을 만지지 않는다
   const [three, setThree] = useState(() => variant === "app" && typeof window !== "undefined" && window.location.hash === THREE_HASH);
@@ -340,7 +342,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     </div>
   );
   const gridNode = <YearGrid key={`g-${idx}`} onYear={() => once("invest_year_pick")} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
-  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} />;
+  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} ratioLink={variant === "app" && ratioLink ? () => once("invest_ratio") : undefined} />;
   // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
   // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
   const MOBILE_SECTIONS: { id: string; node: React.ReactNode }[] = [

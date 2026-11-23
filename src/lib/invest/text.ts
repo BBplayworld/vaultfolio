@@ -205,3 +205,6 @@ export function threeSourceLines(vs: Record<IndexKey, IndexView>, revIds: Record
     "KOSPI는 한국거래소, S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc.의 상표이며, 시크릿에셋은 이 기관들과 제휴 관계가 아니에요. 과거 시장 사실이며 투자 권유가 아니에요.",
   ];
 }
+
+/** T1: 기간 카드 아래 링크 문구. 가이드 RATIO_CTA(`/guide/guide-copy.ts`)와 같은 문구 — 두 곳이 어긋나면 테스트가 막는다 */
+export const RATIO_LINK_LABEL = "캡처로 내 비중 보기";
