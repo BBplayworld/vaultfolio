@@ -140,7 +140,7 @@ export interface InvestViewProps {
   asof?: number;
 }
 
-type InvestCategory = "invest_three" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
@@ -201,7 +201,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   };
   const pickThreeYear = (y: number | null) => { setYr(y); if (y != null) once("invest_year_pick"); };
   // 해시로 바로 열린 경우도 진입 1회
-  useEffect(() => { if (three) once("invest_three"); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (three) once("invest_three"); }, []);
   // 모드 전환 뒤 본문 상단이 화면 위로 지나가 있으면 선택기 바로 아래로 즉시 올린다
   const rootRef = useRef<HTMLDivElement>(null);
   const first = useRef(true);
@@ -355,7 +356,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
       <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
-      {threeViews && <ThreeView views={threeViews} yr={yr} onYear={pickThreeYear} />}
+      {threeViews && <ThreeView views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} />}
       {!three && !wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
       {!three && wide && (
         <>

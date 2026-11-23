@@ -100,3 +100,32 @@ describe("#270 세 지수 칸·A1", () => {
     expect(iv).not.toMatch(/localStorage|sessionStorage/);
   });
 });
+
+describe("#271 A5 연대별 요약", () => {
+  const h = renderToStaticMarkup(<ThreeView views={views} yr={null} onYear={() => {}} />);
+  it("표 머리·행 7·지표 칸 3칸(기본 해마다 평균)·정의 문장", () => {
+    const t = text(h);
+    expect(t).toContain("10년씩 묶으면 어땠나요?");
+    expect(t).toContain("연대별 요약");
+    expect(h.match(/data-testid="a5-decade-\d+"/g)).toHaveLength(7);
+    for (const id of ["avg", "cum", "dd15"]) expect(h).toContain(`data-testid="a5-metric-${id}"`);
+    expect(h).toMatch(/aria-checked="true"[^>]*data-testid="a5-metric-avg"/);
+    expect(t).toContain("해마다 평균과 누적은 연대 첫 해의 전년 말부터 마지막 해 말까지 계산했어요. −15% 이하 해는 한 해 연간 등락이 −15% 이하였던 해의 수예요.");
+    expect(t).toContain("과거 연말 값으로 계산한 결과예요. 앞으로도 같다는 뜻은 아니에요.");
+  });
+  it("부분 연대 표기 4곳(1961~·1982~·1986~·~2025)·2026 0·검산값", () => {
+    const t = text(h);
+    for (const m of ["1961~", "1982~", "1986~", "~2025"]) expect(t).toContain(m);
+    expect(t).not.toContain("2026");
+    expect(t).toContain("−2.7%");
+    expect(t).toContain("+32.4%");
+  });
+  it("<360은 `−15% 이하` 약칭, 접근 이름은 정식", () => {
+    expect(h).toContain('<span class="max-[359px]:sr-only">−15% 이하 해</span><span aria-hidden="true" class="min-[360px]:hidden">−15% 이하</span>');
+  });
+  it("세 지수 보기에서 InvestView는 칸 4개·GA invest_decade는 첫 전환 1회(once)", () => {
+    const iv = read("app/(main)/_components/views/invest/invest-view.tsx");
+    expect(iv).toContain('onMetric={() => once("invest_decade")}');
+    expect(read("lib/analytics/ga.ts")).toContain('invest_decade: "투자·연대별"');
+  });
+});

@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { buildIndexView } from "@/lib/invest/calc";
 import { marketHistory } from "@/lib/invest/market-history";
-import { A1_ROWS, a1RowOf, classifyYear, classifyYears, commonRange, sameYearRets, type ThreeViews } from "@/lib/invest/three";
+import { A1_ROWS, a1RowOf, classifyYear, classifyYears, commonRange, decadeRows, decadeText, sameYearRets, type ThreeViews } from "@/lib/invest/three";
+import { periodResult } from "@/lib/invest/period";
 import { THREE_TEXT, fmtPct, threeSourceLines, topic } from "@/lib/invest/text";
 
 const mk = (asof?: number): ThreeViews => ({ spx: buildIndexView(marketHistory, "spx", asof), ndx: buildIndexView(marketHistory, "ndx", asof), kospi: buildIndexView(marketHistory, "kospi", asof) });
@@ -80,5 +81,57 @@ describe("세 지수 출처·문장", () => {
   });
   it("요약 문장 정본", () => {
     expect(THREE_TEXT.summary(1986, 2025, 40)).toBe("1986~2025년, 세 지수 모두 연말 값이 있는 40해를 나눠 셌어요");
+  });
+});
+
+describe("A5 연대별 요약(#271)", () => {
+  const rows = decadeRows(V), at = (d: number) => rows.find((r) => r.decade === d)!;
+  it("행 1960~2020년대 7개, 자료 없는 칸은 null(—)", () => {
+    expect(rows.map((r) => r.decade)).toEqual([1960, 1970, 1980, 1990, 2000, 2010, 2020]);
+    expect(at(1960).cells.map((c) => c != null)).toEqual([true, false, false]);
+    expect(decadeText(at(1970).cells[2], "avg")).toBe("—");
+  });
+  it("검산: S&P 2000년대 누적 −24%·평균 −2.7%·2해, 나스닥 1990년대 +1,556%(spec 1,557%는 반올림 전 1,556.46)·+32.4%, 코스피 1990년대 −15% 이하 3해", () => {
+    const s = at(2000).cells[0]!;
+    expect(decadeText(s, "cum")).toBe("−24%");
+    expect(decadeText(s, "avg")).toBe("−2.7%");
+    expect(decadeText(s, "dd15")).toBe("2해");
+    const n = at(1990).cells[1]!;
+    expect(decadeText(n, "cum")).toBe("+1,556%");
+    expect(decadeText(n, "avg")).toBe("+32.4%");
+    expect(decadeText(at(1990).cells[2], "dd15")).toBe("3해");
+  });
+  it("부분 연대 표기 4곳: 1961~·1986~·1982~·진행 중 ~2025", () => {
+    expect(at(1960).cells[0]!.from).toBe(1961);
+    expect(at(1980).cells[1]!.from).toBe(1986);
+    expect(at(1980).cells[2]!.from).toBe(1982);
+    expect(rows.filter((r) => r.to != null).map((r) => [r.decade, r.to])).toEqual([[2020, 2025]]);
+    const partial = rows.flatMap((r) => r.cells).filter((c) => c?.from != null).length;
+    expect(partial).toBe(3);
+  });
+  it("2026(진행 중 해) 값 0: 모든 연대 끝 해 ≤ 마지막 해", () => {
+    for (const r of rows) for (const c of r.cells) if (c) expect(Number.isFinite(c.cum)).toBe(true);
+    expect(at(2020).to).toBe(2025);
+  });
+  it("S&P 2010년대 = 기간 카드 2009→2019와 같은 함수", () => {
+    const p = periodResult(V.spx, 2009, 2019);
+    expect(at(2010).cells[0]!.cum).toBeCloseTo((p.lumpMult - 1) * 100, 9);
+    expect(at(2010).cells[0]!.avg).toBeCloseTo(p.lumpCagr, 9);
+  });
+  it("전 셀을 격자 원값(close)에서 독립 재계산한 값과 일치(N/N)", () => {
+    let n = 0;
+    for (const r of rows) r.cells.forEach((c, i) => {
+      const v = [V.spx, V.ndx, V.kospi][i];
+      const a = Math.max(r.decade, v.start + 1), b = Math.min(r.decade + 9, v.last);
+      if (a > b) { expect(c).toBeNull(); return; }
+      const mult = v.close[b - v.start] / v.close[a - 1 - v.start];
+      let dd = 0;
+      for (let y = a; y <= b; y++) if (v.close[y - v.start] / v.close[y - 1 - v.start] - 1 <= -0.15 + 1e-12 && Math.round((v.close[y - v.start] / v.close[y - 1 - v.start] - 1) * 10000) / 100 <= -15) dd++;
+      expect(c!.cum).toBeCloseTo((mult - 1) * 100, 6);
+      expect(c!.avg).toBeCloseTo((Math.pow(mult, 1 / (b - a + 1)) - 1) * 100, 6);
+      expect(c!.dd15).toBe(dd);
+      n++;
+    });
+    expect(n).toBe(17); // 21칸 중 1960·70년대 나스닥·코스피 4칸은 자료 없음
   });
 });

@@ -4,10 +4,12 @@
 // 데이터는 이미 만든 IndexView 3개(저장·전송 0). 색·막대·점 0(값은 전경색), 눌리는 것 전부 40px 이상.
 import { ChevronRight } from "lucide-react";
 import { useId, useRef, useState } from "react";
-import { A1_ROWS, a1RowOf, classifyYears, sameYearRets, type ThreeViews } from "@/lib/invest/three";
-import { THREE_TEXT } from "@/lib/invest/text";
+import { InlineSelector } from "../../layout/ui/inline-selector";
+import { A1_ROWS, DECADE_METRICS, a1RowOf, classifyYears, decadeLabel, decadeRows, decadeSign, decadeText, sameYearRets, type DecadeMetric, type ThreeViews } from "@/lib/invest/three";
+import { CALC_PAST, THREE_TEXT } from "@/lib/invest/text";
+import { getProfitLossColor } from "@/config/theme";
 import { FoldNote } from "./fold-note";
-import { NoBreak, ThreeYear } from "./nowrap";
+import { NOWRAP_TAIL, NoBreak, ThreeYear } from "./nowrap";
 
 const CARD = "rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none";
 /** 어구가 줄 중간에서 끊기지 않게(S&P 500과·나스닥100이) */
@@ -89,11 +91,62 @@ export function ThreeA1({ views, yr, onYear }: { views: ThreeViews; yr: number |
   );
 }
 
-/** 세 지수 보기 본문(모바일 세로 gap-3, 1280은 두 열). A5(연대별 요약)는 #271에서 이 안에 들어온다 */
-export function ThreeView({ views, yr, onYear }: { views: ThreeViews; yr: number | null; onYear: (y: number | null) => void; onMetric?: () => void }) {
+const METRIC_OPTIONS = DECADE_METRICS.map((m) => ({
+  value: m.value,
+  // <360은 `−15% 이하`로 줄이고 접근 이름은 정식(SameYear 약칭 관행). 글자 영역이 모자라 잘리는 것을 막는다(C25)
+  label: m.value === "dd15" ? <><span className="max-[359px]:sr-only">{m.label}</span><span aria-hidden className="min-[360px]:hidden">{m.short}</span></> : m.label,
+  testId: `a5-metric-${m.value}`,
+}));
+
+/** A5 연대별 요약: 행 = 연대, 열 = 세 지수, 값은 지표 칸 하나(해마다 평균·누적·−15% 이하 해). 누적·평균은 기간 카드와 같은 계산(periodResult) */
+export function ThreeA5({ views, onMetric }: { views: ThreeViews; onMetric?: () => void }) {
+  const [metric, setMetric] = useState<DecadeMetric>("avg");
+  const rows = decadeRows(views);
+  const name = DECADE_METRICS.find((m) => m.value === metric)!.label;
+  return (
+    <section data-testid="three-a5" className={CARD}>
+      <p className="mb-2 text-xs text-muted-foreground text-balance break-keep">{THREE_TEXT.qA5}</p>
+      <h3 className="text-base font-bold">{THREE_TEXT.titleA5}</h3>
+      <div className="mt-2">
+        <InlineSelector fullWidth tight value={metric} onChange={(m) => { if (m !== metric) { setMetric(m); onMetric?.(); } }} options={METRIC_OPTIONS} ariaLabel="연대별 지표 선택" />
+      </div>
+      <table data-testid="a5-table" className="mt-1 w-full border-separate border-spacing-0 text-sm tabular-nums">
+        <caption className="sr-only">연대별 {name}</caption>
+        <thead>
+          <tr>
+            {THREE_TEXT.a5Head.map((h, i) => <th key={h} scope="col" className={`h-10 text-xs font-semibold text-muted-foreground break-keep ${i ? "text-right" : "w-[3.75rem] text-left"}`}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.decade}>
+              <th scope="row" data-testid={`a5-decade-${r.decade}`} className="h-10 border-t border-border py-1 text-left align-middle font-semibold">
+                {decadeLabel(r.decade)}
+                {r.to != null && <small className="block text-xs font-normal text-muted-foreground">~{r.to}</small>}
+              </th>
+              {r.cells.map((c, i) => (
+                <td key={i} data-testid={`a5-cell-${r.decade}-${i}`} className="h-10 border-t border-border py-1 text-right align-middle">
+                  <span className={`font-medium ${metric === "dd15" ? "" : getProfitLossColor(decadeSign(c, metric))}`}>{decadeText(c, metric)}</span>
+                  {c?.from != null && <small className="block text-xs text-muted-foreground">{c.from}~</small>}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p data-testid="a5-def" className="mt-2 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">
+        {THREE_TEXT.a5Def} <NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} />
+      </p>
+    </section>
+  );
+}
+
+/** 세 지수 보기 본문(모바일 세로 gap-3, 1280은 두 열: A1 좌·A5 우) */
+export function ThreeView({ views, yr, onYear, onMetric }: { views: ThreeViews; yr: number | null; onYear: (y: number | null) => void; onMetric?: () => void }) {
   return (
     <div data-testid="invest-three" className="flex min-w-0 flex-col gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150 xl:grid xl:grid-cols-[400px_minmax(0,1fr)] xl:items-start xl:gap-4">
       <ThreeA1 views={views} yr={yr} onYear={onYear} />
+      <ThreeA5 views={views} onMetric={onMetric} />
     </div>
   );
 }
