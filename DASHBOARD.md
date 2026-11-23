@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-23 18:35 KST** · 운영 최신 **v5.139** · 운영 결함 없음 (이 환경 IP만 Vercel 차단 — 로컬 빌드로 점검 대체)
+> **마지막 갱신: 2026-11-23 19:00 KST** · 운영 최신 **v5.139** · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -17,7 +17,7 @@
 | **v5.137** [PR #260](https://github.com/BBplayworld/vaultfolio/pull/260) | #246 홈 내 종목 오늘 · #251 · #254 · #258 · #259 · 체험 알림 차단 · 7일 카드 만원 | **운영 반영 11/23 14:59 KST** · 운영 스모크 PASS | — |
 | **v5.138** [PR #269](https://github.com/BBplayworld/vaultfolio/pull/269) | #250 홈 순자산 구성 설명 + 성적표 0 부호 수정 | **운영 반영 11/23 15:58 KST** · 운영 스모크 PASS | — |
 | **v5.139** [PR #283](https://github.com/BBplayworld/vaultfolio/pull/283) 투자 탭 R3-1 (#270~#274) | 세 지수 보기·연대별 요약·회복 요약·용어·내 비중 링크·가이드 2편 | **운영 반영 11/23 17:19 KST** · 운영 스모크 PASS | — |
-| **5.142** 투자 탭 R3-2 (#275~#279) | 국면별 표·침체 앞뒤·보유 기간 범위·내 시작 해/비중·매달 나눠 넣기 가이드 | [PR #284](https://github.com/BBplayworld/vaultfolio/pull/284) qa·UI PASS·CEO 승인 | **머지 대기** — 이 환경 Vercel 차단 풀리면 preview 증분 확인 후 머지 |
+| **5.142** 투자 탭 R3-2 (#275~#279) | 국면별 표·침체 앞뒤·보유 기간 범위·내 시작 해/비중·매달 나눠 넣기 가이드 | [PR #284](https://github.com/BBplayworld/vaultfolio/pull/284) qa·UI PASS·CEO 승인 | preview 증분 확인 중 → 머지 |
 | **5.143** 투자 탭 R3-3 (#280·#282, #281 닫음) | 코스피×원/달러 겹쳐 보기·금리차 가이드 | spec·tech-review·ui **CEO 통과** | 5.142 머지·스모크 후 개발 |
 | 다음 | #252 신규 현금 원인 하루 더 표시 (risk:high) | spec·qa 데이터 준비 | #250 머지 뒤 단독 릴리스 → 대표 승인 |
 
