@@ -147,6 +147,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "guide:recession-years": "가이드·경기침체",
   "guide:recovery-years": "가이드·회복 기간",
   "guide:kospi-by-year": "가이드·코스피",
+  "guide:monthly-buying": "가이드·매달 나눠 넣기",
   invest: "투자",
   more: "더보기",
   settings: "설정",

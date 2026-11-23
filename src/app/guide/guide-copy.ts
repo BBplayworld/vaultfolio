@@ -6,7 +6,7 @@ import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 // 예외: market-history(#263)는 본문이 투자 탭 컴포넌트 1벌이라 지수 이름이 필요하다(문구 규칙은 투자 탭 R1~R11). 이 파일은 첫 화면 번들에 들어가므로 투자 데이터를 import하지 않는다 — 설명의 숫자(1961년·4번)는 테스트가 데이터와 대조한다.
 // 글을 고치면 lastModified도 함께 갱신한다(sitemap이 이 값을 그대로 쓴다).
 
-export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year"] as const;
+export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year", "monthly-buying"] as const;
 export type GuideSlug = (typeof GUIDE_SLUGS)[number];
 
 export interface GuideCta {
@@ -259,14 +259,30 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     linkLabel: "코스피 연도별 수익률과 크게 빠진 해",
     lastModified: "2026-11-23",
   },
+  "monthly-buying": {
+    slug: "monthly-buying",
+    title: "S&P 500·나스닥100, 한 번에 넣었을 때와 매달 나눠 넣었을 때 — 시작 연도별 결과",
+    description: "S&P 500·나스닥100에 같은 총액을 2000·2005·2010·2015·2020년 말에 한 번에 넣은 경우와 매달 나눠 넣은 경우의 2025년 말 결과를 한 표에 모았어요. 연말 값으로 어림했고 투자 권유가 아니에요.",
+    h1: "S&P 500·나스닥100, 한 번에 넣었을 때와 매달 나눠 넣었을 때 — 시작 연도별 결과",
+    summary: "시작 해 5개(2000·2005·2010·2015·2020년 말)부터 2025년 말까지, 같은 총액을 한 번에 넣은 경우와 매달 나눠 넣은 경우의 넣은 돈 대비 배수를 같은 표에 나란히 놓았어요. 매달 나눠 넣기는 월 값 대신 연말 값의 평균으로 어림했고, 늦게 넣은 돈일수록 짧게 들어가 있었어요. 과거 기록을 모은 글이라 앞날을 말해 주지 않아요.",
+    // 본문은 투자 탭 컴포넌트(MarketHistoryArticle) + 시작 해별 표. 아래 steps·facts는 쓰지 않는다. 시작 해·마지막 해(2000~2020·2025)는 정적 문자열이라 테스트가 데이터와 대조한다(연간 갱신 때 함께 고친다)
+    steps: [],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [],
+    primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
+    secondary: TRIAL_CTA,
+    linkLabel: "한 번에 넣기와 매달 나눠 넣기, 시작 해별 결과",
+    lastModified: "2026-11-23",
+  },
 };
 
-/** 시장 가이드 6편의 `관련 글` 줄(5.141 #274): 모든 편이 다른 편에서 1번 이상 링크된다 */
+/** 시장 가이드 7편의 `관련 글` 줄(5.141 #274): 모든 편이 다른 편에서 1번 이상 링크된다 */
 export const GUIDE_RELATED: Partial<Record<GuideSlug, GuideSlug[]>> = {
   "market-history": ["rate-hike-years", "recession-years"],
   "index-returns-by-year": ["kospi-by-year", "market-history"],
   "rate-hike-years": ["recession-years", "market-history"],
   "recession-years": ["recovery-years", "rate-hike-years"],
-  "recovery-years": ["market-history", "kospi-by-year"],
+  "recovery-years": ["market-history", "monthly-buying"],
   "kospi-by-year": ["index-returns-by-year", "recovery-years"],
+  "monthly-buying": ["index-returns-by-year", "recovery-years"],
 };

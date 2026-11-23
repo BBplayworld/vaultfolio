@@ -1,8 +1,8 @@
 // 가이드 `index-returns-by-year` 고유 표: 연대 × 지수의 `오른 해/등락을 알 수 있는 해`. 연간 등락의 개수만 센 파생값이라 지수 수준값은 SSR에 나가지 않는다.
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import { marketHistory } from "@/lib/invest/market-history";
-import { hikeYearRows, kospiDropYears, recessionYearRows, recoveryRows, type GuideRow } from "@/lib/invest/guide-tables";
-import { fmtPct } from "@/lib/invest/text";
+import { hikeYearRows, kospiDropYears, monthlyBuyingRows, MONTHLY_INDEXES, recessionYearRows, recoveryRows, type GuideRow } from "@/lib/invest/guide-tables";
+import { CALC_DIV, CALC_FOOT, CALC_PAST, fmtPct } from "@/lib/invest/text";
 import { EventName } from "@/app/(main)/_components/views/invest/nowrap";
 
 /** 연대별 `오른 해/전체 해`(전해보다 연말 지수가 오른 해 / 그 연대에서 연간 등락이 있는 해). 해가 없으면 null */
@@ -134,6 +134,49 @@ export function KospiYearTable() {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** 5.142 G2: 시작 해 5개 × 두 지수. 두 값 열은 같은 굵기·같은 색(우열 강조 0), 값은 배수만(지수 수준값 0) */
+export function MonthlyBuyingTable() {
+  const { rows } = monthlyBuyingRows(marketHistory);
+  return (
+    <table data-testid="guide-unique-table" className="w-full table-fixed border-separate border-spacing-0 text-xs tabular-nums">
+      <caption className="mb-1.5 text-left text-xs text-muted-foreground text-pretty break-keep">같은 총액을 시작 해 말에 한 번에 넣은 경우와 매달 나눠 넣은 경우의 넣은 돈 대비 배수예요</caption>
+      <colgroup><col className="w-[26%]" /><col className="w-[14%]" /><col className="w-[30%]" /><col className="w-[30%]" /></colgroup>
+      <thead>
+        <tr>
+          {["시작(연도 말)", "기간", "한 번에 넣기", "매달 나눠 넣기"].map((h, i) => <th key={h} scope="col" className={`h-auto min-h-10 py-1 align-bottom font-semibold text-muted-foreground break-keep ${i ? "text-right" : "text-left"}`}>{h}</th>)}
+        </tr>
+      </thead>
+      {MONTHLY_INDEXES.map((k) => (
+        <tbody key={k}>
+          <tr><th scope="rowgroup" colSpan={4} className="h-9 border-t border-border pt-2 text-left text-xs font-semibold">{INDEX_META[k].label}</th></tr>
+          {rows.filter((r) => r.index === k).map((r) => (
+            <tr key={`${k}-${r.start}`}>
+              <th scope="row" className="h-10 text-left font-medium text-foreground">{r.start}년</th>
+              <td className="text-right font-medium text-foreground">{r.years}년</td>
+              <td className="text-right font-medium text-foreground">{r.lump}배</td>
+              <td className="text-right font-medium text-foreground">{r.dca}배</td>
+            </tr>
+          ))}
+        </tbody>
+      ))}
+    </table>
+  );
+}
+
+/** 5.142 G2 각주 1~4(정본, spec 5절). 4번은 G1·G3 표 고지와 같은 문장 */
+export function MonthlyBuyingFootnotes() {
+  const { last, holds } = monthlyBuyingRows(marketHistory);
+  const P = "mt-1.5 text-xs leading-relaxed text-muted-foreground text-pretty break-keep";
+  return (
+    <div data-testid="guide-footnotes" className="-mt-2">
+      <p className={P}>{`넣은 돈 대비 배수는 ${last}년 말 평가액을 넣은 총액으로 나눈 값이에요.`}</p>
+      <p className={P}>{`매달 나눠 넣기는 늦게 넣은 돈일수록 짧게 들어가 있어요. 기간 5·10·15·20·25년에 넣은 돈이 들어가 있던 기간은 평균 ${holds.join("·")}년이에요.`}</p>
+      <p className={P}>{`${CALC_PAST} ${CALC_FOOT} ${CALC_DIV}`}</p>
+      <p className={P}>{GUIDE_TABLE_DISCLAIMER}</p>
     </div>
   );
 }
