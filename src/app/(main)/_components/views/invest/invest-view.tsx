@@ -143,7 +143,7 @@ export interface InvestViewProps {
   ratioLink?: boolean;
 }
 
-type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table" | "invest_recession";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open" | "invest_phase_table" | "invest_recession" | "invest_range";
 
 export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
@@ -350,7 +350,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
     </div>
   );
   const gridNode = <YearGrid key={`g-${idx}`} onYear={() => once("invest_year_pick")} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
-  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} ratioLink={variant === "app" && ratioLink ? () => once("invest_ratio") : undefined} />;
+  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} ratioLink={variant === "app" && ratioLink ? () => once("invest_ratio") : undefined} onRange={() => once("invest_range")} />;
   // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
   // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
   const MOBILE_SECTIONS: { id: string; node: React.ReactNode }[] = [
