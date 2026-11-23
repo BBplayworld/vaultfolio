@@ -107,14 +107,58 @@ export function sourceLines(v: IndexView, revIds: Record<"spx" | "ndx" | "kospi"
   return [l1, l2, l3, l4];
 }
 
-/** R4.2 용어 풀이 5줄(연도별 표 펼침 아래 `invest-gloss`) — 정본 라벨은 그대로 두고 풀이만 더한다 */
+/** C1(5.141): 용어 사전 단일 출처. 지수 ⓘ·목록 보조문·기간 카드·연도별 표 풀이·출처 패널이 모두 이 문장을 참조한다(새 문장 0).
+ *  이음 규칙(마침표)은 여기 한 곳에서만 정한다: 앞 문장은 마침표 없이 쓴 원문(LIST_SUB)만 `. `로 잇는다. */
+export const TERM_PRICE_INDEX = "지수에 든 종목의 가격만으로 낸 값이에요. 배당은 들어 있지 않아요.";
+export const TERM_YEAR_END = "해마다 마지막 날(연말) 종가 기준이에요. 한 해 안의 움직임은 담지 않아요.";
+const TERM_DIV_HEAD = "받은 배당을 다시 넣지 않고 계산했어요.";
+const TERM_DROP_TAIL = "한 해 연간 등락이 −15% 이하인 해와는 다른 기준이에요.";
+export type TermId = "priceIndex" | "exDividend" | "yearEnd" | "bigDrop" | "nber" | "spread" | "lumpDca" | "y10" | "fedRate" | "fedBs";
+export const TERMS: Record<TermId, { term: string; def: string }> = {
+  priceIndex: { term: "가격 지수", def: TERM_PRICE_INDEX },
+  exDividend: { term: "배당 제외", def: `${TERM_DIV_HEAD} ${CALC_DIV}` },
+  yearEnd: { term: "연말 기준", def: TERM_YEAR_END },
+  bigDrop: { term: "크게 빠진 때(−15%)", def: `${LIST_SUB}. ${TERM_DROP_TAIL}` },
+  nber: { term: "경기침체(NBER)", def: "미국 경제연구소(NBER)가 정한 경기침체 기간이에요." },
+  spread: { term: "장단기 금리차", def: "10년 만기 국채 금리에서 2년(3개월) 만기 금리를 뺀 값이에요. 마이너스면 짧은 쪽 금리가 더 높았다는 뜻이에요." },
+  lumpDca: { term: "한 번에 넣기·매달 나눠 넣기", def: "한 번에 넣기는 시작 해 말에 총액을 한 번에 넣은 경우, 매달 나눠 넣기는 같은 총액을 매달 같은 금액으로 나눠 넣은 경우예요." },
+  y10: { term: "10년물", def: "10년 만기 미국 국채의 금리예요." },
+  fedRate: { term: "연준 금리", def: "미국 중앙은행(연준)의 기준금리예요." },
+  fedBs: { term: "연준 대차대조표 사건", def: "연준이 채권을 사들이거나 줄인 결정이에요." },
+};
+/** 출처 패널 `용어` 7개(순서 고정) */
+export const PANEL_TERM_IDS: TermId[] = ["priceIndex", "exDividend", "yearEnd", "bigDrop", "nber", "spread", "lumpDca"];
+/** 지수 ⓘ: TERMS 두 문장을 이은 것(새 문장 0) */
+export const INDEX_INFO = `${TERMS.priceIndex.def} ${TERMS.yearEnd.def}`;
+
+/** R4.2 용어 풀이 5줄(연도별 표 펼침 아래 `invest-gloss`) — 풀이는 TERMS 참조 */
 export const GLOSS: { term: string; text: string }[] = [
-  { term: "장단기 금리차(10년−2년·10년−3개월)", text: "10년 만기 국채 금리에서 2년(3개월) 만기 금리를 뺀 값이에요. 마이너스면 짧은 쪽 금리가 더 높았다는 뜻이에요." },
-  { term: "10년물", text: "10년 만기 미국 국채의 금리예요." },
-  { term: "경기침체(NBER)", text: "미국 경제연구소(NBER)가 정한 경기침체 기간이에요." },
-  { term: "연준 금리", text: "미국 중앙은행(연준)의 기준금리예요." },
-  { term: "연준 대차대조표 사건", text: "연준이 채권을 사들이거나 줄인 결정이에요." },
+  { term: "장단기 금리차(10년−2년·10년−3개월)", text: TERMS.spread.def },
+  { term: TERMS.y10.term, text: TERMS.y10.def },
+  { term: TERMS.nber.term, text: TERMS.nber.def },
+  { term: TERMS.fedRate.term, text: TERMS.fedRate.def },
+  { term: TERMS.fedBs.term, text: TERMS.fedBs.def },
 ];
+/** A4(5.141): `크게 빠진 때` 카드 머리 1줄. 회복된 하락만 비교(진행 중은 제외하고 꼬리로 건수), 전부 진행 중이면 깊이만.
+ *  가장 깊었던 때 = dd 최소, 가장 길었던 때 = 고점에서 전고점까지(ry−py) 최대(같으면 이른 하락) — 펼침 `고점에서 전고점까지`와 같은 값 */
+export interface RecoverySummary {
+  deep: { name: string; dd: number };
+  long: { name: string; n: number } | null;
+  /** 가장 깊은 하락이 가장 긴 하락과 같음 */
+  merged: boolean;
+  /** 진행 중이라 비교에서 뺀 하락 수 */
+  skipped: number;
+}
+export function recoverySummary(v: IndexView): RecoverySummary | null {
+  if (!v.eps.length) return null;
+  const done = v.eps.filter((e) => !e.ongoing), pool = done.length ? done : v.eps;
+  const deep = pool.reduce((b, e) => (e.dd < b.dd ? e : b), pool[0]);
+  const longest = done.length ? done.reduce((b, e) => ((e.ry as number) - e.py > (b.ry as number) - b.py ? e : b), done[0]) : null;
+  const skipped = done.length ? v.eps.length - done.length : 0;
+  return { deep: { name: deep.name, dd: deep.dd }, long: longest ? { name: longest.name, n: (longest.ry as number) - longest.py } : null, merged: longest === deep, skipped };
+}
+export const RECOVERY_TAIL = (n: number) => `진행 중 ${n}번 제외`;
+
 export const QUESTION_HEAD = {
   drops: "크게 빠지고 오른 때, 금리는 어땠나요?",
   grid: "해마다 얼마나 움직였나요?",

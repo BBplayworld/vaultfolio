@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { BLS_INFO, QUESTION_HEAD, headlineLines, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
+import { BLS_INFO, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, headlineLines, readoutOf, recoverySummary, sourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -69,22 +69,53 @@ function InfoDot({ left, top, label, children }: { left: number; top: number; la
   );
 }
 
+/** 용어·출처 패널(접힘 기본). 안쪽: `용어` 7개(TERMS) → `출처` 줄. 용어 정의는 TERMS 참조 — 새 문장 0 */
 function SourcePanel({ lines }: { lines: string[] }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="mt-1">
       <button type="button" aria-expanded={open} aria-controls="invest-source-panel" data-testid="invest-source-button" onClick={() => setOpen((o) => !o)} className="inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-        출처·라이선스 · <span className="whitespace-nowrap">CC BY-SA 4.0</span><Info aria-hidden className="size-3.5" />
+        용어·출처 · <span className="whitespace-nowrap">CC BY-SA 4.0</span><Info aria-hidden className="size-3.5" />
         <ChevronDown aria-hidden className={`size-3.5 motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       <div id="invest-source-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
-          <div data-testid="invest-source" className="space-y-1.5 pb-1 pt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">
-            {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
+          <div className="pb-1 pt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">
+            <p className="font-semibold text-foreground">용어</p>
+            <dl data-testid="invest-terms" className="mt-1 space-y-2">
+              {PANEL_TERM_IDS.map((id) => <div key={id}><dt className="font-semibold text-foreground">{TERMS[id].term}</dt><dd>{TERMS[id].def}</dd></div>)}
+            </dl>
+            <div className="mt-3 border-t border-border/60 pt-2">
+              <p className="font-semibold text-foreground">출처</p>
+              <div data-testid="invest-source" className="mt-1 space-y-1.5">
+                {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** A4: 크게 빠진 때 카드 머리 1줄. <360은 숨김(같은 값이 목록 행·펼침에 있음) */
+function RecoveryLine({ view, className = "" }: { view: ReturnType<typeof buildIndexView>; className?: string }) {
+  const r = recoverySummary(view);
+  if (!r) return null;
+  const B = ({ children }: { children: React.ReactNode }) => <b className="font-semibold text-foreground">{children}</b>;
+  const dot = <span aria-hidden className="text-muted-foreground"> · </span>;
+  return (
+    <p data-testid="invest-drop-recovery" className={`text-xs leading-snug text-muted-foreground text-pretty break-keep max-[359px]:hidden ${className}`}>
+      {r.merged && r.long ? (
+        <>가장 깊고 고점에서 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span>{dot}<span className="whitespace-nowrap"><B>{r.long.n}년</B></span></>
+      ) : (
+        <>
+          가장 깊었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span>
+          {r.long && <>{dot}고점에서 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.long.name}</B> <B>{r.long.n}년</B></span></>}
+        </>
+      )}
+      {r.skipped > 0 && <span className="whitespace-nowrap">{dot}{RECOVERY_TAIL(r.skipped)}</span>}
+    </p>
   );
 }
 
@@ -208,7 +239,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         {L && showLevels ? (
           <>
             <MainChart data={marketHistory} view={view} width={width} wide={wide} selEp={selEff} selYear={yr} overlay={ov} onPickYear={pickYear} />
-            <InfoDot left={capWidth(`지수 · 해마다 연말 값 · ${view.last}년 말까지`) + 2} top={-2} label="지수 값 설명">가격 지수(배당 제외)이고, 해마다 마지막 날(연말) 종가 기준이에요. 한 해 안의 움직임은 담지 않아요.</InfoDot>
+            <InfoDot left={capWidth(`지수 · 해마다 연말 값 · ${view.last}년 말까지`) + 2} top={-2} label="지수 값 설명">{INDEX_INFO}</InfoDot>
             <InfoDot left={capWidth(`${view.rate === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값`) + 2} top={L.cap3 - 14} label="기준금리 설명">{(view.rate === "us" ? "연준 목표금리(범위면 상단)를 매달 이어서 그렸어요. 1982년 9월부터 자료가 있어요." : "한국은행 기준금리를 매달 이어서 그렸어요(2008년 3월 전은 콜금리 목표). 1999년 5월부터 자료가 있어요.") + (ov === "cpi" || ov === "unemp" ? ` 겹쳐 본 선: ${BLS_INFO}` : "")}</InfoDot>
             <button
               ref={btnRef} type="button" aria-haspopup="listbox" aria-expanded={menu} aria-label={ovCur ? `겹쳐 보기, ${ovCur.label} 켜짐` : "겹쳐 보기"} data-testid="overlay-button"
@@ -247,6 +278,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     <div data-testid="invest-drops" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
       <p data-testid="q-drops" className="mb-2 text-xs text-muted-foreground text-balance break-keep">{QUESTION_HEAD.drops}</p>
       <h3 className="text-base font-bold">크게 빠진 때</h3>
+      <RecoveryLine view={view} className="mt-1" />
       <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail width={listW} bare />
       <p data-testid="invest-base" className="mt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{head.l3}</p>
       <div className="mt-4 border-t border-border/60 pt-3">
@@ -285,7 +317,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         <>
           {chartCard}
           <div className="grid grid-cols-[400px_minmax(0,1fr)] items-stretch gap-4">
-            <div className="min-w-0 h-full rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(false)}</div>
+            <div className="min-w-0 h-full rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listTab === "drop" && <RecoveryLine view={view} className="mt-2" />}{listBody(false)}</div>
             <div data-testid="invest-detail" className="h-full min-w-0 overflow-hidden rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
               {listTab === "rise" ? (
                 pattern.rise.find((r) => r.y === riseDetailYear) ? (
