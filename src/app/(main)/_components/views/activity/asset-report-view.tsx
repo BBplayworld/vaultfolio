@@ -36,10 +36,14 @@ import { buildGrowBoards, growStatus as growStatusOf } from "@/lib/asset/grow-ki
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 
 // 부호 색상 텍스트 (상승=빨강/하락=파랑)
+/** 0(−0·0.0% 반올림 포함)은 부호·손익색 없이 — 손실인데 `+0원`으로 보이던 표기 정리 */
+export const zeroSafe = (v: number, digits = 0) => (Math.abs(v) < 0.5 * 10 ** -digits ? 0 : v);
+export const signPrefix = (v: number, digits = 0) => (zeroSafe(v, digits) > 0 ? "+" : "");
 function Signed({ value, className = "" }: { value: number; className?: string }) {
+  const v = zeroSafe(value);
   return (
-    <span className={`font-semibold tabular-nums ${getProfitLossColor(value)} ${className}`}>
-      {value >= 0 ? "+" : ""}{formatPriceByMode(value)}
+    <span className={`font-semibold tabular-nums ${getProfitLossColor(v)} ${className}`}>
+      {signPrefix(v)}{formatPriceByMode(v)}
     </span>
   );
 }
@@ -361,8 +365,8 @@ export function AssetReportView() {
         <div className="text-right">
           <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(allNet)} /></p>
           {allNetRate !== null && (
-            <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(allNetRate)}`}>
-              {allNetRate >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%
+            <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(zeroSafe(allNetRate, 1))}`}>
+              {signPrefix(allNetRate, 1)}{zeroSafe(allNetRate, 1).toFixed(1)}%
             </p>
           )}
         </div>
@@ -382,8 +386,8 @@ export function AssetReportView() {
             <div className="text-right">
               <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(equityNet)} /></p>
               {equityNetRate !== null && (
-                <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(equityNetRate)}`}>
-                  {equityNetRate >= 0 ? "+" : ""}{equityNetRate.toFixed(1)}%
+                <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(zeroSafe(equityNetRate, 1))}`}>
+                  {signPrefix(equityNetRate, 1)}{zeroSafe(equityNetRate, 1).toFixed(1)}%
                 </p>
               )}
             </div>
@@ -399,8 +403,8 @@ export function AssetReportView() {
             <div className="text-right">
               <p className="text-sm font-bold tabular-nums"><Signed value={Math.round(debtNet)} /></p>
               {debtNetRate !== null && (
-                <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(debtNetRate)}`}>
-                  {debtNetRate >= 0 ? "+" : ""}{debtNetRate.toFixed(1)}%
+                <p className={`text-sm font-semibold tabular-nums ${getProfitLossColor(zeroSafe(debtNetRate, 1))}`}>
+                  {signPrefix(debtNetRate, 1)}{zeroSafe(debtNetRate, 1).toFixed(1)}%
                 </p>
               )}
             </div>
@@ -543,8 +547,8 @@ export function AssetReportView() {
                 <p className="flex items-baseline gap-2 flex-wrap">
                   <Signed value={Math.round(allNet)} className="text-xl md:text-2xl font-bold" />
                   {allNetRate !== null && (
-                    <span className={`text-base font-bold tabular-nums ${getProfitLossColor(allNetRate)}`}>
-                      ({allNetRate >= 0 ? "+" : ""}{allNetRate.toFixed(1)}%)
+                    <span className={`text-base font-bold tabular-nums ${getProfitLossColor(zeroSafe(allNetRate, 1))}`}>
+                      ({signPrefix(allNetRate, 1)}{zeroSafe(allNetRate, 1).toFixed(1)}%)
                     </span>
                   )}
                 </p>
@@ -571,8 +575,8 @@ export function AssetReportView() {
                       <span className="flex flex-col items-end whitespace-nowrap text-right sm:flex-row sm:items-baseline sm:gap-x-1.5">
                         <Signed value={Math.round(r.net)} className="text-sm font-bold" />
                         {r.rate !== null && (
-                          <span className={`text-sm font-semibold tabular-nums ${getProfitLossColor(r.rate)}`}>
-                            ({r.rate >= 0 ? "+" : ""}{r.rate.toFixed(1)}%)
+                          <span className={`text-sm font-semibold tabular-nums ${getProfitLossColor(zeroSafe(r.rate, 1))}`}>
+                            ({signPrefix(r.rate, 1)}{zeroSafe(r.rate, 1).toFixed(1)}%)
                           </span>
                         )}
                       </span>
