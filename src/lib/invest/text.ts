@@ -179,7 +179,8 @@ export const BLS_INFO = "연평균은 월 12개 평균이에요. 물가는 CPI-U
 
 /** R3-3: 원/달러 출처·정의(정본). 'FRED 로고·제휴·공식' 표기 금지. G.5가 정본(CEO 정정, H.10 아님) */
 export const FX_SOURCE = "원/달러: 미 연준 이사회(G.5) · FRED(세인트루이스 연은) 경유(EXKOUS) 자료를 가공했어요(공공 영역, 출처 표기).";
-export const FX_INFO = "원/달러는 1달러에 몇 원인지예요. 매일 뉴욕 정오 시세를 달마다 평균하고, 그 12개를 다시 평균했어요. 1982년부터 있고, 지수는 원화 값 그대로예요.";
+export const FX_INFO = "원/\u2060달러는 1달러에 몇 원인지예요. 매일 뉴욕 정오 시세를 달마다 평균하고, 그 12개를 다시 평균했어요. 1982년부터 있고, 지수는 원화 값 그대로예요.";
+/** FX_INFO의 \u2060(단어 결합자)은 320 팝오버에서 '원/'·'달러' 사이 줄바꿈 방지(C113) */
 /** R3-3: 원/달러 연평균 공개 CSV(정확한 값은 화면이 아니라 이 파일로 제공) */
 export const FX_DATASET_HREF = "/datasets/market-history/fx-krw-usd-annual.csv";
 export const FX_DATASET_LABEL = "원/달러 연평균 CSV 열기";
