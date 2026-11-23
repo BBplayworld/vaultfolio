@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { BLS_INFO, FX_DATASET_HREF, FX_DATASET_LABEL, FX_INFO, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, THREE_LABEL, headlineLines, readoutOf, recoverySummary, sourceLines, threeSourceLines, fmtPct } from "@/lib/invest/text";
+import { BLS_INFO, FX_DATASET_HREF, FX_DATASET_LABEL, FX_INFO, FX_SOURCE, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, THREE_LABEL, headlineLines, readoutOf, recoverySummary, sourceLines, threeSourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -104,7 +104,8 @@ function SourcePanel({ lines, datasetHref }: { lines: string[]; datasetHref?: st
             <div className="mt-3 border-t border-border/60 pt-2">
               <p className="font-semibold text-foreground">출처</p>
               <div data-testid="invest-source" className="mt-1 space-y-1.5">
-                {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
+                {/* 원/달러 출처(FX_SOURCE)는 l2 끝에 붙어 있지만 화면에서는 별도 줄로 나눠 읽기 쉽게 한다(`원/달러:`는 끊김 0) */}
+                {lines.flatMap((t) => (t.endsWith(FX_SOURCE) ? [t.slice(0, -FX_SOURCE.length).trimEnd(), FX_SOURCE] : [t])).map((t, i) => <p key={i}><NoBreak text={t} phrases={t === FX_SOURCE ? ["원/달러:"] : undefined} /></p>)}
                 {datasetHref && <p><a href={datasetHref} data-testid="fx-dataset-link" className="inline-flex min-h-10 items-center rounded-md text-brand underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:text-indigo-300">{FX_DATASET_LABEL}</a></p>}
               </div>
             </div>

@@ -159,9 +159,11 @@ export function PeriodCard({ view, period, onChange, question, ratioLink, mine, 
         )}
       </p>
       <p data-testid="period-honest" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">
-        {APPROX_LINE}
-        {/* ⓘ는 끝 어절 바로 뒤(40px 히트, 줄 높이는 음수 마진으로 유지) */}
+        {/* ⓘ는 끝 어절과 한 묶음(nowrap)이라 줄 첫머리에 혼자 남지 않는다(5.143 UI(a)). 40px 히트, 줄 높이는 음수 마진으로 유지 */}
+        {APPROX_LINE.slice(0, APPROX_LINE.lastIndexOf(" ") + 1)}
+        <span className="whitespace-nowrap">{APPROX_LINE.slice(APPROX_LINE.lastIndexOf(" ") + 1)}
         <button type="button" aria-expanded={info} aria-controls="period-honest-def" aria-label="어림 방식 보기" data-testid="honest-info" onClick={() => setInfo((o) => !o)} className="-my-3.5 ml-0.5 inline-flex size-10 items-center justify-center rounded-full align-middle text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><Info aria-hidden className="size-4" /></button>
+        </span>
         {/* A6(5.142): 같은 줄 끝에 이어 붙인다(높이 +0). 히트영역 40px은 after로 확보 */}
         {range && (
           <button type="button" aria-expanded={rangeOpen} aria-controls={rangeId} data-testid="period-range-button" onClick={() => { const o = !rangeOpen; setRangeOpen(o); if (o) onRange?.(); }} className="relative ml-1 whitespace-nowrap rounded-sm align-baseline text-xs font-medium text-foreground/80 outline-none after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50">

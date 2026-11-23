@@ -129,7 +129,7 @@ describe("투자 탭 행·표·③ 마크업", () => {
   it("기간 수익률 카드 기본 S&P 2015→2025: 한 번에 3.35배·+235%·+12.85% / 매달 2.01배·+101%·평균 5.0년, 어림 1줄·ⓘ·고정 문장", () => {
     const html = renderToStaticMarkup(<PeriodCard view={views.spx} period={defaultPeriod(views.spx)} onChange={() => {}} />);
     for (const t of ["3.35배", "+235%", "+12.85%", "2.01배", "+101%", "넣은 돈이 들어가 있던 기간은 ", "평균 5.0년이에요"]) expect(html).toContain(t);
-    expect(html).toContain("월 지수 값 대신 연말 값의 평균으로 매달 산 것으로 어림했어요");
+    expect(html).toContain('월 지수 값 대신 연말 값의 평균으로 매달 산 것으로 <span class="whitespace-nowrap">어림했어요<button'); // 끝 어절 + ⓘ 한 묶음(5.143 UI(a))
     expect(html).toContain('data-testid="calc-hold-dca"');
     expect(html).toContain('data-testid="honest-irr"');
     expect(html).toContain("넣은 시점을 반영해 해마다 평균으로 바꾸면 ");

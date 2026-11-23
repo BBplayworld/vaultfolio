@@ -7,10 +7,11 @@ import { useRef, useState, type KeyboardEvent } from "react";
 import type { IndexView } from "@/lib/invest/calc";
 import { NOWRAP_YEAR_SUFFIX, NoBreak, ReadoutChips } from "./nowrap";
 import { useElementWidth } from "./use-width";
-import { MINUS, READOUT_HINT, fmtLevel, fmtPct, readoutOf } from "@/lib/invest/text";
+import { READOUT_HINT, fmtLevel, fmtPct, readoutOf } from "@/lib/invest/text";
 import { getProfitLossColor } from "@/config/theme";
 
-const f1 = (v: number) => { const r = Math.round(v * 10) / 10; return r > 0 ? `+${r.toFixed(1)}` : r < 0 ? `${MINUS}${Math.abs(r).toFixed(1)}` : "0.0"; };
+// 칸 글자는 aria-label·표·읽기 줄과 같은 공통 fmtPct(`toFixed`) 한 벌에서 `%`만 뗀다(5.143 N1: 따로 반올림하면 .x5 칸이 0.1%p 어긋남)
+const f1 = (v: number) => fmtPct(v).slice(0, -1);
 export const gridAlpha = (retPct: number) => 0.1 + 0.5 * Math.min(Math.abs(retPct) / 40, 1);
 
 export function YearGrid({ view, period, showLevels, question, onYear }: { view: IndexView; period: { sy: number; ey: number }; showLevels: boolean; question?: string; onYear?: () => void }) {

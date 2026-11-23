@@ -199,7 +199,7 @@ export function SpreadYearsTables() {
         <tbody>
           {rows.map((r) => (
             <tr key={r.id} data-testid={`g4-row-${r.id}`}>
-              <th scope="row" className="h-auto min-h-10 border-t border-border/60 py-1 text-left font-medium text-foreground break-keep"><RowLabel text={r.label} /></th>
+              <th scope="row" className="h-10 border-t border-border/60 py-1 text-left font-medium text-foreground break-keep"><RowLabel text={r.label} /></th>
               <td className="border-t border-border/60 text-right font-medium text-foreground">{cnt(r.c.n, r.c.up)}</td>
               <td className="border-t border-border/60 text-right font-medium text-foreground">{cnt(r.c.nNext, r.c.upNext)}</td>
             </tr>
@@ -208,7 +208,7 @@ export function SpreadYearsTables() {
       </table>
       <table data-testid="g4-year-table" className="w-full table-fixed border-separate border-spacing-0 text-xs tabular-nums">
         <caption className="mb-1.5 text-left text-xs text-muted-foreground text-pretty break-keep">금리차가 마이너스인 달이 있던 해마다, 그달과 그해·다음 해 S&P 500 연말 등락이에요</caption>
-        <colgroup><col className="w-[16%]" /><col className="w-[28%]" /><col className="w-[28%]" /><col className="w-[28%]" /></colgroup>
+        <colgroup><col className="w-[12%]" /><col className="w-[46%]" /><col className="w-[21%]" /><col className="w-[21%]" /></colgroup>
         <thead>
           <tr>{["해", "마이너스인 달", "그해", "다음 해"].map((h, i) => <th key={h} scope="col" className={`h-10 font-semibold text-muted-foreground break-keep ${i > 1 ? "text-right" : "text-left"}`}>{h}</th>)}</tr>
         </thead>
