@@ -72,7 +72,7 @@ export function ThreeA1({ views, yr, onYear }: { views: ThreeViews; yr: number |
                 <div className="min-h-0 overflow-hidden">
                   <div className="px-2 pb-2">
                     {/* 칩을 눌러도 아래가 밀리지 않게 슬롯 높이를 예약한다 */}
-                    <div data-testid="a1-selected" role="status" aria-live="polite" className="flex min-h-12 items-center rounded-xl bg-secondary px-3 py-2 text-xs max-[359px]:min-h-16">
+                    <div data-testid="a1-selected" role="status" aria-live="polite" className="flex min-h-14 items-center rounded-xl bg-secondary px-3 py-2 text-xs max-[359px]:min-h-16">
                       {inRow(k) ? <ThreeYear year={yr as number} items={sameYearRets(views, yr as number)} /> : <span className="text-muted-foreground">{THREE_TEXT.slotHint}</span>}
                     </div>
                     <Chips years={r.years} label={r.label} yr={yr} onYear={onYear} />
@@ -94,7 +94,7 @@ export function ThreeA1({ views, yr, onYear }: { views: ThreeViews; yr: number |
 const METRIC_OPTIONS = DECADE_METRICS.map((m) => ({
   value: m.value,
   // <360은 `−15% 이하`로 줄이고 접근 이름은 정식(SameYear 약칭 관행). 글자 영역이 모자라 잘리는 것을 막는다(C25)
-  label: m.value === "dd15" ? <><span className="max-[359px]:sr-only">{m.label}</span><span aria-hidden className="min-[360px]:hidden">{m.short}</span></> : m.label,
+  label: m.value === "dd15" ? <><span className="max-[360px]:sr-only">{m.label}</span><span aria-hidden className="min-[360px]:hidden">{m.short}</span></> : m.label,
   testId: `a5-metric-${m.value}`,
 }));
 

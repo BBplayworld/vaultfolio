@@ -1,6 +1,7 @@
 import { GUIDES, GUIDE_RELATED, type GuideDoc } from "../guide-copy";
 import { GuideActions } from "../guide-actions";
 import Link from "next/link";
+import { NoBreak } from "@/app/(main)/_components/views/invest/nowrap";
 import { DecadeTable, GUIDE_TABLE_DISCLAIMER, HikeTable, KospiYearTable, RecessionTable, RecoveryTable } from "./decade-table";
 import { KOSPI_DEF, LIST_NOTE_2, LIST_SUB_SENTENCE } from "@/lib/invest/text";
 import { InvestView } from "@/app/(main)/_components/views/invest/invest-view";
@@ -16,7 +17,7 @@ export function MarketHistoryArticle({ doc }: { doc: GuideDoc }) {
     <>
       <div>
         <h1 data-testid="guide-title" className="text-xl md:text-2xl font-bold leading-snug text-balance break-keep">
-          {doc.h1}
+          <NoBreak text={doc.h1} phrases={["나스닥100·코스피,", "나스닥100·코스피"]} />
         </h1>
         <p data-testid="guide-summary" className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty break-keep">
           {doc.summary}

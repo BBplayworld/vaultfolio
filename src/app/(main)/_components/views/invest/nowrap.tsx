@@ -35,11 +35,12 @@ export function ReadoutChips({ ro, hideYear = false }: { ro: Readout; hideYear?:
 }
 
 /** 지수명+값 묶음(줄바꿈 단위). 320 미만은 약칭(`S&P`·`나스닥`), 접근 이름은 정식 이름·값. 색·인과 0 */
-function RetItem({ label, ret, first }: { label: string; ret: number; first: boolean }) {
+function RetItem({ label, ret, first, trail = false }: { label: string; ret: number; first: boolean; trail?: boolean }) {
   return (
     <span className="whitespace-nowrap" aria-label={`${label} ${fmtPct(ret, 1)}`}>
       <span aria-hidden className="text-muted-foreground">{first ? "" : "· "}<span className="max-[359px]:hidden">{label}</span><span className="hidden max-[359px]:inline">{label.replace(/ ?100$| 500$/, "")}</span></span>{" "}
       <span aria-hidden className="text-foreground">{fmtPct(ret, 1)}</span>
+      {trail && <span aria-hidden className="text-muted-foreground"> ·</span>}
     </span>
   );
 }
@@ -61,7 +62,7 @@ export function ThreeYear({ year, items }: { year: number; items: { label: strin
   return (
     <div data-testid="three-year" className="flex flex-wrap items-baseline gap-x-1.5 text-xs tabular-nums break-keep">
       <b className="mr-0.5 text-sm font-bold">{year}년</b>
-      {items.map((x, i) => <RetItem key={x.label} label={x.label} ret={x.ret} first={i === 0} />)}
+      {items.map((x, i) => <RetItem key={x.label} label={x.label} ret={x.ret} first trail={i < items.length - 1} />)}
     </div>
   );
 }

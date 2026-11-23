@@ -38,7 +38,7 @@ const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: strin
 };
 /** 칸 라벨: <360은 약칭(`S&P`·`나스닥`)으로 줄이고 접근 이름은 항상 정식 이름(SameYear 약칭 관행, C25) */
 function ShortLabel({ full, short }: { full: string; short: string }) {
-  return <><span className="max-[359px]:sr-only">{full}</span><span aria-hidden className="min-[360px]:hidden">{short}</span></>;
+  return <><span className="max-[360px]:sr-only">{full}</span><span aria-hidden className="min-[360px]:hidden">{short}</span></>;
 }
 type Mode = IndexKey | "three";
 const SHORT: Record<IndexKey, string> = { spx: "S&P", ndx: "나스닥", kospi: "코스피" };
@@ -160,6 +160,8 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
   const wide = useMediaQuery("(min-width: 1280px)");
   const chartRef = useRef<HTMLDivElement>(null);
   const stepRef = useRef<HTMLDivElement>(null);
+  // 칸 선택기를 누를 때는 해 선택을 지우지 않는다(지수→세 지수 전환에서 고른 해를 넘기기 위해)
+  const selectorRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(chartRef);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -218,7 +220,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
   useEffect(() => {
     const down = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (yr != null && chartRef.current && !chartRef.current.contains(t) && !stepRef.current?.contains(t)) setYr(null);
+      if (yr != null && chartRef.current && !chartRef.current.contains(t) && !stepRef.current?.contains(t) && !selectorRef.current?.contains(t)) setYr(null);
       if (menu && !menuRef.current?.contains(t) && !btnRef.current?.contains(t)) setMenu(false);
     };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape" && menu) { setMenu(false); btnRef.current?.focus(); } };
@@ -356,7 +358,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
   return (
     <div ref={rootRef} data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:mx-auto xl:w-full xl:max-w-[960px] xl:gap-4">
       {/* P4: 지수 선택기 상단 고정(모바일). 체험 배너·PWA safe-area 아래에 붙는다 */}
-      <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
+      <div ref={selectorRef} data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
         <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
       {threeViews && <ThreeView views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} />}

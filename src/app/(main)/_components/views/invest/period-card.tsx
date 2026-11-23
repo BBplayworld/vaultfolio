@@ -131,12 +131,12 @@ export function PeriodCard({ view, period, onChange, question, ratioLink }: { vi
           <div data-testid="calc-hold-dca" className="text-xs text-muted-foreground break-keep"><NoBreak text={HOLD_LINE(t.hold)} phrases={[]} tails={NOWRAP_TAIL} /></div>
         </div>
       </div>
-      <p data-testid="calc-past" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} /></p>
-      {ratioLink && (
-        <Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="inline-flex min-h-10 items-center gap-1 rounded-md text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:active:scale-[0.98]">
-          {RATIO_LINK_LABEL} <span aria-hidden>›</span>
-        </Link>
-      )}
+      <p data-testid="calc-past" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} />
+        {/* T1(5.141): 별도 줄이 아니라 이 단락 끝에 잇는다(높이 증가 최소). 히트영역 40px은 after로 확보(레이아웃 높이 0) */}
+        {ratioLink && (
+          <> <Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="relative inline-block whitespace-nowrap rounded-sm font-semibold text-primary outline-none after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50">{RATIO_LINK_LABEL} <span aria-hidden>›</span></Link></>
+        )}
+      </p>
       <p data-testid="period-honest" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">
         {APPROX_LINE}
         {/* ⓘ는 끝 어절 바로 뒤(40px 히트, 줄 높이는 음수 마진으로 유지) */}

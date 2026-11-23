@@ -48,7 +48,7 @@ describe("#270 세 지수 칸·A1", () => {
     const h = app();
     expect(h.match(/role="radio"/g)).toHaveLength(4);
     for (const id of ["spx", "ndx", "kospi", "three"]) expect(h).toContain(`data-testid="invest-index-${id}"`);
-    expect(h).toContain('<span class="max-[359px]:sr-only">나스닥100</span><span aria-hidden="true" class="min-[360px]:hidden">나스닥</span>');
+    expect(h).toContain('<span class="max-[360px]:sr-only">나스닥100</span><span aria-hidden="true" class="min-[360px]:hidden">나스닥</span>');
     expect(h).toContain("세 지수");
     expect(h).toContain('role="radiogroup"');
   });
@@ -121,7 +121,7 @@ describe("#271 A5 연대별 요약", () => {
     expect(t).toContain("+32.4%");
   });
   it("<360은 `−15% 이하` 약칭, 접근 이름은 정식", () => {
-    expect(h).toContain('<span class="max-[359px]:sr-only">−15% 이하 해</span><span aria-hidden="true" class="min-[360px]:hidden">−15% 이하</span>');
+    expect(h).toContain('<span class="max-[360px]:sr-only">−15% 이하 해</span><span aria-hidden="true" class="min-[360px]:hidden">−15% 이하</span>');
   });
   it("세 지수 보기에서 InvestView는 칸 4개·GA invest_decade는 첫 전환 1회(once)", () => {
     const iv = read("app/(main)/_components/views/invest/invest-view.tsx");
@@ -139,7 +139,7 @@ describe("#273 T1 `/ratio` 1줄", () => {
     expect(text(h)).toContain("캡처로 내 비중 보기 ›");
     expect(h.indexOf('data-testid="calc-past"')).toBeLessThan(h.indexOf('data-testid="invest-ratio-link"'));
     expect(h.indexOf('data-testid="invest-ratio-link"')).toBeLessThan(h.indexOf('data-testid="period-honest"'));
-    expect(h).toContain("min-h-10");
+    expect(h).toContain("after:-inset-y-3"); // 히트영역 40px(레이아웃 높이 0)
     expect(h.match(/data-testid="invest-ratio-link"/g)).toHaveLength(1);
   });
   it("보유 기기(기본값)·가이드(variant guide)는 DOM 0", () => {
@@ -152,5 +152,21 @@ describe("#273 T1 `/ratio` 1줄", () => {
   });
   it("노출 판정: 체험 또는 자산 0개(InvestTab)", () => {
     expect(read("app/(main)/_components/views/invest/invest-lazy.tsx")).toContain("const ratioLink = isTrialMode() || !hasAnyAssets(assetData);");
+  });
+});
+
+describe("5.141 qa D1·D2 회귀", () => {
+  const iv = read("app/(main)/_components/views/invest/invest-view.tsx");
+  it("D1: Tailwind v4 max-*는 `<`라 짝 `min-[360px]`와 맞게 max-[360px] — 359·360 양쪽에서 두 라벨이 겹치지 않는다", () => {
+    for (const f of ["app/(main)/_components/views/invest/invest-view.tsx", "app/(main)/_components/views/invest/three-view.tsx"]) {
+      const src = read(f);
+      expect(src).toContain('max-[360px]:sr-only');
+      expect(src).not.toContain('max-[359px]:sr-only');
+      expect(src).toContain('min-[360px]:hidden');
+    }
+  });
+  it("D2: 칸 선택기를 누를 때 pointerdown 핸들러가 해 선택(setYr(null))을 지우지 않는다", () => {
+    expect(iv).toContain("!selectorRef.current?.contains(t)) setYr(null)");
+    expect(iv).toContain("ref={selectorRef}");
   });
 });
