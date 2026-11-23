@@ -1,0 +1,112 @@
+{
+ "_note": "합성값. localStorage는 키→JSON 값. 시계는 Asia/Seoul. 주식 20주x100만=2,000만 고정(시세변동 0).",
+ "clock": {
+  "sat": "2026-11-28",
+  "sun": "2026-11-29",
+  "mon": "2026-11-30",
+  "tz": "Asia/Seoul"
+ },
+ "scenario": "S5 일요일 등록: 11-29(일) 현금 500만 등록, 일요일 행은 토요일(11-28) 행 upsert, 월요일(11-30) 열기",
+ "localStorage": {
+  "secretasset_asset_data": {
+   "realEstate": [],
+   "stocks": [
+    {
+     "id": "stk1",
+     "category": "domestic",
+     "name": "합성주식A",
+     "ticker": "000001",
+     "quantity": 20,
+     "averagePrice": 900000,
+     "currentPrice": 1000000,
+     "currency": "KRW",
+     "purchaseDate": "2026-10-01"
+    }
+   ],
+   "crypto": [],
+   "cash": [
+    {
+     "id": "csh1",
+     "type": "bank",
+     "name": "합성계좌",
+     "balance": 5000000,
+     "currency": "KRW"
+    }
+   ],
+   "loans": [],
+   "yearlyNetAssets": [],
+   "transactions": [],
+   "cashTransactions": [],
+   "loanTransactions": [],
+   "cryptoTransactions": [],
+   "lastUpdated": "2026-11-25T12:00:00+09:00",
+   "nickname": ""
+  },
+  "secretasset_daily_snapshots": [
+   {
+    "date": "2026-11-27",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-28",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   }
+  ],
+  "secretasset_last_visit_date": "2026-11-29"
+ },
+ "expect": {
+  "sunday_after_edit": "행 11-28 불변(재작성 안 함) — 일요일 Hero 시작점이 토요일 행이라 갱신 시 '신규'가 사라짐",
+  "sunday_hero": "신규 현금 +500만",
+  "monday_hero_known_limit": "M/D 이후 신규 현금 +500만 한 번 더(범위 밖 한계로 qa-report 명시)"
+ }
+}

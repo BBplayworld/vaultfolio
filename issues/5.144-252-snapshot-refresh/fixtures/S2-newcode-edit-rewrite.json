@@ -1,0 +1,263 @@
+{
+ "_note": "합성값. localStorage는 키→JSON 값. 시계는 Asia/Seoul. 주식 20주x100만=2,000만 고정(시세변동 0).",
+ "clock": {
+  "D": "2026-11-25",
+  "D1": "2026-11-26",
+  "tz": "Asia/Seoul"
+ },
+ "scenario": "S2 신 코드: D 열기→등록→(디바운스 후) 행 D 재작성→D+1",
+ "before": {
+  "secretasset_asset_data": {
+   "realEstate": [],
+   "stocks": [
+    {
+     "id": "stk1",
+     "category": "domestic",
+     "name": "합성주식A",
+     "ticker": "000001",
+     "quantity": 20,
+     "averagePrice": 900000,
+     "currentPrice": 1000000,
+     "currency": "KRW",
+     "purchaseDate": "2026-10-01"
+    }
+   ],
+   "crypto": [],
+   "cash": [],
+   "loans": [],
+   "yearlyNetAssets": [],
+   "transactions": [],
+   "cashTransactions": [],
+   "loanTransactions": [],
+   "cryptoTransactions": [],
+   "lastUpdated": "2026-11-25T12:00:00+09:00",
+   "nickname": ""
+  },
+  "secretasset_daily_snapshots": [
+   {
+    "date": "2026-11-23",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-24",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-25",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   }
+  ],
+  "secretasset_last_visit_date": "2026-11-25"
+ },
+ "afterEditExpectedDaily": [
+  {
+   "date": "2026-11-23",
+   "netAsset": 20000000,
+   "financialAsset": 20000000,
+   "breakdown": {
+    "realEstate": 0,
+    "stocks": 20000000,
+    "crypto": 0,
+    "cash": 0,
+    "loans": 0,
+    "tenantDeposit": 0,
+    "physical": 0
+   },
+   "fx": {
+    "USD": 1400,
+    "JPY": 900
+   },
+   "fxBase": {
+    "USD": 0,
+    "JPY": 0
+   },
+   "cost": {
+    "total": 18000000,
+    "stock": 18000000,
+    "crypto": 0,
+    "realEstate": 0,
+    "physical": 0
+   }
+  },
+  {
+   "date": "2026-11-24",
+   "netAsset": 20000000,
+   "financialAsset": 20000000,
+   "breakdown": {
+    "realEstate": 0,
+    "stocks": 20000000,
+    "crypto": 0,
+    "cash": 0,
+    "loans": 0,
+    "tenantDeposit": 0,
+    "physical": 0
+   },
+   "fx": {
+    "USD": 1400,
+    "JPY": 900
+   },
+   "fxBase": {
+    "USD": 0,
+    "JPY": 0
+   },
+   "cost": {
+    "total": 18000000,
+    "stock": 18000000,
+    "crypto": 0,
+    "realEstate": 0,
+    "physical": 0
+   }
+  },
+  {
+   "date": "2026-11-25",
+   "netAsset": 25000000,
+   "financialAsset": 25000000,
+   "breakdown": {
+    "realEstate": 0,
+    "stocks": 20000000,
+    "crypto": 0,
+    "cash": 5000000,
+    "loans": 0,
+    "tenantDeposit": 0,
+    "physical": 0
+   },
+   "fx": {
+    "USD": 1400,
+    "JPY": 900
+   },
+   "fxBase": {
+    "USD": 0,
+    "JPY": 0
+   },
+   "cost": {
+    "total": 23000000,
+    "stock": 18000000,
+    "crypto": 0,
+    "realEstate": 0,
+    "physical": 0
+   }
+  }
+ ],
+ "afterEditAssetData": {
+  "realEstate": [],
+  "stocks": [
+   {
+    "id": "stk1",
+    "category": "domestic",
+    "name": "합성주식A",
+    "ticker": "000001",
+    "quantity": 20,
+    "averagePrice": 900000,
+    "currentPrice": 1000000,
+    "currency": "KRW",
+    "purchaseDate": "2026-10-01"
+   }
+  ],
+  "crypto": [],
+  "cash": [
+   {
+    "id": "csh1",
+    "type": "bank",
+    "name": "합성계좌",
+    "balance": 5000000,
+    "currency": "KRW"
+   }
+  ],
+  "loans": [],
+  "yearlyNetAssets": [],
+  "transactions": [],
+  "cashTransactions": [],
+  "loanTransactions": [],
+  "cryptoTransactions": [],
+  "lastUpdated": "2026-11-25T12:00:00+09:00",
+  "nickname": ""
+ },
+ "expect": {
+  "rowsChanged": "행 D만(netAsset 2,000→2,500만, breakdown.cash 0→500만, cost.total 동기)",
+  "unchanged": [
+   "행 11-23",
+   "행 11-24",
+   "monthly 전체",
+   "lastVisitDate=D",
+   "assetData(키 값 동일 바이트)"
+  ],
+  "D_hero": "신규 현금 +500만 유지(시작점=행 11-24)",
+  "D1_hero": "신규 현금 줄 없음",
+  "week7_today_bar": "편집 즉시 2,500만"
+ }
+}

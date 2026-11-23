@@ -1,0 +1,121 @@
+{
+ "_note": "합성값. localStorage는 키→JSON 값. 시계는 Asia/Seoul. 주식 20주x100만=2,000만 고정(시세변동 0).",
+ "clock": {
+  "D": "2026-11-25",
+  "D1": "2026-11-26",
+  "tz": "Asia/Seoul"
+ },
+ "scenario": "S4 소급 입력: D+1에 date=D 입금 기록(createdAt=D+1) → 행 D(입금 전) 시작, 포함돼야 함",
+ "localStorage": {
+  "secretasset_asset_data": {
+   "realEstate": [],
+   "stocks": [
+    {
+     "id": "stk1",
+     "category": "domestic",
+     "name": "합성주식A",
+     "ticker": "000001",
+     "quantity": 20,
+     "averagePrice": 900000,
+     "currentPrice": 1000000,
+     "currency": "KRW",
+     "purchaseDate": "2026-10-01"
+    }
+   ],
+   "crypto": [],
+   "cash": [
+    {
+     "id": "csh1",
+     "type": "bank",
+     "name": "합성계좌",
+     "balance": 1000000,
+     "currency": "KRW"
+    }
+   ],
+   "loans": [],
+   "yearlyNetAssets": [],
+   "transactions": [],
+   "cashTransactions": [
+    {
+     "id": "ctx_2",
+     "cashId": "csh1",
+     "type": "deposit",
+     "amount": 1000000,
+     "currency": "KRW",
+     "date": "2026-11-25",
+     "reflected": true,
+     "createdAt": "2026-11-26T09:00:00+09:00"
+    }
+   ],
+   "loanTransactions": [],
+   "cryptoTransactions": [],
+   "lastUpdated": "2026-11-25T12:00:00+09:00",
+   "nickname": ""
+  },
+  "secretasset_daily_snapshots": [
+   {
+    "date": "2026-11-24",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-25",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   }
+  ],
+  "secretasset_last_visit_date": "2026-11-25"
+ },
+ "expect": {
+  "D1_hero": "현금 입금 +100만 포함(createdAt KST 날짜 D+1 > D) — P1 2026-08 회귀 보호",
+  "sum": "=Δ순자산"
+ }
+}

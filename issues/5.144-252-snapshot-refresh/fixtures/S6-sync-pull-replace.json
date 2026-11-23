@@ -1,0 +1,275 @@
+{
+ "_note": "합성값. localStorage는 키→JSON 값. 시계는 Asia/Seoul. 주식 20주x100만=2,000만 고정(시세변동 0).",
+ "clock": {
+  "D": "2026-11-25",
+  "D1": "2026-11-26",
+  "tz": "Asia/Seoul"
+ },
+ "scenario": "S6 동기화 pull로 일별 통째 교체: 로컬(신 코드 갱신 행 D=등록 후) ← 원격(구버전 기기가 보낸 행 D=등록 전)",
+ "local": {
+  "secretasset_asset_data": {
+   "realEstate": [],
+   "stocks": [
+    {
+     "id": "stk1",
+     "category": "domestic",
+     "name": "합성주식A",
+     "ticker": "000001",
+     "quantity": 20,
+     "averagePrice": 900000,
+     "currentPrice": 1000000,
+     "currency": "KRW",
+     "purchaseDate": "2026-10-01"
+    }
+   ],
+   "crypto": [],
+   "cash": [
+    {
+     "id": "csh1",
+     "type": "bank",
+     "name": "합성계좌",
+     "balance": 5000000,
+     "currency": "KRW"
+    }
+   ],
+   "loans": [],
+   "yearlyNetAssets": [],
+   "transactions": [],
+   "cashTransactions": [],
+   "loanTransactions": [],
+   "cryptoTransactions": [],
+   "lastUpdated": "2026-11-25T12:00:00+09:00",
+   "nickname": ""
+  },
+  "secretasset_daily_snapshots": [
+   {
+    "date": "2026-11-23",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-24",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-25",
+    "netAsset": 25000000,
+    "financialAsset": 25000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 5000000,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 23000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   }
+  ],
+  "secretasset_last_visit_date": "2026-11-25"
+ },
+ "remotePayload": {
+  "assetData": {
+   "realEstate": [],
+   "stocks": [
+    {
+     "id": "stk1",
+     "category": "domestic",
+     "name": "합성주식A",
+     "ticker": "000001",
+     "quantity": 20,
+     "averagePrice": 900000,
+     "currentPrice": 1000000,
+     "currency": "KRW",
+     "purchaseDate": "2026-10-01"
+    }
+   ],
+   "crypto": [],
+   "cash": [
+    {
+     "id": "csh1",
+     "type": "bank",
+     "name": "합성계좌",
+     "balance": 5000000,
+     "currency": "KRW"
+    }
+   ],
+   "loans": [],
+   "yearlyNetAssets": [],
+   "transactions": [],
+   "cashTransactions": [],
+   "loanTransactions": [],
+   "cryptoTransactions": [],
+   "lastUpdated": "2026-11-25T12:00:00+09:00",
+   "nickname": ""
+  },
+  "snapshots": {
+   "daily": [
+    {
+     "date": "2026-11-23",
+     "netAsset": 20000000,
+     "financialAsset": 20000000,
+     "breakdown": {
+      "realEstate": 0,
+      "stocks": 20000000,
+      "crypto": 0,
+      "cash": 0,
+      "loans": 0,
+      "tenantDeposit": 0,
+      "physical": 0
+     },
+     "fx": {
+      "USD": 1400,
+      "JPY": 900
+     },
+     "fxBase": {
+      "USD": 0,
+      "JPY": 0
+     },
+     "cost": {
+      "total": 18000000,
+      "stock": 18000000,
+      "crypto": 0,
+      "realEstate": 0,
+      "physical": 0
+     }
+    },
+    {
+     "date": "2026-11-24",
+     "netAsset": 20000000,
+     "financialAsset": 20000000,
+     "breakdown": {
+      "realEstate": 0,
+      "stocks": 20000000,
+      "crypto": 0,
+      "cash": 0,
+      "loans": 0,
+      "tenantDeposit": 0,
+      "physical": 0
+     },
+     "fx": {
+      "USD": 1400,
+      "JPY": 900
+     },
+     "fxBase": {
+      "USD": 0,
+      "JPY": 0
+     },
+     "cost": {
+      "total": 18000000,
+      "stock": 18000000,
+      "crypto": 0,
+      "realEstate": 0,
+      "physical": 0
+     }
+    },
+    {
+     "date": "2026-11-25",
+     "netAsset": 20000000,
+     "financialAsset": 20000000,
+     "breakdown": {
+      "realEstate": 0,
+      "stocks": 20000000,
+      "crypto": 0,
+      "cash": 0,
+      "loans": 0,
+      "tenantDeposit": 0,
+      "physical": 0
+     },
+     "fx": {
+      "USD": 1400,
+      "JPY": 900
+     },
+     "fxBase": {
+      "USD": 0,
+      "JPY": 0
+     },
+     "cost": {
+      "total": 18000000,
+      "stock": 18000000,
+      "crypto": 0,
+      "realEstate": 0,
+      "physical": 0
+     }
+    }
+   ],
+   "monthly": []
+  }
+ },
+ "expect": {
+  "afterPull_daily": "원격 daily 통째(applyImportedPayload 4단계) → 행 D=등록 전으로 복귀(현행과 동일, 손실 0·행 수 동일)",
+  "afterPull_D1": "신규 현금 반복(구버전 행과 동일, 허용 한계)",
+  "mustNot": [
+   "행 수 감소",
+   "행 D 소실",
+   "pull 직후 재작성이 원격 행을 덮어씀(차단 조건: pull 직후 no-op)",
+   "assetData 변경"
+  ],
+  "reverse": "원격=신 코드 행(등록 후), 로컬=구버전 → pull 후 등록 후 행 유지",
+  "push_after_pull": "pull 직후 재작성은 no-op; 다음 사용자 편집에서만 재작성"
+ }
+}

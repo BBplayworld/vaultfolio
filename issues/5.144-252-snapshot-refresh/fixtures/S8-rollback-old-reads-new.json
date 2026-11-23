@@ -1,0 +1,142 @@
+{
+ "_note": "합성값. localStorage는 키→JSON 값. 시계는 Asia/Seoul. 주식 20주x100만=2,000만 고정(시세변동 0).",
+ "clock": {
+  "D": "2026-11-25",
+  "D1": "2026-11-26",
+  "tz": "Asia/Seoul"
+ },
+ "scenario": "S8 롤백: 신 코드가 쓴 행 D(등록 후)를 구버전 코드가 읽기",
+ "localStorage": {
+  "secretasset_asset_data": {
+   "realEstate": [],
+   "stocks": [
+    {
+     "id": "stk1",
+     "category": "domestic",
+     "name": "합성주식A",
+     "ticker": "000001",
+     "quantity": 20,
+     "averagePrice": 900000,
+     "currentPrice": 1000000,
+     "currency": "KRW",
+     "purchaseDate": "2026-10-01"
+    }
+   ],
+   "crypto": [],
+   "cash": [
+    {
+     "id": "csh1",
+     "type": "bank",
+     "name": "합성계좌",
+     "balance": 5000000,
+     "currency": "KRW"
+    }
+   ],
+   "loans": [],
+   "yearlyNetAssets": [],
+   "transactions": [],
+   "cashTransactions": [],
+   "loanTransactions": [],
+   "cryptoTransactions": [],
+   "lastUpdated": "2026-11-25T12:00:00+09:00",
+   "nickname": ""
+  },
+  "secretasset_daily_snapshots": [
+   {
+    "date": "2026-11-23",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-24",
+    "netAsset": 20000000,
+    "financialAsset": 20000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 0,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 18000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   },
+   {
+    "date": "2026-11-25",
+    "netAsset": 25000000,
+    "financialAsset": 25000000,
+    "breakdown": {
+     "realEstate": 0,
+     "stocks": 20000000,
+     "crypto": 0,
+     "cash": 5000000,
+     "loans": 0,
+     "tenantDeposit": 0,
+     "physical": 0
+    },
+    "fx": {
+     "USD": 1400,
+     "JPY": 900
+    },
+    "fxBase": {
+     "USD": 0,
+     "JPY": 0
+    },
+    "cost": {
+     "total": 23000000,
+     "stock": 18000000,
+     "crypto": 0,
+     "realEstate": 0,
+     "physical": 0
+    }
+   }
+  ],
+  "secretasset_last_visit_date": "2026-11-25"
+ },
+ "expect": {
+  "format": "행 형식 불변(필드 동일) → JSON 파싱·성적표·7일·월 결산 동일 동작",
+  "old_saveSnapshots_D1": "구버전 앱 열기가 행 D+1 신규 upsert, 행 D 보존(30일 컷오프 안)",
+  "D1_hero": "반복 없음(행 D가 등록 후이므로 Δ0) — 롤백 전 기록이 이득으로 남음",
+  "loss": "0",
+  "pair_risk": "당일 입금 기록은 구버전 Hero에서 유령 짝(재접속 사용자 현행과 동일)"
+ }
+}
