@@ -27,7 +27,7 @@ export const TRIAL_EXIT_KEY = "trial_exit";
 export const TRIAL_EXIT_FROM_KEY = "trial_exit_from";
 
 /** 체험 중 거부하는 같은 출처 API(외부 전송) — 경로 자체 또는 그 하위 */
-export const TRIAL_BLOCKED_PATHS = ["/api/parse-screenshot", "/api/share", "/api/sync", "/api/feedback"] as const;
+export const TRIAL_BLOCKED_PATHS = ["/api/parse-screenshot", "/api/share", "/api/sync", "/api/feedback", "/api/push"] as const;
 
 /** 거부 API 합성 응답의 error 문구 — 호출처가 그대로 토스트로 띄운다 */
 export const TRIAL_BLOCKED_MESSAGE = "체험 중에는 사용할 수 없어요";

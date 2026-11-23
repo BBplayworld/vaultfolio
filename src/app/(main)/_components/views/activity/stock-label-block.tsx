@@ -456,11 +456,11 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
         aria-controls={sheetId}
         aria-label={`${row.name}, 보유 ${row.holdText}, ${own ? "매입가 대비" : "평단 대비 수익률"} ${row.rate === null ? "없음" : pctText(row.rate)}${row.due ? ", 점검 차례" : ""}`}
         onClick={onToggle}
-        className={`-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_4.5rem_3.625rem_0.875rem] items-center gap-x-2 gap-y-0.5 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150 max-[359px]:grid-cols-[minmax(0,1fr)_3rem_3.625rem_0.875rem] ${open ? "rounded-t-lg bg-foreground/6" : "rounded-lg hover:bg-muted/40"}`}
+        className={`-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_4.5rem_minmax(3.625rem,auto)_0.875rem] items-center gap-x-2 gap-y-0.5 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150 max-[359px]:grid-cols-[minmax(0,1fr)_3rem_minmax(3.625rem,auto)_0.875rem] ${open ? "rounded-t-lg bg-foreground/6" : "rounded-lg hover:bg-muted/40"}`}
       >
         <span className={`min-w-0 text-sm font-semibold text-foreground text-pretty break-keep ${own ? "col-span-2" : ""}`}>{row.name}</span>
         {own ? null : row.rate === null ? <span /> : <ZeroBar value={row.rate} scale={scale} className="h-2" />}
-        <span data-testid="grow-row-rate" data-rate={row.rate === null ? "" : pctText(row.rate)} className={`text-right text-base font-bold tabular-nums ${row.rate === null ? "text-muted-foreground" : pctTone(row.rate)}`}>
+        <span data-testid="grow-row-rate" data-rate={row.rate === null ? "" : pctText(row.rate)} className={`whitespace-nowrap text-right text-base font-bold tabular-nums ${row.rate === null ? "text-muted-foreground" : pctTone(row.rate)}`}>
           {row.rate === null ? (own ? "" : "—") : pctText(row.rate)}
         </span>
         <ChevronRight aria-hidden className={`size-3.5 self-center text-muted-foreground motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-90" : ""}`} />

@@ -41,10 +41,12 @@ interface StockTargetPickerProps {
   allowNew: boolean;
   defaultCategory: Stock["category"];
   defaultBroker?: string;
+  // 신규 자산 종류 Select에 보일 종류 목록(#258 시장별 제한) — 없으면 전체(기존 화면 그대로)
+  allowedCategories?: readonly Stock["category"][];
 }
 
 // 보유 자산 항목 선택 카드 목록 + 신규 자산 등록(증권사·주식 타입 선택)
-export function StockTargetPicker({ candidates, value, onChange, allowNew, defaultCategory, defaultBroker = "" }: StockTargetPickerProps) {
+export function StockTargetPicker({ candidates, value, onChange, allowNew, defaultCategory, defaultBroker = "", allowedCategories }: StockTargetPickerProps) {
   const isNew = value?.kind === "new";
   const cardClass = (selected: boolean) =>
     `flex w-full min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-[background-color,box-shadow] motion-safe:active:scale-[0.96] ${selected ? "bg-card shadow-sm ring-2 ring-brand" : "bg-muted/40 hover:bg-muted/70 dark:bg-muted/25 dark:hover:bg-muted/40"
@@ -85,7 +87,7 @@ export function StockTargetPicker({ candidates, value, onChange, allowNew, defau
             {isNew && <Check className="size-4 shrink-0 text-brand" />}
           </button>
           {value?.kind === "new" && (
-            <div className="grid grid-cols-2 gap-2 px-3 pb-3">
+            <div className="grid grid-cols-2 gap-2 px-3 pb-3 max-[359px]:grid-cols-1">
               <Select value={value.broker} onValueChange={(v) => onChange({ ...value, broker: v })}>
                 <SelectTrigger className="h-9 w-full min-w-0 text-sm"><SelectValue placeholder="증권사 선택" /></SelectTrigger>
                 <SelectContent>
@@ -97,7 +99,7 @@ export function StockTargetPicker({ candidates, value, onChange, allowNew, defau
               <Select value={value.category} onValueChange={(v) => onChange({ ...value, category: v as Stock["category"] })}>
                 <SelectTrigger className="h-9 w-full min-w-0 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {stockCategories.map((c) => (
+                  {stockCategories.filter((c) => !allowedCategories || allowedCategories.includes(c.value)).map((c) => (
                     <SelectItem key={c.value} value={c.value} className="text-sm">{c.label}</SelectItem>
                   ))}
                 </SelectContent>

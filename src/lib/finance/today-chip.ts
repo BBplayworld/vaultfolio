@@ -167,6 +167,8 @@ export function getStockChipQuote(
 
 export interface TodayChipResult {
   rate: number; // %
+  // 원화 등락 기여(#246 홈 '내 종목 오늘' 고르기 전용) = 등락률을 낸 분자 합 - 분모 합(같은 현재 환율). 화면·서버에 쓰지 않는다
+  krwChange: number;
   anyLive: boolean;
   closeDates: string[]; // 장 종료 후 종목들의 종가일(중복 제거·오름차순)
 }
@@ -218,7 +220,7 @@ export function computeTodayChip(
   if (!(den > 0)) return null;
   // ② 시장 단위로 비면(장 종료 직후·휴장 구간 등) 다른 시장만의 값을 내지 않는다
   if ((["domestic", "foreign"] as const).some((m) => marketHasRef[m] && !marketHasChip[m])) return null;
-  return { rate: (num / den - 1) * 100, anyLive, closeDates: [...dates].sort() };
+  return { rate: (num / den - 1) * 100, krwChange: num - den, anyLive, closeDates: [...dates].sort() };
 }
 
 export function todayChipLabel(chip: TodayChipResult, scope: "row" | "header"): string {
