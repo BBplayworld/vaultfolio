@@ -145,6 +145,8 @@ const SCREEN_TITLES: Record<string, string> = {
   "guide:index-returns-by-year": "가이드·연도별 수익률",
   "guide:rate-hike-years": "가이드·금리 인상기",
   "guide:recession-years": "가이드·경기침체",
+  "guide:recovery-years": "가이드·회복 기간",
+  "guide:kospi-by-year": "가이드·코스피",
   invest: "투자",
   more: "더보기",
   settings: "설정",

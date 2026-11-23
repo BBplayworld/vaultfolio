@@ -115,18 +115,19 @@ function RecoveryLine({ view, className = "" }: { view: ReturnType<typeof buildI
   const r = recoverySummary(view);
   if (!r) return null;
   const B = ({ children }: { children: React.ReactNode }) => <b className="font-semibold text-foreground">{children}</b>;
-  const dot = <span aria-hidden className="text-muted-foreground"> · </span>;
+  // 구분점은 뒤 어구에 붙여 한 덩어리로 묶는다 — 좁은 폭에서 줄 끝에 `·`이 매달리지 않는다(D-11 규칙)
+  const dot = <span aria-hidden>· </span>;
   return (
     <p data-testid="invest-drop-recovery" className={`text-xs leading-snug text-muted-foreground text-pretty break-keep max-[359px]:hidden ${className}`}>
       {r.merged && r.long ? (
-        <>가장 깊고 고점에서 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span>{dot}<span className="whitespace-nowrap"><B>{r.long.n}년</B></span></>
+        <>가장 깊고 고점에서 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span> <span className="whitespace-nowrap">{dot}<B>{r.long.n}년</B></span></>
       ) : (
         <>
           가장 깊었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span>
-          {r.long && <>{dot}고점에서 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.long.name}</B> <B>{r.long.n}년</B></span></>}
+          {r.long && <> <span className="whitespace-nowrap">{dot}고점에서</span> 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.long.name}</B> <B>{r.long.n}년</B></span></>}
         </>
       )}
-      {r.skipped > 0 && <span className="whitespace-nowrap">{dot}{RECOVERY_TAIL(r.skipped)}</span>}
+      {r.skipped > 0 && <> <span className="whitespace-nowrap">{dot}{RECOVERY_TAIL(r.skipped)}</span></>}
     </p>
   );
 }

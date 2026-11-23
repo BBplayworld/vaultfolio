@@ -75,6 +75,10 @@ export function listNote(v: IndexView): string {
   const ex = v.ret[2020 - v.start];
   return `한 해 안에서 빠졌다가 같은 해에 되돌린 하락은 이 목록에 없어요. 예를 들어 2020년 ${v.label}는 연간 ${fmtPct(ex ?? 0)}로 끝나, 그해 3월의 급락은 안 보여요.`;
 }
+/** 목록 보조문을 한 문장으로 쓸 때(가이드 정의 줄·TERMS): 마침표는 여기서 한 번만 붙인다 */
+export const LIST_SUB_SENTENCE = `연말 기준 고점 대비 ${Math.round(DROP_THRESHOLD * 100)}% 넘게 빠진 때예요. 연말만 재서 장중 저점보다 얕게 나와요.`;
+/** G3 정의 줄(−15% 이하 해). 뒤에 LIST_NOTE_2를 잇는다 */
+export const KOSPI_DEF = "−15% 이하 해는 그해 연말 값이 전해 연말보다 15% 이상 내린 해예요.";
 export const LIST_NOTE_2 = "같은 시기에 있었다는 기록이고, 무엇이 원인인지는 말하지 않아요.";
 export const LIST_SUB = `연말 기준 고점 대비 ${Math.round(DROP_THRESHOLD * 100)}% 넘게 빠진 때예요. 연말만 재서 장중 저점보다 얕게 나와요`;
 
@@ -119,7 +123,7 @@ export const TERMS: Record<TermId, { term: string; def: string }> = {
   priceIndex: { term: "가격 지수", def: TERM_PRICE_INDEX },
   exDividend: { term: "배당 제외", def: `${TERM_DIV_HEAD} ${CALC_DIV}` },
   yearEnd: { term: "연말 기준", def: TERM_YEAR_END },
-  bigDrop: { term: "크게 빠진 때(−15%)", def: `${LIST_SUB}. ${TERM_DROP_TAIL}` },
+  bigDrop: { term: "크게 빠진 때(−15%)", def: `${LIST_SUB_SENTENCE} ${TERM_DROP_TAIL}` },
   nber: { term: "경기침체(NBER)", def: "미국 경제연구소(NBER)가 정한 경기침체 기간이에요." },
   spread: { term: "장단기 금리차", def: "10년 만기 국채 금리에서 2년(3개월) 만기 금리를 뺀 값이에요. 마이너스면 짧은 쪽 금리가 더 높았다는 뜻이에요." },
   lumpDca: { term: "한 번에 넣기·매달 나눠 넣기", def: "한 번에 넣기는 시작 해 말에 총액을 한 번에 넣은 경우, 매달 나눠 넣기는 같은 총액을 매달 같은 금액으로 나눠 넣은 경우예요." },
