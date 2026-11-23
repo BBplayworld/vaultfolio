@@ -99,6 +99,39 @@ export function assetIdRegisteredDate(id: unknown, today: string): string | null
   return date > addDaysStr(today, 1) ? null : date;
 }
 
+/** 현금 자산 최초 등록 시각(ms) — id의 13자리 ms 중 가장 이른 값. 현금이 없거나 id를 못 읽는 항목이 있으면 null(현행 규칙 폴백). 읽기 전용 */
+function firstCashRegisteredMs(assetData: AssetData): number | null {
+  const cash = assetData.cash ?? [];
+  if (cash.length === 0) return null;
+  let min = Infinity;
+  for (const c of cash) {
+    const m = typeof c.id === "string" ? ID_MS_RE.exec(c.id) : null;
+    const ms = m ? Number(m[2]) : NaN;
+    if (!Number.isFinite(ms) || ms < ID_MS_MIN) return null;
+    min = Math.min(min, ms);
+  }
+  return min;
+}
+
+/**
+ * 현금 등록 사용자 판정(`cashTracked`) — 구간 시작 현금·입출금 기록이 있으면 참. 현금이 구간 도중에 처음 생긴 경우만,
+ * 구간 안 매매 기록이 모두 현금 최초 등록 시각보다 먼저 입력(`createdAt`, 거래 날짜 아님)됐으면 거짓(그 매매는 순유입 유지, #250 ⑯).
+ * 매매가 없거나 시각을 못 읽거나 등록 뒤 입력분이 섞여 있으면 종전과 같이 참.
+ */
+export function isCashTrackedForTrades(
+  assetData: AssetData,
+  o: { startCash: number; endCash: number; hasCashRecords: boolean; startDate: string | null; endDate: string },
+): boolean {
+  if (o.startCash > 0 || o.hasCashRecords) return true;
+  if (!(o.endCash > 0)) return false;
+  const first = firstCashRegisteredMs(assetData);
+  if (first === null) return true;
+  const trades = [...(assetData.transactions ?? []), ...(assetData.cryptoTransactions ?? [])]
+    .filter((t) => (!o.startDate || t.date > o.startDate) && t.date <= o.endDate);
+  if (trades.length === 0) return true;
+  return trades.some((t) => !(Date.parse((t as { createdAt?: string }).createdAt ?? "") < first));
+}
+
 const isEnrichedDaily = (s: DailyAssetSnapshot): boolean => !!(s?.date && s.breakdown && s.fx && s.fxBase && s.cost);
 
 /**

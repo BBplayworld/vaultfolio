@@ -11,7 +11,7 @@ import { formatPriceByMode } from "@/lib/number-utils";
 import { getProfitLossColor } from "@/config/theme";
 import type { AssetData, MonthlyAssetSnapshot } from "@/types/asset";
 import { computeAttributionBetween, type buildLiveAttributionCurr } from "@/lib/report/asset-report";
-import { estimateLoanInterest, mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, splitLoanCause, type SettlementCause, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
+import { estimateLoanInterest, isCashTrackedForTrades, mapSettlementCauses, SETTLEMENT_CAUSE_LABEL, splitLoanCause, type SettlementCause, type SettlementCauses, type SettlementWindow } from "@/lib/report/settlement";
 import { linkedTradeIdOf } from "@/lib/trade/linked-record";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { SECTION, SectionHeader, SpecRow } from "../../layout/ui/report-section";
@@ -290,7 +290,7 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
   const hasCashRecords = (assetData.cashTransactions ?? []).some(
     (t) => !!startDate && t.date >= startDate && t.date <= endDate,
   );
-  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || endCash > 0 || hasCashRecords;
+  const cashTracked = isCashTrackedForTrades(assetData, { startCash: start?.breakdown?.cash ?? 0, endCash, hasCashRecords, startDate, endDate });
   const effects = attr ? attr.effects : [{ key: "cash" as const, amount: deltaNet, estimated: true }];
   const hasCash = hasCashIn(assetData, startDate, endDate);
   const mapped = withLoanCause(mapSettlementCauses(
@@ -328,7 +328,7 @@ export function computeChainCauses({ points, live, deltaNet, endDate, liveCash, 
   const start = points[0];
   const startDate = start ? (start.date ?? null) : null;
   const hasCash = hasCashIn(assetData, startDate, endDate);
-  const cashTracked = (start?.breakdown?.cash ?? 0) > 0 || liveCash > 0 || hasCash;
+  const cashTracked = isCashTrackedForTrades(assetData, { startCash: start?.breakdown?.cash ?? 0, endCash: liveCash, hasCashRecords: hasCash, startDate, endDate });
   const mapped = withLoanCause(mapSettlementCauses(
     effects.length ? effects : [{ key: "cash", amount: deltaNet, estimated: true }],
     {
