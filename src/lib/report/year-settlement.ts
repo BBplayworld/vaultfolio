@@ -4,7 +4,7 @@
 
 import type { AssetData, DailyAssetSnapshot, MonthlyAssetSnapshot, YearlyNetAsset } from "@/types/asset";
 import {
-  CARD_UNTIL_DAY, FIRST_RECORD_MIN_DAYS, daysBetween, isEnriched, pickFirstRecordStart, snapshotDate,
+  CARD_UNTIL_DAY, isCashTrackedForTrades, FIRST_RECORD_MIN_DAYS, daysBetween, isEnriched, pickFirstRecordStart, snapshotDate,
   type SettlementCause, type SettlementCauses,
 } from "./settlement";
 
@@ -115,7 +115,7 @@ export function hasReflectedCashIn(assetData: AssetData, from: string, until: st
 export function isYearCashTracked(assetData: AssetData, start: MonthlyAssetSnapshot | undefined, endCash: number, endDate: string): boolean {
   const from = start?.date ?? null;
   const hasCash = !!from && (assetData.cashTransactions ?? []).some((t) => t.date > from && t.date <= endDate);
-  return (start?.breakdown?.cash ?? 0) > 0 || endCash > 0 || hasCash;
+  return isCashTrackedForTrades(assetData, { startCash: start?.breakdown?.cash ?? 0, endCash, hasCashRecords: hasCash, startDate: from, endDate });
 }
 
 // ── 3묶음 매핑 ───────────────────────────────────────────────────

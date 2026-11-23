@@ -303,6 +303,40 @@ function useMyStockToday(hasHeaderChange: boolean, onOpen: () => void): MyStockL
   return { state, pick, onOpen };
 }
 
+/** 금융 1종(주식 또는 암호화폐)만 있고 현금·대출·부동산·보증금·실물이 모두 없을 때 그 종류 — 홈 필터 대신 구성 사실 1줄(#250). 아니면 null */
+export function netWorthComposeKind(
+  s: { stockValue: number; cryptoValue: number; realEstateValue: number; tenantDepositTotal: number; physicalValue: number },
+  a: { cash: readonly unknown[]; loans: readonly unknown[] },
+): "stocks" | "crypto" | null {
+  if (a.cash.length > 0 || a.loans.length > 0) return null;
+  if (s.realEstateValue !== 0 || s.tenantDepositTotal !== 0 || s.physicalValue !== 0) return null;
+  if (s.stockValue > 0 && s.cryptoValue <= 0) return "stocks";
+  if (s.cryptoValue > 0 && s.stockValue <= 0) return "crypto";
+  return null;
+}
+
+const COMPOSE_BTN = "relative rounded-sm px-0.5 text-sm leading-5 font-medium whitespace-nowrap text-brand dark:text-indigo-300 hover:text-brand/80 dark:hover:text-indigo-200 active:scale-[0.96] motion-safe:transition-[color,scale] motion-safe:duration-150 after:absolute after:content-[''] after:-inset-x-2 after:-top-1.5 after:-bottom-3.5";
+
+/** 홈 필터 자리 블록(#250) — 순자산이 금융 1종만 더한 값이라는 사실 + 허브와 같은 추가 시트 진입 */
+export function HomeCompose({ kind }: { kind: "stocks" | "crypto" }) {
+  const open = (category: "cash" | "loan") => {
+    track("feature_use", { category: category === "cash" ? "home_compose_cash" : "home_compose_loan" });
+    window.dispatchEvent(new CustomEvent("open-add-asset-sheet", { detail: { category } }));
+  };
+  return (
+    <div data-testid="home-compose" data-kind={kind} data-screenshot-hide className="-mt-1 flex flex-col items-center text-center">
+      <p data-testid="home-compose-text" className="text-sm leading-5 text-muted-foreground break-keep text-balance">
+        지금 순자산은 {kind === "stocks" ? "주식" : "암호화폐"}만 더한 값이에요
+      </p>
+      <div className="flex h-5 items-center justify-center">
+        <button type="button" data-testid="home-compose-cash" className={COMPOSE_BTN} onClick={() => open("cash")}>현금 추가하기</button>
+        <span aria-hidden className="mx-2 text-sm text-muted-foreground/60">·</span>
+        <button type="button" data-testid="home-compose-loan" className={COMPOSE_BTN} onClick={() => open("loan")}>대출 추가하기</button>
+      </div>
+    </div>
+  );
+}
+
 export function NetAssetSummaryBox({
   netAsset,
   totalAsset,
@@ -321,6 +355,7 @@ export function NetAssetSummaryBox({
   marketLine = "off",
   onMarketOpen,
   myStock,
+  composeSlot,
 }: {
   netAsset: number;
   totalAsset?: number;
@@ -331,6 +366,8 @@ export function NetAssetSummaryBox({
   activeTab?: string;
   onSegmentClick?: (key: string) => void;
   visibleTabs?: { value: string; label: string }[];
+  /** 필터 칸이 없을 때 그 자리에 그릴 블록(#250 홈 전용 — 웰컴·인증카드는 넘기지 않아 diff 0) */
+  composeSlot?: ReactNode;
   screenshotMode?: boolean;
   showRealtimeBadge?: boolean;
   /** 자산 성적표 최신 등급(성적표 화면 방문 시 기록됨) — 있으면 우상단에 미니 트로피 배지 노출 */
@@ -561,6 +598,7 @@ export function NetAssetSummaryBox({
           />
         </div>
       )}
+      {!(visibleTabs.length > 1 && onSegmentClick) && composeSlot}
 
       <AssetDonutChart
         items={treemapData}
@@ -882,8 +920,10 @@ export function Dashboard() {
   const grossTotal = totalAsset + totalLiability;
 
   // 홈 탭에 physical이 없으므로 실물 조각은 상세 실물 탭으로 이동, 그 외는 기존 필터 전환(탭 필터에도 "실물"은 넣지 않는다)
+  const composeKind = netWorthComposeKind(summary, assetData);
   const handleSegmentClick = (key: string) => {
     if (key === "physical") navigate({ type: "detail", tab: "physical" });
+    else if (composeKind && key === "financial") navigate({ type: "detail", tab: composeKind }); // 금융 1종만: 접힌 금융자산 탭 대신 상세로
     else setActiveDetailTab(key);
   };
 
@@ -917,7 +957,9 @@ export function Dashboard() {
 
   const tenantCount = assetData.realEstate.filter((re) => (re.tenantDeposit ?? 0) > 0).length;
 
-  const { visibleTabs, resolvedTab } = useDashboardTabs(activeDetailTab);
+  const tabs = useDashboardTabs(activeDetailTab);
+  const visibleTabs = composeKind ? [] : tabs.visibleTabs;
+  const resolvedTab = composeKind ? "all" : tabs.resolvedTab;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
@@ -940,6 +982,7 @@ export function Dashboard() {
                   activeTab={resolvedTab}
                   onSegmentClick={handleSegmentClick}
                   visibleTabs={visibleTabs}
+                  composeSlot={composeKind ? <HomeCompose kind={composeKind} /> : undefined}
                   showRealtimeBadge
                   grade={latestGrade}
                   onGradeClick={() => navigate({ type: "activity", tab: "report" })}
