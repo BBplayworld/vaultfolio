@@ -198,10 +198,10 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
   // 칸 전환은 replaceState만(history 추가 0·state 미사용) — 뒤로 가기는 투자 탭 진입 전 화면으로 간다
   const setHash = (h: string) => { if (variant === "app" && window.location.hash !== h) window.history.replaceState(null, "", h); };
   // 세 지수 → 한 지수 X: 고른 해를 X의 해 선택으로 넘긴다(X의 범위 밖이면 해제). 지수 → 세 지수: 고른 해는 그대로(공통 범위 안이면 그 분류 행이 열린다)
-  const changeMode = (m: Mode) => {
+  const changeMode = (m: Mode, fromHash = false) => {
     if (m === "three") {
       if (three) return;
-      setThree(true); setMenu(false); once("invest_three"); setHash(THREE_HASH);
+      setThree(true); setMenu(false); once("invest_three"); if (!fromHash) setHash(THREE_HASH);
       return;
     }
     if (!three) { changeIndex(m); return; }
@@ -209,8 +209,21 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
     const keep = yr != null && yr >= nv.start + 1 && yr <= nv.last ? yr : null;
     const ep = keep != null ? episodeIndexOfYear(nv.eps, keep) : -1;
     setThree(false); setIdx(m); setYr(keep); setSel(ep >= 0 ? ep : null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
-    once(`invest_index_${m}`); setHash("#invest");
+    once(`invest_index_${m}`); if (!fromHash) setHash("#invest");
   };
+  // D3(5.141 이월): 투자 탭 안에서 주소창으로 해시만 바꿔도 칸이 따라 바뀐다(replaceState는 이 이벤트를 만들지 않는다). 다른 탭 해시는 건드리지 않는다
+  const hashRef = useRef({ three, idx, changeMode });
+  useEffect(() => { hashRef.current = { three, idx, changeMode }; });
+  useEffect(() => {
+    if (variant !== "app") return;
+    const on = () => {
+      const h = window.location.hash, cur = hashRef.current;
+      if (h === THREE_HASH) { if (!cur.three) cur.changeMode("three", true); }
+      else if (h === "#invest" || h.startsWith("#invest/")) { if (cur.three) cur.changeMode(cur.idx, true); }
+    };
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, [variant]);
   // A2 ↔ 하락 전 12개월 양방향 링크(5.142): 번호가 올라가면 대상이 펼쳐지고 화면 위로 온다
   const [patternGo, setPatternGo] = useState(0);
   const [a2Go, setA2Go] = useState(0);

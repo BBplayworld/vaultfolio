@@ -155,7 +155,7 @@ export function PeriodCard({ view, period, onChange, question, ratioLink, mine, 
       <p data-testid="calc-past" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep"><NoBreak text={CALC_PAST} phrases={[]} tails={NOWRAP_TAIL} />
         {/* T1(5.141): 별도 줄이 아니라 이 단락 끝에 잇는다(높이 증가 최소). 히트영역 40px은 after로 확보(레이아웃 높이 0) */}
         {ratioLink && (
-          <> <Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="relative inline-block whitespace-nowrap rounded-sm font-semibold text-primary outline-none after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50">{RATIO_LINK_LABEL} <span aria-hidden>›</span></Link></>
+          <>{" "}<Link href="/ratio" data-testid="invest-ratio-link" onClick={ratioLink} className="relative ml-1 inline-block whitespace-nowrap rounded-sm font-semibold text-primary outline-none after:absolute after:inset-x-0 after:-inset-y-3 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50">{RATIO_LINK_LABEL} <span aria-hidden>›</span></Link></>
         )}
       </p>
       <p data-testid="period-honest" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">
