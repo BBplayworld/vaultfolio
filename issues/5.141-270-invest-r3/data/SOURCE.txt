@@ -1,0 +1,3 @@
+받은 시각 2026-11-23 (5.143 재다운로드 대조: 기존 EXKOUS.csv와 차이 0, 548행); https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXKOUS
+시리즈 페이지 원문(재확인 2026-11-23): Source: Board of Governors of the Federal Reserve System (US) / Release: G.5 Foreign Exchange Rates / Public Domain: Citation Requested / Notes에 제3자 저작권 표기 0(Notes는 일별 평균·뉴욕 정오 매입률 설명과 문의 안내뿐). 페이지 일반 문구 "Data in this graph are copyrighted..."는 시리즈 Notes 우선.
+변환: tools/make-fx-annual.mjs (월 12개 단순 평균, half-up 소수 1자리, 1982~2025 44행)
