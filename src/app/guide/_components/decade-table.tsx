@@ -1,7 +1,9 @@
 // 가이드 `index-returns-by-year` 고유 표: 연대 × 지수의 `오른 해/등락을 알 수 있는 해`. 연간 등락의 개수만 센 파생값이라 지수 수준값은 SSR에 나가지 않는다.
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import { marketHistory } from "@/lib/invest/market-history";
-import { hikeYearRows, recessionYearRows, type GuideRow } from "@/lib/invest/guide-tables";
+import { hikeYearRows, kospiDropYears, recessionYearRows, recoveryRows, type GuideRow } from "@/lib/invest/guide-tables";
+import { fmtPct } from "@/lib/invest/text";
+import { EventName } from "@/app/(main)/_components/views/invest/nowrap";
 
 /** 연대별 `오른 해/전체 해`(전해보다 연말 지수가 오른 해 / 그 연대에서 연간 등락이 있는 해). 해가 없으면 null */
 export function decadeCounts(): { decade: number; cells: ({ up: number; n: number } | null)[] }[] {
@@ -72,6 +74,66 @@ export function RecessionTable() {
       <GuideCountTable head="구분" caption="미국 경기침체 기준, 연말 지수가 전해 말보다 오른 해 수 / 해당하는 해 수예요(지수마다 자료가 시작한 해가 달라요)" rows={rows} />
       <p data-testid="guide-table-note" className={NOTE}>{`침체 달이 있던 해 중 S&P 500이 오른 해: ${spxUpInRecession.join("·")}년. 1970년은 +0.1%로 거의 그대로였어요.`}</p>
       <p className={NOTE}>코스피 열도 미국 경기침체(NBER) 기준이에요.</p>
+    </div>
+  );
+}
+
+/** 5.141 G1: 크게 빠진 때 13번 — 지수 그룹 행 3개 + 4열(320 가로 스크롤 0). 열 `고점에서 전고점까지`는 아직이면 `아직이에요` */
+export function RecoveryTable() {
+  const rows = recoveryRows(marketHistory);
+  return (
+    <div>
+      <table data-testid="guide-unique-table" className="w-full table-fixed border-separate border-spacing-0 text-xs tabular-nums">
+        <caption className="mb-1.5 text-left text-xs text-muted-foreground text-pretty break-keep">연말 기준 15% 넘게 빠진 때마다, 고점에서 바닥까지와 고점에서 전고점까지 걸린 햇수예요</caption>
+        <colgroup><col className="w-[38%]" /><col className="w-[16%]" /><col className="w-[20%]" /><col className="w-[26%]" /></colgroup>
+        <thead>
+          <tr>
+            {["하락", "낙폭", "고점에서 바닥까지", "고점에서 전고점까지"].map((h, i) => <th key={h} scope="col" className={`h-auto min-h-10 py-1 align-bottom font-semibold text-muted-foreground break-keep ${i ? "text-right" : "text-left"}`}>{h}</th>)}
+          </tr>
+        </thead>
+        {INDEX_KEYS.map((k) => (
+          <tbody key={k}>
+            <tr><th scope="rowgroup" colSpan={4} className="h-9 border-t border-border pt-2 text-left text-xs font-semibold">{INDEX_META[k].label}</th></tr>
+            {rows.filter((r) => r.index === k).map((r) => (
+              <tr key={`${k}-${r.py}`}>
+                <th scope="row" className="min-h-10 py-1 text-left font-medium break-keep"><span className="block text-foreground">{r.name}</span><span className="block font-normal text-muted-foreground">{r.py}~{r.ty}년</span></th>
+                <td className="text-right">{fmtPct(r.dd)}</td>
+                <td className="text-right">{r.toBottom}년</td>
+                <td className="text-right">{r.toPrev == null ? "아직이에요" : `${r.toPrev}년`}</td>
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </div>
+  );
+}
+
+/** 5.141 G3: 코스피 연간 등락 −15% 이하 해 — 같은 해 이슈(최대 2건 + `외 n건`). 같은 시기 기록일 뿐 원인을 말하지 않는다 */
+export function KospiYearTable() {
+  const { rows } = kospiDropYears(marketHistory);
+  return (
+    <div>
+      <table data-testid="guide-unique-table" className="w-full table-fixed border-separate border-spacing-0 text-xs tabular-nums">
+        <caption className="mb-1.5 text-left text-xs text-muted-foreground text-pretty break-keep">코스피 연간 등락이 −15% 이하였던 해와 같은 해 경제 이슈예요</caption>
+        <colgroup><col className="w-12" /><col className="w-16" /><col /></colgroup>
+        <thead>
+          <tr>
+            {["해", "연간 등락", "같은 해 이슈"].map((h, i) => <th key={h} scope="col" className={`h-10 font-semibold text-muted-foreground break-keep ${i === 1 ? "text-right" : "text-left"} ${i === 2 ? "pl-3" : ""}`}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.y}>
+              <th scope="row" className="min-h-10 border-t border-border py-1.5 text-left align-top font-semibold">{r.y}</th>
+              <td className="border-t border-border py-1.5 text-right align-top">{fmtPct(r.ret)}</td>
+              <td className="border-t border-border py-1.5 pl-3 text-left align-top text-pretty break-keep">
+                {r.issues.length ? <>{r.issues.slice(0, 2).map((n) => <span key={n} className="block"><EventName name={n} /></span>)}{r.issues.length > 2 && <span className="block text-muted-foreground">외 {r.issues.length - 2}건</span>}</> : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

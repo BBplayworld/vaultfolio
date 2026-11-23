@@ -111,13 +111,22 @@ export function guardTrialView(view: AssetView, trial: boolean): AssetView {
   return view;
 }
 
+/** `invest`·`invest/…`(앞 `#` 없는 값) */
+const isInvestHash = (clean: string) => clean === "invest" || clean.startsWith("invest/");
+
+/** navigate가 pushState를 건너뛸지: 현재 해시가 이동할 화면의 해시와 같으면 true. 투자 탭은 `#invest/…` 전부 같은 화면 */
+export function isSameNavHash(currentHash: string, v: AssetView): boolean {
+  return v.type === "invest" ? isInvestHash(currentHash.replace(/^#/, "")) : currentHash === toHash(v);
+}
+
 export function parseHash(hash: string): AssetView {
   const clean = hash.replace(/^#/, "");
   if (!clean || clean === "home") return { type: "home" };
   if (clean === "more") return { type: "more" };
   if (clean === "settings") return { type: "settings" };
   if (clean === "tax") return { type: "tax" };
-  if (clean === "invest") return { type: "invest" };
+  // 투자 탭 하위 해시(`#invest/three` 등, 5.141): 화면은 투자 탭 하나 — 칸 선택은 InvestView가 해시를 읽어 정한다. 모르는 하위 해시도 투자 탭(기본 지수)
+  if (isInvestHash(clean)) return { type: "invest" };
   const [type, tab] = clean.split("/");
   if (type === "detail") {
     // #detail (탭 생략) → hub
@@ -292,7 +301,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (v.type === "activity" && v.tab === "change-market") marketCompareEnteredInApp = true;
     reportEnteredFromDetail = reportEntryFromDetail(viewRef.current, v, reportEnteredFromDetail);
     const target = hash || window.location.pathname + window.location.search;
-    if (window.location.hash !== hash) {
+    // 투자 탭은 `#invest`·`#invest/three` 모두 같은 화면 — 이미 투자 탭 해시면 push하지 않는다(재탭 시 history 추가 0, 5.141)
+    if (!isSameNavHash(window.location.hash, v)) {
       window.history.pushState(null, "", target);
     }
     // 짧은 햅틱 진동 (지원 기기만, 모바일 대부분) — 토스 스타일 미세 피드백

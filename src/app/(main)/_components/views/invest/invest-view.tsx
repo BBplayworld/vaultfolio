@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { buildIndexView, INDEX_KEYS, INDEX_META } from "@/lib/invest/calc";
 import type { IndexKey } from "@/lib/invest/types";
-import { BLS_INFO, QUESTION_HEAD, headlineLines, readoutOf, sourceLines, fmtPct } from "@/lib/invest/text";
+import { BLS_INFO, INDEX_INFO, PANEL_TERM_IDS, QUESTION_HEAD, RECOVERY_TAIL, TERMS, THREE_LABEL, headlineLines, readoutOf, recoverySummary, sourceLines, threeSourceLines, fmtPct } from "@/lib/invest/text";
 import { marketHistory } from "@/lib/invest/market-history";
 import { getProfitLossColor } from "@/config/theme";
 import { track } from "@/lib/analytics/ga";
@@ -24,6 +24,8 @@ import { YearTable } from "./year-table";
 import { PatternSection } from "./pattern-section";
 import { RiseDetail, RiseList } from "./rise-list";
 import { buildPattern } from "@/lib/invest/pattern";
+import { episodeIndexOfYear } from "@/lib/invest/calc";
+import { ThreeView } from "./three-view";
 
 // 겹쳐 보기 항목: 한국 지수는 10년물만. 물가·실업률은 연 값(계단선)이라 미국 지수에만 둔다(R2-1)
 const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: string; def: string }[]> = {
@@ -34,7 +36,17 @@ const OVERLAY: Record<"us" | "kr", { key: OverlayKey; label: string; full: strin
   ],
   kr: [{ key: "y10", label: "10년물", full: "국고채 10년 금리", def: "매달 평균 · 오른쪽 축" }],
 };
-const INDEX_OPTIONS = INDEX_KEYS.map((k) => ({ value: k, label: INDEX_META[k].label, testId: `invest-index-${k}` }));
+/** 칸 라벨: <360은 약칭(`S&P`·`나스닥`)으로 줄이고 접근 이름은 항상 정식 이름(SameYear 약칭 관행, C25) */
+function ShortLabel({ full, short }: { full: string; short: string }) {
+  return <><span className="max-[360px]:sr-only">{full}</span><span aria-hidden className="min-[360px]:hidden">{short}</span></>;
+}
+type Mode = IndexKey | "three";
+const SHORT: Record<IndexKey, string> = { spx: "S&P", ndx: "나스닥", kospi: "코스피" };
+const MODE_OPTIONS: { value: Mode; label: React.ReactNode; testId: string }[] = [
+  ...INDEX_KEYS.map((k) => ({ value: k as Mode, label: <ShortLabel full={INDEX_META[k].label} short={SHORT[k]} />, testId: `invest-index-${k}` })),
+  { value: "three", label: THREE_LABEL, testId: "invest-index-three" },
+];
+const THREE_HASH = "#invest/three";
 
 /** 층 높이를 고정한 스켈레톤(회색 면 3개, CLS 0) */
 export function ChartSkeleton({ wide }: { wide: boolean }) {
@@ -69,22 +81,54 @@ function InfoDot({ left, top, label, children }: { left: number; top: number; la
   );
 }
 
+/** 용어·출처 패널(접힘 기본). 안쪽: `용어` 7개(TERMS) → `출처` 줄. 용어 정의는 TERMS 참조 — 새 문장 0 */
 function SourcePanel({ lines }: { lines: string[] }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="mt-1">
       <button type="button" aria-expanded={open} aria-controls="invest-source-panel" data-testid="invest-source-button" onClick={() => setOpen((o) => !o)} className="inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-        출처·라이선스 · <span className="whitespace-nowrap">CC BY-SA 4.0</span><Info aria-hidden className="size-3.5" />
+        용어·출처 · <span className="whitespace-nowrap">CC BY-SA 4.0</span><Info aria-hidden className="size-3.5" />
         <ChevronDown aria-hidden className={`size-3.5 motion-safe:transition-transform motion-safe:duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       <div id="invest-source-panel" {...(open ? {} : { inert: true })} className={`grid motion-safe:transition-[grid-template-rows,visibility] motion-safe:duration-200 ${open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
-          <div data-testid="invest-source" className="space-y-1.5 pb-1 pt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">
-            {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
+          <div className="pb-1 pt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">
+            <p className="font-semibold text-foreground">용어</p>
+            <dl data-testid="invest-terms" className="mt-1 space-y-2">
+              {PANEL_TERM_IDS.map((id) => <div key={id}><dt className="font-semibold text-foreground">{TERMS[id].term}</dt><dd>{TERMS[id].def}</dd></div>)}
+            </dl>
+            <div className="mt-3 border-t border-border/60 pt-2">
+              <p className="font-semibold text-foreground">출처</p>
+              <div data-testid="invest-source" className="mt-1 space-y-1.5">
+                {lines.map((t, i) => <p key={i}><NoBreak text={t} /></p>)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** A4: 크게 빠진 때 카드 머리 1줄. <360은 숨김(같은 값이 목록 행·펼침에 있음) */
+function RecoveryLine({ view, className = "" }: { view: ReturnType<typeof buildIndexView>; className?: string }) {
+  const r = recoverySummary(view);
+  if (!r) return null;
+  const B = ({ children }: { children: React.ReactNode }) => <b className="font-semibold text-foreground">{children}</b>;
+  // 구분점은 뒤 어구에 붙여 한 덩어리로 묶는다 — 좁은 폭에서 줄 끝에 `·`이 매달리지 않는다(D-11 규칙)
+  const dot = <span aria-hidden>· </span>;
+  return (
+    <p data-testid="invest-drop-recovery" className={`text-xs leading-snug text-muted-foreground text-pretty break-keep max-[359px]:hidden ${className}`}>
+      {r.merged && r.long ? (
+        <>가장 깊고 고점에서 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span> <span className="whitespace-nowrap">{dot}<B>{r.long.n}년</B></span></>
+      ) : (
+        <>
+          가장 깊었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span>
+          {r.long && <> <span className="whitespace-nowrap">{dot}고점에서</span> 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.long.name}</B> <B>{r.long.n}년</B></span></>}
+        </>
+      )}
+      {r.skipped > 0 && <> <span className="whitespace-nowrap">{dot}{RECOVERY_TAIL(r.skipped)}</span></>}
+    </p>
   );
 }
 
@@ -95,12 +139,16 @@ export interface InvestViewProps {
   defaultIndex?: IndexKey;
   /** 진행 중 하락 모의(데이터 마지막 연도를 이 해로 자름). preview 점검용 */
   asof?: number;
+  /** T1: 기간 카드 아래 `캡처로 내 비중 보기 ›` 1줄(앱·자산 0개 또는 체험일 때만 호출부가 true). 기본 숨김 */
+  ratioLink?: boolean;
 }
 
-type InvestCategory = "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
+type InvestCategory = "invest_three" | "invest_decade" | "invest_ratio" | "invest_rise_tab" | "invest_pattern" | "invest_index_spx" | "invest_index_ndx" | "invest_index_kospi" | "invest_overlay" | "invest_table" | "invest_calc" | "invest_year_pick" | "invest_drop_open";
 
-export function InvestView({ variant = "app", defaultIndex = "spx", asof }: InvestViewProps) {
+export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioLink = false }: InvestViewProps) {
   const [idx, setIdx] = useState<IndexKey>(defaultIndex);
+  // 세 지수 보기(#270): 앱은 해시 `#invest/three`로 바로 열린다(마운트 때 1회 읽기, 앱 전용 dynamic이라 SSR 불일치 0). 가이드는 URL을 만지지 않는다
+  const [three, setThree] = useState(() => variant === "app" && typeof window !== "undefined" && window.location.hash === THREE_HASH);
   const [sel, setSel] = useState<number | null>(null);
   const [yr, setYr] = useState<number | null>(null);
   const [ov, setOv] = useState<OverlayKey | null>(null);
@@ -112,10 +160,13 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
   const wide = useMediaQuery("(min-width: 1280px)");
   const chartRef = useRef<HTMLDivElement>(null);
   const stepRef = useRef<HTMLDivElement>(null);
+  // 칸 선택기를 누를 때는 해 선택을 지우지 않는다(지수→세 지수 전환에서 고른 해를 넘기기 위해)
+  const selectorRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(chartRef);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const view = useMemo(() => buildIndexView(marketHistory, idx, asof), [idx, asof]);
+  const threeViews = useMemo(() => (three ? { spx: buildIndexView(marketHistory, "spx", asof), ndx: buildIndexView(marketHistory, "ndx", asof), kospi: buildIndexView(marketHistory, "kospi", asof) } : null), [three, asof]);
   const pattern = useMemo(() => buildPattern(marketHistory, view), [view]);
   const deepest = useMemo(() => view.eps.reduce((b, e, k, a) => (e.dd < a[b].dd ? k : b), 0), [view]);
   const selEff = sel ?? (wide && view.eps.length ? deepest : null);
@@ -137,11 +188,39 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     setIdx(k); setSel(null); setYr(null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
     once(`invest_index_${k}`);
   };
+  // 칸 전환은 replaceState만(history 추가 0·state 미사용) — 뒤로 가기는 투자 탭 진입 전 화면으로 간다
+  const setHash = (h: string) => { if (variant === "app" && window.location.hash !== h) window.history.replaceState(null, "", h); };
+  // 세 지수 → 한 지수 X: 고른 해를 X의 해 선택으로 넘긴다(X의 범위 밖이면 해제). 지수 → 세 지수: 고른 해는 그대로(공통 범위 안이면 그 분류 행이 열린다)
+  const changeMode = (m: Mode) => {
+    if (m === "three") {
+      if (three) return;
+      setThree(true); setMenu(false); once("invest_three"); setHash(THREE_HASH);
+      return;
+    }
+    if (!three) { changeIndex(m); return; }
+    const nv = buildIndexView(marketHistory, m, asof);
+    const keep = yr != null && yr >= nv.start + 1 && yr <= nv.last ? yr : null;
+    const ep = keep != null ? episodeIndexOfYear(nv.eps, keep) : -1;
+    setThree(false); setIdx(m); setYr(keep); setSel(ep >= 0 ? ep : null); setOv(null); setMenu(false); setRiseSel(null); setPeriodOverride(null);
+    once(`invest_index_${m}`); setHash("#invest");
+  };
+  const pickThreeYear = (y: number | null) => { setYr(y); if (y != null) once("invest_year_pick"); };
+  // 해시로 바로 열린 경우도 진입 1회
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (three) once("invest_three"); }, []);
+  // 모드 전환 뒤 본문 상단이 화면 위로 지나가 있으면 선택기 바로 아래로 즉시 올린다
+  const rootRef = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const r = rootRef.current?.getBoundingClientRect();
+    if (r && r.top < 0) window.scrollTo({ top: window.scrollY + r.top - 8, behavior: "instant" });
+  }, [three]);
   // 그림 바깥을 탭하면 해 선택 해제, 겹쳐 보기 목록은 바깥 탭·Esc로 닫는다
   useEffect(() => {
     const down = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (yr != null && chartRef.current && !chartRef.current.contains(t) && !stepRef.current?.contains(t)) setYr(null);
+      if (yr != null && chartRef.current && !chartRef.current.contains(t) && !stepRef.current?.contains(t) && !selectorRef.current?.contains(t)) setYr(null);
       if (menu && !menuRef.current?.contains(t) && !btnRef.current?.contains(t)) setMenu(false);
     };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape" && menu) { setMenu(false); btnRef.current?.focus(); } };
@@ -208,7 +287,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
         {L && showLevels ? (
           <>
             <MainChart data={marketHistory} view={view} width={width} wide={wide} selEp={selEff} selYear={yr} overlay={ov} onPickYear={pickYear} />
-            <InfoDot left={capWidth(`지수 · 해마다 연말 값 · ${view.last}년 말까지`) + 2} top={-2} label="지수 값 설명">가격 지수(배당 제외)이고, 해마다 마지막 날(연말) 종가 기준이에요. 한 해 안의 움직임은 담지 않아요.</InfoDot>
+            <InfoDot left={capWidth(`지수 · 해마다 연말 값 · ${view.last}년 말까지`) + 2} top={-2} label="지수 값 설명">{INDEX_INFO}</InfoDot>
             <InfoDot left={capWidth(`${view.rate === "us" ? "미국 기준금리" : "한국 기준금리"} · 매달 값`) + 2} top={L.cap3 - 14} label="기준금리 설명">{(view.rate === "us" ? "연준 목표금리(범위면 상단)를 매달 이어서 그렸어요. 1982년 9월부터 자료가 있어요." : "한국은행 기준금리를 매달 이어서 그렸어요(2008년 3월 전은 콜금리 목표). 1999년 5월부터 자료가 있어요.") + (ov === "cpi" || ov === "unemp" ? ` 겹쳐 본 선: ${BLS_INFO}` : "")}</InfoDot>
             <button
               ref={btnRef} type="button" aria-haspopup="listbox" aria-expanded={menu} aria-label={ovCur ? `겹쳐 보기, ${ovCur.label} 켜짐` : "겹쳐 보기"} data-testid="overlay-button"
@@ -242,11 +321,13 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     </div>
   );
 
-  const src = sourceLines(view, { spx: marketHistory.idx.spx.rev, ndx: marketHistory.idx.ndx.rev, kospi: marketHistory.idx.kospi.rev });
+  const revs = { spx: marketHistory.idx.spx.rev, ndx: marketHistory.idx.ndx.rev, kospi: marketHistory.idx.kospi.rev };
+  const src = threeViews ? threeSourceLines(threeViews, revs) : sourceLines(view, revs);
   const dropsCard = (
     <div data-testid="invest-drops" className="rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">
       <p data-testid="q-drops" className="mb-2 text-xs text-muted-foreground text-balance break-keep">{QUESTION_HEAD.drops}</p>
       <h3 className="text-base font-bold">크게 빠진 때</h3>
+      <RecoveryLine view={view} className="mt-1" />
       <DropList data={marketHistory} view={view} sel={selEff} yr={yr} onSelect={setSel} inlineDetail width={listW} bare />
       <p data-testid="invest-base" className="mt-1 text-xs leading-relaxed text-muted-foreground text-pretty break-keep">{head.l3}</p>
       <div className="mt-4 border-t border-border/60 pt-3">
@@ -264,7 +345,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     </div>
   );
   const gridNode = <YearGrid key={`g-${idx}`} onYear={() => once("invest_year_pick")} view={view} period={period} showLevels={showLevels} question={QUESTION_HEAD.grid} />;
-  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} />;
+  const periodNode = <PeriodCard key={`c-${idx}`} view={view} period={period} onChange={onPeriod} question={QUESTION_HEAD.period} ratioLink={variant === "app" && ratioLink ? () => once("invest_ratio") : undefined} />;
   // 모바일(<768) 섹션 순서 = 질문 순서(P2). 순서·기본 펼침은 이 배열 한 곳에서만 바꾼다(R4.2 결과 반영용).
   // 기본 펼침 4개(P3): 첫 화면·크게 빠진 때·격자·기간 카드. `deeper`(하락 전 12개월·크게 오른 해, 연도별 표)는 접힘(저장 0)
   const MOBILE_SECTIONS: { id: string; node: React.ReactNode }[] = [
@@ -275,17 +356,18 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof }: Inve
     { id: "deeper", node: deeperCard },
   ];
   return (
-    <div data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:mx-auto xl:w-full xl:max-w-[960px] xl:gap-4">
+    <div ref={rootRef} data-testid="invest-view" data-variant={variant} className="flex min-w-0 flex-col gap-3 xl:mx-auto xl:w-full xl:max-w-[960px] xl:gap-4">
       {/* P4: 지수 선택기 상단 고정(모바일). 체험 배너·PWA safe-area 아래에 붙는다 */}
-      <div data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
-        <InlineSelector fullWidth value={idx} onChange={changeIndex} options={INDEX_OPTIONS} ariaLabel="지수 선택" className="w-full" />
+      <div ref={selectorRef} data-testid="invest-index-sticky" className="sticky top-[max(var(--trial-bar-h,0px),env(safe-area-inset-top,0px))] z-20 -mx-3 -mt-1 bg-background/95 px-3 py-0.5 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md xl:static xl:mx-0 xl:mt-0 xl:shadow-none xl:bg-transparent xl:px-0 xl:py-0 xl:backdrop-blur-none">
+        <InlineSelector fullWidth tight value={three ? "three" : idx} onChange={changeMode} options={MODE_OPTIONS} ariaLabel="지수 선택" className="w-full" />
       </div>
-      {!wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
-      {wide && (
+      {threeViews && <ThreeView views={threeViews} yr={yr} onYear={pickThreeYear} onMetric={() => once("invest_decade")} />}
+      {!three && !wide && MOBILE_SECTIONS.map((sec) => <div key={sec.id} data-section={sec.id} className="min-w-0">{sec.node}</div>)}
+      {!three && wide && (
         <>
           {chartCard}
           <div className="grid grid-cols-[400px_minmax(0,1fr)] items-stretch gap-4">
-            <div className="min-w-0 h-full rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listBody(false)}</div>
+            <div className="min-w-0 h-full rounded-2xl bg-card p-4 pb-3 shadow-sm dark:shadow-none">{listSegment}{listTab === "drop" && <RecoveryLine view={view} className="mt-2" />}{listBody(false)}</div>
             <div data-testid="invest-detail" className="h-full min-w-0 overflow-hidden rounded-2xl bg-card p-4 shadow-sm dark:shadow-none">
               {listTab === "rise" ? (
                 pattern.rise.find((r) => r.y === riseDetailYear) ? (

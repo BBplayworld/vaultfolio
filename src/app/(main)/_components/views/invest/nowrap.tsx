@@ -34,6 +34,17 @@ export function ReadoutChips({ ro, hideYear = false }: { ro: Readout; hideYear?:
   );
 }
 
+/** 지수명+값 묶음(줄바꿈 단위). 320 미만은 약칭(`S&P`·`나스닥`), 접근 이름은 정식 이름·값. 색·인과 0 */
+function RetItem({ label, ret, first, trail = false }: { label: string; ret: number; first: boolean; trail?: boolean }) {
+  return (
+    <span className="whitespace-nowrap" aria-label={`${label} ${fmtPct(ret, 1)}`}>
+      <span aria-hidden className="text-muted-foreground">{first ? "" : "· "}<span className="max-[359px]:hidden">{label}</span><span className="hidden max-[359px]:inline">{label.replace(/ ?100$| 500$/, "")}</span></span>{" "}
+      <span aria-hidden className="text-foreground">{fmtPct(ret, 1)}</span>
+      {trail && <span aria-hidden className="text-muted-foreground"> ·</span>}
+    </span>
+  );
+}
+
 /** R2-3: 펼침 안 1줄 `같은 해 나스닥100 −41.9% · 코스피 −40.7%`. 현재 지수 제외·자료 없는 지수 생략, 둘 다 없으면 줄 0. 단위만 표기(환산·인과·`함께` 0). 묶음(지수명+값) 단위로만 줄바꿈 */
 export function SameYear({ view, year, className = "mt-1.5" }: { view: IndexView; year: number; className?: string }) {
   const o = view.same[year];
@@ -41,12 +52,17 @@ export function SameYear({ view, year, className = "mt-1.5" }: { view: IndexView
   return (
     <div data-testid="same-year" className={`${className} flex flex-wrap gap-x-1.5 text-xs tabular-nums break-keep`}>
       <span className="text-muted-foreground">{SAME_YEAR_LABEL}</span>
-      {o.map((x, i) => (
-        <span key={x.label} className="whitespace-nowrap" aria-label={`${x.label} ${fmtPct(x.ret, 1)}`}>
-          <span aria-hidden className="text-muted-foreground">{i ? "· " : ""}<span className="max-[359px]:hidden">{x.label}</span><span className="hidden max-[359px]:inline">{x.label.replace(/ ?100$| 500$/, "")}</span></span>{" "}
-          <span aria-hidden className="text-foreground">{fmtPct(x.ret, 1)}</span>
-        </span>
-      ))}
+      {o.map((x, i) => <RetItem key={x.label} label={x.label} ret={x.ret} first={i === 0} />)}
+    </div>
+  );
+}
+
+/** 5.141 A1 칩 1줄: SameYear와 같은 형식으로 세 지수 전부(`{Y}년 S&P 500 +26.7% · 나스닥100 +39.6% · 코스피 +49.5%`) */
+export function ThreeYear({ year, items }: { year: number; items: { label: string; ret: number }[] }) {
+  return (
+    <div data-testid="three-year" className="flex flex-wrap items-baseline gap-x-1.5 text-xs tabular-nums break-keep">
+      <b className="mr-0.5 text-sm font-bold">{year}년</b>
+      {items.map((x, i) => <RetItem key={x.label} label={x.label} ret={x.ret} first trail={i < items.length - 1} />)}
     </div>
   );
 }

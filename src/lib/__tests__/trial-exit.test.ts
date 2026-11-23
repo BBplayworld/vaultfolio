@@ -1,4 +1,5 @@
 // #249 체험 → 복귀 웰컴 전달값: 허용 목록·1회 소비·GA 꼬리·체험 중 gtag 0건·저장 키 무변경(정적 검사).
+import { viewToKey } from "@/lib/feature-usage";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -39,6 +40,7 @@ describe("resolveTrialExit — 화면 키 허용 목록(spec 3-2)", () => {
     ["activity:report", null, { source: "activity" }],
     ["detail:hub", null, { source: "detail" }],
     ["tax", null, { source: "detail" }],
+    ["invest", null, { source: "invest" }],
   ])("%s → 등록 칸 %s", (key, asset, ga) => {
     expect(resolveTrialExit(key)).toEqual({ asset, ga });
   });
@@ -128,6 +130,13 @@ describe("체험 중 gtag 0건(AC-10)", () => {
     track("onboarding_action", { method: "trial_start" });
     track("onboarding_action", { method: "trial_start", ...resolveTrialExit("detail:stocks-item").ga! });
     expect(gtag.mock.calls.map((c) => c[2].page_title)).toEqual(["웰컴·체험", "웰컴·체험·주식"]);
+    expect(gtag.mock.calls.every((c) => Object.keys(c[2]).sort().join() === "page_location,page_title")).toBe(true);
+  });
+  it("5.141 T2: 투자 탭 체험 복귀 꼬리 `웰컴·체험·투자` — source 값만 추가(파라미터 키 0), 화면 키는 viewToKey(invest)", () => {
+    expect(viewToKey({ type: "invest" })).toBe("invest");
+    track("onboarding_action", { method: "trial_start" });
+    track("onboarding_action", { method: "trial_start", ...resolveTrialExit(viewToKey({ type: "invest" })).ga! });
+    expect(gtag.mock.calls.map((c) => c[2].page_title)).toEqual(["웰컴·체험", "웰컴·체험·투자"]);
     expect(gtag.mock.calls.every((c) => Object.keys(c[2]).sort().join() === "page_location,page_title")).toBe(true);
   });
   it("체험 중: 꼬리 포함 track 호출 0", () => {

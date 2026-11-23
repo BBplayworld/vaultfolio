@@ -6,7 +6,7 @@ import { YEAR_SETTLE_COPY } from "@/lib/report/year-settlement";
 // 예외: market-history(#263)는 본문이 투자 탭 컴포넌트 1벌이라 지수 이름이 필요하다(문구 규칙은 투자 탭 R1~R11). 이 파일은 첫 화면 번들에 들어가므로 투자 데이터를 import하지 않는다 — 설명의 숫자(1961년·4번)는 테스트가 데이터와 대조한다.
 // 글을 고치면 lastModified도 함께 갱신한다(sitemap이 이 값을 그대로 쓴다).
 
-export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years"] as const;
+export const GUIDE_SLUGS = ["stock-ratio", "net-worth", "year-end", "market-history", "index-returns-by-year", "rate-hike-years", "recession-years", "recovery-years", "kospi-by-year"] as const;
 export type GuideSlug = (typeof GUIDE_SLUGS)[number];
 
 export interface GuideCta {
@@ -229,4 +229,44 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
     linkLabel: "경기침체 때의 지수",
     lastModified: "2026-11-22",
   },
+  "recovery-years": {
+    slug: "recovery-years",
+    title: "S&P 500·나스닥100·코스피, 크게 빠진 뒤 전고점까지 몇 년 걸렸나",
+    description: "S&P 500·나스닥100·코스피가 연말 기준 15% 넘게 빠진 13번을 모아, 고점에서 바닥까지와 고점에서 전고점까지 걸린 햇수를 한 표에 정리했어요. 과거 사실이고 투자 권유가 아니에요.",
+    h1: "S&P 500·나스닥100·코스피, 크게 빠진 뒤 전고점까지 몇 년 걸렸나",
+    summary: "연말 기준으로 15% 넘게 빠진 뒤 이전 고점을 다시 넘기까지 걸린 햇수를 세 지수 13번 모두 모았어요. S&P 500은 4번 2~14년, 나스닥100은 3번 2~15년, 코스피는 6번 3~6년이 걸렸어요. 과거 기록을 모은 글이라 앞날을 말해 주지 않아요.",
+    // 본문은 투자 탭 컴포넌트(MarketHistoryArticle) + 회복 기간 고유 표. 아래 steps·facts는 쓰지 않는다. summary의 숫자(13번·4/3/6번·2~14년 등)는 테스트가 데이터와 대조한다
+    steps: [],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [],
+    primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
+    secondary: TRIAL_CTA,
+    linkLabel: "크게 빠진 뒤 전고점까지 걸린 해",
+    lastModified: "2026-11-23",
+  },
+  "kospi-by-year": {
+    slug: "kospi-by-year",
+    title: "코스피 연도별 수익률과 크게 빠진 해 한눈에 보기",
+    description: "1982년 이후 코스피가 해마다 오르내린 %와, 한 해에 −15% 이하로 내린 7해의 같은 해 경제 이슈를 모았어요. 배당 제외·연말 기준이에요.",
+    h1: "코스피 연도별 수익률과 크게 빠진 해 한눈에 보기",
+    summary: "1982년 이후 코스피는 44해 중 29해에 연말 값이 전해보다 올랐고, −15% 이하로 내린 해는 7해였어요. 가장 크게 내린 해는 2000년 −50.9%였어요. 과거 기록을 모은 글이라 앞날을 말해 주지 않아요.",
+    // 본문은 투자 탭 컴포넌트(MarketHistoryArticle, 기본 지수 코스피) + −15% 이하 해 고유 표. summary의 숫자(44·29·7·2000년 −50.9%)는 테스트가 데이터와 대조한다
+    steps: [],
+    factTitle: GUIDE_FACT_TITLE,
+    facts: [],
+    primary: { label: "내 자산도 정리해 보기", kind: "link", href: "/" },
+    secondary: TRIAL_CTA,
+    linkLabel: "코스피 연도별 수익률과 크게 빠진 해",
+    lastModified: "2026-11-23",
+  },
+};
+
+/** 시장 가이드 6편의 `관련 글` 줄(5.141 #274): 모든 편이 다른 편에서 1번 이상 링크된다 */
+export const GUIDE_RELATED: Partial<Record<GuideSlug, GuideSlug[]>> = {
+  "market-history": ["rate-hike-years", "recession-years"],
+  "index-returns-by-year": ["kospi-by-year", "market-history"],
+  "rate-hike-years": ["recession-years", "market-history"],
+  "recession-years": ["recovery-years", "rate-hike-years"],
+  "recovery-years": ["market-history", "kospi-by-year"],
+  "kospi-by-year": ["index-returns-by-year", "recovery-years"],
 };

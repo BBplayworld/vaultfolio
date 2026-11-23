@@ -371,6 +371,10 @@ function Hint({ children }: { children: ReactNode }) {
 - 차트 캡션 줄 오른쪽 알약+목록(listbox) 컨트롤, 접힘 표(`grid-rows` 0fr→1fr + `inert`)를 규약으로 등록
 
 
+### 좁은 폭 라벨·구분점 규약(투자 탭 R3-1, #5.141)
+- 4칸 선택기(`InlineSelector fullWidth tight`)는 라벨이 잘리면 <360px에서만 약칭(`ShortLabel` = `max-[359px]:sr-only` 정식 + `min-[360px]:hidden aria-hidden` 약칭, 접근 이름은 항상 정식). JS 측정 0
+- 줄바꿈에서 `·`이 줄 끝에 매달리지 않게: 구분점을 뒤 어구에 붙여 한 덩어리(`whitespace-nowrap`)로 묶는다(읽기 줄·A4). 링크 줄(`관련 글`)은 점을 항목 앞 여백에 두고 바깥 `overflow-hidden`이 줄 머리의 점을 잘라 낸다
+
 ## 12. 공개 문서 페이지 규약 (가이드, #4.45)
 - `(main)` 밖 정적 글 페이지는 `/ratio` 껍데기(480px 컬럼·헤더 복사·홈 링크 없음)를 따른다. 단계 번호는 단색 `tabular-nums` 숫자(`aria-hidden`, 칩·아이콘 배경 금지), 단계 구분은 헤어라인(`border-border dark:border-border/40`), 카드는 "시크릿에셋으로 하면" 면 1장만. 행동 블록은 brand 주 버튼 + secondary 보조 버튼 `h-11`, 본문 링크는 `text-primary` + 밑줄 + `min-h-10`. 슬래시 어구(국내/해외)는 nowrap, 모든 한글 블록 `break-keep`.
 - 상단바 1회 안내 카드: 헤더 `overflow-x-clip`(세로 허용) 안 `absolute right-3 top-full`, `bg-card rounded-xl shadow-lg`, 확인=brand·취소=ghost. 한 줄 안내 스트립(세금 시즌)은 X-Ray 스트립과 같은 클래스 복제.

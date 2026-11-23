@@ -1,6 +1,7 @@
 // 가이드 2·3편(rate-hike-years·recession-years) 고유 표 계산: 연간 등락의 개수(오른 해/전체 해)만 센다. 지수 수준값·% 비율은 쓰지 않는다(R4 ⑤).
 // 인상 국면 = 연준 목표(범위면 상단)를 올린 첫 결정부터, 그 뒤 처음 내리기 전의 마지막 인상까지. 국면이 걸친 해 = 첫 인상 해~마지막 인상 해의 모든 해(한 해는 한 행에만 센다).
-import { buildIndexView, INDEX_KEYS, recessionMonthsIn } from "./calc";
+import { buildIndexView, INDEX_KEYS, INDEX_META, recessionMonthsIn, yearIssues } from "./calc";
+import type { IndexKey } from "./types";
 import type { MarketHistoryData } from "./types";
 
 export interface HikePhase { from: string; to: string }
@@ -49,4 +50,21 @@ export function recessionYearRows(d: MarketHistoryData): { rows: GuideRow[]; spx
   const rows = [countRow(d, "침체 달이 있던 해", rec), countRow(d, "침체 달이 없던 해", all.filter((y) => !rec.includes(y)))];
   const v = buildIndexView(d, "spx");
   return { rows, spxUpInRecession: rec.filter((y) => (v.ret[y - v.start] ?? 0) > 0) };
+}
+
+/** G1 `recovery-years` 고유 표: 지수 순서 후 시간순, 크게 빠진 때 전부(13번). 연도 값은 해 수만, 지수 수준값 0 */
+export interface RecoveryRow { index: IndexKey; label: string; name: string; py: number; ty: number; dd: number; toBottom: number; toPrev: number | null }
+export function recoveryRows(d: MarketHistoryData): RecoveryRow[] {
+  return INDEX_KEYS.flatMap((k) => buildIndexView(d, k).eps.map((e) => ({
+    index: k, label: INDEX_META[k].label, name: e.name, py: e.py, ty: e.ty, dd: e.dd, toBottom: e.ty - e.py, toPrev: e.ry == null ? null : e.ry - e.py,
+  })));
+}
+
+/** G3 `kospi-by-year` 고유 표: 연간 등락 −15% 이하인 해(코스피) + 같은 해 이슈. 규칙은 투자 탭 A5와 같은 `ret ≤ −15` */
+export interface KospiYearRow { y: number; ret: number; issues: string[] }
+export function kospiDropYears(d: MarketHistoryData): { rows: KospiYearRow[]; n: number; up: number; from: number; worst: KospiYearRow } {
+  const v = buildIndexView(d, "kospi");
+  const all = v.years.filter((y) => v.ret[y - v.start] != null);
+  const rows = all.filter((y) => (v.ret[y - v.start] as number) <= -15).map((y) => ({ y, ret: v.ret[y - v.start] as number, issues: yearIssues(v, y).map((e) => e.name) }));
+  return { rows, n: all.length, up: all.filter((y) => (v.ret[y - v.start] as number) > 0).length, from: all[0], worst: rows.reduce((b, r) => (r.ret < b.ret ? r : b), rows[0]) };
 }

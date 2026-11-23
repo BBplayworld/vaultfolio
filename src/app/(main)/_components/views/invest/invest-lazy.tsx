@@ -9,6 +9,7 @@ import { isTrialMode } from "@/lib/trial/trial-mode";
 import { holdingSplit } from "@/lib/invest/default-index";
 import { pickDefaultIndex } from "@/lib/invest/calc";
 import { LOAD_ERROR } from "@/lib/invest/text";
+import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { Button } from "@/components/ui/button";
 
 function Skeleton() {
@@ -48,9 +49,11 @@ export function InvestTab() {
     const v = Number(new URLSearchParams(window.location.search).get("asof"));
     return Number.isInteger(v) && v > 1990 && v < 2100 ? v : undefined;
   }, []);
+  // T1(5.141): 자산 0개이거나 체험일 때만 `캡처로 내 비중 보기` 1줄. 보유 여부는 기기 안에서 노출만 정하고 값은 보내지 않는다(체험은 데모 자산이 있어 둘 다 본다)
+  const ratioLink = isTrialMode() || !hasAnyAssets(assetData);
   return (
     <LoadBoundary key={boundaryKey} onRetry={() => { setComp(() => makeDynamic()); setBoundaryKey((k) => k + 1); }}>
-      <Comp variant="app" defaultIndex={defaultIndex} asof={asof} />
+      <Comp variant="app" defaultIndex={defaultIndex} asof={asof} ratioLink={ratioLink} />
     </LoadBoundary>
   );
 }
