@@ -57,3 +57,15 @@ risk:low · 저장 키·스키마·서버 전송·GA title 변경 0 · 화면 �
 ## 8. 되돌림
 - revert 1커밋으로 4개 모두 복원, 데이터 영향 0(저장 변경 0). 판독 경계 = 운영 반영 확인 시각(C144) DECISIONS 기록.
 - 실패 기준(ceo-review ②4): 전후 4주 합 기준 `상세`·`상세·주식`·`성과`·`성과·자산 변화` 중 2개가 동시에 3기기 이상 감소 → 되돌림 검토. 한 화면만 줄면 기록만.
+
+## 9. 동승 C (성과 표기 정돈) — CEO 판정 2026-11-24(`_discovery/2026-11-24-core-enhance/ceo.md` ②)
+planner · 코드 `git show origin/main`(d7b89f4) 기준 줄 번호, 작업 트리 `/home/user/vf-5146`(R1 진행 중) 대조. **결론: 코드 변경은 주석 1줄뿐이다. C2·C3은 규약 위반이 아니라서 뺀다**(planner.md ①의 C 판단이 틀렸음, 아래에 근거).
+| # | 위치 | 확인 결과 | R1 조치 |
+|---|---|---|---|
+| C1 | `activity/profit-chart.tsx:583` 펼침 이름 `기준 종가 비교`, `:578` 주석 '펼치면 옵션 토글 + 종가 비교 표' | 이 이름은 원래 표 이름이다(5.117 ui 판정 '표 이름으로 유지', STATE 66행). R1 D 뒤 펼침 안에는 날짜 맞춤 이름·값 글자(작업 트리 `:590`·`:603` `profit-basis-value`)와 종가 표만 남아서 오히려 이름과 더 잘 맞는다. 어긋나는 것은 `:578` 주석뿐이다 | **이름 유지**, `:578` 주석을 '펼치면 날짜 맞춤 값(글자) + 종가 비교 표'로 고친다. 이름을 바꾸면 5.117 ui 판정을 뒤집는 것이라 ui-designer 판정 없이는 하지 않는다(**CEO 판정 C1 '개명'에 대한 planner 이견**) |
+| C2 | `activity/net-asset-chart.tsx:631` 일 달력 `종가 기준` `text-2xs font-normal`(부모 `:628` `text-sm font-semibold text-muted-foreground`) | design-system 74행 `text-2xs` = 메타 캡션(기준·시각), 99행 메타 캡션 = `text-2xs text-muted-foreground`(부모에서 물려받음), 109행 11px 미만 금지 → `--text-2xs` 0.6875rem = 11px로 **규약 안이다** | 변경 0 |
+| C3 | `activity/asset-report-view.tsx:673·700` 산식·대출별 이자 단락 `ASSET_THEME.dividerAccent` | design-system 148행 '강조(accent) 구분선 = 논리 그룹·큰 단락 전용, 별점 amber 톤, 토큰 필수' 규약 그대로다. 골드 구분선 정리는 5.117 #224(대표 지시)에서 이미 함 | 변경 0 |
+
+- 확인만 하는 것(수정 아님): 320 일 달력 칸 금액 `:674`·`:680`(`text-2xs md:text-xs tracking-tighter`, design-system 102행 허용)이 `-8,800만원` 길이에서 잘리지 않는지 qa가 R1 회귀 캡처 때 함께 본다. 잘리면 5.147 B 감사표로 넘기고 R1은 막지 않는다.
+- 커밋: C1 주석은 R1 D(`profit-chart.tsx` 같은 블록) 커밋에 넣어도 된다. 화면·GA·저장 변경이 0이라 revert 1커밋 원칙과 부딪히지 않는다. 따로 커밋할 변경은 없다.
+- 완료 기준 추가: 7번에 '`profit-close-trigger` 글자 = `기준 종가 비교`(변경 0), `day-calendar-basis`·`dividerAccent` 클래스 diff 0'.
