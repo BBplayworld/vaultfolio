@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Home, PieChart, TrendingUp, PlusCircle, ChartCandlestick } from "lucide-react";
+import { Home, PieChart, TrendingUp, PlusCircle } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useAssetNavigation } from "../layout/navigation/navigation-context";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -20,14 +20,12 @@ const NAV_ITEMS: NavItem[] = [
   { id: "detail", label: "상세", icon: PieChart },
   { id: "update", label: "업데이트", icon: PlusCircle },
   { id: "activity", label: "성과", icon: TrendingUp },
-  { id: "invest", label: "투자", icon: ChartCandlestick },
 ];
 
 function getActiveId(viewType: string): string | null {
   if (viewType === "home") return "home";
   if (viewType === "detail" || viewType === "tax") return "detail"; // 세금 관리는 상세 소속(4.89)
   if (viewType === "activity") return "activity";
-  if (viewType === "invest") return "invest";
   return null; // 더보기·설정은 홈 헤더 아이콘으로 여는 페이지라 활성 칸 없음(#263)
 }
 
@@ -75,16 +73,13 @@ export function BottomNav() {
       case "update":
         window.dispatchEvent(new CustomEvent("open-add-asset-sheet"));
         break;
-      case "invest":
-        navigate({ type: "invest" });
-        break;
     }
   };
 
   return (
     <nav data-testid="bottom-nav" className="pwa-nav-container fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border" style={{ zIndex: Z_LAYER.nav }}>
-        <div className={`grid items-center ${isTrialMode() ? "grid-cols-4" : "grid-cols-5"} px-2 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]`}>
-          {/* 체험 모드(#59): 업데이트(등록) 숨김 — 홈·상세·성과·투자 grid-cols-4 균등이라 빈 자리 없음(#263) */}
+        <div className={`grid items-center ${isTrialMode() ? "grid-cols-3" : "grid-cols-4"} px-2 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]`}>
+          {/* 체험 모드(#59): 업데이트(등록) 숨김 — 홈·상세·성과 3칸 */}
           {(isTrialMode() ? NAV_ITEMS.filter(({ id }) => id !== "update") : NAV_ITEMS).map(({ id, label, icon: Icon }) => {
             const isActive = id === activeId;
             const isCenter = id === "update";

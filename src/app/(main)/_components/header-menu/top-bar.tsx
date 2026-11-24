@@ -18,11 +18,10 @@ import { track } from "@/lib/analytics/ga";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { useStockPageStore } from "@/stores/stock-page-store";
 
-type HomeTop = "detail" | "activity" | "invest";
+type HomeTop = "detail" | "activity";
 const HOME_TOP_OPTIONS: { value: HomeTop; label: string; dataTutorial?: string }[] = [
   { value: "detail", label: "상세", dataTutorial: "tutorial-detail-tab" },
   { value: "activity", label: "성과", dataTutorial: "tutorial-activity-tab" },
-  { value: "invest", label: "투자" },
 ];
 
 // 상단 아이콘 버튼 공용 크기 (한 단계 ↑) — menu-styles.ts의 HEADER_ICON_BTN
@@ -121,7 +120,6 @@ export function TopBar() {
   const onHomeTabChange = (tab: HomeTop) => {
     if (tab === "detail") navigate({ type: "detail", tab: "hub" });
     if (tab === "activity") navigate({ type: "activity", tab: "hub" });
-    if (tab === "invest") navigate({ type: "invest" });
   };
 
   // 웰컴가이드 페이지에선 헤더 영역 자체를 렌더하지 않아 공간을 차지하지 않게 함

@@ -7,7 +7,7 @@ const read = (p: string) => readFileSync(join(process.cwd(), "src", p), "utf8");
 
 describe("투자 탭 GA(#263, 기존 page_title 패턴만)", () => {
   it("화면 제목: 투자 · 가이드·시장 역사", () => {
-    expect(featureTitleOf("page_view", {}, "invest")).toBe("투자");
+    expect(featureTitleOf("page_view", {}, "invest")).toBeUndefined(); // 5.145: 투자 탭 폐지 — 앱 화면 키 아님
     expect(featureTitleOf("page_view", {}, "guide:market-history")).toBe("가이드·시장 역사");
     expect(screenPath("guide:market-history")).toBe("/v/guide/market-history");
   });
@@ -69,14 +69,11 @@ describe("투자 탭 GA 전송(실제 gtag 호출)", () => {
     __resetGaStateForTest();
   });
   afterEach(() => { delete (globalThis as unknown as { window?: unknown }).window; });
-  it("화면 진입 page_title `투자`, 지수 변경 title만 — 금액·연도 파라미터 없음", () => {
-    trackScreen("invest");
-    expect(gtag.mock.calls.at(-1)![2].page_title).toBe("투자");
+  it("지수 변경 title만 — 금액·연도 파라미터 없음(가이드 안 지수 화면)", () => {
     track("feature_use", { category: "invest_index_kospi" });
     const [, name, payload] = gtag.mock.calls.at(-1)!;
     expect(name).toBe("feature_use");
     expect(Object.keys(payload).sort()).toEqual(["page_location", "page_title"]);
     expect(payload.page_title).toBe("투자·지수·코스피");
-    expect(payload.page_location).toBe("https://www.secretasset.xyz/v/invest");
   });
 });

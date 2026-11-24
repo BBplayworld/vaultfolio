@@ -149,7 +149,6 @@ const SCREEN_TITLES: Record<string, string> = {
   "guide:recovery-years": "가이드·회복 기간",
   "guide:kospi-by-year": "가이드·코스피",
   "guide:monthly-buying": "가이드·매달 나눠 넣기",
-  invest: "투자",
   more: "더보기",
   settings: "설정",
   tax: "세금 관리",
@@ -310,7 +309,6 @@ export function featureTitleOf(eventName: string, params: GaParams, currentScree
         if (params.asset_type) return withAsset("웰컴·체험");
         if (params.source === "activity") return "웰컴·체험·성과";
         if (params.source === "detail") return "웰컴·체험·상세";
-        if (params.source === "invest") return "웰컴·체험·투자";
       }
       return (params.method && WELCOME_ACTION_TITLES[params.method]) || "웰컴";
     case "tutorial_begin":

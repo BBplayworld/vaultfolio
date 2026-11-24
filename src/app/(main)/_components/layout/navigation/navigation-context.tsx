@@ -26,7 +26,6 @@ export type AssetView =
   | { type: "more" }
   | { type: "settings"; focus?: "notify" } // focus: 렌더 후 알림 구역 1회 스크롤(5.115, 해시·저장에 남기지 않음)
   | { type: "tax" }
-  | { type: "invest" } // 투자 탭(#263): 과거 시장 기록(하단 1차 탭). 하위 해시 0
   | { type: "detail"; tab: DetailTab }
   | { type: "activity"; tab: ActivityTab; init?: ChangeInit };
 
@@ -93,15 +92,15 @@ const LEGACY_ACTIVITY_TABS: Record<string, ChangeInit> = {
 };
 
 // 1차 메뉴 좌우 순서 — 스와이프 이동·슬라이드 방향 계산 공용
-// 더보기는 홈 헤더 아이콘으로 여는 페이지라 순서 밖(#263). 투자가 마지막 칸
-const PAGE_ORDER = ["home", "detail", "activity", "invest"] as const;
+// 더보기는 홈 헤더 아이콘으로 여는 페이지라 순서 밖(#263). 투자 탭 폐지(5.145)
+const PAGE_ORDER = ["home", "detail", "activity"] as const;
 type MainViewType = typeof PAGE_ORDER[number];
 // 슬라이드 전환 방향: "right"=오른쪽에서 진입(다음 메뉴), "left"=왼쪽에서 진입(이전 메뉴)
 export type SlideDir = "left" | "right" | null;
 // tax는 상세 하위 페이지(4.89) — 스와이프 위치상 detail로 취급. more·settings는 순서 밖(indexOf -1 → 슬라이드·스와이프 없음)
 const mainTypeOf = (t: AssetView["type"]): AssetView["type"] => (t === "tax" ? "detail" : t);
-// 체험(#59)은 더보기·설정을 두지 않지만 투자는 둔다(#263: 체험 하단 홈·상세·성과·투자) — 스와이프 순서는 비체험과 같다
-const TRIAL_SWIPE_ORDER: readonly MainViewType[] = ["home", "detail", "activity", "invest"];
+// 체험(#59)은 더보기·설정을 두지 않는다 — 스와이프 순서는 비체험과 같다
+const TRIAL_SWIPE_ORDER: readonly MainViewType[] = ["home", "detail", "activity"];
 export function swipeOrderOf(trial: boolean): readonly MainViewType[] {
   return trial ? TRIAL_SWIPE_ORDER : PAGE_ORDER;
 }
@@ -114,9 +113,12 @@ export function guardTrialView(view: AssetView, trial: boolean): AssetView {
 /** `invest`·`invest/…`(앞 `#` 없는 값) */
 const isInvestHash = (clean: string) => clean === "invest" || clean.startsWith("invest/");
 
-/** navigate가 pushState를 건너뛸지: 현재 해시가 이동할 화면의 해시와 같으면 true. 투자 탭은 `#invest/…` 전부 같은 화면 */
+/** 폐지된 투자 탭 해시(5.145) — 홈으로 보내고 주소도 replace로 지운다 */
+export const isRetiredHash = (hash: string) => isInvestHash(hash.replace(/^#/, ""));
+
+/** navigate가 pushState를 건너뛸지: 현재 해시가 이동할 화면의 해시와 같으면 true */
 export function isSameNavHash(currentHash: string, v: AssetView): boolean {
-  return v.type === "invest" ? isInvestHash(currentHash.replace(/^#/, "")) : currentHash === toHash(v);
+  return currentHash === toHash(v);
 }
 
 export function parseHash(hash: string): AssetView {
@@ -125,8 +127,8 @@ export function parseHash(hash: string): AssetView {
   if (clean === "more") return { type: "more" };
   if (clean === "settings") return { type: "settings" };
   if (clean === "tax") return { type: "tax" };
-  // 투자 탭 하위 해시(`#invest/three` 등, 5.141): 화면은 투자 탭 하나 — 칸 선택은 InvestView가 해시를 읽어 정한다. 모르는 하위 해시도 투자 탭(기본 지수)
-  if (isInvestHash(clean)) return { type: "invest" };
+  // `#invest`·`#invest/*`는 투자 탭 폐지(5.145)로 홈 — 아래 기본값과 같다
+  if (isInvestHash(clean)) return { type: "home" };
   const [type, tab] = clean.split("/");
   if (type === "detail") {
     // #detail (탭 생략) → hub
@@ -147,7 +149,6 @@ export function toHash(view: AssetView): string {
   if (view.type === "more") return "#more";
   if (view.type === "settings") return "#settings";
   if (view.type === "tax") return "#tax";
-  if (view.type === "invest") return "#invest";
   // 허브는 짧은 #detail / #activity 형태 유지
   if (view.tab === "hub") return `#${view.type}`;
   return `#${view.type}/${view.tab}`;
@@ -159,7 +160,6 @@ export function toHash(view: AssetView): string {
 export function getBackLabel(view: AssetView, stockPageOrigin?: "stocks" | "market-compare", reportFromDetail = false): string {
   if (view.type === "home") return "";
   if (view.type === "more") return "홈";
-  if (view.type === "invest") return "홈";
   if (view.type === "settings") return "더보기";
   // 세금 일정은 홈 배너·더보기 두 경로에서 진입하므로 중립 라벨(실제 복귀는 history.back)
   if (view.type === "tax") return "뒤로";
@@ -260,6 +260,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // 종목 한 장은 대상 store가 비면(새로고침·직접 URL) 상세·주식으로 — 주소도 바꿔 둔다(히스토리 추가 없음)
     const parsed = parseHash(window.location.hash);
+    // 폐지된 #invest 해시: 홈으로 replace(히스토리 추가 0 → 뒤로 가기 루프 없음)
+    if (isRetiredHash(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search);
     const initial = guardTrialView(guardStockPageView(parsed, !!useStockPageStore.getState().target), isTrialMode());
     // 홈 해시는 ""라 replaceState("")로는 해시가 남는다 — 경로+쿼리로 바꾼다(navigate와 같은 방식)
     if (initial !== parsed) window.history.replaceState(null, "", toHash(initial) || window.location.pathname + window.location.search);
@@ -274,6 +276,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // 현재 테마(<html class="dark"> 여부)를 세션당 1회 계측 — 설정에서 전환하면 settings-page가 새 모드로 재전송
     trackThemeMode(document.documentElement.classList.contains("dark") ? "dark" : "light");
     const onPop = () => {
+      if (isRetiredHash(window.location.hash)) window.history.replaceState(null, "", window.location.pathname + window.location.search);
       const guarded = guardStockPageView(
         withRestoredChangeInit(parseHash(window.location.hash), viewRef.current, changeInitForReturn),
         !!useStockPageStore.getState().target,
@@ -301,7 +304,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (v.type === "activity" && v.tab === "change-market") marketCompareEnteredInApp = true;
     reportEnteredFromDetail = reportEntryFromDetail(viewRef.current, v, reportEnteredFromDetail);
     const target = hash || window.location.pathname + window.location.search;
-    // 투자 탭은 `#invest`·`#invest/three` 모두 같은 화면 — 이미 투자 탭 해시면 push하지 않는다(재탭 시 history 추가 0, 5.141)
     if (!isSameNavHash(window.location.hash, v)) {
       window.history.pushState(null, "", target);
     }
@@ -368,7 +370,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
             if (targetType === "home") navigate({ type: "home" });
             else if (targetType === "detail") navigate({ type: "detail", tab: "hub" });
             else if (targetType === "activity") navigate({ type: "activity", tab: "hub" });
-            else if (targetType === "invest") navigate({ type: "invest" });
           }
         } else {
           // RtoL swipe: 하단 NAV 기준 오른쪽 메뉴 이동 (인덱스 증가)
@@ -378,7 +379,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
             if (targetType === "home") navigate({ type: "home" });
             else if (targetType === "detail") navigate({ type: "detail", tab: "hub" });
             else if (targetType === "activity") navigate({ type: "activity", tab: "hub" });
-            else if (targetType === "invest") navigate({ type: "invest" });
           }
         }
       }

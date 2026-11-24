@@ -2,6 +2,7 @@
 
 import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
 import { SKELETON_FILL } from "@/components/ui/skeleton";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Wallet, BadgeDollarSign, Sprout } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ import { pickFirstRecordStart, pickSettlementCard, resolveSettlementWindow, sett
 import { settlementDelta } from "./change-hero";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { HubChangeRows } from "./hub-change-rows";
+import { GUIDES } from "@/app/guide/guide-copy";
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
@@ -228,6 +230,16 @@ export function PerformanceHub() {
         />
         </div>
       </div>
+
+      {/* 투자 탭 폐지(5.145) — 시장 이야기는 공개 가이드로 안내(링크 1줄) */}
+      <Link
+        href="/guide/market-history"
+        data-testid="hub-market-guide-link"
+        className="inline-flex min-h-10 w-fit items-center rounded-md px-1 text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        <span className="underline decoration-muted-foreground/40 underline-offset-4">{GUIDES["market-history"].linkLabel}</span>
+        <span aria-hidden className="ml-1">›</span>
+      </Link>
     </div>
   );
 }
