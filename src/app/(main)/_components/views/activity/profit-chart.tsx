@@ -575,7 +575,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                         const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
                         return (
                           <div className="space-y-1.5">
-                            {/* 기준 종가 비교: 단일 진입점. 펼치면 옵션 토글 + 종가 비교 표 */}
+                            {/* 기준 종가 비교: 단일 진입점. 펼치면 날짜 맞춤 값(글자) + 종가 비교 표 */}
                             <Collapsible open={closeTableOpen} onOpenChange={setCloseTableOpen}>
                               <CollapsibleTrigger asChild>
                                 <button type="button" data-testid="profit-close-trigger" className="flex items-center gap-1 -ml-1 px-1 min-h-10 text-sm font-medium text-foreground transition-colors">
