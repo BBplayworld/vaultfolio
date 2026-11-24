@@ -317,8 +317,7 @@ describe("T10 팁·GA·화면 렌더", () => {
     const order = ["cause-row-price", "cause-row-valuation", "cause-row-fx", "cause-row-unrecorded"].map((k) => html.indexOf(k));
     expect(order.every((i) => i > 0)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(html).toContain('data-testid="week-market-link"');
-    expect(html).toContain('aria-label="종목별 등락, 시장과 비교로 이동"');
+    expect(html).not.toContain("week-market-link"); // #288 R1 — 시장과 비교 입구는 자산 변화›주식 시장 타일
     expect(html).toContain('data-testid="week-records"'); // 기록 내역(입출금·매매·대출 4건)
     expect(html).toMatch(/data-testid="week-closing-toggle"[^>]*aria-expanded="false"|aria-expanded="false"[^>]*data-testid="week-closing-toggle"/);
     expect(html).toMatch(/id="week-list"[^>]*inert/);
@@ -356,10 +355,11 @@ describe("T10 팁·GA·화면 렌더", () => {
     expect(html.split('data-testid="week-row"').length - 1).toBe(3); // 일별 기록 3행만
     expect(html).not.toContain(">11/1 (");
   });
-  it("주식 미보유면 종목 등락 링크 없음", () => {
+  it("기록 내역 0이면 원인 푸터 줄 없음(주식 보유 여부와 무관, #288 R1)", () => {
     const sc = buildScenario(RICH_STEPS);
     h.sc = { ...sc, assetData: { ...sc.assetData, stocks: [] } };
-    expect(renderToStaticMarkup(<WeekList />)).not.toContain("week-market-link");
+    const html = renderToStaticMarkup(<WeekList />);
+    expect(html).not.toContain("week-market-link");
   });
   it("기록 없음 → week-empty, 원인·접힘 카드 없음", () => {
     h.sc = { ...buildScenario(RICH_STEPS), daily: [] };

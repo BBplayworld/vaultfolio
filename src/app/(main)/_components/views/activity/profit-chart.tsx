@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { InfoHint } from "../../layout/ui/info-hint";
-import { track } from "@/lib/analytics/ga";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -219,7 +218,6 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
   const [closeTableOpen, setCloseTableOpen] = useState(false);
   const profitBasis = useProfitBasisStore((s) => s.basis);
   const profitBasisHydrated = useProfitBasisStore((s) => s.hydrated);
-  const setProfitBasis = useProfitBasisStore((s) => s.setBasis);
   const hydrateProfitBasis = useProfitBasisStore((s) => s.hydrate);
   useEffect(() => { hydrateProfitBasis(); }, [hydrateProfitBasis]);
 
@@ -577,7 +575,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                         const rightSum = isAll ? totalCurrentValue : isKr ? krCurrentSum : usCurrentSum;
                         return (
                           <div className="space-y-1.5">
-                            {/* 기준 종가 비교: 단일 진입점. 펼치면 옵션 토글 + 종가 비교 표 */}
+                            {/* 기준 종가 비교: 단일 진입점. 펼치면 날짜 맞춤 값(글자) + 종가 비교 표 */}
                             <Collapsible open={closeTableOpen} onOpenChange={setCloseTableOpen}>
                               <CollapsibleTrigger asChild>
                                 <button type="button" data-testid="profit-close-trigger" className="flex items-center gap-1 -ml-1 px-1 min-h-10 text-sm font-medium text-foreground transition-colors">
@@ -586,7 +584,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                 </button>
                               </CollapsibleTrigger>
                               <CollapsibleContent className="text-sm mt-2 space-y-2">
-                                {/* 국내·해외 날짜 맞춤: 더보기와 같은 상수·같은 모양(#222) */}
+                                {/* 국내·해외 날짜 맞춤: 현재 값만 표시, 변경은 더보기 › 설정 › 표시(#288 R1) */}
                                 <div className="flex flex-col gap-1.5 min-[440px]:flex-row min-[440px]:items-center min-[440px]:justify-between">
                                 <div className="flex items-center gap-1.5">
                                   <span data-testid="profit-basis-label" className="text-sm font-medium whitespace-nowrap">{PROFIT_BASIS_COPY.name}</span>
@@ -598,22 +596,14 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                       </p>
                                     ))}
                                     {period === "daily" && <p className="text-muted-foreground break-keep">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
+                                    <p className="text-muted-foreground break-keep">더보기 › 설정 › 표시에서 바꿔요.</p>
                                   </InfoHint>
                                 </div>
-                                {profitBasisHydrated && (<div data-testid="profit-basis-selector-chart" className="w-full min-[440px]:w-[208px] min-[440px]:shrink-0">
-                                    <InlineSelector
-                                      value={profitBasis}
-                                      onChange={(v) => {
-                                        if (v === profitBasis) return;
-                                        setProfitBasis(v);
-                                        track("feature_use", { category: "profit_basis_chart" });
-                                      }}
-                                      options={PROFIT_BASIS_COPY.options}
-                                      fullWidth
-                                      tight
-                                      ariaLabel={PROFIT_BASIS_COPY.name}
-                                    />
-                                  </div>)}
+                                {profitBasisHydrated && (
+                                  <span data-testid="profit-basis-value" className="text-sm text-muted-foreground whitespace-nowrap">
+                                    {PROFIT_BASIS_COPY.options.find((o) => o.value === profitBasis)?.label}
+                                  </span>
+                                )}
                                 </div>
                                 {/* 헤더 */}
                                 <div className={`${CLOSE_TABLE_COLS} pb-1.5 border-b border-border dark:border-border/50 text-muted-foreground`}>
