@@ -31,7 +31,6 @@ import { LoanTxInput } from "../../forms/asset-update/input/loan-tx-input";
 import { CashTxView } from "../../views/detail/cash-tx/cash-tx-view";
 import { LoanTxView } from "../../views/detail/loan-tx/loan-tx-view";
 import { CryptoTxView } from "../../views/detail/crypto-tx/crypto-tx-view";
-import { InvestTab } from "../../views/invest/invest-lazy";
 import { useAssetNavigation, type DetailTab, type ActivityTab, type ChangeInit } from "./navigation-context";
 
 // 홈 1차 탭(상세/성과)은 TopBar 좌측에 노출됨 — 본문은 Dashboard만.
@@ -76,16 +75,6 @@ function ActivityView({ tab, init }: { tab: ActivityTab; init?: ChangeInit }) {
   );
 }
 
-// 투자 탭(#263): 허브형 1차 탭. 제목 + 동적으로 불러오는 본문(첫 화면 JS 0)
-function InvestPage() {
-  return (
-    <div className={`flex flex-col gap-3 sm:gap-4 ${ASSET_THEME.contentPad}`}>
-      <h2 className={PAGE_TITLE}>투자</h2>
-      <InvestTab />
-    </div>
-  );
-}
-
 export function AssetPageTabs() {
   const { view, navigate, slideDir } = useAssetNavigation();
 
@@ -116,7 +105,7 @@ export function AssetPageTabs() {
       {/* key 변경 시 재마운트되며 fade+slide-in 애니메이션 (토스 스타일 미세 전환) */}
       {/* 1차 메뉴 좌우 이동 시 방향에 맞춘 슬라이드, 그 외엔 기본 하단 슬라이드 */}
       <div
-        key={view.type === "home" || view.type === "more" || view.type === "settings" || view.type === "tax" || view.type === "invest" ? view.type : `${view.type}/${view.tab}`}
+        key={view.type === "home" || view.type === "more" || view.type === "settings" || view.type === "tax" ? view.type : `${view.type}/${view.tab}`}
         className={`animate-in fade-in duration-200 ${
           slideDir === "right" ? "slide-in-from-right-4" : slideDir === "left" ? "slide-in-from-left-4" : "slide-in-from-bottom-1"
         }`}
@@ -125,7 +114,6 @@ export function AssetPageTabs() {
         {view.type === "more" && <ToolMenuPage />}
         {view.type === "settings" && <SettingsPage focus={view.focus} />}
         {view.type === "tax" && <TaxCalendarView />}
-        {view.type === "invest" && <InvestPage />}
         {view.type === "detail" && <DetailView tab={view.tab} />}
         {view.type === "activity" && <ActivityView tab={view.tab} init={view.init} />}
       </div>

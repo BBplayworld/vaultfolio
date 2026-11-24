@@ -239,7 +239,7 @@ export function SpreadYearsFootnotes() {
   );
 }
 
-export const GUIDE_TABLE_DISCLAIMER = "연간 등락은 투자 탭과 같은 자료(위키백과 CC BY-SA 4.0·Damodaran)로 시크릿에셋이 계산했고, 가공한 표는 같은 조건(CC BY-SA 4.0)으로 공개해요. S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc., KOSPI는 한국거래소의 상표이며, 시크릿에셋은 이 기관들과 제휴 관계가 아니에요. 과거 시장 사실이며 투자 권유가 아니에요.";
+export const GUIDE_TABLE_DISCLAIMER = "연간 등락은 공개 자료(위키백과 CC BY-SA 4.0·Damodaran)로 시크릿에셋이 계산했고, 가공한 표는 같은 조건(CC BY-SA 4.0)으로 공개해요. S&P 500은 S&P Dow Jones Indices, Nasdaq-100은 Nasdaq, Inc., KOSPI는 한국거래소의 상표이며, 시크릿에셋은 이 기관들과 제휴 관계가 아니에요. 과거 시장 사실이며 투자 권유가 아니에요.";
 
 export function DecadeTable() {
   const rows = decadeCounts();

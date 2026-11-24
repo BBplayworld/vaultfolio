@@ -5,6 +5,9 @@
 ---
 
 ## 2026-11-24
+### 투자 탭 폐지 — 상세·성과 2탭 (issue-5.145, #287, risk:medium)
+- PWA 하단 `홈·상세·업데이트·성과`(체험 3칸)·브라우저 `상세|성과`·스와이프에서 투자 제거, `#invest*`는 홈(replace), 체험 꼬리 `웰컴·체험·투자` 제거, 성과 허브 시장 가이드 링크 1줄·새 소식 1줄. 투자 컴포넌트·`lib/invest`·공개 가이드 유지. 저장·서버 요청·GA 키 변경 0.
+
 ### 등록 다음 날 '신규 현금 +X' 반복 제거 (issue-5.144, #252, risk:high)
 - 편집(`ASSET_USER_EDIT_EVENT`) 800ms 뒤 **오늘(평일) 일별 행 1줄만** 재계산(`refreshTodayDailyRow`·`computeSnapshotRow` 추출, saveSnapshots와 같은 수식). 월·연 행·lastVisitDate·assetData·네트워크 0, 일요일·차단(복원·앱 잠금·데모·preview)·세션 내 saveSnapshots 미성공 시 no-op, 실패 시 기존 행 유지. 홈 Hero 경로(`computeAttributionSince(…, startDayGate=true)`)만 정밀 일별 시작점의 시작일 당일 현금·대출 기록을 `createdAt` KST 날짜 > 시작일인 것만 포함(유령 짝 방지, createdAt 없는 옛 기록은 종전). 결산·성적표·월 행 불변. 스키마·저장 키·서버 전송 변경 0.
 

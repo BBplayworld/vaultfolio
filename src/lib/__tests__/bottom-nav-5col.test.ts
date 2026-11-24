@@ -5,16 +5,16 @@ import { join } from "node:path";
 // #125 하단 네비 5칸·인증카드 상단 통일(v2) 정적 단언
 const read = (p: string) => readFileSync(join(process.cwd(), "src", p), "utf8");
 
-describe("하단 네비 5칸 (#125)", () => {
+describe("하단 네비 4칸 (#125, 5.145 투자 탭 폐지)", () => {
   const nav = read("app/(main)/_components/pwa/bottom-nav.tsx");
-  it("순서: 홈·상세·업데이트·성과·투자, 인증카드 칸 없음(더보기는 홈 헤더 아이콘, #263)", () => {
+  it("순서: 홈·상세·업데이트·성과, 인증카드 칸 없음(더보기는 홈 헤더 아이콘, #263)", () => {
     const ids = [...nav.matchAll(/\{ id: "(\w+)", label:/g)].map((m) => m[1]);
-    expect(ids).toEqual(["home", "detail", "update", "activity", "invest"]);
+    expect(ids).toEqual(["home", "detail", "update", "activity"]);
     expect(nav).not.toContain("ShareScreenshotDialog");
     expect(nav).not.toContain("IdCard");
   });
-  it("균등 grid (5칸, 체험 4칸: 홈·상세·성과·투자) + aria-current", () => {
-    expect(nav).toContain('"grid-cols-4" : "grid-cols-5"');
+  it("균등 grid (4칸, 체험 3칸: 홈·상세·성과) + aria-current", () => {
+    expect(nav).toContain('"grid-cols-3" : "grid-cols-4"');
     expect(nav).toContain('aria-current={isActive ? "page" : undefined}');
   });
 });

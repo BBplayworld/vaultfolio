@@ -12,7 +12,7 @@ export type TrialExitAsset = "stock" | "crypto" | "cash" | "loan" | "real-estate
 /** GA 꼬리 인자 — asset_type(자산군) 또는 source(성과·상세). page_title 결정에만 쓰인다 */
 export type TrialExitGa =
   | { asset_type: "stock" | "crypto" | "cash" | "loan" | "real_estate" | "physical" }
-  | { source: "activity" | "detail" | "invest" };
+  | { source: "activity" | "detail" };
 
 export interface TrialExitTarget {
   asset: TrialExitAsset | null;
@@ -33,8 +33,6 @@ const TRIAL_EXIT_TARGETS = new Map<string, TrialExitTarget>([
   ...entries(["detail:physical"], { asset: null, ga: { asset_type: "physical" } }),
   ...entries(["activity:hub", "activity:change", "activity:change-market", "activity:dividend", "activity:report"], { asset: null, ga: { source: "activity" } }),
   ...entries(["detail:hub", "tax"], { asset: null, ga: { source: "detail" } }),
-  // 5.141 T2: 투자 탭에서 체험을 끝내면 `웰컴·체험·투자` 꼬리(문구·등록 칸 변화 0)
-  ...entries(["invest"], { asset: null, ga: { source: "invest" } }),
 ]);
 
 /** 화면 키 → 복귀 상태. home·more·settings·모르는 값·빈 값은 없음(현행) */
