@@ -4,6 +4,10 @@
 
 ---
 
+## 2026-11-24
+### 등록 다음 날 '신규 현금 +X' 반복 제거 (issue-5.144, #252, risk:high)
+- 편집(`ASSET_USER_EDIT_EVENT`) 800ms 뒤 **오늘(평일) 일별 행 1줄만** 재계산(`refreshTodayDailyRow`·`computeSnapshotRow` 추출, saveSnapshots와 같은 수식). 월·연 행·lastVisitDate·assetData·네트워크 0, 일요일·차단(복원·앱 잠금·데모·preview)·세션 내 saveSnapshots 미성공 시 no-op, 실패 시 기존 행 유지. 홈 Hero 경로(`computeAttributionSince(…, startDayGate=true)`)만 정밀 일별 시작점의 시작일 당일 현금·대출 기록을 `createdAt` KST 날짜 > 시작일인 것만 포함(유령 짝 방지, createdAt 없는 옛 기록은 종전). 결산·성적표·월 행 불변. 스키마·저장 키·서버 전송 변경 0.
+
 ## 2026-11-23
 ### 투자 탭 R3-3 — 코스피×원/달러 겹쳐 보기·가이드 G4·격자 반올림 한 벌 (issue-5.143, #280·#282, #281 닫음)
 - 코스피 겹쳐 보기 3항목(`안 함·10년물·원/달러`): 원/달러 연평균(연준 G.5 EXKOUS, FRED 경유 월 12개 평균, 1982~2025 44점) 계단선 + 전용 오른쪽 눈금(`600원·1,000원·1,500원`, 1280은 4개), 금리 층 스케일·격자 불변. 정확한 값은 화면에 쓰지 않고 출처 펼침의 공개 CSV(`fx-krw-usd-annual.csv`) 링크로 제공. 저장·서버 요청·GA 파라미터 변경 0.

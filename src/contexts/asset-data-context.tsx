@@ -20,6 +20,8 @@ import { persistNickname, NICKNAME_EVENT } from "@/hooks/use-nickname";
 import { fetchProfitRef, recordTodayExchangeRate, mergeExchangeHistory, type ProfitBasis } from "@/lib/finance/profit-utils";
 import { prunePeriodProfitCache } from "@/lib/finance/profit-cache-cleanup";
 import { isBackgroundWorkBlocked } from "@/lib/pwa/background-gate";
+import { isTrialMode } from "@/lib/trial/trial-mode";
+import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { isPwaLocked } from "@/lib/pwa/app-lock";
 import { isStandaloneDisplay } from "@/lib/pwa/detect-browser";
 import { useProfitBasisStore } from "@/stores/profit-basis-store";
@@ -37,9 +39,117 @@ import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 // notifyAssetUserEdit()를 호출해야 한다. 누락하면 그 편집이 다른 기기로 동기화되지 않는다.
 export const ASSET_USER_EDIT_EVENT = "secretasset-asset-user-edit";
 
+// 편집 후 오늘 일별 행 재계산 대기 — 동기화 자동 push 디바운스(AUTO_PUSH_DEBOUNCE_MS=2500)보다 짧아야 같은 push에 실린다
+export const SNAPSHOT_REFRESH_DEBOUNCE_MS = 800;
+
 export function notifyAssetUserEdit(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(ASSET_USER_EDIT_EVENT));
+}
+
+// 일별·월별 스냅샷 한 행의 값 계산 — saveSnapshots와 편집 시 재계산(#252)이 같은 수식을 공유
+export function computeSnapshotRow(
+  data: AssetData,
+  rates: { USD: number; JPY: number },
+  refMap: ProfitRefResponse,
+) {
+  // 종가 기준 주식가치: ref 종가 없는 종목은 실시간 currentPrice로 폴백
+  const closePriceOf = (s: Stock): number => {
+    const t = normalizeTicker(s);
+    const entry = t ? refMap[t] : null;
+    return entry?.refPrice ?? s.currentPrice;
+  };
+  const nab = computeNetAsset(data, rates, closePriceOf);
+  const { financialAsset, netAsset } = nab;
+
+  // v2 파생 정보(성적표·원인분해 델타용) — 스냅샷 시점 박제
+  const cost = computeAssetCost(data, rates);
+  // 통화별 외화노출 기준액(KRW 환산) — 환율효과 분리용
+  const fxBase = { USD: 0, JPY: 0 };
+  for (const s of data.stocks) {
+    if (s.inactiveStatus === "delisted") continue;
+    if (s.currency === "USD") fxBase.USD += s.quantity * closePriceOf(s) * rates.USD;
+    else if (s.currency === "JPY") fxBase.JPY += s.quantity * closePriceOf(s) * (rates.JPY / 100);
+  }
+  for (const c of data.cash ?? []) {
+    if (c.currency === "USD") fxBase.USD += c.balance * rates.USD;
+    else if (c.currency === "JPY") fxBase.JPY += c.balance * (rates.JPY / 100);
+  }
+  const enrich = {
+    breakdown: {
+      realEstate: nab.realEstateValue,
+      stocks: nab.stockValue,
+      crypto: nab.cryptoValue,
+      cash: nab.cashValue,
+      loans: nab.loanBalance,
+      tenantDeposit: nab.tenantDepositTotal,
+      physical: nab.physicalValue, // 0이어도 기록 — 필드 없는 스냅샷(구버전 기기)과 구분(mergeMonthlySnapshots)
+    },
+    fx: { USD: rates.USD, JPY: rates.JPY },
+    fxBase,
+    cost: {
+      total: cost.realEstateCost + cost.physicalCost + cost.stockCost + cost.cryptoCost + nab.cashValue,
+      stock: cost.stockCost,
+      crypto: cost.cryptoCost,
+      realEstate: cost.realEstateCost,
+      physical: cost.physicalCost,
+    },
+  };
+  return { netAsset, financialAsset, enrich };
+}
+
+// 편집 직후 오늘(평일) 일별 행 1줄만 다시 계산해 쓴다(#252) — 다음 날 Hero가 '등록 전' 행을 시작점으로 삼아
+// 같은 원인을 한 번 더 보여 주던 문제 해소. 월·연 행·lastVisitDate·assetData·네트워크는 건드리지 않는다.
+// 일요일은 제외(일요일 Hero 시작점이 토요일 행이라 갱신하면 그날 등록이 Hero에서 사라진다).
+// 계산을 모두 끝낸 뒤 한 번만 쓰고, 어떤 예외든 기존 행을 그대로 둔다. 쓰기 성공 여부 반환.
+export function refreshTodayDailyRow(
+  data: AssetData,
+  rates: { USD: number; JPY: number },
+  refMap: ProfitRefResponse,
+  todayStr: string,
+): boolean {
+  try {
+    if (new Date(`${todayStr}T00:00:00Z`).getUTCDay() === 0) return false;
+    const raw = localStorage.getItem(STORAGE_KEYS.dailySnapshots);
+    if (!raw) return false;
+    const all: DailyAssetSnapshot[] = JSON.parse(raw);
+    if (!Array.isArray(all)) return false;
+    const idx = all.findIndex(s => s.date === todayStr);
+    if (idx < 0) return false;
+    const prev = all[idx];
+    const { netAsset, financialAsset, enrich } = computeSnapshotRow(data, rates, refMap);
+    const row: DailyAssetSnapshot = { date: todayStr, netAsset, financialAsset, ...enrich, ...(prev.grade ? { grade: prev.grade } : {}) };
+    const next = all.map((s, i) => (i === idx ? row : s));
+    localStorage.setItem(STORAGE_KEYS.dailySnapshots, JSON.stringify(next));
+    return true;
+  } catch (e) {
+    console.error("[Snapshot] 오늘 행 재계산 실패", e);
+    return false;
+  }
+}
+
+// 편집 신호 디바운서 — 마지막 신호 후 ms 뒤 1회 실행, dispose 시 대기 취소(타이머 누수 0)
+export function createEditDebouncer(ms: number, run: () => void) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return {
+    onEdit: () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { timer = null; run(); }, ms);
+    },
+    dispose: () => { if (timer) clearTimeout(timer); timer = null; },
+  };
+}
+
+// 재계산 조건 판정 + 실행 — 이번 세션에서 오늘 saveSnapshots 성공(last.date=오늘)이고 차단(복원·앱 잠금·데모·preview) 아님
+export function tryRefreshTodayRow(o: {
+  last: { date: string; refMap: ProfitRefResponse } | null;
+  blocked: boolean;
+  todayStr: string;
+  data: AssetData;
+  rates: { USD: number; JPY: number };
+}): boolean {
+  if (!o.last || o.blocked || o.last.date !== o.todayStr) return false;
+  return refreshTodayDailyRow(o.data, o.rates, o.last.refMap, o.todayStr);
 }
 
 // 토스트가 일정 시간 이상 노출 중일 경우 자동으로 닫히도록 타임스탬프 추적
@@ -402,6 +512,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const profitFetchAbortSetRef = useRef<Set<AbortController>>(new Set());
   // saveSnapshots 차단 플래그 — refreshData 후 새 동기화 시작 전까지 saveSnapshots 진입 자체를 막음
   const saveSnapshotsBlockedRef = useRef(false);
+  // 마지막 saveSnapshots 성공 정보(오늘 날짜·종가 맵) — 편집 시 오늘 일별 행 재계산(#252) 조건·입력
+  const lastSnapshotRef = useRef<{ date: string; refMap: ProfitRefResponse } | null>(null);
   const abortAllProfitFetches = (_reason: string) => {
     for (const c of profitFetchAbortSetRef.current) c.abort();
     profitFetchAbortSetRef.current.clear();
@@ -700,51 +812,11 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     // KIS 점검(서킷 open): 종가 미확정 → 오늘자 스냅샷 저장 스킵 (마지막 정상 스냅샷 보존)
     if (kisUnavailable) return;
 
-    // 공통 헬퍼로 동일 수식 사용 — 단가 함수만 다름
+    // 행 계산은 모듈 함수 공유 — 편집 시 오늘 행 재계산(refreshTodayDailyRow)과 같은 수식
     // refDate는 getDailyClosingRefDates에서 시장별로 안전하게 산출됨
     // (해외=항상 어제, 국내=장후면 오늘/장중이면 어제) → ref 그대로 사용
-    const closePriceOf = (s: Stock): number => {
-      const t = normalizeTicker(s);
-      const entry = t ? refMap[t] : null;
-      return entry?.refPrice ?? s.currentPrice;
-    };
-    const nab = computeNetAsset(latestData, latestRates, closePriceOf);
-    const { financialAsset, netAsset } = nab;
+    const { netAsset, financialAsset, enrich } = computeSnapshotRow(latestData, latestRates, refMap);
     const dayOfWeek = new Date(todayStr).getDay();
-
-    // v2 파생 정보(성적표·원인분해 델타용) — 스냅샷 시점 박제
-    const cost = computeAssetCost(latestData, latestRates);
-    // 통화별 외화노출 기준액(KRW 환산) — 환율효과 분리용
-    const fxBase = { USD: 0, JPY: 0 };
-    for (const s of latestData.stocks) {
-      if (s.inactiveStatus === "delisted") continue;
-      if (s.currency === "USD") fxBase.USD += s.quantity * closePriceOf(s) * latestRates.USD;
-      else if (s.currency === "JPY") fxBase.JPY += s.quantity * closePriceOf(s) * (latestRates.JPY / 100);
-    }
-    for (const c of latestData.cash ?? []) {
-      if (c.currency === "USD") fxBase.USD += c.balance * latestRates.USD;
-      else if (c.currency === "JPY") fxBase.JPY += c.balance * (latestRates.JPY / 100);
-    }
-    const enrich = {
-      breakdown: {
-        realEstate: nab.realEstateValue,
-        stocks: nab.stockValue,
-        crypto: nab.cryptoValue,
-        cash: nab.cashValue,
-        loans: nab.loanBalance,
-        tenantDeposit: nab.tenantDepositTotal,
-        physical: nab.physicalValue, // 0이어도 기록 — 필드 없는 스냅샷(구버전 기기)과 구분(mergeMonthlySnapshots)
-      },
-      fx: { USD: latestRates.USD, JPY: latestRates.JPY },
-      fxBase,
-      cost: {
-        total: cost.realEstateCost + cost.physicalCost + cost.stockCost + cost.cryptoCost + nab.cashValue,
-        stock: cost.stockCost,
-        crypto: cost.cryptoCost,
-        realEstate: cost.realEstateCost,
-        physical: cost.physicalCost,
-      },
-    };
 
     try {
       // ── 일별: 이번 달만 유지 ──
@@ -839,6 +911,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
       // 마지막 스냅샷 저장일 기록 (기기 로컬 전용 — 스냅샷 스킵 시 미기록되어 의미 유지)
       localStorage.setItem(STORAGE_KEYS.lastVisitDate, todayStr);
+      // 편집 시 오늘 행 재계산용 — 이번 세션에서 오늘 저장에 성공했다는 표지와 그때의 종가
+      lastSnapshotRef.current = { date: todayStr, refMap };
     } catch (e) {
       console.error("[Snapshot] 저장 실패", e);
     }
@@ -889,6 +963,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     const hasAssets =
       hasAnyAssets(data);
     prevHasAssetsRef.current = hasAssets;
+    lastSnapshotRef.current = null; // 열기·pull·복원 직후엔 오늘 행 재계산 금지 — 아래 saveSnapshots 성공 때 다시 켠다
     initAssetData(data);
     setIsDataLoaded(true);
     if (!hasAssets) return;
@@ -947,6 +1022,27 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     }
     prevHasAssetsRef.current = hasAssets;
   }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
+
+  // 사용자 편집 → 오늘 일별 행 1줄 재계산(#252). 연속 편집은 묶어 1회(동기화 push 디바운스 2.5초보다 짧게 — 같은 push에 실림).
+  // 계산은 getAssetData() 최신본(편집 직후 저장 완료)을 쓴다. 조건 판정은 tryRefreshTodayRow 참조
+  useEffect(() => {
+    const debouncer = createEditDebouncer(SNAPSHOT_REFRESH_DEBOUNCE_MS, () => {
+      const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const ok = tryRefreshTodayRow({
+        last: lastSnapshotRef.current,
+        blocked: saveSnapshotsBlockedRef.current || isBackgroundWorkBlocked() || isTrialMode() || isPreviewEnv(),
+        todayStr,
+        data: getAssetData(),
+        rates: exchangeRatesRef.current,
+      });
+      if (ok) setSnapshotVersion(v => v + 1);
+    });
+    window.addEventListener(ASSET_USER_EDIT_EVENT, debouncer.onEdit);
+    return () => {
+      window.removeEventListener(ASSET_USER_EDIT_EVENT, debouncer.onEdit);
+      debouncer.dispose();
+    };
+  }, []);
 
   const checkAndApplyThemeMode = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1219,6 +1315,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     cryptoSyncAbortRef.current?.abort();
     abortAllProfitFetches("refreshData");
     saveSnapshotsBlockedRef.current = true;
+    lastSnapshotRef.current = null; // 복원·리셋 직후엔 재계산 금지(새 동기화의 saveSnapshots 성공 전까지)
     setDataResetVersion(v => v + 1);
     setAssetData(getAssetData());
   }, []);

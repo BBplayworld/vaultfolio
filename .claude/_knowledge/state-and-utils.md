@@ -65,6 +65,7 @@ inactiveCheckedAt: result.updated_at,
 
 ### 스냅샷용 tickerList 정렬 필수
 
+`computeSnapshotRow(data, rates, refMap)`(asset-data-context.tsx) — 일별·월별 스냅샷 한 행의 값(netAsset·financialAsset·breakdown·fx·fxBase·cost) 단일 출처. `saveSnapshots`와 `refreshTodayDailyRow`(편집 시 오늘 평일 일별 행 1줄 재계산, #252)가 공유 — 행 수식을 다른 곳에 복제 금지. `tryRefreshTodayRow`(조건 판정)·`createEditDebouncer`(편집 신호 800ms 묶음, `SNAPSHOT_REFRESH_DEBOUNCE_MS` < 동기화 push 2.5초). `lastSnapshotRef`는 saveSnapshots 성공 때만 켜고 initAndSync·refreshData(열기·pull·복원)에서 비운다. `computeAttributionSince(…, liveCurr, startDayGate)` 마지막 인자=true는 Hero 경로(week-attribution)만(`PeriodAttribution.startDayGated`로 기록 목록이 같은 술어 사용).
 `saveSnapshots` 내부의 `tickerList`는 반드시 `.sort()` 후 join (profit-chart·stock-tab과 동일 캐시 키 보장).
 
 ---
