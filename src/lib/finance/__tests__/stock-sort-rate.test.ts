@@ -29,36 +29,17 @@ describe("sortByChipRate", () => {
   });
 });
 
-describe("정렬 컨트롤·저장", () => {
+describe("정렬 컨트롤 제거(#288 R1)", () => {
   const src = readFileSync("src/app/(main)/_components/views/detail/tabs/stock-tab.tsx", "utf8");
-  it("옵션 2개(평가금 순·등락률 순), 오름차순 토글 없음, 선택은 모듈 메모리(저장 키 0)", () => {
-    const block = src.slice(src.indexOf("function StockSortSelect"), src.indexOf("export function StockTab"));
-    expect(block.match(/<SelectItem /g)).toHaveLength(2);
-    expect(block).toContain("평가금 순");
-    expect(block).toContain("등락률 순");
-    expect(src).toMatch(/let stockSortMemory: StockSort = "value";/);
-    expect(src).not.toMatch(/localStorage\.setItem\([^)]*[Ss]ort/);
-    expect(src).not.toMatch(/오름차순/);
-  });
-  it("아이콘형은 평가금 순일 때만(360 미만 / 7칸이면서 400 미만), 등락률 순은 항상 라벨, 아이콘형 히트 40×40 — 정적 클래스 3벌(ui.md r2·qa D1)", () => {
-    const block = src.slice(src.indexOf("const SORT_ICON_MODE"), src.indexOf("export function StockTab"));
-    expect(block).toMatch(/value === "rate" \? "none" : categoryCount >= 7 \? "lt400" : "lt360"/);
-    expect(block).toContain('none: { trigger: "", icon: "hidden", label: "" }');
-    expect(block).toContain("max-[359px]:after:-inset-1");
-    expect(block).toContain("max-[399px]:after:-inset-1");
-    expect(block).toContain('label: "max-[359px]:sr-only"');
-    expect(block).toContain('label: "max-[399px]:sr-only"');
-    expect(src).toMatch(/categoryCount=\{visibleCategories\.length\}/);
-    // 정렬을 바꿔도 선택 카테고리를 scrollIntoView
-    expect(src).toMatch(/\}, \[activeCategory, sort\]\);/);
-  });
-
-  it("정렬 결과는 상세·주식 목록에만 — 비중 막대·인증카드는 평가금 순 그대로", () => {
-    expect(src.match(/filteredStocks=\{listStocks\}/g)).toHaveLength(1);
+  it("선택 UI·메모리·등락률 분기 없음, 목록은 늘 평가금 순(mergedStocks)", () => {
+    expect(src).not.toContain("StockSortSelect");
+    expect(src).not.toContain("stockSortMemory");
+    expect(src).not.toContain("sortByChipRate");
+    expect(src).not.toContain('data-testid="stock-sort"');
+    expect(src).toMatch(/filteredStocks=\{mergedStocks\}/);
     expect(src).toMatch(/barItems=\{barItems\}/);
   });
-  it("GA: 등락률 순을 고를 때 1건, title `상세·주식·등락률 순`", () => {
+  it("GA title 맵은 유지(호출만 사라짐) — `상세·주식·등락률 순`", () => {
     expect(featureTitleOf("feature_use", { category: "stock_sort_rate" }, "detail:stocks")).toBe("상세·주식·등락률 순");
-    expect(src).toMatch(/if \(v === "rate"\) track\("feature_use", \{ category: "stock_sort_rate" \}\)/);
   });
 });

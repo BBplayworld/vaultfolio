@@ -132,7 +132,6 @@ export function WeekList() {
   const start = delta !== null ? end - delta : undefined;
   const pct = delta !== null && start !== undefined && start > 0 ? (delta / start) * 100 : null;
   const records = decomposed?.records ?? [];
-  const hasStock = hasComparableStock(assetData);
 
   return (
     <>
@@ -156,26 +155,9 @@ export function WeekList() {
           scope="week"
           mapped={mapped}
           estimatedLabel="예측"
-          footer={(records.length > 0 || hasStock) ? (
+          footer={records.length > 0 ? (
             <div className="flex flex-wrap items-start justify-between gap-x-3 border-t border-border dark:border-border/40 pt-1">
               {records.length > 0 && <div data-testid="week-records" className="min-w-0 flex-1 has-[[aria-expanded=true]]:basis-full"><AttributionRecordList records={records} /></div>}
-              {hasStock && (
-                <button
-                  type="button"
-                  data-testid="week-market-link"
-                  data-screenshot-hide
-                  aria-label="종목별 등락, 시장과 비교로 이동"
-                  onClick={() => {
-                    // 뒤로(pop) 때 전체·주로 다시 열리게 현재 history 항목에 싣는다. 시장과 비교 목록 기간은 늘 1주로 열린다(저장 안 함)
-                    rememberChangeInit({ scope: "all", period: "week" });
-                    navigate({ type: "activity", tab: "change-market" });
-                  }}
-                  className="ml-auto inline-flex min-h-10 items-center gap-1 text-sm text-muted-foreground hover:text-foreground motion-safe:active:scale-[0.96] transition-[color,transform]"
-                >
-                  종목 등락 보기
-                  <ChevronRight aria-hidden className="size-3.5" />
-                </button>
-              )}
             </div>
           ) : undefined}
         />

@@ -1,5 +1,5 @@
-// 4.83 성과 허브 `자산 변화` 카드 안 행 3개 — C76 기본 경로: 주 탭 D(7·8·9 / 10·14 / 15 / 기록 없음)마다 행 1 = 주 탭 Hero(같은 훅·같은 값),
-// 행 2 N = 월별 기록 카드 행 수(C84), 행 3 = 시장과 비교 1주 지수 문자열. 중첩 인터랙티브 0(KpiCard rows).
+// 4.83 성과 허브 `자산 변화` 카드 안 행 2개 — C76 기본 경로: 주 탭 D(7·8·9 / 10·14 / 15 / 기록 없음)마다 행 1 = 주 탭 Hero(같은 훅·같은 값),
+// 행 2 N = 월별 기록 카드 행 수(C84), 시장과 비교 행은 #288 R1에서 제거. 중첩 인터랙티브 0(KpiCard rows).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
@@ -91,7 +91,7 @@ describe("행 1 = 주 탭 Hero (C76 D 구간표)", () => {
   });
 });
 
-describe("행 2·3", () => {
+describe("행 2", () => {
   beforeEach(() => { h.sc = buildScenario(RICH_STEPS); });
   it("월별 기록 N<2·첫 달(null)이면 행 없음, 있으면 `{N}개월`·data-value", () => {
     expect(renderToStaticMarkup(<HubChangeRows monthlyCount={null} />)).not.toContain("hub-row-monthly");
@@ -99,37 +99,20 @@ describe("행 2·3", () => {
     expect(own(html, "hub-row-monthly-value")).toBe("4개월");
     expect(attr(html, "hub-row-monthly-value", "data-value")).toBe("4");
   });
-  it("시장 값 = 시장과 비교 페이지 1주 지수 문자열(국내+미국·미국만)", () => {
-    h.sc = { ...buildScenario(RICH_STEPS), assetData: { ...buildScenario(RICH_STEPS).assetData, stocks: [
-      { id: "a", category: "domestic", name: "삼성전자", ticker: "005930", quantity: 1, averagePrice: 1, currentPrice: 1, currency: "KRW", purchaseDate: "2026-01-01" },
-      { id: "b", category: "foreign", name: "애플", ticker: "AAPL", quantity: 1, averagePrice: 1, currentPrice: 1, currency: "USD", purchaseDate: "2026-01-01" },
-    ] as Stock[] } };
-    const kr = formatCompareRate(computeIndexSpan("kr", "weekly", IDX).rate!);
-    const us = formatCompareRate(computeIndexSpan("us", "weekly", IDX).rate!);
-    expect(upToSvg(renderToStaticMarkup(<HubChangeRows monthlyCount={null} />), "hub-row-market-value")).toContain(`1주 코스피 ${kr} · S&P 500 ${us}`);
-    h.peer = new Set(); // 국내 종목이 비교 대상 아님 → 미국만
-    expect(upToSvg(renderToStaticMarkup(<HubChangeRows monthlyCount={null} />), "hub-row-market-value")).toContain(`1주 S&P 500 ${us}`);
+  it("시장과 비교 행 없음(#288 R1) — 종목·지수가 있어도 행·값·스켈레톤 0, 행 버튼은 최근 7일·월별 기록뿐", () => {
+    const html = renderToStaticMarkup(<HubChangeRows monthlyCount={4} />);
+    expect(html).not.toContain("hub-row-market");
+    expect(html).not.toContain("시장과 비교");
+    expect(html.match(/data-testid="hub-row-[a-z]+"/g)).toEqual(['data-testid="hub-row-week"', 'data-testid="hub-row-monthly"']);
+    expect(renderToStaticMarkup(<HubChangeRows monthlyCount={null} />)).not.toContain("hub-row-monthly");
   });
-  it("비교할 종목 0 → 시장 행 없음. 지수 실패 → `지수와 나란히 보기`, 판별 전 → 스켈레톤(숫자 0)", () => {
-    h.sc = { ...h.sc!, assetData: { ...h.sc!.assetData, stocks: [] } };
-    expect(renderToStaticMarkup(<HubChangeRows monthlyCount={null} />)).not.toContain("hub-row-market");
-    h.sc = buildScenario(RICH_STEPS);
-    h.idx = { daily: { KOSPI: null, SPX: null }, weekly: { KOSPI: null, SPX: null } };
-    expect(text(renderToStaticMarkup(<HubChangeRows monthlyCount={null} />))).toContain("지수와 나란히 보기");
-    h.peer = null;
-    const loading = renderToStaticMarkup(<HubChangeRows monthlyCount={null} />);
-    expect(loading).toContain("animate-pulse");
-    expect(upToSvg(loading, "hub-row-market-value")).not.toMatch(/%/);
-  });
-  it("행 구분선 직선(rounded 없음) · 값 한 줄 유지(whitespace-nowrap, 320에서 `1주`만 떨어지지 않음)", () => {
+  it("행 구분선 직선(rounded 없음)", () => {
     const html = renderToStaticMarkup(<HubChangeRows monthlyCount={4} />);
     expect(html).not.toMatch(/class="[^"]*\brounded/);
-    const val = html.match(/data-testid="hub-row-market-value"[^>]*class="([^"]*)"|class="([^"]*)"[^>]*data-testid="hub-row-market-value"/);
-    expect(val?.[1] ?? val?.[2]).toContain("whitespace-nowrap");
   });
   it("행 높이 ≥ 44px(min-h-11) · 인증카드 캡처 제외 마커 · `새` 0(마운트 전 판정)", () => {
     const html = renderToStaticMarkup(<HubChangeRows monthlyCount={4} />);
-    expect(html.match(/min-h-11/g)?.length).toBe(3);
+    expect(html.match(/min-h-11/g)?.length).toBe(2);
     expect(html).toContain("data-screenshot-hide");
     expect(html).not.toContain('data-testid="new-chip"');
   });
