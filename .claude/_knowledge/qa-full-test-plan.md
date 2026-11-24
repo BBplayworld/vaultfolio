@@ -976,7 +976,7 @@ _최종 갱신: 2026-10-18 · **공개 API 방어(F-API-SECURITY)·GA4 행동 �
 - 👤 배당 표 640~767은 390과 같은 배치(보조 줄), 768 이상 기존. 새 소식 시트에 성적표 2건, `바로 가기`는 성적표.
 - 👤 실기기(iOS Safari 탭·Chrome) `persist()` 반환값 확인은 팀이 할 수 없어 미확인(dev-notes).
 
-- 👤 **국내·해외 날짜 맞춤(#5.116, 이슈 #222 → #5.146 #288 R1 변경)**: 변경은 더보기 표시 `settings-profit-basis-selector`(2칸 `같은 거래일`/`시장별 최신`) 1곳뿐. 성과 `기준 종가 비교` 펼침의 `profit-basis-selector-chart`는 제거 — 이름·InfoHint(마지막 줄 `더보기 › 표시에서 바꿔요.`)·현재 값 글자 `profit-basis-value`만 표시(설정 값과 동일). Switch 0, 옛 문자열(`동일 영업일`·`KST 접속일`·`종가 기준 옵션`) 0. 설정에서 바꾸면 성과 표·성적표·시장 비교·홈·상세 시장 줄 동기. 저장 키 `secretasset_profit_basis` 값 불변. GA `feature_use{profit_basis_settings}`만 호출(`profit_basis_chart` title은 유지·호출 0). 테스트 `profit-basis-copy.test.ts`
+- 👤 **국내·해외 날짜 맞춤(#5.116, 이슈 #222 → #5.146 #288 R1 변경)**: 변경은 더보기 표시 `settings-profit-basis-selector`(2칸 `같은 거래일`/`시장별 최신`) 1곳뿐. 성과 `기준 종가 비교` 펼침의 `profit-basis-selector-chart`는 제거 — 이름·InfoHint(마지막 줄 `더보기 › 설정 › 표시에서 바꿔요.`)·현재 값 글자 `profit-basis-value`만 표시(설정 값과 동일). Switch 0, 옛 문자열(`동일 영업일`·`KST 접속일`·`종가 기준 옵션`) 0. 설정에서 바꾸면 성과 표·성적표·시장 비교·홈·상세 시장 줄 동기. 저장 키 `secretasset_profit_basis` 값 불변. GA `feature_use{profit_basis_settings}`만 호출(`profit_basis_chart` title은 유지·호출 0). 테스트 `profit-basis-copy.test.ts`
 
 ## F-INVEST (#5.137 #263) 투자 탭
 - **5.145 #287: 앱 진입 폐지**(하단·상단·스와이프·체험 투자 없음, `#invest*`→홈 replace·뒤로 루프 0, 성과 허브 `hub-market-guide-link`). 아래는 공개 가이드(`/guide/*`) 안 지수 화면 기준 사양. (구) 진입: 하단 `투자`·브라우저 `상세|성과|투자`·`#invest`·체험(기본 S&P 500). 390·320·1280 라이트/다크 3지수: 머리 3줄·3층·침체 띠(미국만)·사건 점(간격≥6px)·이름표 6/6·3/3·4/4, 접지 `크게 빠진 때` 제목 하단 ≤780

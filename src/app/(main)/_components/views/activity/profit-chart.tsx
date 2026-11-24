@@ -584,7 +584,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                 </button>
                               </CollapsibleTrigger>
                               <CollapsibleContent className="text-sm mt-2 space-y-2">
-                                {/* 국내·해외 날짜 맞춤: 현재 값만 표시, 변경은 더보기 › 표시(#288 R1) */}
+                                {/* 국내·해외 날짜 맞춤: 현재 값만 표시, 변경은 더보기 › 설정 › 표시(#288 R1) */}
                                 <div className="flex flex-col gap-1.5 min-[440px]:flex-row min-[440px]:items-center min-[440px]:justify-between">
                                 <div className="flex items-center gap-1.5">
                                   <span data-testid="profit-basis-label" className="text-sm font-medium whitespace-nowrap">{PROFIT_BASIS_COPY.name}</span>
@@ -596,7 +596,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
                                       </p>
                                     ))}
                                     {period === "daily" && <p className="text-muted-foreground break-keep">일별 해외는 시작·종료에 어제·오늘 환율을 각각 적용합니다.</p>}
-                                    <p className="text-muted-foreground break-keep">더보기 › 표시에서 바꿔요.</p>
+                                    <p className="text-muted-foreground break-keep">더보기 › 설정 › 표시에서 바꿔요.</p>
                                   </InfoHint>
                                 </div>
                                 {profitBasisHydrated && (
