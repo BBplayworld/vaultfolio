@@ -82,7 +82,7 @@ describe("투자 탭 폐지 네비(#263→5.145)", () => {
   it("새 소식 1줄: 투자 탭이 사라졌고 시장 이야기는 가이드에서 본다(사실만)", () => {
     const e = WHATS_NEW.find((w) => w.id === "20261124-01");
     expect(e?.title).toBe("투자 탭이 없어졌어요");
-    expect(e?.body).toBe("시장 이야기는 가이드에서 볼 수 있어요");
+    expect(e?.body).toBe("시장 이야기는 성과 맨 아래 '크게 빠진 때와 금리'에서 볼 수 있어요");
     // 없는 탭을 안내하던 옛 항목은 목록에서 제외
     for (const id of ["20261123-01", "20261123-02", "20261122-01"]) expect(WHATS_NEW.some((w) => w.id === id)).toBe(false);
   });
