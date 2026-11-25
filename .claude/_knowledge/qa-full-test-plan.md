@@ -44,6 +44,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: 부동산 임차보증금(tenantDeposit) 순자산 차감, 대출 잔액 차감
 
 ### F-STOCK. 주식 상세 탭 ([stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx))
+- 👤 (#5.150) 행 이름: 어절 단위·최대 2줄 말줄임·`title`은 10자 초과일 때만. 320(다크 포함)에서 `SK하이닉스` 한 줄, 우측 숫자 잘림 0. 6탭 공통(`cardInfoName`), 인증카드 `ASSET_THEME_SHOT` 변경 0
 - 👤 종목 카드 펼침/접힘, 증권사별 분할(`SubStockCard`)·나누기 다이얼로그, 주식담보대출 연결 표시 — 종합 카드 거래입력 노출 규칙은 F-ASSET 참조(암호화폐와 동일)
 - 👤 비활성: 상장폐지(red)·거래정지(amber) Badge, delisted 평가 제외 / halted 마지막가 유지
 - 👤 요약 헤더 평가손익·'오늘' 칩(장중 `오늘`/장 종료 후 `종가`), 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)
@@ -58,6 +59,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: delisted 종목이 stockCount·stockCost·환차익에서 제외
 
 ### F-TRADE. 주식 거래내역 (매매 로그) ([trade-input.tsx](../../src/app/(main)/_components/forms/trade/trade-input.tsx) · [stock-trades-view.tsx](../../src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx))
+- 👤 (#5.150) 거래 행 `기록만` 배지는 둘째 줄(증권사 줄 있으면 그 앞), 매도 금액 부호 U+2212, 삭제 `aria-label="거래 삭제"`(주식·현금·코인·대출 공통), 요약·금액의 `원` 분리 0, 날짜 nowrap
 - ⚙ **체결일 기본값·max = KST 오늘(#4.35, `todayKst()`)** — KST 00:00~08:59에도 전날이 아닌 오늘. 현금·대출 입력과 같은 함수. 기존 저장 날짜는 보정하지 않음(`src/lib/__tests__/today-kst-inputs.test.ts`)
 - 👤 거래 입력(매수/매도), 반영 ON/OFF, 반영 후 예상 포지션 인라인 미리보기(`PositionChangePreview`), 중복 거래 인라인 확인
 - 👤 **반영할 자산 항목 직접 선택(#4.29)** — 카테고리·종목 선택 후 그 종목의 **전체 보유 항목**(카테고리 필터 무관)을 `StockTargetPicker` 카드(타입 배지·증권사·수량·평단)로 고른다. 증권사 Select·`resolveMatch` 자동 라우팅은 제거(같은 증권사 안 IRP·ISA·연금저축 구분 불가 문제). 후보 1개면 자동 선택. **신규 자산 등록**(매수만) = 증권사+주식 타입 선택 → 종목 메타 복제·포지션 0 초안(`NEW_STOCK_ID` 자리표시)으로 미리보기 후 `addTransactionsBatch([tx], [], [newStock])` 저장, 반영 강제(체크박스 비활성)·중복 검사 생략. 매도로 바꾸면 신규 선택 해제. 상세 진입(`lockedStock`)은 종전대로
