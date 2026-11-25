@@ -72,18 +72,18 @@ const all = (...ms: Mut[]): Mut => (d) => ms.forEach((m) => m(d));
 describe("B 홈 Hero ↔ 원인 행 표시 글자", () => {
   it("H1 원인 1개 +25,900원", () => {
     const r = renderHome(scenario(cash(25_900)).view);
-    // 결함: Hero는 만원 미만 버림(formatShortCurrency), 행은 반올림(fmtManwon) — 같은 돈이 2만원/3만원
-    expect(r).toEqual({ hero: "▲ +2만원", line: "+3만원", rows: ["+3만원"], keys: ["cash"] });
+    // 수정 전 결함: Hero 버림 2만원 vs 행 반올림(fmtManwon) 3만원 → 행을 Hero 정본에 맞춤
+    expect(r).toEqual({ hero: "▲ +2만원", line: "+2만원", rows: ["+2만원"], keys: ["cash"] });
   });
   it("H2 원인 1개 −25,900원", () => {
     const r = renderHome(scenario(cash(-25_900)).view);
-    // 결함: 금액 2만원/3만원 + 부호 글리프 ASCII '-'(Hero) vs U+2212 '−'(행)
-    expect(r).toEqual({ hero: "▼ -2만원", line: "−3만원", rows: ["−3만원"], keys: ["cash"] });
+    // 수정 전 결함: 금액 2만원/3만원 + 부호 ASCII '-'(Hero) vs U+2212(행) → 둘 다 '−'
+    expect(r).toEqual({ hero: "▼ −2만원", line: "−2만원", rows: ["−2만원"], keys: ["cash"] });
   });
   it("H3 원인 1개 1.25억", () => {
     const r = renderHome(scenario(cash(125_000_000)).view);
-    // 결함: Hero 0.1억 버림 1.2억, 행 toFixed 반올림 1.3억
-    expect(r).toEqual({ hero: "▲ +1.2억원", line: "+1.3억원", rows: ["+1.3억원"], keys: ["cash"] });
+    // 수정 전 결함: Hero 0.1억 버림 1.2억 vs 행 toFixed 반올림 1.3억 → 같은 포맷터
+    expect(r).toEqual({ hero: "▲ +1.2억원", line: "+1.2억원", rows: ["+1.2억원"], keys: ["cash"] });
   });
   it("H4 상쇄 +30.4만·−10.2만", () => {
     const r = renderHome(scenario(all(krw(304), loan(102_000))).view);
@@ -91,28 +91,28 @@ describe("B 홈 Hero ↔ 원인 행 표시 글자", () => {
   });
   it("H5 3행 반올림 합 초과(+15.6만·+30만·+5.7만)", () => {
     const r = renderHome(scenario(all(krw(156), cash(57_000)), { USD: 1515, JPY: 900 }).view);
-    // 결함: 행 합 52만원 ≠ Hero 51만원
-    expect(r).toEqual({ hero: "▲ +51만원", line: "+30만원", rows: ["+16만원", "+30만원", "+6만원"], keys: ["price:stock", "fx", "cash"] });
+    // 수정 전 결함: 행 합 52만원(16+30+6) ≠ Hero 51만원 → 바닥 50 + 나머지 최대(현금 .7)에 1
+    expect(r).toEqual({ hero: "▲ +51만원", line: "+30만원", rows: ["+15만원", "+30만원", "+6만원"], keys: ["price:stock", "fx", "cash"] });
   });
   it("H6 3행 반올림 합 미달(+15.4만·+5.4만·+10.4만)", () => {
     const r = renderHome(scenario(all(krw(154), cash(54_000), loan(-104_000))).view);
-    // 결함: 행 합 30만원 ≠ Hero 31만원
-    expect(r).toEqual({ hero: "▲ +31만원", line: "+15만원", rows: ["+15만원", "+5만원", "+10만원"], keys: ["price:stock", "cash", "debt"] });
+    // 수정 전 결함: 행 합 30만원 ≠ Hero 31만원 → 나머지 동률(.4)은 절댓값 큰 행(시세)에 1
+    expect(r).toEqual({ hero: "▲ +31만원", line: "+16만원", rows: ["+16만원", "+5만원", "+10만원"], keys: ["price:stock", "cash", "debt"] });
   });
   it("H7 1억 이상 여럿(+1.25억·+3.46만)", () => {
     const r = renderHome(scenario(all(krw(125_000), cash(34_600))).view);
-    // 결함: 원인 행 1.3억(반올림) vs Hero 1.2억(버림)
-    expect(r).toEqual({ hero: "▲ +1.2억원", line: "+1.3억원", rows: ["+1.3억원", "+3만원"], keys: ["price:stock", "cash"] });
+    // 수정 전 결함: 원인 행 1.3억(반올림) vs Hero 1.2억(버림) → 배분 단위는 만원(12,500+3 = 12,503), 글자는 Hero 포맷터
+    expect(r).toEqual({ hero: "▲ +1.2억원", line: "+1.2억원", rows: ["+1.2억원", "+3만원"], keys: ["price:stock", "cash"] });
   });
   it("H8 외화 소수(USD 단가 200.37·환율 1512.47, C65)", () => {
     const r = renderHome(scenario((d) => { d.stocks[1].currentPrice = 200.37; }, { USD: 1512.47, JPY: 900 }).view);
-    // 결함: 행 합 31만원(5.6만·24.9만 반올림) ≠ Hero 30만원
-    expect(r).toEqual({ hero: "▲ +30만원", line: "+25만원", rows: ["+6만원", "+25만원"], keys: ["price:stock", "fx"] });
+    // 수정 전 결함: 행 합 31만원(5.6만·24.9만 반올림) ≠ Hero 30만원 → 나머지 큰 환율 행에 1
+    expect(r).toEqual({ hero: "▲ +30만원", line: "+25만원", rows: ["+5만원", "+25만원"], keys: ["price:stock", "fx"] });
   });
   it("H9 잔차 흡수 행(임계 미만 원인 2개 합 1.2만이 가장 큰 같은 부호 행에 얹힘)", () => {
     const r = renderHome(scenario(all(krw(203), cash(6_000), loan(-6_000))).view);
-    // 결함: 행 22만원(21.5 반올림) ≠ Hero 21만원
-    expect(r).toEqual({ hero: "▲ +21만원", line: "+22만원", rows: ["+22만원"], keys: ["price:stock"] });
+    // 수정 전 결함: 행 22만원(21.5 반올림) ≠ Hero 21만원
+    expect(r).toEqual({ hero: "▲ +21만원", line: "+21만원", rows: ["+21만원"], keys: ["price:stock"] });
   });
 });
 
@@ -138,8 +138,7 @@ function accept(mut: Mut, rates?: Rates) {
   if (r.rows.every((t) => !t.endsWith("억원"))) expect(r.rows.reduce((a, t) => a + manOf(t), 0)).toBe(manOf(heroBody));
 }
 describe("수용 — 표시 합 = Hero", () => {
-  // 결함: 수정 전(5.150) 동작 — H4(상쇄, 이미 일치)만 통과하고 나머지는 실패한다
-  for (const [name, mut, rates] of ACCEPT) (name === "H4" ? it : it.fails)(name, () => accept(mut, rates));
+  for (const [name, mut, rates] of ACCEPT) it(name, () => accept(mut, rates));
 });
 
 // 성과 주·월·연 — Hero(signed)와 행(signed)이 같은 formatPriceByMode라 현행 일치. 기대값 변경 없이 회귀만 고정한다

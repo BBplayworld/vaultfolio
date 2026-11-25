@@ -68,9 +68,10 @@ describe("A MarketLine", () => {
   });
 });
 
-const cause = (key: string, label: string, amount: number) => ({ key, label, sentence: label, amount, text: `${amount > 0 ? "+" : "-"}${Math.abs(amount)}만원` });
+// amount는 원 단위(만원 × 1만) — 홈 행 글자는 Hero 증감에 맞춘 배분값(5.153 #304)이라 deltaNet = 원인 합으로 둔다
+const cause = (key: string, label: string, man: number) => ({ key, label, sentence: label, amount: man * 10_000, text: `${man > 0 ? "+" : "−"}${Math.abs(man).toLocaleString()}만원` });
 const change = (o: Record<string, unknown> = {}) => ({
-  deltaNet: -10_000_000, pct: -1, isBig: false, negligible: false, label: "전일 대비", estimated: false,
+  deltaNet: -4_960_000, pct: -1, isBig: false, negligible: false, label: "전일 대비", estimated: false,
   sentence: "x", causes: [cause("stock", "주식 시세 하락", -1096), cause("cash", "현금 입금", 500), cause("loan", "대출 상환", 100)], ...o,
 });
 const box = (props: Record<string, unknown>) =>
@@ -84,12 +85,12 @@ describe("B 가장 큰 원인 1줄", () => {
     expect(html).toContain('data-testid="home-cause-line"');
     expect(html).toContain('data-cause-key="stock"');
     const line = lineOf(html);
-    expect(text(line)).toBe("주식 시세 하락 -1096만원 외 2개");
+    expect(text(line)).toBe("주식 시세 하락 −1,096만원 외 2개");
     expect(line).not.toContain("주로");
     expect(html).toContain('data-testid="home-cause-more"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('aria-controls="home-cause-panel"');
-    expect(html).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 -1096만원 외 2개"');
+    expect(html).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 −1,096만원 외 2개"');
     expect(html).not.toContain('aria-label="변동 원인 보기"'); // 14px 쉐브론 없음
     expect(html).toContain('id="home-cause-panel"');
     expect(html).toMatch(/id="home-cause-panel"[^>]*role="region"/);
@@ -157,7 +158,7 @@ describe("A 노출 연결(NetAssetSummaryBox, 5.105 보조 줄·패널 합침)",
     expect(on).not.toContain('data-placement="slot"');
     expect(on.indexOf("home-cause-panel")).toBeLessThan(on.indexOf("home-market-today"));
     expect(on.indexOf("home-market-today")).toBeLessThan(on.indexOf("home-cause-collapse"));
-    expect(text(lineOf(on))).toBe("주식 시세 하락 -1096만원 외 2개 · 11/11 종가 코스피 +0.8%");
+    expect(text(lineOf(on))).toBe("주식 시세 하락 −1,096만원 외 2개 · 11/11 종가 코스피 +0.8%");
     expect(on).toContain("@max-[300px]:hidden");
     expect(on).toContain("@max-[260px]:hidden");
     expect(on).not.toContain("max-[359px]");
@@ -165,24 +166,24 @@ describe("A 노출 연결(NetAssetSummaryBox, 5.105 보조 줄·패널 합침)",
     // 5.133 qa D-1: 날짜 표기로 지수 구간이 넓어져 숨김 경계 W<440 → W<480
     expect(on).toContain("@max-[480px]:hidden");
     expect(on).not.toContain("@max-[440px]:hidden");
-    expect(on).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 -1096만원 외 2개, 11/11 종가 코스피 +0.8%"');
+    expect(on).toContain('aria-label="변동 원인 펼치기, 주식 시세 하락 −1,096만원 외 2개, 11/11 종가 코스피 +0.8%"');
     expect(text(on)).not.toContain("지난 접속");
   });
   it("원인 줄 지수 날짜 = 지수 줄과 같은 끝 날짜·같은 문구(5.133 C142, 다른 날짜 값과 구분)", () => {
     const d = box({ ...props, market: market({ values: [mv("kr", 2.0, "2026-11-18"), mv("us", -0.2, "2026-11-18")] }), marketLine: "on" });
-    expect(text(lineOf(d))).toBe("주식 시세 하락 -1096만원 외 2개 · 11/18 종가 코스피 +2.0%");
+    expect(text(lineOf(d))).toBe("주식 시세 하락 −1,096만원 외 2개 · 11/18 종가 코스피 +2.0%");
     expect(causeMarketText(mv("kr", 2.0, "2026-11-18"))).toBe("11/18 종가 코스피 +2.0%");
     expect(causeMarketText(mv("kr", 0, "2026-11-27", true))).toBe("11/27 코스피 휴장");
   });
   it("휴장: 보조 줄 `M/D 코스피 휴장`(종가 생략), 0.0% 없음", () => {
     const h = box({ ...props, market: market({ values: [mv("kr", 0, "2026-11-27", true)] }), marketLine: "on" });
-    expect(text(lineOf(h))).toBe("주식 시세 하락 -1096만원 외 2개 · 11/27 코스피 휴장");
+    expect(text(lineOf(h))).toBe("주식 시세 하락 −1,096만원 외 2개 · 11/27 코스피 휴장");
     expect(lineOf(h)).not.toContain("0.0%");
   });
   it("로딩: 지수 구간 자리만 스켈레톤·원인 구간은 즉시, 조회 실패: 구간 생략", () => {
     const l = box({ ...props, market: market({ ready: false }), marketLine: "pending" });
     expect(lineOf(l)).toContain('data-state="loading"');
-    expect(text(lineOf(l))).toBe("주식 시세 하락 -1096만원 외 2개 ·");
+    expect(text(lineOf(l))).toBe("주식 시세 하락 −1,096만원 외 2개 ·");
     const f = box({ ...props, market: market({ values: [] }), marketLine: "on" });
     expect(lineOf(f)).not.toContain("home-cause-market");
   });
