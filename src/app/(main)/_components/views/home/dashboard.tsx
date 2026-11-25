@@ -56,7 +56,7 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
         {items.map(({ key, label, value, color }, idx) => {
           const pct = (value / total) * 100;
           return (
-            <div key={key} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total })[idx]}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
+            <div key={key} className="flex items-center justify-center overflow-hidden transition-[width]" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total })[idx]}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
               {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
             </div>
           );
@@ -204,7 +204,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
             return (
               <div
                 key={name}
-                className={`flex items-center gap-1 min-w-0 rounded-md transition-all px-1.5 py-2 cursor-pointer`}
+                className={`flex items-center gap-1 min-w-0 rounded-md transition-opacity px-1.5 py-2 cursor-pointer`}
                 style={{ opacity: isAll || isActive ? 1 : 0.35 }}
                 onClick={() => { if (!screenshotMode && onSegmentClick) onSegmentClick(key); }}
               >
