@@ -148,12 +148,13 @@ export function StockTradesView() {
     return () => io.disconnect();
   }, [isMobile, hasMore, STEP]);
 
+  const [recordOnlyTarget, setRecordOnlyTarget] = useState<Transaction | null>(null);
+
   const handleDeleteClick = (tx: Transaction) => {
     const stock = groupStocks.find((s) => s.id === tx.stockId);
     if (!stock) return;
     if (!tx.reflected) {
-      deleteTransaction(tx.id);
-      toast.success("거래가 삭제되었습니다.");
+      setRecordOnlyTarget(tx); // 기록만 — 포지션 변화 없음
       return;
     }
     // 현재 보유 포지션 — 거래로그에 없는 수동 보유분을 역산으로 보존하기 위한 기준점
@@ -382,6 +383,20 @@ export function StockTradesView() {
           linkedNote={(() => { const p = planRemoveLink(assetData, deleteTarget.tx.id); return p ? revertNoteText(p) : undefined; })()}
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {recordOnlyTarget && (
+        <DeleteRollbackDialog
+          open
+          recordOnly
+          tx={recordOnlyTarget}
+          stock={groupStocks.find((s) => s.id === recordOnlyTarget.stockId) ?? groupStocks[0]}
+          rollbackPreview={{ quantity: 0, avgPrice: 0, avgExchangeRate: 0 }}
+          onConfirm={() => {
+            if (deleteTransaction(recordOnlyTarget.id)) toast.success("거래가 삭제되었습니다.");
+            setRecordOnlyTarget(null);
+          }}
+          onCancel={() => setRecordOnlyTarget(null)}
         />
       )}
     </Card>

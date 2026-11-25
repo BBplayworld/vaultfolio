@@ -66,12 +66,13 @@ export function LoanTxView() {
     return { repay, borrow, net: repay - borrow };
   }, [list]);
 
+  const [recordOnlyTarget, setRecordOnlyTarget] = useState<LoanTransaction | null>(null);
+
   const confirmDelete = (tx: LoanTransaction) => {
     if (tx.reflected) {
       setDeleteTarget(tx); // 잔액 역가감 확인
     } else {
-      if (!confirm("이 기록을 삭제하시겠습니까?")) return;
-      if (deleteLoanTransaction(tx.id)) toast.success("삭제되었습니다.");
+      setRecordOnlyTarget(tx); // 기록만 — 잔액 변화 없음
     }
   };
 
@@ -181,6 +182,19 @@ export function LoanTxView() {
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" onClick={() => setDeleteTarget(null)}>취소</Button>
               <Button variant="destructive" onClick={runReflectedDelete}>삭제</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 기록만 거래 삭제 확인 (잔액·수량 변화 없음) */}
+      {recordOnlyTarget && (
+        <div data-testid="tx-delete-confirm" className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4" onClick={() => setRecordOnlyTarget(null)} onKeyDown={(e) => { if (e.key === "Escape") setRecordOnlyTarget(null); }}>
+          <div className="w-full max-w-sm rounded-2xl bg-background dark:bg-popover p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base font-bold">기록 삭제</p>
+            <p className="text-sm text-muted-foreground text-pretty break-keep">이 기록만 지워요. 잔액은 그대로예요</p>
+            <div className="flex gap-2 justify-end">
+              <Button data-testid="tx-delete-confirm-cancel" variant="secondary" autoFocus onClick={() => setRecordOnlyTarget(null)}>취소</Button>
+              <Button data-testid="tx-delete-confirm-ok" variant="destructive" onClick={() => { if (deleteLoanTransaction(recordOnlyTarget.id)) toast.success("삭제되었습니다."); setRecordOnlyTarget(null); }}>삭제</Button>
             </div>
           </div>
         </div>
