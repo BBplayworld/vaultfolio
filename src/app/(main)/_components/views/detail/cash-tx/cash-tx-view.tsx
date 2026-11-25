@@ -115,18 +115,18 @@ export function CashTxView() {
       </CardHeader>
       <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad}`}>
         {/* 요약 */}
-        <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/30 dark:bg-card dark:rounded-xl dark:shadow-sm px-3 py-3">
+        <div className="flex flex-wrap justify-between gap-x-3 gap-y-2 rounded-lg bg-muted/30 dark:bg-card dark:rounded-xl dark:shadow-sm px-3 py-3">
           <div>
             <p className="text-sm text-muted-foreground">입금</p>
-            <p className="text-sm font-bold tabular-nums text-red-500 dark:text-rose-400">+{formatCurrencyDisplay(stats.dep, currency)}</p>
+            <p className="text-sm font-bold tabular-nums whitespace-nowrap text-red-500 dark:text-rose-400">+{formatCurrencyDisplay(stats.dep, currency)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">출금</p>
-            <p className="text-sm font-bold tabular-nums text-blue-500 dark:text-blue-400">−{formatCurrencyDisplay(stats.wd, currency)}</p>
+            <p className="text-sm font-bold tabular-nums whitespace-nowrap text-blue-500 dark:text-blue-400">−{formatCurrencyDisplay(stats.wd, currency)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">순유입</p>
-            <p className={`text-sm font-bold tabular-nums ${getProfitLossColor(stats.net)}`}>{stats.net >= 0 ? "+" : "−"}{formatCurrencyDisplay(Math.abs(stats.net), currency)}</p>
+            <p className={`text-sm font-bold tabular-nums whitespace-nowrap ${getProfitLossColor(stats.net)}`}>{stats.net >= 0 ? "+" : "−"}{formatCurrencyDisplay(Math.abs(stats.net), currency)}</p>
           </div>
         </div>
 
