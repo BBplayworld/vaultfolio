@@ -82,6 +82,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ API: `price-history` 라우트 `range=2y`/없음/티커 없음 400, 허용 밖 쿼리 무시, 성공 CDN 헤더·실패 no-store·예산 초과 503·외부 호출 0, 페이징 250행 3회(`price-history*.test.ts`)
 
 ### F-CASH-TX. 현금 입출금 거래내역 ([cash-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/cash-tx-input.tsx) · [cash-tx-view.tsx](../../src/app/(main)/_components/views/detail/cash-tx/cash-tx-view.tsx)) — 명세 [S-4.22](../specs/4.22-cash-transactions.md)
+- 👤 **320 거래 행(5.152 #302 A)**: 360 미만(`max-[359px]`)에서 현금 거래 행이 코인 행과 같은 배치 — 금액·삭제 첫 줄 오른쪽, 날짜·메모 둘째 줄(아이콘 오른쪽 선). 9자리 출금 `−123,456,789원`+메모에서 날짜·금액 겹침 0·가로 넘침 0, 360 이상 배치 불변
 - 👤 현금 카드 "입출금 기록/내역" 진입 → 입금/출금(입금 시 정기·비정기 토글)·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총입금·총출금·순유입 통계, 기간·유형 필터
 - 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 기록만(`기록만` 배지) 삭제 → 앱 안 확인 창 '이 기록만 지워요. 잔액은 그대로예요'(#5.149 #295, 브라우저 confirm 0)
 - ⚙ `cash-tx-utils`: `pruneCashTransactions`(3년 롤링)·`findDuplicateCashTx`(계좌·날짜·금액·유형)·`reflectedBalanceDelta`(반영분만)·`isCashWithdrawalValid`(출금초과 가드). `cash[].balance`는 진실원본 — 로그 추가/삭제해도 balance 단일 저장으로만 변경
@@ -362,6 +363,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 자동: `src/lib/report/__tests__/asset-grade.test.ts` (미작성 — 후속 과제)
 
 ### F-HUB. 집중도·허브·대시보드
+- 👤 **상세 허브 설명 줄 제거(5.152 #302 B′)**: 상세 허브 6장(주식·부동산·암호화폐·현금·실물·대출)에 설명 줄(`국내·해외 보유 종목` 등 고정 문구) 없음 — 제목→금액→보조 줄 3단, 390 `?demo=1` 보유 5장 금액 줄이 첫 화면 안, 320 가로 넘침 0. 성과 허브 KpiCard 3장·`hub-change-rows` 설명 줄은 그대로(`KpiCard.description` 선택 항목)
 - 👤 **상세 허브 추가하기 줄(5.148 #290)**: 보유 자산군 카드만(고정 순서) + 0건 자산군은 맨 아래 `hub-add-row` 칩(주식→부동산→암호화폐→현금→대출, 실물 제외), 칩 누름 = 해당 자산군 `open-add-asset-sheet`, 6종 0건이면 0건 카드 5장·줄 없음, 공유 캡처에 줄 없음, 칩 40px·320 줄바꿈
 - 👤 `detail-hub`(카테고리별 평가손익·건수), `performance-hub`(순자산·수익·배당 KPI), `dashboard` 도넛/금융자산 바
 - 엣지: 빈 카테고리 클릭 비활성, 단일 종목, 0·음수 값

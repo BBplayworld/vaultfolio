@@ -283,7 +283,7 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
   exchangeHistory: Record<string, { USD: number; JPY: number }>;
   assetData: AssetData;
   rates: { USD: number; JPY: number };
-}): { mapped: SettlementCauses; estimatedLabel: "예측" | "일부 예측" } {
+}): { mapped: SettlementCauses; estimatedLabel: "예측" | "일부 예측"; cashTracked: boolean } {
   const attr = start ? computeAttributionBetween(start, end ?? live, exchangeHistory, assetData, rates, false) : null;
   // 결정 4-4 예외 판정: 시작·끝 현금이 모두 0이고 구간 안 입출금 기록도 없으면 현금 미등록 사용자
   const endCash = end ? end.breakdown?.cash ?? 0 : liveCash;
@@ -300,7 +300,7 @@ export function computeSettlementCauses({ start, end, live, deltaNet, startDate,
       hasCashRecords: hasCash, estimatedPriceAsUnrecorded: true,
     },
   ), effects, assetData, startDate, endDate, hasCash, matchRecordedTransferDetail(assetData, startDate, endDate, rates).viaLoan);
-  return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측" };
+  return { mapped, estimatedLabel: !attr || attr.estimated ? "예측" : "일부 예측", cashTracked };
 }
 
 /**
@@ -450,14 +450,19 @@ function MonthCauseRows({ mapped, estimatedLabel, groupEstimated, hints }: {
 
 // 변화 원인 블록(5항목). 매수·매도·상환 문구는 쓰지 않는다. 연 탭은 5.124부터 올해 결산 블록(year-settlement-block.tsx)을 쓴다
 // footer: 원인 줄 아래 슬롯(주 탭 — 기록 내역·종목 등락 보기, 4.79). 없으면 렌더 diff 0
-export function CauseBlock({ scope, mapped, estimatedLabel, status, footer }: {
+// cashTracked: 월 탭 — computeSettlementCauses가 계산에 쓴 값. false면 순유입 도움말을 실제 계산(사고판 금액 순액)에 맞춘다
+const MONTH_INCOME_HINT_UNTRACKED = "입출금 기록이 없어 사고판 금액의 차이로 계산했어요";
+export function CauseBlock({ scope, mapped, estimatedLabel, status, footer, cashTracked }: {
   scope: "month" | "year" | "week";
   mapped?: SettlementCauses;
   estimatedLabel?: string;
   status?: "insufficient" | "error";
   footer?: ReactNode;
+  cashTracked?: boolean;
 }) {
-  const hints = CAUSE_HINT[scope];
+  const hints = scope === "month" && cashTracked === false
+    ? { ...CAUSE_HINT.month, income: MONTH_INCOME_HINT_UNTRACKED }
+    : CAUSE_HINT[scope];
   // 예측 행이 2개 이상이면 행마다 같은 배지를 반복하지 않고 제목 옆에 1개만 둔다(연 탭 B안은 첫 구간이 늘 예측, ui-review)
   const groupEstimated = !status && (mapped?.causes.filter((c) => c.estimated).length ?? 0) >= 2;
   return (

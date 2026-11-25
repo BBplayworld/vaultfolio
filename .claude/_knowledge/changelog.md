@@ -5,6 +5,10 @@
 ---
 
 ## 2026-11-26
+### 월 탭 순유입 도움말 정정·허브 설명 줄 제거·현금 거래 320 행 (issue-5.152, #302, risk:low)
+- 월 탭 `순유입` 도움말을 `computeSettlementCauses`가 돌려주는 `cashTracked`로 2갈래(거짓이면 `입출금 기록이 없어 사고판 금액의 차이로 계산했어요`, `CauseBlock cashTracked` 선택 prop). 상세 허브 6장 설명 줄 제거(`KpiCard.description` 선택화). 현금 거래 행 `max-[359px]` 둘째 줄 배치. 원인 일관성 vitest E1~E6(홈·주·월·연, 프로덕션 diff 0). 저장·서버 전송·GA title 변경 0. 연 탭 `CAUSE_HINT.year.income`은 렌더되지 않는 코드(결함 아님).
+
+## 2026-11-26
 ### 상세 목록 320 읽힘 2차 (issue-5.151, #300, risk:low)
 - 코인·실물 우측 열 45%·손익 2줄 접기(금액 잘림·부제 겹침), 현금 요약 flex-wrap·nowrap, 코인 거래 행 320 금액 첫 줄, 결산 CAPTION·change-hero `break-keep`. 클래스만, 저장·서버 전송 변경 0.
 

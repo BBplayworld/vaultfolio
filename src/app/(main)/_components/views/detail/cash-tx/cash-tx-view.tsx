@@ -147,11 +147,11 @@ export function CashTxView() {
             {list.map((t) => {
               const isDep = t.type === "deposit";
               return (
-                <div key={t.id} className="flex items-center gap-3 py-2.5">
+                <div key={t.id} className="flex items-center gap-3 py-2.5 max-[359px]:flex-wrap max-[359px]:gap-y-0.5">
                   <div className={`size-8 rounded-full flex items-center justify-center shrink-0 ${isDep ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"}`}>
                     {isDep ? <ArrowDownLeft className="size-4" /> : <ArrowUpRight className="size-4" />}
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 max-[359px]:order-last max-[359px]:basis-full max-[359px]:pl-11">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-semibold">{isDep ? "입금" : "출금"}</span>
                       {isDep && t.recurring && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-amber-600 border-amber-600">정기</Badge>}
@@ -159,7 +159,7 @@ export function CashTxView() {
                     </div>
                     <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span>{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>
-                  <span className={`text-sm font-bold tabular-nums shrink-0 ${isDep ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
+                  <span className={`text-sm font-bold tabular-nums shrink-0 max-[359px]:ml-auto ${isDep ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isDep ? "+" : "−"}{formatCurrencyDisplay(t.amount, t.currency)}
                   </span>
                   <Button size="icon" variant="secondary" className="size-7.5 shrink-0" title="삭제" aria-label="거래 삭제" onClick={() => confirmDelete(t)}>
