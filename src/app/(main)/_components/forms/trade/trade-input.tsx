@@ -928,7 +928,7 @@ export function TradeInput() {
                       <p data-testid="record-only-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">
                         {isNewSelected
                           ? "신규 자산은 보유 반영 설정과 무관하게 항상 반영됩니다"
-                          : "이미 보유 수량에 들어간 거래면 해제하세요. 기록만 남고 보유 수량은 그대로예요"}
+                          : "이미 수량에 든 거래면 해제하세요. 기록만 남아요"}
                       </p>
                     </div>
                   </FormItem>

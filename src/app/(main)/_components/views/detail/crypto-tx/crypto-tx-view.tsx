@@ -234,8 +234,8 @@ export function CryptoTxView() {
             <p className="text-base font-bold">기록 삭제</p>
             <p className="text-sm text-muted-foreground text-pretty break-keep">이 기록만 지워요. 보유 수량은 그대로예요</p>
             <div className="flex gap-2 justify-end">
-              <Button data-testid="tx-delete-confirm-cancel" variant="secondary" autoFocus onClick={() => setRecordOnlyTarget(null)}>취소</Button>
-              <Button data-testid="tx-delete-confirm-ok" variant="destructive" onClick={() => { if (deleteCryptoTransaction(recordOnlyTarget.id)) toast.success("삭제되었습니다."); setRecordOnlyTarget(null); }}>삭제</Button>
+              <Button data-testid="tx-delete-confirm-cancel" size="lg" variant="secondary" autoFocus onClick={() => setRecordOnlyTarget(null)}>취소</Button>
+              <Button data-testid="tx-delete-confirm-ok" size="lg" variant="destructive" onClick={() => { if (deleteCryptoTransaction(recordOnlyTarget.id)) toast.success("삭제되었습니다."); setRecordOnlyTarget(null); }}>삭제</Button>
             </div>
           </div>
         </div>

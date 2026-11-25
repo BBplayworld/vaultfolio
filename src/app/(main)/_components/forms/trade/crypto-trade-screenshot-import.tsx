@@ -340,7 +340,7 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
               <div className="leading-none">
                 <span className="text-sm font-medium">보유 수량·평단에 반영</span>
                 <p data-testid="record-only-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">
-                  이미 보유 수량에 들어간 거래면 해제하세요. 기록만 남고 보유 수량은 그대로예요
+                  이미 수량에 든 거래면 해제하세요. 기록만 남아요
                 </p>
               </div>
             </label>

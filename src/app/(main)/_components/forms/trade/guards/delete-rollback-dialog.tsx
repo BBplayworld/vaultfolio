@@ -48,10 +48,10 @@ export function DeleteRollbackDialog({
           </DialogHeader>
           <p className="text-sm text-muted-foreground text-pretty break-keep">이 기록만 지워요. 보유 수량은 그대로예요</p>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button data-testid="tx-delete-confirm-ok" variant="destructive" onClick={onConfirm} className="flex-1 sm:flex-initial">
+            <Button data-testid="tx-delete-confirm-ok" size="lg" variant="destructive" onClick={onConfirm} className="flex-1 sm:flex-initial">
               삭제
             </Button>
-            <Button data-testid="tx-delete-confirm-cancel" variant="secondary" autoFocus onClick={onCancel} className="flex-1 sm:flex-initial">
+            <Button data-testid="tx-delete-confirm-cancel" size="lg" variant="secondary" autoFocus onClick={onCancel} className="flex-1 sm:flex-initial">
               취소
             </Button>
           </DialogFooter>
