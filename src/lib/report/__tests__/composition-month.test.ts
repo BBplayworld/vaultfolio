@@ -147,6 +147,8 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
     const removed = diff.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"))
       // 5.114(#215) 타이포 스케일: AI 행 제목의 크기 클래스 1줄(`text-sm sm:text-base font-semibold` → `text-base font-bold`)만 허용
       .filter((l) => !l.includes('className="block text-sm sm:text-base font-semibold text-foreground text-pretty break-keep"'))
+      // 5.151(#300): CAPTION 상수 한 줄에 break-keep 추가(어절 단위 줄바꿈)만 허용
+      .filter((l) => l !== '-const CAPTION = "text-sm text-muted-foreground text-pretty";')
       .filter((l) => !l.startsWith("-import ") && !l.includes('animationDelay: "120ms"') && !l.startsWith("-export function SettlementView(") && !l.includes('data-testid="prep-ics-button"') && !l.startsWith("-export function SettlementAiButton(") && !l.includes('data-testid="settlement-ai-button"') && !l.includes("AI에게 {name} 변화 물어보기") && !FIRST_RECORD_EDITS.some((t) => l.includes(t)));
     expect(removed).toEqual([]);
     // asset-change-view.tsx는 4.79(주 탭)·4.83(주 방문 기록·focus)이 의도적으로 바꾸므로 4.51 범위 가드에서 제외
