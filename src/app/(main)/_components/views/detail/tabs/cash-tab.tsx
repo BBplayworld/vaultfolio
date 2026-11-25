@@ -55,7 +55,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
               </div>
               <div className={ASSET_THEME.cardInfoLeft}>
                 <div className={ASSET_THEME.cardInfoTitle}>
-                  <span className={ASSET_THEME.cardInfoName}>{item.name}</span>
+                  <span className={ASSET_THEME.cardInfoName} title={item.name.length > 10 ? item.name : undefined}>{item.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
                   <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>

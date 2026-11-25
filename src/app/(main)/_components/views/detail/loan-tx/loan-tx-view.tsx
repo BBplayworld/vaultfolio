@@ -108,18 +108,18 @@ export function LoanTxView() {
       </CardHeader>
       <CardContent className={`space-y-4 min-w-0 ${ASSET_THEME.contentPad}`}>
         {/* 요약 */}
-        <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/30 dark:bg-card dark:rounded-xl dark:shadow-sm px-3 py-3">
+        <div className="flex flex-wrap justify-between gap-x-3 gap-y-2 rounded-lg bg-muted/30 dark:bg-card dark:rounded-xl dark:shadow-sm px-3 py-3">
           <div>
             <p className="text-sm text-muted-foreground">상환</p>
-            <p className="text-sm font-bold tabular-nums text-red-500 dark:text-rose-400">+{formatCurrency(stats.repay)}</p>
+            <p className="text-sm font-bold tabular-nums whitespace-nowrap text-red-500 dark:text-rose-400">+{formatCurrency(stats.repay)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">추가대출</p>
-            <p className="text-sm font-bold tabular-nums text-blue-500 dark:text-blue-400">−{formatCurrency(stats.borrow)}</p>
+            <p className="text-sm font-bold tabular-nums whitespace-nowrap text-blue-500 dark:text-blue-400">−{formatCurrency(stats.borrow)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">순상환</p>
-            <p className={`text-sm font-bold tabular-nums ${getProfitLossColor(stats.net)}`}>{stats.net >= 0 ? "+" : "−"}{formatCurrency(Math.abs(stats.net))}</p>
+            <p className={`text-sm font-bold tabular-nums whitespace-nowrap ${getProfitLossColor(stats.net)}`}>{stats.net >= 0 ? "+" : "−"}{formatCurrency(Math.abs(stats.net))}</p>
           </div>
         </div>
 
@@ -149,12 +149,12 @@ export function LoanTxView() {
                       <span className="text-sm font-semibold">{isRepay ? "상환" : "추가 대출"}</span>
                       {!t.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
                     </div>
-                    <p className="text-sm text-muted-foreground tabular-nums">{t.date}{t.memo ? ` · ${t.memo}` : ""}</p>
+                    <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span>{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>
                   <span className={`text-sm font-bold tabular-nums shrink-0 ${isRepay ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isRepay ? "+" : "−"}{formatCurrency(t.amount)}
                   </span>
-                  <Button size="icon" variant="secondary" className="size-7.5 shrink-0" title="삭제" onClick={() => confirmDelete(t)}>
+                  <Button size="icon" variant="secondary" className="size-7.5 shrink-0" title="삭제" aria-label="거래 삭제" onClick={() => confirmDelete(t)}>
                     <Trash2 className="size-3.5" />
                   </Button>
                 </div>

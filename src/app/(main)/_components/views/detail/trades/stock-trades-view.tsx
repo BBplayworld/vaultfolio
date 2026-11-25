@@ -221,18 +221,18 @@ export function StockTradesView() {
             <Badge variant="outline" className="text-2xs py-0">{categoryLabel}</Badge>
           </div>
           {summaryStock && (
-            <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+            <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-2 text-sm">
               <div>
                 <p className="text-sm text-muted-foreground">보유 수량</p>
-                <p className="font-semibold tabular-nums">{summaryStock.quantity.toLocaleString()}주</p>
+                <p className="font-semibold tabular-nums whitespace-nowrap">{summaryStock.quantity.toLocaleString()}주</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">평단가</p>
-                <p className="font-semibold tabular-nums">{formatPriceByCurrency(summaryStock.averagePrice, currency)}</p>
+                <p className="font-semibold tabular-nums whitespace-nowrap">{formatPriceByCurrency(summaryStock.averagePrice, currency)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">평가금액</p>
-                <p className="font-semibold tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(Math.round(currentVal))}</p>
+                <p className="font-semibold tabular-nums whitespace-nowrap" style={{ color: MAIN_PALETTE[10] }}>{formatCurrency(Math.round(currentVal))}</p>
               </div>
             </div>
           )}
@@ -323,21 +323,22 @@ export function StockTradesView() {
                           {tx.type === "buy" ? "매수" : "매도"}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="tabular-nums">
-                              {tx.quantity.toLocaleString()}주 <span className="text-muted-foreground">· {formatPriceByCurrency(tx.price, tx.currency)}</span>
-                            </p>
-                            {!tx.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
-                          </div>
-                          {brokerScope === "all" && (
-                            <p className="text-2xs text-muted-foreground truncate">
-                              {groupStocks.find((s) => s.id === tx.stockId)?.broker || "미지정"}
-                            </p>
+                          <p className="tabular-nums">
+                            {tx.quantity.toLocaleString()}주 <span className="text-muted-foreground whitespace-nowrap">· {formatPriceByCurrency(tx.price, tx.currency)}</span>
+                          </p>
+                          {/* '기록만' 배지는 둘째 줄 — 320에서 첫 줄 줄바꿈으로 행 높이가 달라지지 않게(증권사 줄이 있으면 그 앞에) */}
+                          {(brokerScope === "all" || !tx.reflected) && (
+                            <div className="flex items-center gap-1.5 text-2xs text-muted-foreground min-w-0">
+                              {!tx.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 h-4 leading-4 shrink-0 text-muted-foreground">기록만</Badge>}
+                              {brokerScope === "all" && (
+                                <span className="truncate">{groupStocks.find((s) => s.id === tx.stockId)?.broker || "미지정"}</span>
+                              )}
+                            </div>
                           )}
                         </div>
                         <div className="text-right shrink-0">
                           <p className={`font-semibold tabular-nums ${getProfitLossColor(tx.type === "buy" ? 1 : -1)}`}>
-                            {tx.type === "buy" ? "+" : "-"}{formatCurrency(Math.round(amt))}
+                            {tx.type === "buy" ? "+" : "−"}{formatCurrency(Math.round(amt))}
                           </p>
                         </div>
                         <Button

@@ -36,7 +36,7 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
               </div>
               <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
                 <div className={`${ASSET_THEME.cardInfoTitle} min-w-0 flex-nowrap`}>
-                  <span className={`${ASSET_THEME.cardInfoName} truncate min-w-0`}>{item.name}</span>
+                  <span className={`${ASSET_THEME.cardInfoName} min-w-0`} title={item.name.length > 10 ? item.name : undefined}>{item.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
                   <span className="text-sm text-muted-foreground whitespace-nowrap">{type.shortLabel} · <span className="font-semibold text-primary tabular-nums">{pct.toFixed(1)}%</span></span>

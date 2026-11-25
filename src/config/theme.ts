@@ -63,7 +63,7 @@ export const ASSET_THEME = {
   cardInfoLeft: "flex-1",
   cardInfoTitle: "flex items-baseline gap-1 flex-wrap",
   cardInfoMeta: "flex items-center gap-1 mt-0.5",
-  cardInfoName: "font-semibold text-sm leading-tight",
+  cardInfoName: "font-semibold text-sm leading-tight break-keep line-clamp-2 [overflow-wrap:anywhere]",
   cardInfoRight: "text-right flex-shrink-0",
   cardAmountMain: "text-sm font-bold tabular-nums leading-tight",
   cardAmountProfitRow: "flex flex-row items-center gap-1 mt-0.5",
