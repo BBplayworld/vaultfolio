@@ -95,7 +95,7 @@ export function ChangeHero({ title, titleTestId, range, rangeTestId, badge, acti
               <p className="mt-1 text-sm text-muted-foreground">{loading}</p>
             </div>
           ) : delta === null ? (
-            message && <div className="mt-1 text-sm text-muted-foreground text-pretty">{message}</div>
+            message && <div className="mt-1 text-sm text-muted-foreground text-pretty break-keep">{message}</div>
           ) : (
             <>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
@@ -124,7 +124,7 @@ export function ChangeHero({ title, titleTestId, range, rangeTestId, badge, acti
               )}
             </>
           )}
-          {note && <p className="mt-1 text-sm text-muted-foreground text-pretty">{note}</p>}
+          {note && <p className="mt-1 text-sm text-muted-foreground text-pretty break-keep">{note}</p>}
         </div>
     </>
   );
