@@ -157,7 +157,7 @@ export function CashTxView() {
                       {isDep && t.recurring && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-amber-600 border-amber-600">정기</Badge>}
                       {!t.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
                     </div>
-                    <p className="text-sm text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span>{t.memo ? ` · ${t.memo}` : ""}</p>
+                    <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span>{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>
                   <span className={`text-sm font-bold tabular-nums shrink-0 ${isDep ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isDep ? "+" : "−"}{formatCurrencyDisplay(t.amount, t.currency)}
