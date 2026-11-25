@@ -216,6 +216,7 @@ describe("문구 규칙", () => {
     const d = GUIDES["year-end"];
     expect(text("year-end").split(YEAR_SETTLE_COPY.loan).length - 1).toBe(1);
     expect(d.facts[2]).toContain(YEAR_SETTLE_COPY.loan);
+    expect(text("year-end")).toContain("출금이 더 많은 해에는 '꺼낸 돈'으로 보여요");
     expect(text("year-end")).not.toMatch(/바로 나눠/);
     const sentences = (slug: (typeof GUIDE_SLUGS)[number]) =>
       text(slug).split(/[.\n]/).map((x) => x.trim()).filter((x) => x.length > 8);

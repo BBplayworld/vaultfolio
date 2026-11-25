@@ -12,7 +12,7 @@ import { buildLiveAttributionCurr } from "@/lib/report/asset-report";
 import { resolveYearChain, snapshotDate, type SettlementCause } from "@/lib/report/settlement";
 import {
   YEAR_SETTLE_COPY, buildYearConclusion, groupYearSettlement, hasReflectedCashIn, hasYearRows, isYearCashTracked, pickYearEndSnapshot,
-  resolveFirstYearChain, resolveYearTarget, splitYearChain, yearConclusionText, yearGrowthSingleHint, yearHeadText, yearIncomeHint,
+  resolveFirstYearChain, resolveYearTarget, splitYearChain, yearConclusionText, yearGrowthSingleHint, yearHeadText, yearIncomeHint, yearHelpText, yearIncomeName,
   yearPeriodDateText, yearPeriodLabel, yearPeriodNoteText, yearPeriodPhrase, yearSettlementTitle,
   type YearGroups, type YearPeriodRow, type YearTarget,
 } from "@/lib/report/year-settlement";
@@ -42,6 +42,7 @@ export interface YearSettlementModel {
   phrase: string;
   periodNote: string | null;                        // 결론 줄이 없고 나눈 기간이 제목과 다를 때
   incomeHint: string;
+  help: string;
   showCashLink: boolean;
 }
 
@@ -113,7 +114,8 @@ export function buildYearSettlementModel({ assetData, monthly, daily, rates, exc
     conclusion,
     phrase,
     periodNote: !conclusion && period && hasGroupRows ? yearPeriodNoteText(period) : null,
-    incomeHint: yearIncomeHint(phrase, isYearCashTracked(assetData, measuredStart, liveCash, endDate ?? today)),
+    incomeHint: yearIncomeHint(phrase, isYearCashTracked(assetData, measuredStart, liveCash, endDate ?? today), groups?.income),
+    help: yearHelpText(groups?.income),
     showCashLink: !closed && !!split.measured?.mapped.showUnrecordedHint && (assetData.cash?.length ?? 0) >= 1,
   };
 }
@@ -128,7 +130,7 @@ function YearGroupRow({ testId, name, amount, hint, i }: { testId: string; name:
   return (
     <div data-testid={testId} data-value={amount} className={`flex min-h-10 items-center justify-between gap-3 ${ROW_ENTER}`} style={stagger(i)}>
       <span className={`inline-flex min-w-0 items-center gap-1.5 ${GROUP_NAME}`}>
-        {name}
+        <span data-testid={`${testId}-name`}>{name}</span>
         {hint && <span data-screenshot-hide className="inline-flex"><InfoHint summary={hint} /></span>}
       </span>
       <span className={`${GROUP_AMOUNT} ${getProfitLossColor(amount)}`}>{signed(amount)}</span>
@@ -204,7 +206,7 @@ export function YearSettlementBlock({ model, status }: { model?: YearSettlementM
   return (
     <section data-testid="year-settle" data-state={model.state} data-split={model.split} className={`${SECTION} ${BODY_ENTER}`}>
       <SectionHeader icon={ListChecks} title={model.title} titleTestId="year-settle-title">
-        <span data-testid="year-settle-help" data-screenshot-hide className="inline-flex"><InfoHint summary={YEAR_SETTLE_COPY.help} /></span>
+        <span data-testid="year-settle-help" data-screenshot-hide className="inline-flex"><InfoHint summary={model.help} /></span>
       </SectionHeader>
 
       {model.head && (
@@ -233,7 +235,7 @@ export function YearSettlementBlock({ model, status }: { model?: YearSettlementM
 
           {groups && (groups.income !== null || groups.growth || groups.loan !== null || groups.unrecorded) && (
             <div>
-              {groups.income !== null && <YearGroupRow testId="year-settle-group-in" name={YEAR_SETTLE_COPY.income} amount={groups.income} hint={model.incomeHint} i={i++} />}
+              {groups.income !== null && <YearGroupRow testId="year-settle-group-in" name={yearIncomeName(groups.income)} amount={groups.income} hint={model.incomeHint} i={i++} />}
               {groups.growth && <GrowthRow growth={groups.growth} i={i++} open={open} onToggle={() => setOpen((v) => !v)} />}
               {groups.loan !== null && <YearGroupRow testId="year-settle-group-out" name={YEAR_SETTLE_COPY.loan} amount={groups.loan} hint={YEAR_SETTLE_COPY.loanHint} i={i++} />}
               {groups.unrecorded && (

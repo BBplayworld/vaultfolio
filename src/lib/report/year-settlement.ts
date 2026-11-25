@@ -195,6 +195,8 @@ export function yearPeriodLabel(period: YearPeriodRow, skipped: boolean): string
 export const YEAR_SETTLE_COPY = {
   help: "받은 배당은 계좌 잔액에 들어 있어 넣은 돈 또는 기록 안 된 변화에 포함돼요",
   income: "넣은 돈",
+  incomeOut: "꺼낸 돈", // 출금이 더 많은 해(income < 0)에만 첫 묶음 이름으로 쓴다
+  helpOut: "받은 배당은 계좌 잔액에 들어 있어 꺼낸 돈 또는 기록 안 된 변화에 포함돼요",
   growth: "불어난 돈",
   loan: "빠져나간 돈",
   loanHint: "추정한 대출 이자와, 늘어난 대출 중 자산에 남지 않은 몫이에요",
@@ -215,8 +217,14 @@ const GROWTH_SINGLE_HINT: Record<(typeof GROWTH_KEYS)[number], string> = {
 export const yearConclusionText = (phrase: string, c: { n: number; m: number }) =>
   ({ head: `${phrase} 순자산을 늘린 금액은`, income: `${YEAR_SETTLE_COPY.income} ${c.n}%,`, growth: `${YEAR_SETTLE_COPY.growth} ${c.m}%예요` });
 export const yearPeriodNoteText = (period: YearPeriodRow) => `${period.month + 1}월부터 나눈 금액이에요`;
-export const yearIncomeHint = (phrase: string, cashTracked: boolean) =>
-  cashTracked ? `${phrase} 입금에서 출금을 뺀 금액이에요` : `입출금 기록이 없어 ${phrase} 사고판 금액의 차이로 계산했어요`;
+/** 출금 우세(음수)일 때만 '꺼낸 돈' — 0·양수·묶음 없음(null)은 '넣은 돈' */
+export const isYearIncomeOut = (income: number | null | undefined) => income != null && income < 0;
+export const yearIncomeName = (income: number | null | undefined) => (isYearIncomeOut(income) ? YEAR_SETTLE_COPY.incomeOut : YEAR_SETTLE_COPY.income);
+export const yearHelpText = (income: number | null | undefined) => (isYearIncomeOut(income) ? YEAR_SETTLE_COPY.helpOut : YEAR_SETTLE_COPY.help);
+export const yearIncomeHint = (phrase: string, cashTracked: boolean, income?: number | null) =>
+  isYearIncomeOut(income)
+    ? (cashTracked ? `${phrase} 출금에서 입금을 뺀 금액이에요` : `입출금 기록이 없어 ${phrase} 판 금액에서 산 금액을 뺀 금액으로 계산했어요`)
+    : (cashTracked ? `${phrase} 입금에서 출금을 뺀 금액이에요` : `입출금 기록이 없어 ${phrase} 사고판 금액의 차이로 계산했어요`);
 export const yearGrowthSingleHint = (row: SettlementCause) => GROWTH_SINGLE_HINT[row.key as (typeof GROWTH_KEYS)[number]];
 export const yearPeriodDateText = (period: YearPeriodRow) => `${mdOf(period.until)} 기록까지`;
 /** 1월 초 머리 줄 기준 — `2025년 말 → 2026년 말`, 첫 해는 `11/3 → 2026년 말` */
