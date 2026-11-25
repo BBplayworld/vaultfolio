@@ -148,12 +148,13 @@ export function StockTradesView() {
     return () => io.disconnect();
   }, [isMobile, hasMore, STEP]);
 
+  const [recordOnlyTarget, setRecordOnlyTarget] = useState<Transaction | null>(null);
+
   const handleDeleteClick = (tx: Transaction) => {
     const stock = groupStocks.find((s) => s.id === tx.stockId);
     if (!stock) return;
     if (!tx.reflected) {
-      deleteTransaction(tx.id);
-      toast.success("거래가 삭제되었습니다.");
+      setRecordOnlyTarget(tx); // 기록만 — 포지션 변화 없음
       return;
     }
     // 현재 보유 포지션 — 거래로그에 없는 수동 보유분을 역산으로 보존하기 위한 기준점
@@ -322,9 +323,12 @@ export function StockTradesView() {
                           {tx.type === "buy" ? "매수" : "매도"}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="tabular-nums">
-                            {tx.quantity.toLocaleString()}주 <span className="text-muted-foreground">· {formatPriceByCurrency(tx.price, tx.currency)}</span>
-                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="tabular-nums">
+                              {tx.quantity.toLocaleString()}주 <span className="text-muted-foreground">· {formatPriceByCurrency(tx.price, tx.currency)}</span>
+                            </p>
+                            {!tx.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
+                          </div>
                           {brokerScope === "all" && (
                             <p className="text-2xs text-muted-foreground truncate">
                               {groupStocks.find((s) => s.id === tx.stockId)?.broker || "미지정"}
@@ -335,9 +339,6 @@ export function StockTradesView() {
                           <p className={`font-semibold tabular-nums ${getProfitLossColor(tx.type === "buy" ? 1 : -1)}`}>
                             {tx.type === "buy" ? "+" : "-"}{formatCurrency(Math.round(amt))}
                           </p>
-                          {tx.reflected && (
-                            <span className="text-2xs px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">반영</span>
-                          )}
                         </div>
                         <Button
                           size="icon"
@@ -382,6 +383,20 @@ export function StockTradesView() {
           linkedNote={(() => { const p = planRemoveLink(assetData, deleteTarget.tx.id); return p ? revertNoteText(p) : undefined; })()}
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {recordOnlyTarget && (
+        <DeleteRollbackDialog
+          open
+          recordOnly
+          tx={recordOnlyTarget}
+          stock={groupStocks.find((s) => s.id === recordOnlyTarget.stockId) ?? groupStocks[0]}
+          rollbackPreview={{ quantity: 0, avgPrice: 0, avgExchangeRate: 0 }}
+          onConfirm={() => {
+            if (deleteTransaction(recordOnlyTarget.id)) toast.success("거래가 삭제되었습니다.");
+            setRecordOnlyTarget(null);
+          }}
+          onCancel={() => setRecordOnlyTarget(null)}
         />
       )}
     </Card>

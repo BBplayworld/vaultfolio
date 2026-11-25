@@ -4,7 +4,7 @@ import { buildLiveAttributionCurr } from "../asset-report";
 import { resolveYearChain, type SettlementCauses } from "../settlement";
 import {
   YEAR_SETTLE_COPY, buildYearConclusion, groupYearSettlement, hasYearRows, pickYearEndSnapshot, resolveFirstYearChain, resolveYearTarget,
-  splitYearChain, yearConclusionText, yearGrowthSingleHint, yearHeadText, yearIncomeHint, yearPeriodDateText, yearPeriodLabel, yearPeriodNoteText,
+  splitYearChain, yearConclusionText, yearGrowthSingleHint, yearHeadText, yearHelpText, yearIncomeHint, yearIncomeName, yearPeriodDateText, yearPeriodLabel, yearPeriodNoteText,
   yearPeriodPhrase, yearSettlementTitle,
 } from "../year-settlement";
 import { computeChainCauses } from "@/app/(main)/_components/views/activity/change-hero";
@@ -352,7 +352,7 @@ describe("문구 — 금지어·표현(AC-5·AC-6)", () => {
   const p = { amount: 1, month: 10, from: "2025-12-31", until: "2026-10-31" };
   const c = yearConclusionText("11월부터", { n: 48, m: 52 });
   const all = [
-    ...Object.values(YEAR_SETTLE_COPY), c.head, c.income, c.growth, yearPeriodNoteText(p), yearIncomeHint("올해", true), yearIncomeHint("올해", false),
+    ...Object.values(YEAR_SETTLE_COPY), c.head, c.income, c.growth, yearPeriodNoteText(p), yearIncomeHint("올해", true), yearIncomeHint("올해", false), yearIncomeHint("올해", true, -3 * M), yearIncomeHint("올해", false, -3 * M),
     yearGrowthSingleHint({ key: "price", amount: 1, estimated: false }), yearGrowthSingleHint({ key: "valuation", amount: 1, estimated: false }), yearGrowthSingleHint({ key: "fx", amount: 1, estimated: false }),
     yearPeriodLabel(p, false), yearPeriodLabel(p, true), yearPeriodDateText(p),
     yearSettlementTitle({ year: 2026, closed: false, firstStart: null }), yearHeadText({ year: 2026, closed: true, start: { year: 2025, netAsset: 1, note: "" }, end: { year: 2026, netAsset: 2, note: "" } }, null),
@@ -366,5 +366,22 @@ describe("문구 — 금지어·표현(AC-5·AC-6)", () => {
     for (const w of ["기록이 없던", "0원", "올해 입출금을 기록하면"]) expect(all).not.toContain(w);
     expect(`${c.head} ${c.income} ${c.growth}`).not.toContain("빠져나간 돈");
     expect(`${c.head} ${c.income} ${c.growth}`).not.toMatch(/\d원/);
+  });
+});
+
+describe("꺼낸 돈 — 출금 우세(income < 0)일 때만 이름·도움말·help가 부호를 따른다(#295 P1)", () => {
+  it("음수: 이름 '꺼낸 돈', 도움말 2갈래·help가 같은 이름", () => {
+    expect(yearIncomeName(-3 * M)).toBe("꺼낸 돈");
+    expect(yearIncomeHint("올해", true, -3 * M)).toBe("올해 출금에서 입금을 뺀 금액이에요");
+    expect(yearIncomeHint("올해", false, -3 * M)).toBe("입출금 기록이 없어 올해 판 금액에서 산 금액을 뺀 금액으로 계산했어요");
+    expect(yearHelpText(-3 * M)).toBe("받은 배당은 계좌 잔액에 들어 있어 꺼낸\u00a0돈 또는 기록 안 된 변화에 포함돼요");
+  });
+  it("0·양수·묶음 없음: 기존 '넣은 돈'과 기존 문구(정본 상수) 그대로", () => {
+    for (const v of [0, 5 * M, null, undefined]) {
+      expect(yearIncomeName(v)).toBe(YEAR_SETTLE_COPY.income);
+      expect(yearHelpText(v)).toBe(YEAR_SETTLE_COPY.help);
+      expect(yearIncomeHint("올해", true, v)).toBe("올해 입금에서 출금을 뺀 금액이에요");
+      expect(yearIncomeHint("올해", false, v)).toBe("입출금 기록이 없어 올해 사고판 금액의 차이로 계산했어요");
+    }
   });
 });

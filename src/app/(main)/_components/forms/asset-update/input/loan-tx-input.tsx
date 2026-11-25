@@ -238,7 +238,7 @@ export function LoanTxInput() {
                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} aria-describedby={warnResync ? "loan-tx-resync-warning-text" : undefined} /></FormControl>
                     <div className="leading-none">
                       <FormLabel className="text-sm font-medium cursor-pointer">현재 잔액에 즉시 반영</FormLabel>
-                      <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">해제 시 기록만 남기고 잔액은 변경하지 않습니다 (과거 소급용)</p>
+                      <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">이미 잔액에 들어간 거래면 해제하세요. 기록만 남고 잔액은 그대로예요</p>
                     </div>
                   </FormItem>
                 )}

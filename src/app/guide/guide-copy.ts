@@ -138,7 +138,7 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
       },
       {
         title: "올해 넣은 돈 더하기",
-        body: "올해 계좌에 넣은 돈에서 꺼낸 돈을 뺀 값을 넣은 돈 하나로 써요. 주식 매수·매도와 대출 상환은 자산 사이의 이동이라 넣은 돈에 넣지 않아요.",
+        body: "올해 계좌에 넣은 돈에서 꺼낸 돈을 뺀 값을 넣은 돈 하나로 써요. 출금이 더 많은 해에는 '꺼낸 돈'으로 보여요. 주식 매수·매도와 대출 상환은 자산 사이의 이동이라 넣은 돈에 넣지 않아요.",
       },
       {
         title: "나머지 보기",
@@ -167,7 +167,7 @@ export const GUIDES: Record<GuideSlug, GuideDoc> = {
       "'기록 안 된 변화'로",
       `'${YEAR_SETTLE_COPY.periodSub}'`,
     ],
-    lastModified: "2026-11-21",
+    lastModified: "2026-11-25",
   },
   "market-history": {
     slug: "market-history",

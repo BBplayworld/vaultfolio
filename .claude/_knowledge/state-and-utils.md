@@ -429,7 +429,7 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
 - `splitYearChain(points, heroStart, heroDelta, run)` → `measured | mixed{period{amount, month, from, until}} | estimated-only`. 기간 행 = 첫 enrich 월 기록 − **Hero 시작값**, 나머지 = `run(points.slice(1), total − 기간 행)` → 합 = Hero 증감
 - `resolveFirstYearChain(monthly, daily|null, assetData, year, endDate)` — 첫 해 시작점: 그 해 가장 이른 enrich 월 기록(끝 달 제외) → `pickFirstRecordStart`(daily가 있을 때만) → 7일 미만이면 null
 - `groupYearSettlement(mapped)` → `{income, growth{amount, rows}, loan, unrecorded}`(10원 미만 숨김), `hasYearRows`, `buildYearConclusion(groups)` → `{n, m} | null`(둘 다 양수·기록 안 된 변화가 합보다 작음·1~99%)
-- 문구: `YEAR_SETTLE_COPY`, `yearPeriodPhrase`(`올해`·`11월부터`·`11/3부터`·`2026년에`·`2026년 11월부터`), `yearSettlementTitle`, `yearPeriodLabel`(`1~10월`·`1월`·`10월 기록 전`), `yearIncomeHint`, `mdOf`
+- 문구: `YEAR_SETTLE_COPY`, `yearPeriodPhrase`(`올해`·`11월부터`·`11/3부터`·`2026년에`·`2026년 11월부터`), `yearSettlementTitle`, `yearPeriodLabel`(`1~10월`·`1월`·`10월 기록 전`), `yearIncomeHint(phrase, cashTracked, income?)`, `yearIncomeName`·`yearHelpText`·`isYearIncomeOut`(income<0이면 `꺼낸 돈` 문구, `YEAR_SETTLE_COPY.incomeOut`·`helpOut`; 정본 income·help 값은 불변), `mdOf`
 - `settlement.ts`: `isEnriched(monthly)` export(5.124)
 - 테스트: `report/__tests__/year-settlement.test.ts`(픽스처 `year-settlement-fixture.ts`), `views/activity/__tests__/year-settlement-block.test.tsx`
 

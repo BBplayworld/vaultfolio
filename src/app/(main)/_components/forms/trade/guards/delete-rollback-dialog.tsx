@@ -18,6 +18,7 @@ interface DeleteRollbackDialogProps {
   tx: Transaction;
   stock: Stock;
   rollbackPreview: PositionPreview;
+  recordOnly?: boolean; // 반영 안 된 기록 — 롤백 미리보기 없이 기록만 삭제 확인
   linkedNote?: string; // 연결 계좌 되돌림 안내 1줄(#103) — 짝 기록이 실제로 있을 때만
   onConfirm: () => void;
   onCancel: () => void;
@@ -28,11 +29,36 @@ export function DeleteRollbackDialog({
   tx,
   stock,
   rollbackPreview,
+  recordOnly,
   linkedNote,
   onConfirm,
   onCancel,
 }: DeleteRollbackDialogProps) {
   const currency = stock.currency || "KRW";
+
+  if (recordOnly) {
+    return (
+      <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+        <DialogContent data-testid="tx-delete-confirm" className="sm:max-w-md touch-pan-y">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="size-5" />
+              기록 삭제
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground text-pretty break-keep">이 기록만 지워요. 보유 수량은 그대로예요</p>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button data-testid="tx-delete-confirm-ok" size="lg" variant="destructive" onClick={onConfirm} className="flex-1 min-h-10 sm:flex-initial">
+              삭제
+            </Button>
+            <Button data-testid="tx-delete-confirm-cancel" size="lg" variant="secondary" autoFocus onClick={onCancel} className="flex-1 min-h-10 sm:flex-initial">
+              취소
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>

@@ -388,7 +388,7 @@ export function CryptoTxInput() {
                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     <div className="leading-none">
                       <FormLabel className="text-sm font-medium cursor-pointer">보유 수량에 즉시 반영</FormLabel>
-                      <p className="text-sm text-muted-foreground mt-0.5">해제 시 거래 기록만 남기고 포지션은 변경하지 않습니다</p>
+                      <p data-testid="record-only-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">이미 수량에 든 거래면 해제하세요. 기록만 남아요</p>
                     </div>
                   </FormItem>
                 )}

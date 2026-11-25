@@ -61,7 +61,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **체결일 기본값·max = KST 오늘(#4.35, `todayKst()`)** — KST 00:00~08:59에도 전날이 아닌 오늘. 현금·대출 입력과 같은 함수. 기존 저장 날짜는 보정하지 않음(`src/lib/__tests__/today-kst-inputs.test.ts`)
 - 👤 거래 입력(매수/매도), 반영 ON/OFF, 반영 후 예상 포지션 인라인 미리보기(`PositionChangePreview`), 중복 거래 인라인 확인
 - 👤 **반영할 자산 항목 직접 선택(#4.29)** — 카테고리·종목 선택 후 그 종목의 **전체 보유 항목**(카테고리 필터 무관)을 `StockTargetPicker` 카드(타입 배지·증권사·수량·평단)로 고른다. 증권사 Select·`resolveMatch` 자동 라우팅은 제거(같은 증권사 안 IRP·ISA·연금저축 구분 불가 문제). 후보 1개면 자동 선택. **신규 자산 등록**(매수만) = 증권사+주식 타입 선택 → 종목 메타 복제·포지션 0 초안(`NEW_STOCK_ID` 자리표시)으로 미리보기 후 `addTransactionsBatch([tx], [], [newStock])` 저장, 반영 강제(체크박스 비활성)·중복 검사 생략. 매도로 바꾸면 신규 선택 해제. 상세 진입(`lockedStock`)은 종전대로
-- 👤 거래 삭제 → 미반영 즉시삭제 / 반영 롤백 다이얼로그
+- 👤 거래 삭제 → 기록만(`기록만` 배지) 거래는 앱 안 확인 창(`tx-delete-confirm`, '이 기록만 지워요. 보유 수량은 그대로예요') / 반영 롤백 다이얼로그. 반영 거래에는 배지 없음(#5.149 #295)
 - 👤 **처음 사는 종목 검색(#5.134 #258)** — 매수에서 `다른 종목 찾기`(보유 0개면 처음부터 검색, 빈 Select 없음). `국내|해외` 검색 → 결과 고르면 요약 카드+`신규 자산 등록`(종류: 국내 4/해외 1). 보유와 같은 종목(정규화 티커)이면 보유 종목 선택으로 전환+`data-reason=ticker` 안내. 현재가 조회 실패 시 체결 단가로 저장(`baseDate` 없음)+안내 줄. 연결 계좌 저장 → 새 stock+거래+짝+잔액 1회. GA `trade_new_stock`·`_linked`. 코인 폼 안내 1줄·보유 0개 `닫기`
 - 👤 **같은 증권사·종류 중복 방지(#259)** — 신규 자산 등록의 증권사·종류가 보유 항목과 같으면 안내 `data-reason=account` + 저장 시 그 항목에 합산(stock 수 불변). 거래 입력·스크린샷 가져오기 공통, 스크린샷 fuzzy 후보 행은 제외. 359px 이하 신규 2칸 1열
 - ⚙ `trade-utils`: 가중평균 평단·환율, 매도 차감, 미반영 스킵, **역산 롤백(수동 보유분 보존)**, `findDuplicateTransaction`, `pruneTransactions` 3년 롤링
@@ -80,7 +80,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-CASH-TX. 현금 입출금 거래내역 ([cash-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/cash-tx-input.tsx) · [cash-tx-view.tsx](../../src/app/(main)/_components/views/detail/cash-tx/cash-tx-view.tsx)) — 명세 [S-4.22](../specs/4.22-cash-transactions.md)
 - 👤 현금 카드 "입출금 기록/내역" 진입 → 입금/출금(입금 시 정기·비정기 토글)·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총입금·총출금·순유입 통계, 기간·유형 필터
-- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 미반영 즉시 삭제
+- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 기록만(`기록만` 배지) 삭제 → 앱 안 확인 창 '이 기록만 지워요. 잔액은 그대로예요'(#5.149 #295, 브라우저 confirm 0)
 - ⚙ `cash-tx-utils`: `pruneCashTransactions`(3년 롤링)·`findDuplicateCashTx`(계좌·날짜·금액·유형)·`reflectedBalanceDelta`(반영분만)·`isCashWithdrawalValid`(출금초과 가드). `cash[].balance`는 진실원본 — 로그 추가/삭제해도 balance 단일 저장으로만 변경
 - ⚙ 단일 저장 `addCashTransactionWithBalance`/`deleteCashTransactionWithBalance`(로그+잔액, stale-closure 방지, R4 대칭)
 - 엣지: 출금 반영액>잔액 차단, 미반영 로그는 잔액 무변경, 미래·보존기간(3년) 밖 날짜 차단, 통화(USD·JPY/100) 환산
@@ -90,7 +90,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-LOAN-TX. 대출 상환/추가 대출 거래내역 ([loan-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-tx-input.tsx) · [loan-tx-view.tsx](../../src/app/(main)/_components/views/detail/loan-tx/loan-tx-view.tsx)) — 명세 [S-4.24](../specs/4.24-loan-transactions.md)
 - ⚙ **날짜 기본값·max = KST 오늘(#4.35, `todayKst()`)** — 주식·현금 입력과 동일 기준
 - 👤 대출 카드 "상환/대출 기록·내역" 진입 → 상환/추가대출 토글·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총상환·총추가대출·순상환 통계, 기간·유형 필터. 전역 "자산 업데이트" 플로팅 버튼의 대출 선택 → "상환/대출 기록"에서도 동일 폼 진입(대상 미지정, 폼에서 대출 직접 선택 — 현금과 대칭)
-- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 미반영 즉시 삭제
+- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 기록만(`기록만` 배지) 삭제 → 앱 안 확인 창 '이 기록만 지워요. 잔액은 그대로예요'(#5.149 #295, 브라우저 confirm 0)
 - ⚙ `loan-tx-utils`: `pruneLoanTransactions`(3년 롤링)·`findDuplicateLoanTx`(대출·날짜·금액·유형)·`reflectedLoanBalanceDelta`(반영분만)·`isLoanRepaymentValid`(상환초과 가드). `loans[].balance`는 진실원본 — 로그 추가/삭제해도 balance 단일 저장으로만 변경. 대출은 통화 필드 없음(항상 KRW) — `cashTransactionSchema` 대비 `currency`·`recurring` 필드 없음
 - ⚙ 단일 저장 `addLoanTransactionWithBalance`/`deleteLoanTransactionWithBalance`(로그+잔액, stale-closure 방지, R4 대칭)
 - ⚙ **완납(balance=0)·재활성화** — 상환으로 잔액이 정확히 0이 되면 `loan-tab.tsx`의 `allLoans`(`balance > 0` 필터)에서 자동으로 빠지고, 별도 "완납된 대출" 요약 목록(비중 바·이자 집계 미포함, 이름·"완납" 배지·내역/기록 버튼만)에 노출. 그 목록의 "기록"에서 추가 대출(반영 ON, `+amount`)을 남기면 `balance > 0`으로 복귀해 `allLoans`에 재노출(별도 재활성화 로직 없이 필터 재평가만으로 성립)
@@ -102,7 +102,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-CRYPTO-TX. 암호화폐 매수/매도 거래내역 ([crypto-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx) · [crypto-tx-view.tsx](../../src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx)) — 명세 [S-4.25](../specs/4.25-crypto-transactions.md)
 - 👤 코인 카드(병합·거래소별 하위 카드) "매수/매도 기록·내역" 진입, "자산업데이트" 플로팅 버튼(코인 선택) → "매수/매도 기록"에서도 동일 폼 진입(현금·대출과 동일 동선). 폼: 코인 선택·매수/매도 토글·수량·체결단가·날짜·메모·반영 ON/OFF·반영 후 예상 포지션 인라인 미리보기·중복 인라인 확인. 로그 뷰 총매수·총매도 통계, 기간·유형 필터
-- 👤 반영 거래 삭제 → 포지션 롤백 확인 다이얼로그(수량·평단 변화 표시) / 미반영 즉시 삭제
+- 👤 반영 거래 삭제 → 포지션 롤백 확인 다이얼로그(수량·평단 변화 표시) / 기록만 삭제 → 앱 안 확인 창 '이 기록만 지워요. 보유 수량은 그대로예요'(#5.149 #295)
 - ⚙ **계산 엔진은 잔액 선형 가감(현금·대출)이 아니라 수량×평단 가중평균** — `trade-utils.ts`를 새 유틸 파일 없이 재사용(`computeNewPosition`/`recomputeFromLog`/`reverseTransaction`/`deriveBaseSnapshot`/`rollbackTransaction`/`pruneTransactions`/`findDuplicateTransaction`을 `TxLike`/`PositionLike` 구조적 타입으로 일반화, `validateReflection`도 동일). 삭제 시 단순 산술 역가감이 아니라 `rollbackTransaction`(거래로그 전체 재적용)으로 재계산
 - ⚙ 단일 저장 `addCryptoTransactionWithPosition`/`deleteCryptoTransactionWithPosition`(로그+포지션, stale-closure 방지, R4 대칭)
 - ⚙ 종합 카드는 하위 항목(거래소) 존재 시 `!hasSubItems` 조건으로 기록/내역 버튼을 항상 숨김(1개 거래소만 지정된 경우도 포함) — 개별 거래소 하위 카드(`SubCryptoCard`)에서만 기록. 주식(F-STOCK)과 동일 규칙
@@ -214,6 +214,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **변화 원인 6항목(#4.34, 대표 수정 2026-10-29)** — 월·연 탭 공통 순서 시세 변동 → 평가 갱신 → 환율 효과 → 순유입 → **대출**(`cause-row-loan`, 항상 ≤ 0) → 기록 안 된 변화, 0원 숨김. 대출 = 기록 안 된 변화 U가 음수일 때만 −min(|U|, 대출 순증 + 이자 추정(현재 잔액×금리×일수/365)), 이자 포함 시 예측 배지. 대출과 기록 안 된 변화는 반대 부호가 아니다. 순유입은 기록된 출금↔기록된 매수·상환 ±3일 짝짓기만 상쇄(짝 없는 출금은 순유입 −). 현금 거래가 있는 구간은 입출금 안내 없음
 - 👤 **연 탭 올해 결산(#5.124 #237, 구 연 탭 변화 원인 대체)** — 전체·연에서 Hero 아래 첫 블록 `year-settle`(제목 `year-settle-title` = `올해 결산`). 평면 6행 `cause-block[data-scope=year]`는 없다. 묶음 `year-settle-group-in`(넣은 돈 = 순유입)·`-grow`(불어난 돈 = 시세 변동+평가 갱신+환율 효과, 하위 2행 이상일 때만 `year-settle-grow-toggle` 펼침)·`-out`(빠져나간 돈 = 대출) → `cause-row-unrecorded` → `year-settle-cash-link`(기록 안 된 변화가 크고 입출금 기록 0·현금 계좌 ≥1·1월 초 아님, 도착 상세 › 현금) → `year-settle-period-row`(`1~N월`·N=1 `1월`·해 건너뜀 `N월 기록 전`, 2줄 `월 기록 전 기간 · M/D 기록까지`). 체인은 현행(`resolveYearChain` → 실시간)이고 앵커가 enrich가 아니면 첫 구간만 기간 행으로 뗀다 — 숨김 전 합 = `change-hero-delta`(보이는 행 합과의 차 ≤ 숨긴 행 수 × 9원), Hero 증감과 같은 `data-value` 행 없음. 결론 `year-settle-conclusion`은 넣은 돈·불어난 돈이 둘 다 양수·1~99%일 때만(비율·기간만, 금액 없음), 아니면 예측 섞임에서만 `year-settle-period-note`. 예측 배지·`0원`·`기록이 없던`·`올해 입출금을 기록하면` 없음
   - ⚙ 상태(`data-state`): measured(전년 12월 enrich 앵커, 기간 `올해`) / mixed / estimated-only(올해 enrich 월이 이번 달뿐 → `year-settle-empty` 안내 1줄만, GA 0) / first-year(직전 해 값 없음 — Hero 제목 `M/D 이후`·블록 `M/D 이후 결산`·`year-first-note`에 작년 말 순자산 넣기, 시작점 = 올해 가장 이른 enrich 월 기록 → 4.94 일별 → 7일 미만이면 블록 없음) / closed(1/1~1/10 — 제목 `YYYY년 결산` + `year-settle-head` `2025년 말 → 2026년 말 ±N`, 끝값 = 년도별 그 해 항목, 끝점 = 그 해 마지막 enrich 월 기록, Hero가 `올해 순자산이 기록되면…` 문구여도 뜸, 1/11부터 현행) / 올해 항목 없음 = 블록 없음 / 오류 = `cause-error`
+  - ⚙ **꺼낸 돈(#5.149 #295)**: `income < 0`이면 첫 묶음 이름(`year-settle-group-in-name`)·도움말(`yearIncomeHint` income 인자)·블록 help(`yearHelpText`)가 모두 `꺼낸 돈`(0·양수·묶음 없음은 `넣은 돈`). 금액·부호·색·결론 문장 규칙 불변. 가이드 year-end 3단계에 `출금이 더 많은 해에는 '꺼낸 돈'으로 보여요`. 체크 도움말 6곳·거래 배지 `기록만`은 상세 거래 화면 항목 참조
   - ⚙ N월 기록 전에 적은 입출금은 넣은 돈이 아니라 기간 행 금액에 들어간다. 그 구간에 반영된 입출금이 있으면 기간 행 도움말에 `year-settle-period-cash-note` 1줄. 배당은 합산하지 않는다(블록 도움말 1줄)
   - ⚙ 월·주·일 탭 원인 블록·성적표·시장과 비교 렌더 불변, 월 결산 화면 새 진입 0개. 저장·전송 0. GA `feature_use{year_settlement}` → `성과·자산 변화·올해 결산`(행 1개 이상일 때 연 탭 진입당 1회), 연 진입 `settlement_view` 0회
   - ⚙ 체험(`?trial=1`)은 스냅샷 저장이 막혀 올해 항목이 없으므로 연 탭이 `올해 순자산이 기록되면…` 상태다(5.124 dev-notes '데모' 절 — cto 재판정 대기)
