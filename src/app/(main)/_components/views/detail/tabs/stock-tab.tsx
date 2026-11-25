@@ -312,7 +312,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             <Badge variant="outline" className={`text-amber-600 border-amber-600 ${badgeCls}`}>거래정지</Badge>
           )}
           {stock.inactiveStatus === "delisted" && (
-            <Badge variant="outline" className={`text-red-600 border-red-600 ${badgeCls}`}>상장폐지</Badge>
+            <Badge variant="outline" className={`text-destructive border-destructive ${badgeCls}`}>상장폐지</Badge>
           )}
         </div>
         <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap${decision ? ` ${DOT_WRAP_ROW}` : ""}`}>

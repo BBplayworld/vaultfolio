@@ -86,7 +86,7 @@ export const PARAM_VALUES = {
     "settled", "in_progress", "first_month",
   ],
   source: ["web", "pwa", "inapp", "settings", "more", "home_tip", "whats_new", "share_card", "install", "fab", "wizard", "welcome", "dashboard", "top_bar", "detail", "card", "menu", "settlement", "report", "home_week", "push", "activity", "invest"],
-  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "guide_open", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "home_my_stock", "home_compose_cash", "home_compose_loan", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab", "grow_pick", "grow_other_label", "home_tip_due", "stock_decision", "stock_check_tile", "stock_decision_view", "trade_new_stock", "trade_new_stock_linked", "invest_index_spx", "invest_index_ndx", "invest_index_kospi", "invest_three", "invest_decade", "invest_ratio", "invest_overlay", "invest_table", "invest_calc", "invest_rise_tab", "invest_pattern", "invest_year_pick", "invest_drop_open", "invest_phase_table", "invest_recession", "invest_range", "invest_my_start", "invest_my_xray", "guide_move"],
+  category: ["xray", "tax_sim", "home_tip", "home_tip_notify", "persist_ok", "persist_denied", "whats_new", "feedback", "theme", "ai_prompt", "demo", "guide_open", "ratio_preview", "share_card", "app_guide", "install_nudge", "install_nudge_tap", "sync_overwrite_notice", "sync_overwrite_undo", "resync_start", "resync_apply", "resync_undo", "balance_resync", "resync_continue", "save_failed", "linked_trade", "change_scope_stock", "change_week_all", "stock_sort_rate", "relink", "settlement_ics", "home_cause_open", "home_market", "home_my_stock", "home_compose_cash", "home_compose_loan", "profit_basis_settings", "profit_basis_chart", "push_on", "push_off", "push_denied", "push_click_morning", "push_click_kr", "push_click_settle", "push_click_tax", "year_settlement", "grow_label", "grow_check", "grow_revisit", "grow_plan", "grow_grade_tab", "grow_pick", "grow_other_label", "home_tip_due", "stock_decision", "stock_check_tile", "stock_decision_view", "trade_new_stock", "trade_new_stock_linked", "invest_index_spx", "invest_index_ndx", "invest_index_kospi", "invest_three", "invest_decade", "invest_ratio", "invest_overlay", "invest_table", "invest_calc", "invest_rise_tab", "invest_pattern", "invest_year_pick", "invest_drop_open", "invest_phase_table", "invest_recession", "invest_range", "invest_my_start", "invest_my_xray", "guide_move", "tip_view_backup", "tip_click_backup", "tip_view_tax", "tip_click_tax", "tip_view_settlement", "tip_click_settlement", "tip_view_due", "tip_view_whats_new", "tip_click_whats_new", "tip_view_relink", "tip_click_relink", "tip_view_refresh", "tip_click_refresh", "tip_view_notify", "tip_view_feature", "tip_click_feature"],
   step: ["1", "2", "3", "4", "5", "start", "stock", "crypto", "cash", "loan", "complete", "exit"],
   content_type: ["stock", "portfolio", "type", "link"],
   // 화면 테마(#4.42) — 앱 시작 시 현재 모드, 전환 시 새 모드. page_title 결정에만 쓴다
@@ -261,6 +261,23 @@ const CATEGORY_TITLES: Partial<Record<NonNullable<GaParams["category"]>, string>
   grow_other_label: "내 자산 불리기·주식 외 정함", // 이 기기의 저장으로 코인·부동산·실물 유효 이름표가 0 → 1이 될 때 1회(동기화 수신은 0)
   // #245(5.130) 내 종목 화면이 내 결정을 안다 — 종목·값·건수 미전송. 판정 지표는 타일 title뿐, 나머지 3개는 관찰용
   home_tip_due: "홈 팁·점검 차례", // 홈 `점검 차례` 팁을 누를 때(기존 `홈 팁·누름`도 함께 나간다)
+  // #290(5.148) 홈 팁 종류별 보임·누름 — 기존 `홈 팁`·`홈 팁·누름` 전송은 그대로 두고 종류만 더한다(점검 차례·알림 누름은 기존 title 사용)
+  tip_view_backup: "홈 팁 보임·백업",
+  tip_click_backup: "홈 팁 누름·백업",
+  tip_view_tax: "홈 팁 보임·세금",
+  tip_click_tax: "홈 팁 누름·세금",
+  tip_view_settlement: "홈 팁 보임·결산",
+  tip_click_settlement: "홈 팁 누름·결산",
+  tip_view_due: "홈 팁 보임·점검 차례",
+  tip_view_whats_new: "홈 팁 보임·새 소식",
+  tip_click_whats_new: "홈 팁 누름·새 소식",
+  tip_view_relink: "홈 팁 보임·끊긴 거래",
+  tip_click_relink: "홈 팁 누름·끊긴 거래",
+  tip_view_refresh: "홈 팁 보임·최신화",
+  tip_click_refresh: "홈 팁 누름·최신화",
+  tip_view_notify: "홈 팁 보임·알림",
+  tip_view_feature: "홈 팁 보임·기능",
+  tip_click_feature: "홈 팁 누름·기능",
   stock_decision: "상세·주식·내 결정", // 점검 한 장 진입(종목 한 장 머리·차례 행 펼침 공통)을 누를 때
   stock_check_tile: "상세·주식·내 자산 점검", // 상세·주식 `내 자산 점검` 타일을 누를 때
   stock_decision_view: "상세·주식·내 결정 보임", // 상세·주식 목록에 정한 종목 행이 1개 이상일 때 페이지 수명당 1회(저장 키 0)

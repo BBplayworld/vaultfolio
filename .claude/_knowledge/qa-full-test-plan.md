@@ -358,6 +358,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 자동: `src/lib/report/__tests__/asset-grade.test.ts` (미작성 — 후속 과제)
 
 ### F-HUB. 집중도·허브·대시보드
+- 👤 **상세 허브 추가하기 줄(5.148 #290)**: 보유 자산군 카드만(고정 순서) + 0건 자산군은 맨 아래 `hub-add-row` 칩(주식→부동산→암호화폐→현금→대출, 실물 제외), 칩 누름 = 해당 자산군 `open-add-asset-sheet`, 6종 0건이면 0건 카드 5장·줄 없음, 공유 캡처에 줄 없음, 칩 40px·320 줄바꿈
 - 👤 `detail-hub`(카테고리별 평가손익·건수), `performance-hub`(순자산·수익·배당 KPI), `dashboard` 도넛/금융자산 바
 - 엣지: 빈 카테고리 클릭 비활성, 단일 종목, 0·음수 값
 - ⚙ `assignColors` 최대값=MAIN_PALETTE[0]
@@ -542,11 +543,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-ONBOARD. 튜토리얼·온보딩 ([welcome-guide.tsx](../../src/app/(main)/_components/layout/onboarding/welcome-guide.tsx) · [app-guide.tsx](../../src/app/(main)/_components/header-menu/app-guide.tsx))
 - 👤 웰컴가이드(자산 0개)에서 대시보드 미리보기 영역이 실제 `dashboard.tsx` 컴포넌트를 공통 사용하여 동일 포맷으로 노출되며, 미리보기 카드 내부의 클릭이나 모든 액션들이 완전 차단 및 방지되는지 확인, 앱가이드 단독 보기, 튜토리얼 step 진행/스킵
 - ⚙ **루트 첫 화면 사전 조각(#4.61)**: 로컬 운영 빌드 `curl /` 원본 HTML에 h1 1개·`나만의 비밀 자산 금고`·부제·신뢰 3항목·`first-paint-shell`, `/?trial=1`에는 부재. 키 3개(`secretasset_asset_data`·`secretasset.physical_assets`·`secretasset-asset-data`) 중 하나라도 있으면 `html[data-has-assets]` → 조각 `display:none`(보유자 노출 0프레임). 0건 기기는 조각→웰컴 전환 시 h1·신뢰 줄 위치 이동 0·`getAnimations()` 0·h1 동시 ≤1·hydration 경고 0. 인앱 0건(해시 없음)은 `inapp-gate-cover` 0. 회귀 테스트 `onboarding/__tests__/welcome-intro.test.tsx`
-- 👤 **첫 화면 순서(#4.35)**: 히어로 < 신뢰 한 줄(+자세히 보기) < 보안 상세 < 예시 순자산 < CTA 슬롯 < 주식 미리보기 (< 설치 박스: 데스크톱만). 375×812 스크롤 0(진입 모션 후)에 제목·신뢰 줄·순자산 금액·설치/바로 시작 버튼이 보인다. 접힘 상태 가시 텍스트에 PBKDF2·Ed25519·blob 없음, "로그인 없" 1회
+- 👤 **첫 화면 순서(#4.35)**: 히어로 < 신뢰 한 줄(+자세히 보기) < 보안 상세 < CTA 슬롯 < 예시 순자산 < 안내 문장 (주식 미리보기 없음, 5.148 #292) (< 설치 박스: 데스크톱만). 375×812 스크롤 0(진입 모션 후)에 제목·신뢰 줄·순자산 금액·설치/바로 시작 버튼이 보인다. 접힘 상태 가시 텍스트에 PBKDF2·Ed25519·blob 없음, "로그인 없" 1회
 - 👤 **보안 안내 문구(#4.38)**: 웰컴 보안 상세·앱가이드 카드 3쌍이 문자 단위로 같다(`SECURITY_COPY`). 구 문구 0건("절대 벗어나지"·"원천 불가"·"문제없습니다"·"(blob)"·"(pubKey)"·"E2EE 암호학적" — 정정 7파일+`security-copy.ts` 한정), 업로드 박스 4종 문구·클래스 동일·테두리 0, 동기화 메뉴 설명 마지막 문장 상수(preview에선 `cs.enabled=false`라 미렌더 → 정적 테스트). 320·375에서 "저장·/전송" 분리 0, 신뢰 한 줄 "… 저장 · / 원하면 암호화 동기화". 금고 암호 문장(cloud-sync-menu-entry·connect-dialog)·home-tip 백업 팁·config/app.ts 무변경. 자동: `src/config/__tests__/security-copy.test.tsx`
 - 👤 **보안 상세 펼침**: 토글 1회 탭 → 3카드(`SECURITY_COPY`) 노출, 재탭 접힘, 새로고침 시 접힘(저장 없음). 같은 노드 유지(grid-rows 전환), 닫힘 `inert`·`invisible`. 토글은 gtag 호출 0
 - 👤 **모바일 웹 미설치(#4.86)**: CTA 슬롯 `data-state=asset` — 설치 버튼·"웹에서 바로 시작"·캡션 없음(화면에 `웹앱 설치하기` 0개). "스크린샷으로 자산 등록"(brand) + "직접 입력 · 가져오기" 팝오버(직접 입력 라벨 + 부동산·주식·암호화폐·현금성 자산·대출 5행 → 구분선 → 가져오기 2행). 행 탭 → 팝오버 닫힘 + 해당 자산군 추가 창 1개, `onboarding_action{manual}` 1회(`asset_add_start` 없음). pending 셸 높이 모바일 216px = asset 높이(점프 0). 첫 저장 뒤 홈 #78 안내로 설치
-- 👤 **데스크톱·standalone(설치된 앱)**: 슬롯 `asset`(자산 등록 CTA 바로 노출). 데스크톱 미설치는 주식 미리보기 아래 설치 박스(설치 버튼 1개)
+- 👤 **데스크톱·standalone(설치된 앱)**: 슬롯 `asset`(자산 등록 CTA 바로 노출). 데스크톱 미설치는 안내 문장 아래 설치 박스(설치 버튼 1개)
 - 👤 **링크 미리보기(#4.35)**: `og:image` = `${siteUrl}/og-image.png`(1200×630, 텍스트 "안전한 자산 관리,"·"시크릿에셋"만), `twitter:card=summary_large_image`. 이미지 교체 시 파일명 변경(크롤러 캐시)
 - ⚙ 분기 키: `welcomeCtaState({ mounted, isStandalone, isInApp })` → pending/inapp/asset(#4.38 inapp은 mounted 다음 최우선, standalone이면 제외). 마운트 전 pending 빈 셸(hydration 불일치·깜빡임 없음). 회귀 테스트 `onboarding/__tests__/welcome-guide.test.tsx`(정적 마크업·GA 매핑·`PARAM_VALUES` 스냅샷·저장 경로 grep)
 - ⚙ `app-guide.tsx`는 `useState/useEffect` 사용 → `"use client"` 지시어 필수(서버 컴포넌트 빌드 에러 방지)

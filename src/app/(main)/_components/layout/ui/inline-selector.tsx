@@ -63,7 +63,7 @@ export function InlineSelector<T extends string>({
             className={`${base} whitespace-nowrap shrink-0 rounded transition-colors ${disabled
               ? "text-muted-foreground/40 cursor-not-allowed"
               : active
-                ? "bg-background text-foreground font-semibold shadow-sm"
+                ? "bg-background dark:bg-foreground/15 dark:ring-1 dark:ring-inset dark:ring-foreground/50 text-foreground font-semibold shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
               }`}
           >

@@ -287,12 +287,12 @@ export function StockTradesView() {
         {/* 기간 요약 스탯 */}
         <div className="grid grid-cols-2 gap-2">
           <div data-testid="trades-stat-buy" className="rounded-xl bg-red-500/5 dark:bg-card dark:shadow-sm px-3 py-2">
-            <p className="flex items-center gap-1 text-sm text-red-500"><TrendingUp className="size-3" /> 매수</p>
+            <p className="flex items-center gap-1 text-sm text-red-500 dark:text-rose-400"><TrendingUp className="size-3" /> 매수</p>
             <p className="font-bold tabular-nums">{stats.buyQty.toLocaleString()}주</p>
             <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.buyAmt))}</p>
           </div>
           <div data-testid="trades-stat-sell" className="rounded-xl bg-blue-500/5 dark:bg-card dark:shadow-sm px-3 py-2">
-            <p className="flex items-center gap-1 text-sm text-blue-500"><TrendingDown className="size-3" /> 매도</p>
+            <p className="flex items-center gap-1 text-sm text-blue-500 dark:text-blue-400"><TrendingDown className="size-3" /> 매도</p>
             <p className="font-bold tabular-nums">{stats.sellQty.toLocaleString()}주</p>
             <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.sellAmt))}</p>
           </div>
@@ -318,7 +318,7 @@ export function StockTradesView() {
                     const amt = tx.price * tx.quantity * (tx.currency === "KRW" ? 1 : mul);
                     return (
                       <div key={tx.id} className="flex items-center gap-2 rounded-lg px-3 dark:px-0 py-2.5 text-sm group/item">
-                        <span className={`text-xs font-bold shrink-0 w-8 ${tx.type === "buy" ? "text-red-500" : "text-blue-500"}`}>
+                        <span className={`text-xs font-bold shrink-0 w-8 ${tx.type === "buy" ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                           {tx.type === "buy" ? "매수" : "매도"}
                         </span>
                         <div className="min-w-0 flex-1">

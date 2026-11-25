@@ -136,12 +136,12 @@ export function CryptoTxView() {
         {/* 요약 */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl bg-red-500/5 px-3 py-2">
-            <p className="flex items-center gap-1 text-sm text-red-500"><TrendingUp className="size-3" /> 매수</p>
+            <p className="flex items-center gap-1 text-sm text-red-500 dark:text-rose-400"><TrendingUp className="size-3" /> 매수</p>
             <p className="font-bold tabular-nums">{stats.buyQty.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</p>
             <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.buyAmt))}</p>
           </div>
           <div className="rounded-xl bg-blue-500/5 px-3 py-2">
-            <p className="flex items-center gap-1 text-sm text-blue-500"><TrendingDown className="size-3" /> 매도</p>
+            <p className="flex items-center gap-1 text-sm text-blue-500 dark:text-blue-400"><TrendingDown className="size-3" /> 매도</p>
             <p className="font-bold tabular-nums">{stats.sellQty.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</p>
             <p className="text-sm text-muted-foreground tabular-nums">{formatCurrency(Math.round(stats.sellAmt))}</p>
           </div>
@@ -168,7 +168,7 @@ export function CryptoTxView() {
               const isBuy = t.type === "buy";
               return (
                 <div key={t.id} className="flex items-center gap-3 py-2.5">
-                  <span className={`text-xs font-bold shrink-0 w-8 ${isBuy ? "text-red-500" : "text-blue-500"}`}>
+                  <span className={`text-xs font-bold shrink-0 w-8 ${isBuy ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isBuy ? "매수" : "매도"}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -178,7 +178,7 @@ export function CryptoTxView() {
                     </div>
                     <p className="text-sm text-muted-foreground tabular-nums">{t.date}{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>
-                  <span className={`text-sm font-bold tabular-nums shrink-0 ${isBuy ? "text-red-500" : "text-blue-500"}`}>
+                  <span className={`text-sm font-bold tabular-nums shrink-0 ${isBuy ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isBuy ? "+" : "−"}{formatCurrency(t.price * t.quantity)}
                   </span>
                   <Button size="icon" variant="secondary" className="size-7.5 shrink-0" title="삭제" onClick={() => confirmDelete(t)}>

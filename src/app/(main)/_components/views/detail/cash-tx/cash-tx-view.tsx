@@ -117,11 +117,11 @@ export function CashTxView() {
         <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/30 dark:bg-card dark:rounded-xl dark:shadow-sm px-3 py-3">
           <div>
             <p className="text-sm text-muted-foreground">입금</p>
-            <p className="text-sm font-bold tabular-nums text-red-500">+{formatCurrencyDisplay(stats.dep, currency)}</p>
+            <p className="text-sm font-bold tabular-nums text-red-500 dark:text-rose-400">+{formatCurrencyDisplay(stats.dep, currency)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">출금</p>
-            <p className="text-sm font-bold tabular-nums text-blue-500">−{formatCurrencyDisplay(stats.wd, currency)}</p>
+            <p className="text-sm font-bold tabular-nums text-blue-500 dark:text-blue-400">−{formatCurrencyDisplay(stats.wd, currency)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">순유입</p>
@@ -158,7 +158,7 @@ export function CashTxView() {
                     </div>
                     <p className="text-sm text-muted-foreground tabular-nums">{t.date}{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>
-                  <span className={`text-sm font-bold tabular-nums shrink-0 ${isDep ? "text-red-500" : "text-blue-500"}`}>
+                  <span className={`text-sm font-bold tabular-nums shrink-0 ${isDep ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isDep ? "+" : "−"}{formatCurrencyDisplay(t.amount, t.currency)}
                   </span>
                   <Button size="icon" variant="secondary" className="size-7.5 shrink-0" title="삭제" onClick={() => confirmDelete(t)}>

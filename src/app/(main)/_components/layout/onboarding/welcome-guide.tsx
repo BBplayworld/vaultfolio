@@ -12,8 +12,7 @@ import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { TreemapItem, NetAssetSummaryBox } from "@/app/(main)/_components/views/home/dashboard";
-import { StockSummaryHeader, StockCategorySection, StockRowItem } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
-import { assignColors, computeStockMetrics, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
+import { assignColors, getMultiplier } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import { Stock } from "@/types/asset";
 import { PwaInstallFlow } from "../../pwa/pwa-install-flow";
 import { InAppExternalGuide } from "../../pwa/in-app-external-guide";
@@ -59,19 +58,6 @@ const finBase = [
 ].filter((d) => d.value > 0);
 const finColors = assignColors(finBase);
 const PREVIEW_FIN_BAR = finBase.map((d, i) => ({ ...d, color: finColors[i] }));
-
-const foreignStocks = PREVIEW_STOCKS.filter((s) => s.category === "foreign").sort(
-  (a, b) => b.quantity * b.currentPrice * EXCHANGE_RATES.USD - a.quantity * a.currentPrice * EXCHANGE_RATES.USD,
-);
-const foreignTotal = foreignStocks.reduce((s, st) => s + st.quantity * st.currentPrice * EXCHANGE_RATES.USD, 0);
-const foreignBarValues = foreignStocks.map((st) => ({ value: st.quantity * st.currentPrice * EXCHANGE_RATES.USD }));
-const foreignBarColors = assignColors(foreignBarValues);
-const PREVIEW_BAR_ITEMS = foreignStocks.map((st, i) => ({ stock: st, value: foreignBarValues[i].value, color: foreignBarColors[i] }));
-const foreignMetrics = foreignStocks.map((st) => computeStockMetrics(st, EXCHANGE_RATES, foreignTotal));
-const foreignProfit = foreignMetrics.reduce((s, m) => s + m.profit, 0);
-const foreignCurrencyGain = foreignMetrics.reduce((s, m) => s + m.currencyGain, 0);
-const foreignCost = foreignTotal - foreignProfit;
-const foreignProfitRate = foreignCost > 0 ? (foreignProfit / foreignCost) * 100 : 0;
 
 // ── GA 호출 조건 고정용 순수 매핑(#48) — 위치만 바뀌고 값·조건은 기존과 동일
 /** welcome_view source 판정: standalone → pwa, 인앱 → inapp, 그 외 → web */
@@ -193,76 +179,38 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
         </div>
       </div>
 
-      {/* ③ 예시 순자산 미리보기 */}
-      <div data-testid="welcome-preview-net" className={`space-y-3 ${ENTER}`} style={{ animationDelay: "120ms" }}>
-        <PreviewLabel
-          title="포트폴리오 미리보기"
-          action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink inApp={ctaState === "inapp"} /> : undefined}
-        />
-        <NetAssetSummaryBox
-          netAsset={netAsset}
-          treemapData={PREVIEW_TREEMAP}
-          change={{ deltaNet: previewData.dailyProfit, pct: previewData.dailyProfitRate, isBig: false, negligible: false, label: "전일 대비", estimated: false, sentence: null, causes: [] }}
-          screenshotMode={true}
-          showRealtimeBadge={true}
-        />
-      </div>
-
-      {/* ④ 시작 CTA 단일 슬롯(#33 대체 지점) — 셸 노드는 상태가 바뀌어도 유지, 안쪽 콘텐츠만 교체 */}
+      {/* ③ 시작 CTA 단일 슬롯(#292 신뢰 줄 바로 아래로)(#33 대체 지점) — 셸 노드는 상태가 바뀌어도 유지, 안쪽 콘텐츠만 교체 */}
       <div
         data-testid="welcome-cta-slot"
         data-state={ctaState}
         className={`rounded-xl bg-card/80 shadow-xs p-4 sm:p-6 min-h-[216px] sm:min-h-[160px] ${ENTER}`}
-        style={{ animationDelay: "180ms" }}
+        style={{ animationDelay: "120ms" }}
       >
         {ctaState === "inapp" && <WelcomeInAppCta isIOS={isIOS} />}
         {ctaState === "asset" && <WelcomeAssetCta standalone={isStandalone} focusOnMount={focusCta} pick={trialPick} />}
       </div>
 
-      {/* ⑤ 주식 미리보기 — 실제 stock-tab 과 동일하게 카드 박스 없이 노출 */}
-      <div data-testid="welcome-preview-stock" className="space-y-3">
-        <PreviewLabel title="주식 미리보기" />
-        <div className="space-y-4">
-          <StockSummaryHeader
-            totalValue={foreignTotal}
-            totalProfit={foreignProfit}
-            totalProfitRate={foreignProfitRate}
-            currencyGain={foreignCurrencyGain}
-            screenshotMode={false}
+      {/* ④ 예시 순자산 미리보기 + 안내 문장(한 묶음, #292 — 주식 미리보기는 제거) */}
+      <div className={`space-y-2 ${ENTER}`} style={{ animationDelay: "180ms" }}>
+        <div data-testid="welcome-preview-net" className="space-y-3">
+          <PreviewLabel
+            title="포트폴리오 미리보기"
+            action={mounted && allowTrial && !restoreHash ? <WelcomeTrialLink inApp={ctaState === "inapp"} /> : undefined}
           />
-
-          {/* 주식 상세 — 해외주식 고정 */}
-          <StockCategorySection
-            activeCategory="foreign"
-            onCategoryChange={() => { }}
-            filteredStocks={foreignStocks}
-            totalValue={foreignTotal}
-            barItems={PREVIEW_BAR_ITEMS}
-            barColors={foreignBarColors}
+          <NetAssetSummaryBox
+            netAsset={netAsset}
+            treemapData={PREVIEW_TREEMAP}
+            change={{ deltaNet: previewData.dailyProfit, pct: previewData.dailyProfitRate, isBig: false, negligible: false, label: "전일 대비", estimated: false, sentence: null, causes: [] }}
             screenshotMode={true}
-            renderItem={(stock, _isFirst, color) => {
-              const m = computeStockMetrics(stock, EXCHANGE_RATES, foreignTotal);
-              return (
-                <StockRowItem
-                  key={stock.id}
-                  stock={stock}
-                  color={color}
-                  pct={m.pct}
-                  currentVal={m.currentVal}
-                  profit={m.profit}
-                  profitRate={m.profitRate}
-                  screenshotMode={true}
-                />
-              );
-            }}
+            showRealtimeBadge={true}
           />
         </div>
+        <p className={`text-2xs text-center break-keep ${ASSET_THEME.distributionCard.muted}`}>
+          실제 자산을 입력하면 이 화면이 내 포트폴리오로 채워집니다.
+        </p>
       </div>
-      <p className={`text-2xs text-center break-keep ${ASSET_THEME.distributionCard.muted}`}>
-        실제 자산을 입력하면 이 화면이 내 포트폴리오로 채워집니다.
-      </p>
 
-      {/* ⑥ PWA 웹앱 설치 유도(데스크톱·태블릿 미설치) — 홈 설치 버튼과 동일한 설치 흐름(PwaInstallFlow) 공용 사용 */}
+      {/* ⑤ PWA 웹앱 설치 유도(데스크톱·태블릿 미설치) — 홈 설치 버튼과 동일한 설치 흐름(PwaInstallFlow) 공용 사용 */}
       {showInstallBox && (
         <div data-testid="welcome-install-box" className="rounded-xl bg-primary/5 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center gap-3">

@@ -7,7 +7,7 @@
 // 인터랙션은 모두 "카드 전체 클릭 = 유일한 동작, X = 닫기"로 통일.
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { track } from "@/lib/analytics/ga";
+import { track, type GaParams } from "@/lib/analytics/ga";
 import { ShieldAlert, Receipt, RefreshCw, Lightbulb, Sparkles, CalendarCheck, Link2, Bell, ListChecks, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAssetData } from "@/contexts/asset-data-context";
@@ -34,6 +34,8 @@ import { ASSET_THEME } from "@/config/theme";
 import { useAssetNavigation } from "../../layout/navigation/navigation-context";
 import { formatSettlementPoint, settlementWindowName, type SettlementWindow } from "@/lib/report/settlement";
 import type { MarketLineState } from "@/lib/finance/market-compare";
+
+type HomeTipCategory = NonNullable<GaParams["category"]>;
 
 export const NOTIFY_OFFER_ID = "notify-offer";
 
@@ -99,6 +101,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
       if (lastViewKey.current !== key) {
         lastViewKey.current = key;
         track("feature_use", { category: picked.kind === "notify" ? "home_tip_notify" : "home_tip", method: "view" });
+        track("feature_use", { category: `tip_view_${picked.kind}` as HomeTipCategory }); // 종류별 보임(#290)
       }
     }
   }, [assetData, hasAssets, cs.status, isDataLoaded, marketLine, labelsReady, dueTip]);
@@ -129,6 +132,8 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
   const activate = () => {
     keepShownRef.current = undefined;
     track("feature_use", { category: tip.kind === "notify" ? "home_tip_notify" : "home_tip", method: "click" });
+    // 종류별 누름(#290) — 점검 차례·알림은 기존 title(`홈 팁·점검 차례`·`홈 팁·알림·누름`)이 있어 추가 없음
+    if (tip.kind !== "due" && tip.kind !== "notify") track("feature_use", { category: `tip_click_${tip.kind}` as HomeTipCategory });
     if (tip.kind === "backup") {
       try {
         if (!exportAssetData(assetData)) {
@@ -210,7 +215,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
         <Icon className={`size-4 mt-0.5 shrink-0 ${ASSET_THEME.important}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-bold text-orange-600 dark:text-orange-400">
+            <span className="rounded bg-orange-500/10 dark:bg-orange-500/5 px-1.5 py-0.5 text-xs font-bold text-orange-600 dark:text-orange-400">
               {badgeLabel}
             </span>
             <p data-testid="home-tip-title" className="text-sm font-semibold text-foreground text-pretty break-keep wrap-break-word">{title}</p>
