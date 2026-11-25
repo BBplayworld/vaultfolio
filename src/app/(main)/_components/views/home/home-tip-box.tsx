@@ -215,7 +215,7 @@ export function HomeTipBox({ marketLine = "off" }: { marketLine?: MarketLineStat
         <Icon className={`size-4 mt-0.5 shrink-0 ${ASSET_THEME.important}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-bold text-orange-600 dark:text-orange-400">
+            <span className="rounded bg-orange-500/10 dark:bg-orange-500/5 px-1.5 py-0.5 text-xs font-bold text-orange-600 dark:text-orange-400">
               {badgeLabel}
             </span>
             <p data-testid="home-tip-title" className="text-sm font-semibold text-foreground text-pretty break-keep wrap-break-word">{title}</p>

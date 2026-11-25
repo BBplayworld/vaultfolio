@@ -184,7 +184,7 @@ function TaxEventCard({ event, tags }: { event: TaxEvent; tags: TaxTagReasons })
             <span
               className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold tabular-nums ${
                 event.severity === "high"
-                  ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                  ? "bg-orange-500/10 dark:bg-orange-500/5 text-orange-600 dark:text-orange-400"
                   : "bg-muted text-muted-foreground"
               }`}
             >
