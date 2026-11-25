@@ -38,15 +38,15 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
                 <div className={`${ASSET_THEME.cardInfoTitle} min-w-0 flex-nowrap`}>
                   <span className={`${ASSET_THEME.cardInfoName} min-w-0`} title={item.name.length > 10 ? item.name : undefined}>{item.name}</span>
                 </div>
-                <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">{type.shortLabel} · <span className="font-semibold text-primary tabular-nums">{pct.toFixed(1)}%</span></span>
+                <div className={`${ASSET_THEME.cardInfoMeta} min-w-0`}>
+                  <span className="text-sm text-muted-foreground max-[359px]:whitespace-normal min-[360px]:whitespace-nowrap">{type.shortLabel} · <span className="font-semibold text-primary tabular-nums">{pct.toFixed(1)}%</span></span>
                 </div>
               </div>
-              <div className={ASSET_THEME.cardInfoRight}>
+              <div className={`${ASSET_THEME.cardInfoRight} max-[359px]:max-w-[45%]`}>
                 <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default} whitespace-nowrap`}>{formatPriceByMode(item.currentValue)}</p>
-                <div data-testid="profit-text" data-zero={tone.isZero} className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass}`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
-                  <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass}`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
+                <div data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardAmountProfitRow} max-sm:flex-wrap max-sm:justify-end`}>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass} whitespace-nowrap`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
+                  <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass} whitespace-nowrap`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
                 </div>
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
