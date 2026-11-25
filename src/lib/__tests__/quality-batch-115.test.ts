@@ -195,7 +195,7 @@ describe("D·E. 정적 배선", () => {
   it("E: 도움말 <p>에 break-keep text-pretty", () => {
     for (const f of ["cash-tx-input", "loan-tx-input"]) {
       const t = read(`app/(main)/_components/forms/asset-update/input/${f}.tsx`);
-      expect(t).toMatch(/data-testid="tx-help"[^>]*break-keep text-pretty[^>]*>해제 시 기록만 남기고 잔액은 변경하지 않습니다 \(과거 소급용\)/);
+      expect(t).toMatch(/data-testid="tx-help"[^>]*break-keep text-pretty[^>]*>이미 잔액에 들어간 거래면 해제하세요. 기록만 남고 잔액은 그대로예요/);
     }
   });
 });

@@ -925,10 +925,10 @@ export function TradeInput() {
                       <FormLabel className="text-sm font-medium cursor-pointer">
                         보유 수량에 즉시 반영
                       </FormLabel>
-                      <p className="text-sm text-muted-foreground mt-0.5 break-keep">
+                      <p data-testid="record-only-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">
                         {isNewSelected
                           ? "신규 자산은 보유 반영 설정과 무관하게 항상 반영됩니다"
-                          : "해제 시 거래 기록만 남기고 포지션은 변경하지 않습니다"}
+                          : "이미 보유 수량에 들어간 거래면 해제하세요. 기록만 남고 보유 수량은 그대로예요"}
                       </p>
                     </div>
                   </FormItem>

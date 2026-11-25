@@ -419,8 +419,8 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
               <Checkbox checked={reflectToHoldings} onCheckedChange={(v) => setReflectToHoldings(!!v)} />
               <div className="leading-none">
                 <span className="text-sm font-medium">보유 수량·평단에 반영</span>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  해제 시 거래 기록만 남기고 보유 수량/평단은 변경하지 않습니다
+                <p data-testid="record-only-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">
+                  이미 보유 수량에 들어간 거래면 해제하세요. 기록만 남고 보유 수량은 그대로예요
                 </p>
               </div>
             </label>
