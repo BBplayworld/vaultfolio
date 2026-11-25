@@ -75,7 +75,6 @@ export function DetailHub() {
           <KpiCard
             icon={TrendingUp}
             title="주식"
-            description="국내·해외 보유 종목"
             primary={formatPriceByMode(s.stockValue)}
             primaryClassName={ASSET_THEME.text.default}
             secondary={s.stockCount > 0
@@ -89,7 +88,6 @@ export function DetailHub() {
           <KpiCard
             icon={Building2}
             title="부동산"
-            description="보유 부동산"
             primary={formatPriceByMode(s.realEstateValue)}
             primaryClassName={ASSET_THEME.text.default}
             secondary={s.realEstateCount > 0
@@ -103,7 +101,6 @@ export function DetailHub() {
           <KpiCard
             icon={Bitcoin}
             title="암호화폐"
-            description="보유 코인"
             primary={formatPriceByMode(s.cryptoValue)}
             primaryClassName={ASSET_THEME.text.default}
             secondary={s.cryptoCount > 0
@@ -117,7 +114,6 @@ export function DetailHub() {
           <KpiCard
             icon={Wallet}
             title="현금"
-            description="현금성 자산"
             primary={formatPriceByMode(s.cashValue)}
             primaryClassName={ASSET_THEME.text.default}
             secondary={countLine(s.cashCount, "건")}
@@ -131,7 +127,6 @@ export function DetailHub() {
             <KpiCard
               icon={Gem}
               title="실물 자산"
-              description="금·은·귀금속 등 직접 보관 자산"
               primary={formatPriceByMode(s.physicalValue)}
               primaryClassName={ASSET_THEME.text.default}
               secondary={profitLine(s.physicalProfit, s.physicalCost > 0 ? (s.physicalProfit / s.physicalCost) * 100 : null)}
@@ -144,7 +139,6 @@ export function DetailHub() {
           <KpiCard
             icon={CreditCard}
             title="대출"
-            description="대출 잔액"
             primary={formatPriceByMode(s.loanBalance)}
             primaryClassName={ASSET_THEME.text.default}
             secondary={countLine(s.loanCount, "건")}

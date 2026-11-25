@@ -9,7 +9,7 @@ import { ASSET_THEME } from "@/config/theme";
 interface KpiCardProps {
   icon: LucideIcon;
   title: ReactNode;
-  description: ReactNode;
+  description?: ReactNode; // 없으면 설명 줄 생략(제목 되풀이 문구는 두지 않는다, 5.152)
   primary?: ReactNode; // 없으면 금액 줄 생략(안내만 보여줄 때)
   secondary?: ReactNode;
   onClick: () => void;
@@ -29,7 +29,7 @@ export function KpiCard({ icon: Icon, title, description, primary, secondary, on
           <h3 className="text-base font-bold text-foreground">{title}</h3>
           <ChevronRight className="size-4 text-muted-foreground shrink-0" />
         </div>
-        <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+        {description != null && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
         {primary !== undefined && (
           <p className={`text-xl md:text-2xl font-bold tabular-nums mt-2 ${primaryClassName || ASSET_THEME.important}`}>
             {primary}
