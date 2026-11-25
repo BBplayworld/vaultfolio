@@ -19,7 +19,7 @@
 | **v5.143** [PR #289](https://github.com/BBplayworld/vaultfolio/pull/289) | 투자 탭 폐지 → 상세·성과 2탭 | **운영 반영 11/24 14:56 KST** · 운영 스모크 PASS | 4주 판독(12/22 전후) |
 | **v5.144** [PR #291](https://github.com/BBplayworld/vaultfolio/pull/291) | #288 R1 — 상세·성과 중복 입구·안 쓰는 버튼 4개 정리 | **운영 반영 11/25 01:13 KST** · 운영 스모크 PASS | 4주 판독(실패 기준: 핵심 4화면 중 2개 동시 3기기↓) · R2 12/20 후 |
 | **v5.145** [PR #294](https://github.com/BBplayworld/vaultfolio/pull/294) | #293 대표 제보 — 과거 소급(미반영) 입출금이 성과 원인 순유입으로 | **운영 반영 11/25 20:19 KST** · 운영 스모크 PASS | — |
-| **v5.148** [#290](https://github.com/BBplayworld/vaultfolio/issues/290)·[#292](https://github.com/BBplayworld/vaultfolio/issues/292) | 홈·상세·성과 강화 1차 + 웰컴 첫 화면 등록 버튼 올리기 | spec·ui·판독 정의 완료(CEO 판정) | **11/26 09:13 개발 착수** → qa → CEO 머지 |
+| **v5.148** [#290](https://github.com/BBplayworld/vaultfolio/issues/290)·[#292](https://github.com/BBplayworld/vaultfolio/issues/292) | 홈·상세·성과 강화 1차 + 웰컴 첫 화면 등록 버튼 올리기 | **개발 중(11/25 20:50 대표 지시로 앞당김)** | qa → ui-review → CEO 머지 |
 
 ## 📅 다가오는 확인
 - 11/25: GA CSV 기록 — 투자 탭·가이드 9편 기기 수, #249·#245 반응, D12 발굴(웰컴 빼기·사용 적은 화면 합치기)
