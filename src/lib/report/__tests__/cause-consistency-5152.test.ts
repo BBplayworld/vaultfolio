@@ -33,6 +33,13 @@ function run(opts: { mutate: Mut; rates?: typeof R0; noCashAccount?: boolean }) 
 }
 const cashTx = (id: string, type: "deposit" | "withdrawal", amount: number, reflected = true) =>
   ({ id, cashId: "c_krw", date: "2026-11-10", type, amount, currency: "KRW", reflected }) as AssetData["cashTransactions"][number];
+// 매수 반영: 수량·평균단가를 함께 갱신(평단을 두고 수량만 늘리면 시세 효과가 왜곡된다)
+const applyBuy = (d: AssetData, qty: number, price: number) => {
+  const st = d.stocks[0];
+  st.averagePrice = (st.quantity * st.averagePrice + qty * price) / (st.quantity + qty);
+  st.quantity += qty;
+  d.transactions = [buyTx(qty, price)];
+};
 const buyTx = (qty: number, price: number) =>
   ({ id: "b1", stockId: "s_kr", ticker: "005930", stockName: "국내주식", type: "buy", quantity: qty, price, currency: "KRW", date: "2026-11-10", reflected: true, createdAt: "2026-11-10T01:00:00.000Z" }) as AssetData["transactions"][number];
 
@@ -56,20 +63,19 @@ describe("E 원인 일관성 — 같은 사건 × 홈·주·월·연", () => {
     // 의도: #293 기준 — 이미 잔액에 든 변화는 4화면 모두 순유입(차이 없음)
     eq(r, { home: { income: 2 * M }, week: { income: 2 * M }, month: { income: 2 * M }, year: { income: 2 * M } });
   });
-  it("E3 짝 없는 주식 매수 6백만(현금 계좌 없음)", () => {
-    const r = run({ noCashAccount: true, mutate: (d) => { d.stocks[0].quantity += 100; d.transactions = [buyTx(100, 60000)]; } });
-    // 의도: 월·연은 cashTracked=false(현금 미등록)라 사고판 금액 순액을 `순유입`으로(4.94 결정 4-4, 5.152 C′ 도움말과 같은 기준)
-    // 결함: 홈·주는 같은 사건을 `기록 안 된 변화`로 보임(spec 예상은 주 `순유입`) — 이슈 미등록, qa 확정 후 별도 이슈. LEARNINGS 10 '매수는 원인 아님'과 대조 필요
-    eq(r, { home: { "price:stock": 1 * M, unrecorded: 5 * M }, week: { price: 1 * M, unrecorded: 5 * M }, month: { price: 1 * M, income: 5 * M }, year: { price: 1 * M, income: 5 * M } });
+  it("E3 주식 매수 6백만(현금 계좌 없음, 평단 갱신)", () => {
+    const r = run({ noCashAccount: true, mutate: (d) => { applyBuy(d, 100, 60000); } });
+    // 의도: 홈은 `주식 매수`(4.79 O-1, 자산군 단위 세분), 주·월·연은 결산 어휘로 `순유입`(weekLineOf: buy:*→income, cashTracked=false면 사고판 금액 순액, 4-4)
+    eq(r, { home: { "buy:stock": 6 * M }, week: { income: 6 * M }, month: { income: 6 * M }, year: { income: 6 * M } });
   });
   it("E4 대출 1천만 받아 주식 매수", () => {
     const r = run({ mutate: (d) => {
-      d.loans[0].balance += 10 * M; d.stocks[0].quantity += 100; d.transactions = [buyTx(100, 100000)];
+      d.loans[0].balance += 10 * M; applyBuy(d, 100, 100000);
       d.loanTransactions = [{ id: "l1b", loanId: "l1", type: "borrow", amount: 10 * M, date: "2026-11-10", reflected: true, createdAt: "2026-11-10T01:00:00.000Z" } as AssetData["loanTransactions"][number]];
     } });
-    // 의도: 월·연의 대출 행 정의는 `이자·자산에 안 남은 몫`(CAUSE_HINT.month.loan), 주는 잔액 변화 ±(4.79) — 정의 차이(G 보류 근거)
-    // 결함: 홈·주가 대출 몫을 `기록 안 된 변화`로 보임 — 월·연은 `대출`. 이슈 미등록, qa 확정 후 별도 이슈
-    eq(r, { home: { "price:stock": 1 * M, unrecorded: -5 * M }, week: { price: 1 * M, unrecorded: -5 * M }, month: { price: 1 * M, loan: -5 * M }, year: { price: 1 * M, loan: -5 * M } });
+    // 의도: 매수가가 시세보다 높아(평단 갱신 반영) 손익이 −4백만이라 4화면 모두 `시세 −4백만` 하나로 같다 — 대출 행도 매수 행도 없음
+    // 의도: 현금 미등록 + 대출에 연결되지 않은 매수는 월·연에서 두 줄(순유입 +·대출 −)로 나온다 — settlement.ts 4-4 의도. 이 픽스처는 그 두 줄 경우를 재현하지 않는다(시세 한 줄만)
+    eq(r, { home: { "price:stock": -4 * M }, week: { price: -4 * M }, month: { price: -4 * M }, year: { price: -4 * M } });
   });
   it("E5 환율 1500→1515 (외화 종목 보유)", () => {
     const r = run({ rates: R1, mutate: () => {} });
