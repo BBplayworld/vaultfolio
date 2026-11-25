@@ -958,6 +958,7 @@ COMPARE_PERIOD_LABEL · MARKET_INDEX_NAME(`코스피`/`S&P 500`)
 useCompareBasis() · useDailyRefToken() · useKospiPeerCodes() · useMarketIndexRefs(basis, enabled, token, periods?) · fetchMarketIndex
 // #4.90: useKospiPeerCodes(enabled = true) — false면 종목 마스터 청크를 불러오지 않음. useMarketEntryValue(period, visible, enabled) · values[]에 endDate·holiday 추가
 // lib/report/home-today.ts — pickTopCause(causes)(|amount| 최대, 동률 앞 항목) · weekTrendTitle(snapshots)(연속이면 최근 N일, 아니면 최근 기록 N일)
+// lib/report/hero-cause-display.ts(5.153 #304) — 홈 Hero·원인 행 표시 글자 단일 출처: formatHeroDelta(Δ)(`▲ +`/`▼ −`, U+2212) · formatSignedShort(v)(부호+formatShortCurrency) · heroManwon(Δ)(0 방향 버림 만원) · allocateManwon(amounts, total)(만원 정수 최대 나머지 배분, 0만원·부호 반전 금지, 막히면 절댓값 큰 행) · heroCauseTexts(amounts, Δ)(행 합 = Hero). 엔진 fmtManwon·AttributionDisplayItem.text(AI·결산·home-today용)는 그대로 — 합계·내역이 한 카드에 같이 보이면 표시 단계에서 이 배분을 쓴다
 // feature-usage pickRecommendedFeature(assetData, excludeIds?) · home-tip pickHomeTip({suppressFeatureIds}) — dismiss 기록 없이 이번 판정에서만 제외
 // market-compare-view listPeriodFromInit(init) — init.period "day" → 하루, 그 밖 1주
 ```

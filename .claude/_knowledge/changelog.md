@@ -5,6 +5,10 @@
 ---
 
 ## 2026-11-26
+### 홈 Hero 증감과 원인 행 금액 같은 숫자로 (issue-5.153, #304, risk:medium)
+- Hero는 만원 미만 버림, 원인 행은 반올림(`fmtManwon`)이라 원인 1개인 날 `+2만원`/`+3만원`, 여럿이면 합이 어긋나던 결함. 원인 행 글자를 Hero 정본(만원 버림)에 만원 정수 최대 나머지 배분(`hero-cause-display.ts`)으로 맞추고 음수 부호를 Hero·행 모두 U+2212로. 엔진·AI·결산·`home-today` diff 0. 홈 `dashboard.tsx` `transition-all` 2곳 속성 명시. 저장·서버 전송·GA 변경 0.
+
+## 2026-11-26
 ### 월 탭 순유입 도움말 정정·허브 설명 줄 제거·현금 거래 320 행 (issue-5.152, #302, risk:low)
 - 월 탭 `순유입` 도움말을 `computeSettlementCauses`가 돌려주는 `cashTracked`로 2갈래(거짓이면 `입출금 기록이 없어 사고판 금액의 차이로 계산했어요`, `CauseBlock cashTracked` 선택 prop). 상세 허브 6장 설명 줄 제거(`KpiCard.description` 선택화). 현금 거래 행 `max-[359px]` 둘째 줄 배치. 원인 일관성 vitest E1~E6(홈·주·월·연, 프로덕션 diff 0). 저장·서버 전송·GA title 변경 0. 연 탭 `CAUSE_HINT.year.income`은 렌더되지 않는 코드(결함 아님).
 

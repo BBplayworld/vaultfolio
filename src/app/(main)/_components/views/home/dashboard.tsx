@@ -26,6 +26,7 @@ import { computeAttributionView } from "../activity/week-attribution";
 import type { ReactNode } from "react";
 import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
 import { pickTopCause, weekTrendTitle } from "@/lib/report/home-today";
+import { formatHeroDelta, heroCauseTexts } from "@/lib/report/hero-cause-display";
 import { marketLineState, type MarketLineState } from "@/lib/finance/market-compare";
 import { CauseMarketSegment, MarketLine, causeMarketText, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
 import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
@@ -55,7 +56,7 @@ export function SectionBar({ items, total }: { items: { key: string; label: stri
         {items.map(({ key, label, value, color }, idx) => {
           const pct = (value / total) * 100;
           return (
-            <div key={key} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total })[idx]}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
+            <div key={key} className="flex items-center justify-center overflow-hidden transition-[width]" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total })[idx]}%`, backgroundColor: color }} title={`${label}: ${pct.toFixed(1)}%`}>
               {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
             </div>
           );
@@ -203,7 +204,7 @@ export function AssetDonutChart({ items, netAsset, activeTab, onSegmentClick, sc
             return (
               <div
                 key={name}
-                className={`flex items-center gap-1 min-w-0 rounded-md transition-all px-1.5 py-2 cursor-pointer`}
+                className={`flex items-center gap-1 min-w-0 rounded-md transition-opacity px-1.5 py-2 cursor-pointer`}
                 style={{ opacity: isAll || isActive ? 1 : 0.35 }}
                 onClick={() => { if (!screenshotMode && onSegmentClick) onSegmentClick(key); }}
               >
@@ -386,6 +387,9 @@ export function NetAssetSummaryBox({
   const hasCause = !!change && !change.negligible && (!!change.sentence || change.estimated);
   // 가장 큰 원인 1줄(4.90 B) — 원인이 있으면 쉐브론 대신 이 줄이 펼침 입구. 원인 0개(예측만)는 현행 쉐브론 유지
   const top = hasCause && change ? pickTopCause(change.causes) : null;
+  // 원인 행 글자는 Hero 증감(만원 버림)에 맞춰 배분한 값(#304) — 행 표시 합 = Hero, 원인 1개면 같은 글자. 색은 원 단위 c.amount 기준 유지
+  const causeTexts = hasCause && change ? heroCauseTexts(change.causes.map((c) => c.amount), change.deltaNet) : [];
+  const topText = top && change ? causeTexts[change.causes.indexOf(top)] : "";
   const showLine = !!top && !screenshotMode;
   // 보조 줄 지수 구간(5.105) — 라벨 `전일 대비`+지수 on일 때만. 기간이 다른 1일 지수를 나란히 두지 않는다
   const marketOn = !!market && marketLine !== "off";
@@ -444,7 +448,7 @@ export function NetAssetSummaryBox({
               {change && !change.negligible && (
                 // 금액·%는 각각 한 덩어리(금액·단위 분리 방지), 좁은 폭에선 flex-wrap으로 %·라벨이 다음 행(#4.36)
                 <span className={`inline-flex flex-wrap gap-y-0.5 items-center text-base font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
-                  <span className="whitespace-nowrap">{change.deltaNet >= 0 ? "▲ +" : "▼ "}{formatShortCurrency(change.deltaNet)}</span>
+                  <span className="whitespace-nowrap">{formatHeroDelta(change.deltaNet)}</span>
                   <span className="text-sm font-bold ml-1 whitespace-nowrap">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
                   {/* 라벨·쉐브론은 한 덩어리 — 쉐브론만 다음 줄에 떨어지지 않게(#4.36 ui-review R1) */}
                   <span className="inline-flex items-center ml-1.5">
@@ -502,12 +506,12 @@ export function NetAssetSummaryBox({
                         data-cause-key={top.key}
                         aria-expanded={open}
                         aria-controls="home-cause-panel"
-                        aria-label={`변동 원인 펼치기, ${top.label} ${top.text}${change.causes.length > 1 ? ` 외 ${change.causes.length - 1}개` : ""}${inlineMarket?.ready && inlineMarket.values[0] ? `, ${causeMarketText(inlineMarket.values[0])}` : ""}`}
+                        aria-label={`변동 원인 펼치기, ${top.label} ${topText}${change.causes.length > 1 ? ` 외 ${change.causes.length - 1}개` : ""}${inlineMarket?.ready && inlineMarket.values[0] ? `, ${causeMarketText(inlineMarket.values[0])}` : ""}`}
                         onClick={() => { focusTo.current = "panel"; toggleCause(); }}
                         className="@container relative flex min-h-5 w-full items-center gap-1.5 whitespace-nowrap py-2.5 text-left text-sm after:absolute after:-inset-x-4 after:inset-y-0 after:content-[''] active:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                       >
                         <span className="min-w-0 truncate text-sm text-foreground">{top.label}</span>
-                        <span className={`shrink-0 text-sm font-semibold tabular-nums ${getProfitLossColor(top.amount)}`}>{top.text}</span>
+                        <span className={`shrink-0 text-sm font-semibold tabular-nums ${getProfitLossColor(top.amount)}`}>{topText}</span>
                         {change.causes.length > 1 && (
                           <span data-testid="home-cause-more" className="shrink-0 text-sm text-muted-foreground @max-[260px]:hidden">외 {change.causes.length - 1}개</span>
                         )}
@@ -536,13 +540,13 @@ export function NetAssetSummaryBox({
                   {/* 항목이 많아 한 줄 문장이 길어지므로 세로 리스트로 정렬 — 라벨(전경)·기록 날짜(muted)·금액(손익색) 분리.
                       시세·환율 → 기록 날짜순 → 날짜 없는 항목 순(sortCausesByDate) */}
                   <ul className="w-full max-w-xs space-y-0.5">
-                    {change.causes.map((c) => (
+                    {change.causes.map((c, i) => (
                       <li key={c.key} className="flex items-baseline justify-between gap-3">
                         <span className="text-sm text-foreground break-keep">
                           {c.label}
                           {c.dateLabel && <span className="ml-1.5 text-xs tabular-nums text-muted-foreground">{c.dateLabel}</span>}
                         </span>
-                        <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{c.text}</span>
+                        <span className={`text-sm font-semibold tabular-nums shrink-0 ${getProfitLossColor(c.amount)}`}>{causeTexts[i]}</span>
                       </li>
                     ))}
                   </ul>

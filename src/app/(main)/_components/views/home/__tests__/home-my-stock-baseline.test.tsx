@@ -10,9 +10,10 @@ vi.mock("@/app/(main)/_components/layout/navigation/navigation-context", () => (
 import { NetAssetSummaryBox } from "../dashboard";
 import type { MarketEntryValue } from "../../activity/market-entry-line";
 
-const cause = (key: string, label: string, amount: number) => ({ key, label, sentence: label, amount, text: `${amount > 0 ? "+" : "-"}${Math.abs(amount)}만원` });
+// amount는 원 단위(만원 × 1만) — 홈 행 글자는 Hero 증감에 맞춘 배분값(5.153 #304)이라 deltaNet = 원인 합으로 둔다
+const cause = (key: string, label: string, man: number) => ({ key, label, sentence: label, amount: man * 10_000, text: `${man > 0 ? "+" : "−"}${Math.abs(man).toLocaleString()}만원` });
 const change = (o: Record<string, unknown> = {}) => ({
-  deltaNet: -10_000_000, pct: -1, isBig: false, negligible: false, label: "전일 대비", estimated: false,
+  deltaNet: -5_960_000, pct: -1, isBig: false, negligible: false, label: "전일 대비", estimated: false,
   sentence: "x", causes: [cause("stock", "주식 시세 하락", -1096), cause("cash", "현금 입금", 500)], ...o,
 });
 const market: MarketEntryValue = {
