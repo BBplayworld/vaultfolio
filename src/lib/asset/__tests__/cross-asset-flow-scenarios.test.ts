@@ -68,12 +68,12 @@ describe("C42 자산 간 흐름 S1~S7 (현재 동작 고정)", () => {
     expect(out(m)).toEqual({ income: -100 * M, unrecorded: -100 * M });
   });
 
-  it("S3 반영 해제(기록만): 잔액 900만, Δ −100만 = 기록 안 된 변화 −100만", () => {
+  it("S3 반영 해제(기록만): 잔액 900만, Δ −100만 = 이미 잔액에 든 변화라 순유입 −100만(#293)", () => {
     const d = data();
     d.cashTransactions = [{ ...cashTx("w", "2026-11-15", "withdrawal", 100 * M), reflected: false }];
     const m = run(d, snap("2026-10", "2026-10-31", { cash: 1000 * M }), snap("2026-11", "2026-11-30", { cash: 900 * M }));
     expect(m.deltaNet).toBe(-100 * M);
-    expect(out(m)).toEqual({ unrecorded: -100 * M });
+    expect(out(m)).toEqual({ income: -100 * M });
   });
 
   it("S3L 11/28 대출 맞추기 2,900만 → 거래일 11/20 상환 100만 반영 기록: 대출 2,800만(이중)", () => {

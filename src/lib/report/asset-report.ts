@@ -889,6 +889,14 @@ function resolveAttribution(
     // incomeEffect(실제 기록)가 대수적으로 소거되지 않게 한다(기록 없이도 표시가 바뀌던 회귀 수정).
     const dCostCash = savingInvest - dCostStock - dCostCrypto - dCostRealEstate - dCostPhysical + priceResidual - depositEffect - costFx.flowFxCash;
 
+    // 미반영(과거 소급) 입출금 순액 U — 잔액은 직접 수정·스크린샷 갱신으로 이미 그 변화를 포함하므로
+    // 그 증가분이 dCostCash 잔차(기록 안 된 변화)로 남는다. 같은 부호의 잔차 한도 안에서 income으로 옮긴다
+    // (cash −x, income +x → 합계 불변). 반영 기록 계산은 그대로.
+    const unreflectedNet = unreflectedCashNet(assetData, prev._date, curr._date, rates, isFirstSegment, startGate);
+    const unreflectedShift = Math.sign(unreflectedNet) === Math.sign(dCostCash) && dCostCash !== 0
+      ? Math.sign(dCostCash) * Math.min(Math.abs(unreflectedNet), Math.abs(dCostCash))
+      : 0;
+
     const { effects, topCauses, restEffect, restCauses } = pickTopCauses([
       { key: "price:stock", amount: priceStock },
       { key: "price:crypto", amount: priceCrypto },
@@ -901,8 +909,8 @@ function resolveAttribution(
       { key: "sell:crypto", amount: sellCrypto },
       { key: dCostRealEstate >= 0 ? "buy:realEstate" : "sell:realEstate", amount: dCostRealEstate },
       ...(dCostPhysical !== 0 ? [{ key: (dCostPhysical > 0 ? "buy:physical" : "sell:physical") as AttributionCauseKey, amount: dCostPhysical }] : []),
-      { key: "income", amount: incomeEffect },
-      { key: "cash", amount: dCostCash },
+      { key: "income", amount: incomeEffect + unreflectedShift },
+      { key: "cash", amount: dCostCash - unreflectedShift },
       { key: "deposit", amount: depositEffect },
       { key: "debt", amount: debtEffect },
     ]);
@@ -1084,6 +1092,24 @@ function costFxRevaluation(
     cash += bal * d(c.currency);
   }
   return { stock, cash, flowFxStock, flowFxCash };
+}
+
+// 기간 내 **미반영**(과거 소급) 현금 입출금 순액(KRW) — reflectedCashInflow와 같은 경계·환산 규칙.
+// 잔액이 이미 그 변화를 포함한 경우 정밀 분해의 cash 잔차를 income으로 옮기는 한도 계산에만 쓴다(#293).
+function unreflectedCashNet(
+  assetData: AssetData,
+  fromDate: string,
+  toDate: string,
+  rates: { USD: number; JPY: number },
+  includeFrom: boolean,
+  startGate: boolean,
+): number {
+  let net = 0;
+  for (const t of assetData.cashTransactions || []) {
+    if (t.reflected || !inCashLoanWindow(t, fromDate, toDate, includeFrom, startGate)) continue;
+    net += (t.type === "deposit" ? t.amount : -t.amount) * krwMul(t.currency, rates);
+  }
+  return net;
 }
 
 // 기간[from, to] 내 **반영된** 현금 거래 순유입(입금−출금)을 KRW로 환산해 합산.

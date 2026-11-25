@@ -131,7 +131,7 @@ describe("asset-report 원인분해", () => {
     expect(sumEffects(attr!)).toBeCloseTo(attr!.deltaNet, 6);
   });
 
-  it("미반영(과거 소급) 현금 기록 자체는 원인이 아니고, 실제 잔액 증가는 cash로 귀속되어 기록된 income과 구분된다", () => {
+  it("미반영(과거 소급) 현금 기록: 이미 잔액에 든 증가는 cash 잔차 대신 income 원인으로 귀속된다(#293)", () => {
     const data = emptyData();
     data.cashTransactions = [cashTx({ date: "2026-05-10", amount: 3_000_000, reflected: false })];
     // 미반영 거래는 cost.total을 움직이지 않는다 → savingFull = 0. 잔액(breakdown.cash)만 +300만
@@ -139,10 +139,10 @@ describe("asset-report 원인분해", () => {
     const attr = run(data, daily, "2026-05-01")!;
     expect(attr.incomeEffect).toBe(0); // 순자산을 움직이지 않은 기록은 집계하지 않는다
     expect(attr.savingEffect).toBe(0);
-    // 기록 없이 실제로 변한 잔액은 income(=기록된 입출금)이 아니라 cash(=설명되지 않는 잔차)로 귀속된다
+    // 잔액이 이미 포함한 증가는 같은 기간 미반영 입금 한도 안에서 income으로 옮겨지고 cash 잔차는 0
     const byKey = new Map(getOrderedCauses(attr).map((c) => [c.key, c.amount]));
-    expect(byKey.get("cash")).toBeCloseTo(3_000_000, 6);
-    expect(byKey.has("income")).toBe(false); // incomeEffect=0이라 pickTopCauses가 자동으로 걸러낸다
+    expect(byKey.get("income")).toBeCloseTo(3_000_000, 6);
+    expect(byKey.has("cash")).toBe(false);
     expect(byKey.has("price:stock")).toBe(false);
     expect(sumDisplayed(attr)).toBeCloseTo(attr.deltaNet, 6);
   });
