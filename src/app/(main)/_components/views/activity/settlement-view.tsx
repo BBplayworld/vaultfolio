@@ -41,6 +41,7 @@ interface SettlementResult {
   mapped: SettlementCauses;
   live: ReturnType<typeof buildLiveAttributionCurr>;
   estimatedLabel: "예측" | "일부 예측";
+  cashTracked: boolean;
 }
 
 export function SettlementView({ initialMonth, source, focus }: { initialMonth?: string; source: NonNullable<ChangeInit["source"]>; focus?: ChangeInit["focus"] }) {
@@ -61,11 +62,11 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
       const start = w.start;
       const live = buildLiveAttributionCurr(assetData, exchangeRates, summary);
       const { prevValue, currValue, delta, pct } = settlementDelta(w, summary.netAsset);
-      const { mapped, estimatedLabel } = computeSettlementCauses({
+      const { mapped, estimatedLabel, cashTracked } = computeSettlementCauses({
         start, end: w.end, live, deltaNet: delta, startDate: w.startDate, endDate: w.endDate,
         liveCash: summary.cashValue, exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
       });
-      return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel } };
+      return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel, cashTracked } };
     } catch {
       return { ok: false };
     }
@@ -133,7 +134,7 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
     );
   }
 
-  const { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel } = computed.value;
+  const { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel, cashTracked } = computed.value;
   const stale = getStaleRows(assetData).length > 0;
   const firstMonth = w.kind === "first_month";
   // 처음 맞는 결산(4.94)은 Hero·원인까지만 — 구성·월별 기록·AI는 숨김
@@ -169,7 +170,7 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
         contentKey={month}
       />
 
-      {!firstMonth && <CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} />}
+      {!firstMonth && <CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} cashTracked={cashTracked} />}
 
       {!limited && <CompositionBlock key={`composition-${month}`} w={w} liveBreakdown={live.breakdown} />}
 

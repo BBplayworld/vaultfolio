@@ -122,7 +122,7 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
   const view = readFileSync("src/app/(main)/_components/views/activity/settlement-view.tsx", "utf8");
   it("렌더 1줄 + import + memo live 뿐, Hero·원인·AI 행 코드는 그대로", () => {
     expect(view.match(/<CompositionBlock /g)).toHaveLength(1);
-    expect(view).toContain("<CauseBlock key={month} scope=\"month\" mapped={mapped} estimatedLabel={estimatedLabel} />");
+    expect(view).toContain("<CauseBlock key={month} scope=\"month\" mapped={mapped} estimatedLabel={estimatedLabel} cashTracked={cashTracked} />");
     expect(view.indexOf("<CauseBlock")).toBeLessThan(view.indexOf("<CompositionBlock"));
     expect(view.indexOf("<CompositionBlock")).toBeLessThan(view.indexOf("SettlementAiButton name"));
   });
@@ -149,6 +149,9 @@ describe("결산 파일 diff 범위(정적 검사)", () => {
       .filter((l) => !l.includes('className="block text-sm sm:text-base font-semibold text-foreground text-pretty break-keep"'))
       // 5.151(#300): CAPTION 상수 한 줄에 break-keep 추가(어절 단위 줄바꿈)만 허용
       .filter((l) => l !== '-const CAPTION = "text-sm text-muted-foreground text-pretty";')
+      // 5.152(#302 C′): computeSettlementCauses가 돌려준 cashTracked를 CauseBlock에 넘기는 4줄(구조분해 3 + 렌더 1)만 허용 — 원인·합계 계산 줄은 그대로
+      .filter((l) => !["-      const { mapped, estimatedLabel } = computeSettlementCauses({", "-      return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel } };", "-  const { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel } = computed.value;"].includes(l))
+      .filter((l) => !l.includes('<CauseBlock key={month} scope="month" mapped={mapped} estimatedLabel={estimatedLabel} />'))
       .filter((l) => !l.startsWith("-import ") && !l.includes('animationDelay: "120ms"') && !l.startsWith("-export function SettlementView(") && !l.includes('data-testid="prep-ics-button"') && !l.startsWith("-export function SettlementAiButton(") && !l.includes('data-testid="settlement-ai-button"') && !l.includes("AI에게 {name} 변화 물어보기") && !FIRST_RECORD_EDITS.some((t) => l.includes(t)));
     expect(removed).toEqual([]);
     // asset-change-view.tsx는 4.79(주 탭)·4.83(주 방문 기록·focus)이 의도적으로 바꾸므로 4.51 범위 가드에서 제외
