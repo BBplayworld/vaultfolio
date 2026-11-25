@@ -168,18 +168,18 @@ export function CryptoTxView() {
             {list.map((t) => {
               const isBuy = t.type === "buy";
               return (
-                <div key={t.id} className="flex items-center gap-3 py-2.5">
+                <div key={t.id} className="flex items-center gap-3 py-2.5 max-[359px]:flex-wrap max-[359px]:gap-y-0.5">
                   <span className={`text-xs font-bold shrink-0 w-8 ${isBuy ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isBuy ? "매수" : "매도"}
                   </span>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 max-[359px]:order-last max-[359px]:basis-full max-[359px]:pl-11">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm tabular-nums">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개 · {formatCurrency(t.price)}</span>
+                      <span className="text-sm tabular-nums max-[359px]:whitespace-nowrap">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개 · {formatCurrency(t.price)}</span>
                       {!t.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
                     </div>
                     <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span>{t.memo ? ` · ${t.memo}` : ""}</p>
                   </div>
-                  <span className={`text-sm font-bold tabular-nums shrink-0 ${isBuy ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
+                  <span className={`text-sm font-bold tabular-nums shrink-0 max-[359px]:ml-auto ${isBuy ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isBuy ? "+" : "−"}{formatCurrency(t.price * t.quantity)}
                   </span>
                   <Button size="icon" variant="secondary" className="size-7.5 shrink-0" title="삭제" aria-label="거래 삭제" onClick={() => confirmDelete(t)}>

@@ -45,6 +45,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-STOCK. 주식 상세 탭 ([stock-tab.tsx](../../src/app/(main)/_components/views/detail/tabs/stock-tab.tsx))
 - 👤 (#5.150) 행 이름: 어절 단위·최대 2줄 말줄임·`title`은 10자 초과일 때만. 320(다크 포함)에서 `SK하이닉스` 한 줄, 우측 숫자 잘림 0. 6탭 공통(`cardInfoName`), 인증카드 `ASSET_THEME_SHOT` 변경 0
+- 👤 (#5.151) 320 우측 열: 코인·실물도 주식과 같이 `max-[359px]:max-w-[45%]`·손익 `max-sm:flex-wrap`(금액·`(+30.4%)` 잘림·부제 겹침 0, 360 이상 ±0px). 현금 요약 `flex-wrap`·nowrap(9자리 붙음 0), 코인 거래 행 320에서 금액 첫 줄·단가 `원` 분리 0. 결산 CAPTION·change-hero 문장 어절 끊김 0
 - 👤 종목 카드 펼침/접힘, 증권사별 분할(`SubStockCard`)·나누기 다이얼로그, 주식담보대출 연결 표시 — 종합 카드 거래입력 노출 규칙은 F-ASSET 참조(암호화폐와 동일)
 - 👤 비활성: 상장폐지(red)·거래정지(amber) Badge, delisted 평가 제외 / halted 마지막가 유지
 - 👤 요약 헤더 평가손익·'오늘' 칩(장중 `오늘`/장 종료 후 `종가`), 해외 상세 환차손익(금액/수익률 2줄, 우측 매입환율 영역 미침범)

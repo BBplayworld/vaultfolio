@@ -29,7 +29,7 @@ import type { ChangeInit } from "../../layout/navigation/navigation-context";
 import { hasAnyAssets } from "@/lib/asset/asset-storage";
 
 const kstToday = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
-const CAPTION = "text-sm text-muted-foreground text-pretty";
+const CAPTION = "text-sm text-muted-foreground text-pretty break-keep";
 const PREP_ID = "settlement-prep";
 
 interface SettlementResult {
