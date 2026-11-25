@@ -305,7 +305,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
       <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`} data-testid={screenshotMode ? undefined : "stock-row-left"}>
         <div className={ASSET_THEME.cardInfoTitle}>
           {/* 이름은 모바일·PC 공통 전체 노출하되 최대 2줄, 2줄 초과분만 말줄임(하드컷 제거) */}
-          <span className={`${nameCls} line-clamp-2${!screenshotMode && stock.inactiveStatus ? " max-sm:line-clamp-1" : ""}${screenshotMode ? "" : " break-keep [overflow-wrap:anywhere]"}`} title={stock.name.length > 18 ? stock.name : undefined}>
+          <span className={`${nameCls} line-clamp-2${!screenshotMode && stock.inactiveStatus ? " max-sm:line-clamp-1" : ""}`} title={stock.name.length > 10 ? stock.name : undefined}>
             {stock.name}
           </span>
           {stock.inactiveStatus === "halted" && (
@@ -337,7 +337,7 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
           )}
         </div>
       </div>
-      <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-[359px]:max-w-[50%] min-[360px]:max-sm:max-w-[60%]"}`} data-testid={screenshotMode ? undefined : "stock-row-right"}>
+      <div className={`${ASSET_THEME.cardInfoRight}${screenshotMode ? "" : " max-[359px]:max-w-[45%] min-[360px]:max-sm:max-w-[60%]"}`} data-testid={screenshotMode ? undefined : "stock-row-right"}>
         <p className={`${amountCls} ${ASSET_THEME.text.default}`}>{fmt(currentVal)}</p>
         <div data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardAmountProfitRow}${screenshotMode ? "" : " max-sm:flex-wrap max-sm:justify-end"}`}>
           <span className={`${subCls} ${tone.colorClass}${screenshotMode ? "" : " whitespace-nowrap"}`}>
@@ -727,7 +727,7 @@ function SubStockCard({ stock, idx, onDelete, exchangeRates, totalValue, onViewT
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
               <div className={`${ASSET_THEME.cardInfoLeft} min-w-0`}>
                 <div className={ASSET_THEME.cardInfoTitle}>
-                  <span className={`${ASSET_THEME.cardInfoName} truncate`}>{label}</span>
+                  <span className={`${ASSET_THEME.cardInfoName} truncate !line-clamp-1`}>{label}</span>
                 </div>
                 <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap`}>
                   <span className="text-sm text-foreground tabular-nums">{stock.quantity.toLocaleString()}주</span>

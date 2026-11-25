@@ -124,7 +124,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
               </div>
               <div className={ASSET_THEME.cardInfoLeft}>
                 <div className={ASSET_THEME.cardInfoTitle}>
-                  <span className={ASSET_THEME.cardInfoName}>{coin.name}</span>
+                  <span className={ASSET_THEME.cardInfoName} title={coin.name.length > 10 ? coin.name : undefined}>{coin.name}</span>
                   {coin.symbol && <span className="text-2xs text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>

@@ -63,7 +63,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
               </div>
               <div className={ASSET_THEME.cardInfoLeft}>
                 <div className={ASSET_THEME.cardInfoTitle}>
-                  <span className={ASSET_THEME.cardInfoName}>{loan.name}</span>
+                  <span className={ASSET_THEME.cardInfoName} title={loan.name.length > 10 ? loan.name : undefined}>{loan.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
                   <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
