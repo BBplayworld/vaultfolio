@@ -79,9 +79,11 @@ describe("WelcomeGuide 초기 마크업", () => {
   const html = renderToStaticMarkup(<WelcomeGuide />);
   const pos = (id: string) => html.indexOf(`data-testid="${id}"`);
 
-  it("블록 DOM 순서: 히어로 < 신뢰 < 보안 상세 < 순자산 < CTA 슬롯 < 주식", () => {
-    const order = ["welcome-hero", "welcome-trust", "welcome-security-detail", "welcome-preview-net", "welcome-cta-slot", "welcome-preview-stock"].map(pos);
+  it("블록 DOM 순서: 히어로 < 신뢰 < 보안 상세 < CTA 슬롯 < 순자산 (주식 미리보기 없음, #292)", () => {
+    const order = ["welcome-hero", "welcome-trust", "welcome-security-detail", "welcome-cta-slot", "welcome-preview-net"].map(pos);
     order.forEach((p) => expect(p).toBeGreaterThanOrEqual(0));
+    expect(pos("welcome-preview-stock")).toBe(-1);
+    expect(html.indexOf("실제 자산을 입력하면")).toBeGreaterThan(pos("welcome-preview-net"));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
