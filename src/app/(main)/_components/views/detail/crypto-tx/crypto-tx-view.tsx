@@ -174,7 +174,7 @@ export function CryptoTxView() {
                   </span>
                   <div className="min-w-0 flex-1 max-[359px]:order-last max-[359px]:basis-full max-[359px]:pl-11">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm tabular-nums whitespace-nowrap">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개 · {formatCurrency(t.price)}</span>
+                      <span className="text-sm tabular-nums max-[359px]:whitespace-nowrap">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개 · {formatCurrency(t.price)}</span>
                       {!t.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
                     </div>
                     <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span>{t.memo ? ` · ${t.memo}` : ""}</p>
