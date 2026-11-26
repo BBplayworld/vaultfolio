@@ -12,7 +12,7 @@ import { isLinkDateAllowed, linkCandidates, type LinkTrade } from "@/lib/trade/l
 import { LINK_NONE, linkPreviewText, linkValueOf, type LinkEval } from "@/lib/trade/link-text";
 import type { AssetData } from "@/types/asset";
 
-export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, hasFee = false }: {
+export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, hasFee = false, hideResyncWarning = false }: {
   data: AssetData;
   trade: Omit<LinkTrade, "id">;
   reflected: boolean;
@@ -20,6 +20,7 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
   onChange: (v: string) => void;
   ev: LinkEval;
   hasFee?: boolean;
+  hideResyncWarning?: boolean; // 과거 날짜 질문에 아직 답하지 않았으면 경고를 숨긴다(주식 폼, #311). 기본 false = 기존 그대로
 }) {
   const cands = linkCandidates(data, trade);
   const visible = reflected && (cands.cash.length > 0 || cands.loans.length > 0);
@@ -49,7 +50,7 @@ export function LinkAccountRow({ data, trade, reflected, value, onChange, ev, ha
       ].filter((g) => g.items.length > 0);
   const chosenKind = ev.state === "none" ? null : ev.choice.kind;
   const preview = ev.state === "ok" ? linkPreviewText(ev, trade.type, hasFee) : null;
-  const warnResync = chosenKind !== null && shouldWarnTxAfterResync({ txDate: trade.date, reflected, refreshedAtIso: lastRefreshedAt(chosenKind) });
+  const warnResync = !hideResyncWarning && chosenKind !== null && shouldWarnTxAfterResync({ txDate: trade.date, reflected, refreshedAtIso: lastRefreshedAt(chosenKind) });
 
   return (
     <>

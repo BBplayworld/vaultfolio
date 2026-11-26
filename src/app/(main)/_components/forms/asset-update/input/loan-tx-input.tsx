@@ -137,7 +137,7 @@ export function LoanTxInput() {
       : addLoanTransaction(tx);
     if (ok) {
       track("transaction_save", { asset_type: "loan", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
-      toast.success(tx.type === "repay" ? "상환이 기록되었습니다." : "추가 대출이 기록되었습니다.");
+      toast.success(tx.type === "repay" ? "상환을 기록했어요" : "추가 대출을 기록했어요");
       resetAndClose();
     }
   };
@@ -280,7 +280,7 @@ export function LoanTxInput() {
               <p className="tabular-nums">{dupPending.tx.type === "repay" ? "상환" : "추가 대출"} · {dupPending.tx.date} · {formatCurrency(dupPending.tx.amount)}</p>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 유지했습니다."); resetAndClose(); }}>기존 유지</Button>
+              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 그대로 뒀어요"); resetAndClose(); }}>기존 유지</Button>
               <Button type="button" variant="secondary" onClick={() => { if (dupPending) commit(dupPending.tx, dupPending.loan); }}>새로 추가</Button>
               <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>취소</Button>
             </DialogFooter>
