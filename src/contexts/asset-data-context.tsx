@@ -11,6 +11,8 @@ import { normalizeTicker, resolveStockName, type StockClassificationPatch } from
 import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/finance/stock-cache-slot";
 import { getCoinCacheSlot } from "@/lib/finance/coin-cache-slot";
+import { EMPTY_PRICE_ATTEMPTS, currentPriceSlots, hasResyncWork, planPriceResync, type PriceAttempts } from "@/lib/finance/price-freshness";
+import { createSingleFlight, onPageResume } from "@/lib/pwa/page-resume";
 import { todayKst } from "@/lib/tax-utils";
 import { buildLink, cryptoLinkTrade, findLinkedRecord, removeLink, stockLinkTrade, type LinkChoice } from "@/lib/trade/linked-record";
 import { pruneTransactions } from "@/lib/trade/trade-utils";
@@ -309,9 +311,10 @@ const notify = {
 };
 
 // KIS 외부 API 일시 오류 토스트는 세션당 1회만 노출 (배치 반복 중복 방지)
+// silent(복귀 재조회)는 토스트를 띄우지 않고 세션 1회 기록도 소비하지 않는다(#309)
 let kisUnavailableNotified = false;
-function notifyKisUnavailableOnce() {
-  if (kisUnavailableNotified) return;
+function notifyKisUnavailableOnce(silent = false) {
+  if (silent || kisUnavailableNotified) return;
   kisUnavailableNotified = true;
   notify.error(MSG.KIS_API_UNAVAILABLE);
 }
@@ -514,6 +517,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   const saveSnapshotsBlockedRef = useRef(false);
   // 마지막 saveSnapshots 성공 정보(오늘 날짜·종가 맵) — 편집 시 오늘 일별 행 재계산(#252) 조건·입력
   const lastSnapshotRef = useRef<{ date: string; refMap: ProfitRefResponse } | null>(null);
+  // 복귀 재조회(#309): 이번 세션에 받기를 시도한 칸(메모리) — 같은 칸에서 빠진 종목·서킷을 복귀마다 다시 부르지 않는다
+  const priceAttemptsRef = useRef<PriceAttempts>({ ...EMPTY_PRICE_ATTEMPTS });
+  // 앱 열기·pull·첫 자산 사슬이 도는 중이면 복귀 재조회를 시작하지 않는다(겹침 0)
+  const priceChainBusyRef = useRef(0);
   const abortAllProfitFetches = (_reason: string) => {
     for (const c of profitFetchAbortSetRef.current) c.abort();
     profitFetchAbortSetRef.current.clear();
@@ -540,7 +547,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // Step 1. 오늘자 환율 조회 (자기완결)
   // - 오늘자 localStorage 캐시 있음: 캐시를 state에 반영 후 return (API 호출 없음)
   // - 없으면: /api/finance?type=exchange 호출 → state + localStorage 갱신
-  const syncTodayExchangeRate = useCallback(async () => {
+  const syncTodayExchangeRate = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     // exchangeSyncDate 하나로 "오늘 환율 동기화(현재환율 + 2일치 이력)" 완료 여부를 관리
@@ -559,6 +566,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    priceAttemptsRef.current.exchange = todayStr;
     try {
       const res = await fetch("/api/finance?type=exchange");
       const data = await res.json();
@@ -569,7 +577,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         if (data.JPY) updateExchangeRate("JPY", data.JPY);
       }
     } catch (e) {
-      notify.error(MSG.EXCHANGE_SYNC_FAILED);
+      if (!silent) notify.error(MSG.EXCHANGE_SYNC_FAILED);
       console.error(e);
     }
   }, [updateExchangeRate]);
@@ -585,7 +593,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // - outdated 판단: s.baseDate !== currentSlot (장중 1시간 단위, 장외 날짜 단위)
   // - 해외 주식 우선, 3개씩 배치 순차 호출, 배치 간 1초 지연
   // - 갱신 완료 시 toast 알림
-  const syncTodayStockPrices = useCallback(async (data: AssetData): Promise<AssetData> => {
+  // - silent(복귀 재조회, #309): 결과·실패 토스트 0. 서킷 중단·epoch 취소는 그대로
+  const syncTodayStockPrices = useCallback(async (data: AssetData, { silent = false }: { silent?: boolean } = {}): Promise<AssetData> => {
     // 진행 중인 직전 sync를 무효화하고 이번 sync의 epoch·AbortController 발급
     // (데이터 삭제/불러오기 → refreshData/initAndSync 재호출 시 이전 sync는 즉시 중단)
     stockSyncAbortRef.current?.abort();
@@ -606,6 +615,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     // 장중에는 1시간 슬롯("2026-05-15-H14"), 장외에는 날짜("2026-05-15")를 반환
     const slotDomestic = getStockCacheSlot("domestic");
     const slotForeign = getStockCacheSlot("foreign");
+    priceAttemptsRef.current.domestic = slotDomestic;
+    priceAttemptsRef.current.foreign = slotForeign;
     // ticker 단위 outdated 판정: 같은 ticker 엔트리 중 하나라도 currentSlot과 어긋나면 그 ticker 전체를 갱신 대상에 포함
     // (broker별 엔트리가 서로 다른 baseDate를 가진 채 시작해도 한 번에 일관되게 동기화)
     const outdatedTickers = new Map<string, Stock>();
@@ -631,7 +642,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (outdatedStocks.length === 0) {
       if (hasMarketCache) {
         if (isCanceled()) return data;
-        notify.info(MSG.STOCK_UP_TO_DATE);
+        if (!silent) notify.info(MSG.STOCK_UP_TO_DATE);
         return data;
       }
       // market 캐시 없음: 오늘자 ticker로 1회 조회해 stockMarkets만 채움
@@ -649,7 +660,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`, { signal: controller.signal });
           if (res.headers.get("X-KIS-Unavailable") === "1") {
             if (isCanceled()) return data;
-            notifyKisUnavailableOnce();
+            notifyKisUnavailableOnce(silent);
             return data; // 서킷 open: 외부 호출 중단 + 완료 토스트 스킵
           }
           const stocksData = await res.json();
@@ -667,7 +678,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         } catch { /* abort 또는 네트워크 오류: 다음 반복에서 isCanceled가 차단 */ }
       }
       if (isCanceled()) return data;
-      notify.info(MSG.STOCK_UP_TO_DATE);
+      if (!silent) notify.info(MSG.STOCK_UP_TO_DATE);
       return data;
     }
 
@@ -686,7 +697,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`, { signal: controller.signal });
         if (res.headers.get("X-KIS-Unavailable") === "1") {
           if (isCanceled()) return current;
-          notifyKisUnavailableOnce();
+          notifyKisUnavailableOnce(silent);
           return current; // 서킷 open: 외부 호출 중단 + 완료 토스트 스킵
         }
         const stocksData = await res.json();
@@ -712,13 +723,13 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         // AbortError는 정상 취소 — toast 표시 없이 종료
         if (controller.signal.aborted || (e instanceof Error && e.name === "AbortError")) return current;
-        notify.error(MSG.STOCK_SYNC_FAILED);
+        if (!silent) notify.error(MSG.STOCK_SYNC_FAILED);
         console.error(e);
       }
     }
 
     if (isCanceled()) return current;
-    notify.info(MSG.STOCK_SYNC_COMPLETE);
+    if (!silent) notify.info(MSG.STOCK_SYNC_COMPLETE);
     return current;
   }, []);
 
@@ -737,6 +748,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       outdated.add(symbol);
     }
     if (outdated.size === 0) return data;
+    priceAttemptsRef.current.coin = slot;
 
     const controller = new AbortController();
     const myEpoch = ++cryptoSyncEpochRef.current;
@@ -776,7 +788,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
   // 오늘자 일별·월별 자산 스냅샷 저장 (주식/환율 갱신 완료 후 호출)
   // 일별: 이번 달 한 달치만 유지, 월별: 올해 12개월치 유지
   // 주식가치는 종가(ref) 기준 — 실시간이 아닌 기준 영업일 종가로 평가
-  const saveSnapshots = useCallback(async (latestData: AssetData, latestRates: { USD: number; JPY: number }) => {
+  const saveSnapshots = useCallback(async (latestData: AssetData, latestRates: { USD: number; JPY: number }, { silent = false }: { silent?: boolean } = {}) => {
     // refreshData 후 새 sync가 시작되기 전까지는 진입 자체 차단
     if (saveSnapshotsBlockedRef.current) return;
 
@@ -800,7 +812,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         refMap = await fetchProfitRef(tickerList, "daily", {
           signal: profitCtrl.signal,
           caller: "saveSnapshots",
-          onKisUnavailable: () => { kisUnavailable = true; notifyKisUnavailableOnce(); },
+          onKisUnavailable: () => { kisUnavailable = true; notifyKisUnavailableOnce(silent); },
         });
       } catch { /* 무시: 실패 시 실시간으로 폴백 */ }
       finally {
@@ -970,37 +982,42 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     // 전체화면 게이트(인앱 게이트·앱 잠금) 활성 시 오늘자 환율·시세·스냅샷 자동 동기화 차단
     // (데이터 로드는 위에서 완료). 호출처 7곳을 개별 방어하는 것보다 여기 한 곳이 안전하다.
     if (isBackgroundWorkBlocked()) return;
-    await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
-    await syncTodayExchangeRate();
+    priceChainBusyRef.current++;
+    try {
+      await new Promise<void>(r => setTimeout(r, INITIAL_SYNC_DELAY_MS));
+      await syncTodayExchangeRate();
 
-    // 하위호환 마이그레이션: foreign + KRW → USD 자동 변환
-    const usdRateForMigration = exchangeRatesRef.current.USD;
-    if (usdRateForMigration > 0) {
-      setAssetData(prev => {
-        const dirty = prev.stocks.filter(s => s.category === "foreign" && s.currency === "KRW");
-        if (dirty.length === 0) return prev;
-        const fixed = prev.stocks.map(s => {
-          if (s.category !== "foreign" || s.currency !== "KRW") return s;
-          return {
-            ...s,
-            currency: "USD" as const,
-            averagePrice: Math.round(s.averagePrice / usdRateForMigration * 10000) / 10000,
-            currentPrice: 0,
-            baseDate: undefined,
-            purchaseExchangeRate: usdRateForMigration,
-          };
+      // 하위호환 마이그레이션: foreign + KRW → USD 자동 변환
+      const usdRateForMigration = exchangeRatesRef.current.USD;
+      if (usdRateForMigration > 0) {
+        setAssetData(prev => {
+          const dirty = prev.stocks.filter(s => s.category === "foreign" && s.currency === "KRW");
+          if (dirty.length === 0) return prev;
+          const fixed = prev.stocks.map(s => {
+            if (s.category !== "foreign" || s.currency !== "KRW") return s;
+            return {
+              ...s,
+              currency: "USD" as const,
+              averagePrice: Math.round(s.averagePrice / usdRateForMigration * 10000) / 10000,
+              currentPrice: 0,
+              baseDate: undefined,
+              purchaseExchangeRate: usdRateForMigration,
+            };
+          });
+          const newData = { ...prev, stocks: fixed };
+          saveAssetDataNotify(newData);
+          return newData;
         });
-        const newData = { ...prev, stocks: fixed };
-        saveAssetDataNotify(newData);
-        return newData;
-      });
-    }
+      }
 
-    if (!skipSnapshots) {
-      const stockSynced = await syncTodayStockPrices(data);
-      // 코인은 주식 배치(KIS rate limit)가 끝난 뒤 순차 실행
-      const finalData = await syncTodayCryptoPrices(stockSynced);
-      await saveSnapshots(finalData, exchangeRatesRef.current);
+      if (!skipSnapshots) {
+        const stockSynced = await syncTodayStockPrices(data);
+        // 코인은 주식 배치(KIS rate limit)가 끝난 뒤 순차 실행
+        const finalData = await syncTodayCryptoPrices(stockSynced);
+        await saveSnapshots(finalData, exchangeRatesRef.current);
+      }
+    } finally {
+      priceChainBusyRef.current--;
     }
   }, [initAssetData, syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
 
@@ -1013,15 +1030,58 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       hasAnyAssets(assetData);
     if (hasAssets && !prevHasAssetsRef.current) {
       const doSync = async () => {
-        await syncTodayExchangeRate();
-        const stockSynced = await syncTodayStockPrices(assetData);
-        const finalData = await syncTodayCryptoPrices(stockSynced);
-        await saveSnapshots(finalData, exchangeRatesRef.current);
+        priceChainBusyRef.current++;
+        try {
+          await syncTodayExchangeRate();
+          const stockSynced = await syncTodayStockPrices(assetData);
+          const finalData = await syncTodayCryptoPrices(stockSynced);
+          await saveSnapshots(finalData, exchangeRatesRef.current);
+        } finally {
+          priceChainBusyRef.current--;
+        }
       };
       void doSync();
     }
     prevHasAssetsRef.current = hasAssets;
   }, [assetData, isDataLoaded, syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
+
+  // 화면 복귀 재조회(#309) — visibilitychange→visible·pageshow(persisted)만(타이머·잠금 해제 리스너 0).
+  // 호출 전에 칸을 먼저 비교하고, 바뀐 단계만 silent로 1회 부른다. 칸이 같으면 어떤 함수도 부르지 않는다
+  // (syncTodayStockPrices는 진입만으로 abort·dataResetVersion 증가를 일으키므로 사전 판정이 필수).
+  // 같은 복귀에서 pull이 오면 initAndSync가 epoch를 올려 이쪽 응답을 버린다(최신 우선, 저장은 최신본 병합 C44).
+  const resumePriceSync = useCallback(async () => {
+    const latest = getAssetData();
+    if (!hasAnyAssets(latest)) return;
+    const plan = planPriceResync({
+      stocks: latest.stocks,
+      crypto: latest.crypto,
+      exchangeSyncDate: localStorage.getItem(STORAGE_KEYS.exchangeSyncDate),
+      slots: currentPriceSlots(),
+      attempts: priceAttemptsRef.current,
+    });
+    if (!hasResyncWork(plan)) return;
+    if (plan.exchange) await syncTodayExchangeRate({ silent: true });
+    const startEpoch = stockSyncEpochRef.current;
+    let myEpoch = startEpoch;
+    if (plan.stock) {
+      const pending = syncTodayStockPrices(getAssetData(), { silent: true });
+      myEpoch = stockSyncEpochRef.current; // 진입 시 동기적으로 발급된 이번 epoch
+      await pending;
+    }
+    // 도중에 pull·데이터 교체로 새 sync가 시작됐으면 이후 단계(코인·스냅샷)를 하지 않는다 — 그쪽 사슬이 이어서 처리
+    if (stockSyncEpochRef.current !== myEpoch) return;
+    if (plan.coin) await syncTodayCryptoPrices(getAssetData());
+    if (stockSyncEpochRef.current !== myEpoch) return;
+    await saveSnapshots(getAssetData(), exchangeRatesRef.current, { silent: true });
+  }, [syncTodayExchangeRate, syncTodayStockPrices, syncTodayCryptoPrices, saveSnapshots]);
+
+  useEffect(() => {
+    if (!isDataLoaded) return;
+    const trigger = createSingleFlight(resumePriceSync, () =>
+      priceChainBusyRef.current === 0 && !isBackgroundWorkBlocked() && navigator.onLine !== false,
+    );
+    return onPageResume(() => { trigger().catch((e) => console.error(e)); });
+  }, [isDataLoaded, resumePriceSync]);
 
   // 사용자 편집 → 오늘 일별 행 1줄 재계산(#252). 연속 편집은 묶어 1회(동기화 push 디바운스 2.5초보다 짧게 — 같은 push에 실림).
   // 계산은 getAssetData() 최신본(편집 직후 저장 완료)을 쓴다. 조건 판정은 tryRefreshTodayRow 참조
