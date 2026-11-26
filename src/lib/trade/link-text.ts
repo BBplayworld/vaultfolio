@@ -77,7 +77,7 @@ const fmtRate = (c: LinkConversion): string => {
 
 /** 저장 성공 토스트 */
 export const linkSavedToast = (type: "buy" | "sell", kind: "cash" | "loan") =>
-  `${type === "buy" ? "매수" : "매도"} 거래가 기록되었습니다. ${kind === "cash" ? "현금" : "대출"} 기록도 남겼어요`;
+  `${type === "buy" ? "매수" : "매도"} 거래를 기록했어요. ${kind === "cash" ? "현금" : "대출"} 기록도 남겼어요`;
 
 /** 삭제 확인 안내 1줄(하한 꼬리 포함, ui.md 3절). plan.delta = 실제 잔액 변화 */
 export function revertNoteText(plan: RemoveLinkPlan): string {

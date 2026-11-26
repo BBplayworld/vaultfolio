@@ -493,7 +493,7 @@ export function TradeInput() {
         track("transaction_save", { asset_type: "stock", method: "manual", result: "reflected" });
         trackLinkedTrade(link);
         if (pickedNew) trackTradeNewStock(link);
-        toast.success(link ? linkSavedToast("buy", link.kind) : "매수 거래가 기록되었습니다.");
+        toast.success(link ? linkSavedToast("buy", link.kind) : "매수 거래를 기록했어요");
         resetAndClose();
       }
       return;
@@ -512,7 +512,7 @@ export function TradeInput() {
             message: `보유 수량(${guard.maxQty}주)을 초과합니다`,
           });
         } else if (guard.reason === "already_reflected") {
-          toast.error("이미 반영된 거래입니다.");
+          toast.error("이미 반영된 거래예요");
         }
         return;
       }
@@ -547,7 +547,7 @@ export function TradeInput() {
     if (ok) {
       track("transaction_save", { asset_type: "stock", method: "manual", result: finalTx.reflected ? "reflected" : "unreflected" });
       trackLinkedTrade(link);
-      toast.success(link ? linkSavedToast(finalTx.type, link.kind) : finalTx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
+      toast.success(link ? linkSavedToast(finalTx.type, link.kind) : finalTx.type === "buy" ? "매수 거래를 기록했어요" : "매도 거래를 기록했어요");
       resetAndClose();
     }
   };
@@ -1036,7 +1036,7 @@ export function TradeInput() {
                 </p>
               </div>
               <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 거래를 유지했습니다."); resetAndClose(); }}>
+                <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 거래를 그대로 뒀어요"); resetAndClose(); }}>
                   덮어쓰기 (기존 유지)
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => { if (dupPending) commitTransaction(dupPending.tx, dupPending.stock); }}>

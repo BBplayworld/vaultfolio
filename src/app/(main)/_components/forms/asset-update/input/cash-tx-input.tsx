@@ -161,7 +161,7 @@ export function CashTxInput() {
       : addCashTransaction(tx);
     if (ok) {
       track("transaction_save", { asset_type: "cash", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
-      toast.success(tx.type === "deposit" ? "입금이 기록되었습니다." : "출금이 기록되었습니다.");
+      toast.success(tx.type === "deposit" ? "입금을 기록했어요" : "출금을 기록했어요");
       resetAndClose();
     } else {
       toast.error("저장하지 못했어요. 입력값을 확인해 주세요.");
@@ -335,7 +335,7 @@ export function CashTxInput() {
               <p className="tabular-nums">{dupPending.tx.type === "deposit" ? "입금" : "출금"} · {dupPending.tx.date} · {formatCurrencyDisplay(dupPending.tx.amount, dupPending.tx.currency)}</p>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 유지했습니다."); resetAndClose(); }}>기존 유지</Button>
+              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 그대로 뒀어요"); resetAndClose(); }}>기존 유지</Button>
               <Button type="button" variant="secondary" onClick={() => { if (dupPending) commit(dupPending.tx, dupPending.cash); }}>새로 추가</Button>
               <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>취소</Button>
             </DialogFooter>

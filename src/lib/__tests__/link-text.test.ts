@@ -50,8 +50,8 @@ describe("evaluateLink", () => {
     expect(evaluateLink(d, trade({ quantity: 11 }), "cash:a", true)).toMatchObject({ message: expect.stringContaining("잔액이 부족해요") });
   });
   it("토스트 문구", () => {
-    expect(linkSavedToast("buy", "cash")).toBe("매수 거래가 기록되었습니다. 현금 기록도 남겼어요");
-    expect(linkSavedToast("sell", "loan")).toBe("매도 거래가 기록되었습니다. 대출 기록도 남겼어요");
+    expect(linkSavedToast("buy", "cash")).toBe("매수 거래를 기록했어요. 현금 기록도 남겼어요");
+    expect(linkSavedToast("sell", "loan")).toBe("매도 거래를 기록했어요. 대출 기록도 남겼어요");
     expect(revertToastSuffix("cash")).toBe(" 연결된 현금 기록도 지웠어요");
   });
 });
