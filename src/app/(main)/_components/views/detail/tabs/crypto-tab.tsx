@@ -128,13 +128,13 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
                   <span className={ASSET_THEME.cardInfoName} title={coin.name.length > 10 ? coin.name : undefined}>{coin.name}</span>
                   {coin.symbol && <span className="text-2xs text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
                 </div>
-                <div className={`${ASSET_THEME.cardInfoMeta} max-[359px]:flex-wrap max-[359px]:gap-x-1.5`}>
+                <div className={`${ASSET_THEME.cardInfoMeta} max-[360px]:flex-wrap max-[360px]:gap-x-1.5`}>
                   <span className="text-sm text-foreground dark:min-[360px]:whitespace-nowrap">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
-                  <span className="text-sm text-muted-foreground max-[359px]:hidden">·</span>
+                  <span className="text-sm text-muted-foreground max-[360px]:hidden">·</span>
                   <span className="text-sm font-semibold text-primary dark:min-[360px]:whitespace-nowrap">{pct.toFixed(1)}%</span>
                 </div>
               </div>
-              <div className={`${ASSET_THEME.cardInfoRight} max-[359px]:max-w-[45%]`}>
+              <div className={`${ASSET_THEME.cardInfoRight} max-[360px]:max-w-[45%]`}>
                 <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(value)}</p>
                 <div data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardAmountProfitRow} max-sm:flex-wrap max-sm:justify-end`}>
                   <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass} whitespace-nowrap`}>{tone.sign}{formatPriceByMode(Math.round(tone.amount))}</p>

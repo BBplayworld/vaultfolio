@@ -5,6 +5,9 @@
 ---
 
 ## 2026-11-27
+### 배당 종목 표 2단 640 미만 확대·359 경계 표기 정리 (issue-5.165, #332, risk:low)
+- 360~639의 배당 종목 표 5열은 열 폭이 고정(52/56/56/56px)이라 폭이 넓어져도 지급·합계 금액이 겹치고 합계 끝자리가 표 테두리에서 잘리던 문제: `monthly-dividend-stocks.tsx`의 2단 배치 접두 `max-[360px]:` 34곳을 `max-sm:`로, 자리 채움 `min-[360px]:hidden`을 `sm:hidden`으로(DOM·문구·계산 불변, 640 이상 5열 그대로)
+- `max-[359px]:`는 Tailwind 4에서 `width < 359`라 359px 뷰포트에 걸리지 않던 표기 17파일 42곳을 `max-[360px]:`로 일괄 치환(짝 `min-[360px]:`와 빈틈이 있던 `stock-tab.tsx`·`broker-totals-block.tsx` 포함. 바뀌는 폭은 359.00~359.99뿐). 재유입은 `type-scale-guard.test.ts`가 막는다
 ### 맞추기 결과 대조 1줄 — 화면 합계 전용 별도 호출 (issue-5.164, #328, risk:medium)
 - 주식을 화면 1장으로 맞춘 뒤 숫자가 증권사 화면과 같은지 확인할 방법이 없던 문제(5.161에서 합계를 행 인식 호출에 함께 넣었다가 행이 회귀해 뺐다). 이번에는 **행 인식 호출을 한 글자도 바꾸지 않고**(프롬프트·스키마·생성 설정 SHA-256 고정 테스트 `stock-row-frozen-5164.test.ts`) 합계만 읽는 전용 호출을 따로 둔다: `assetType=stock-total` → `screen-total.ts` `respondScreenTotal`(전용 프롬프트·스키마·`maxOutputTokens` 256, 금액은 화면 글자 그대로 받아 서버 `parseScreenAmount`가 숫자로 변환 — 모델이 숫자를 직접 쓰면 자릿수가 틀어지던 qa D-1 대응) → `{ screenTotal: {value,label,currency} | null }`. 전용 풀 `STOCK_TOTAL_POOL`(일 60, 전역 1,500 안의 몫·전역 인상 0, 초과 429). 서버 저장·캐시 0, 로그는 호출 오류 메시지 1건뿐(값 미출력).
 - 기기: 행 인식이 끝난 그 인식 동작 안에서 **주식·올린 장 1장·그 장 ok**일 때만 1회(`screenTotalTarget` → `startScreenTotalCall`, 본문 = 이미지 + 모드 값, 8초, 재전송 0, 기기 30회 차감 0, 대기 표시 0). `맞추기`를 누른 순간 받아 둔 값으로만 판정하고 늦은 응답은 버린다. 결과 화면 `ReconcileLines`(일치일 때만 `증권사 화면 합계와 맞아요` 1줄 — CEO 판정으로 축소: 차이 판정은 줄 없이 GA `resync_check_diff`만 집계, 허용 오차 max(0.5%, 1,000원), 라벨 제외어에 `손익`·표 머리글 낱말·줄바꿈 추가, 합계가 한 행 평가액과 같거나 행 합의 50% 미만이면 숨김 — qa D-2). GA `resync_check_match|diff|none|skip`(skip = 보냈으나 못 받음, category만). 새 소식 `20261127-02`(바로 가기 없음, 체험은 인식이 막혀 있어 `trialHidden`으로 체험 목록·팁·`새` 개수에서 제외 — `visibleWhatsNew`). 저장 키·스키마·마이그레이션·동기화·공유 토큰 변경 0.
@@ -481,7 +484,7 @@
 - **자산 변화 › 일 Hero·원인 = 홈**: `activity/use-day-hero.ts`(`useDayHero`·순수 `resolveDayHero`)가 `computeAttributionView(sinceDate=어제)`로 계산(홈 `useHeaderNetChange`와 같은 식). 일 탭 전용 diff(이번 달 마지막 2건) 삭제. 제목 `전일 대비`/`M/D 기록 대비`, 원인 `CauseBlock scope="week"`(`mapWeekCauses`) 재사용, 비교 기록 없음이면 홈 7일 카드 문구(`day-empty`), 연 탭 문구는 일 탭에서 제거.
 - **달력 칸 증감**: `prevDailyRecord`로 30일 롤링 전체에서 직전 기록 탐색(월초 1일 칸도 전달 마지막 기록 대비). 달력 머리에 `종가 기준` 11px 캡션(`day-calendar-basis`, 분리 커밋).
 - **F4**: `WeekTrendCard` 막대 값 라벨 360 미만은 `formatCompactKRW`(원 생략·`6.4억`·`752만`) 11px 한 줄. 360 이상 diff 0.
-- **F5**: 배당 `N월 예정` 칩 `max-[359px]:px-1 max-[359px]:text-[11px]`.
+- **F5**: 배당 `N월 예정` 칩 `max-[359px]` 접두로 `px-1`·`text-[11px]`.
 - **ProfitCard**: `period` 필수, 비제어 분기(`innerPeriod`·자체 선택기·요약 박스) 삭제.
 - 저장·GA·서버·동기화 변경 0. 테스트: `use-day-hero.test.ts`·`quality-batch-184.test.tsx`(신규).
 
@@ -928,7 +931,7 @@
 
 ### 품질 정돈 묶음 (#4.49, 이슈 #89, risk low)
 - **왜**: 검수에서 '비차단 후속'으로 쌓인 소형 화면·조작 결함 정리. 새 문구·저장 변경 0.
-- ④ 320 주식 행: `stock-tab.tsx` StockRowHeader 비스크린샷에 `max-sm:` 가산(우측 열 `max-[359px]:max-w-[50%] min-[360px]:max-sm:max-w-[60%]` — 폭 구간 분리, 로컬 Playwright 실측: 320 '삼성전자' 이름 66px 1줄, 360+ 일반 금액(≤8천만) 행 39.5px 유지·375 이상은 억 단위도 1줄, 360 억 단위만 줄바꿈 63.5px, 320·340은 우측 50%라 일반 금액도 63.5px, 1280 40.8px 불변·손익 줄 wrap·금액/(%) nowrap·이름 `break-keep`). 웰컴·인증카드(screenshotMode) 클래스 불변. testid `stock-row-left/right`.
+- ④ 320 주식 행: `stock-tab.tsx` StockRowHeader 비스크린샷에 `max-sm:` 가산(우측 열 `max-[359px]` 접두 `max-w-[50%]` + `min-[360px]:max-sm:max-w-[60%]` — 폭 구간 분리, 로컬 Playwright 실측: 320 '삼성전자' 이름 66px 1줄, 360+ 일반 금액(≤8천만) 행 39.5px 유지·375 이상은 억 단위도 1줄, 360 억 단위만 줄바꿈 63.5px, 320·340은 우측 50%라 일반 금액도 63.5px, 1280 40.8px 불변·손익 줄 wrap·금액/(%) nowrap·이름 `break-keep`). 웰컴·인증카드(screenshotMode) 클래스 불변. testid `stock-row-left/right`.
 - ⑤ FAB 과거 순자산: 50ms `setTimeout` 제거 → `asset-dispatch.ts` 1회 요청 + `net-asset-chart.tsx` 마운트/이벤트 소비(3초 유효). `asset-change-view` 무변경.
 - ① InfoHint 터치 40px 확장(`pointer-coarse` after, 래퍼 없음) + 설정 InlineSelector `relative z-10`.
 - ③ 다크 ON 배지 `dark:bg-brand/15 dark:text-indigo-300`(라이트 불변).

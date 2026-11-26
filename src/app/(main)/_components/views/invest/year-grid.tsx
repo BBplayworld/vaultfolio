@@ -69,7 +69,7 @@ export function YearGrid({ view, period, showLevels, question, onYear }: { view:
         </span>
         <span className="inline-flex items-center gap-1.5"><i aria-hidden className="inline-block h-[3px] w-4 rounded-sm bg-brand" /><span data-testid="yearly-legend-period">아래 기간 수익률에서 고른 기간</span></span>
       </div>
-      <div data-testid="invest-readout-grid" aria-live="polite" className="mt-2 min-h-12 text-sm max-[359px]:min-h-16">
+      <div data-testid="invest-readout-grid" aria-live="polite" className="mt-2 min-h-12 text-sm max-[360px]:min-h-16">
         {ro && showLevels ? (
           <div className="flex flex-wrap items-center gap-x-1.5">
             <ReadoutChips ro={ro} />
