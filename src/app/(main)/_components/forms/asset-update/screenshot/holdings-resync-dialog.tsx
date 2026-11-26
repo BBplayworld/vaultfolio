@@ -1180,7 +1180,7 @@ export function ReconcileLines({ view }: { view: ReconcileView }) {
   const lines = reconcileLines(view);
   if (lines.length === 0) return null;
   return (
-    <div data-testid="resync-reconcile" className="space-y-0.5">
+    <div data-testid="resync-reconcile" className="space-y-1">
       {lines.map((l, i) => (
         <p key={i} className="text-sm text-foreground tabular-nums text-pretty break-keep">{l}</p>
       ))}

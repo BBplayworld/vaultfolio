@@ -22,7 +22,7 @@ vi.mock("@/server/api-guard", () => ({
 }));
 
 import { POST } from "../route";
-import { buildScreenTotalPrompt, sanitizeScreenTotal, SCREEN_TOTAL_SCHEMA } from "../screen-total";
+import { buildScreenTotalPrompt, parseScreenAmount, readScreenTotalFields, sanitizeScreenTotal, SCREEN_TOTAL_SCHEMA } from "../screen-total";
 
 const sha = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 const png = (w: number, h: number) => {
@@ -84,7 +84,7 @@ describe("주식 행 인식 호출 — 바이트 고정(요청 0)", () => {
   it("assetType=stock을 명시해도, 합계 호출을 먼저 한 뒤에도 같은 값이다(호출 사이 상태 없음)", async () => {
     await call("stock");
     expect(hashes()).toEqual(MAIN_STOCK);
-    reply({ screenTotal: 801_000, screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" });
+    reply({ screenTotalText: "801,000원", screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" });
     await call("stock-total");
     reply(ROWS);
     const row = await call();
@@ -105,19 +105,23 @@ describe("주식 행 인식 호출 — 바이트 고정(요청 0)", () => {
 
 describe("화면 합계 전용 호출(assetType=stock-total)", () => {
   it("응답은 { screenTotal: {value,label,currency} } 한 필드뿐, 행(stocks) 없음", async () => {
-    reply({ screenTotal: 801_000, screenTotalLabel: " 총 평가금액 ", screenTotalCurrency: "KRW" });
+    reply({ screenTotalText: "801,000원", screenTotalLabel: " 총 평가금액 ", screenTotalCurrency: "KRW" });
     const r = await call("stock-total");
     expect(r.status).toBe(200);
     expect(r.body).toEqual({ screenTotal: { value: 801_000, label: "총 평가금액", currency: "KRW" } });
   });
-  it("행과 다른 프롬프트·스키마·출력 한도 128로 1번만 부르고, 전용 풀(stock-total, 일 60)로 1회 예약한다", async () => {
-    reply({ screenTotal: 0, screenTotalLabel: "", screenTotalCurrency: "KRW" });
+  it("행과 다른 프롬프트·스키마·출력 한도 256으로 1번만 부르고, 전용 풀(stock-total, 일 60)로 1회 예약한다", async () => {
+    reply({ screenTotalText: "", screenTotalLabel: "", screenTotalCurrency: "KRW" });
     await call("stock-total");
     expect(generate).toHaveBeenCalledTimes(1);
     const a = sent();
     expect(a.contents[0].parts[0].text).toBe(buildScreenTotalPrompt());
     expect(a.config.responseSchema).toBe(SCREEN_TOTAL_SCHEMA);
-    expect(a.config.maxOutputTokens).toBe(128);
+    expect(a.config.maxOutputTokens).toBe(256);
+    // 금액은 숫자 칸이 아니라 화면 글자 그대로(문자열)로 받는다 — 자릿수 변환은 서버만 한다(qa D-1)
+    expect(Object.keys(SCREEN_TOTAL_SCHEMA.properties).sort()).toEqual(["screenTotalCurrency", "screenTotalLabel", "screenTotalText"]);
+    expect(SCREEN_TOTAL_SCHEMA.properties.screenTotalText.type).toBe("STRING");
+    expect(JSON.stringify(SCREEN_TOTAL_SCHEMA)).not.toContain("NUMBER");
     expect(a.config.temperature).toBe(0);
     expect(hashes().prompt).not.toBe(MAIN_STOCK.prompt);
     expect(reserve).toHaveBeenCalledTimes(1);
@@ -125,7 +129,7 @@ describe("화면 합계 전용 호출(assetType=stock-total)", () => {
     expect(reserve.mock.calls[0][3]).toEqual({ name: "stock-total", dailyLimit: 60 });
   });
   it("Gemini에는 프롬프트와 이미지만 간다 — 요청에 다른 필드를 실어도 전달되지 않는다", async () => {
-    reply({ screenTotal: 0, screenTotalLabel: "", screenTotalCurrency: "KRW" });
+    reply({ screenTotalText: "", screenTotalLabel: "", screenTotalCurrency: "KRW" });
     await call("stock-total", [1080, 1920], { appTotal: "123456789", broker: "토스증권", entry: "ratio" });
     const parts = sent().contents[0].parts;
     expect(parts).toHaveLength(2);
@@ -136,11 +140,15 @@ describe("화면 합계 전용 호출(assetType=stock-total)", () => {
   });
   it("총액 없음(0·빈 라벨)·통화 불명·형식 어긋남·읽을 수 없는 응답·잘림은 200 null", async () => {
     for (const o of [
-      { screenTotal: 0, screenTotalLabel: "", screenTotalCurrency: "KRW" },
-      { screenTotal: 801_000, screenTotalLabel: "", screenTotalCurrency: "KRW" },
-      { screenTotal: 801_000, screenTotalLabel: "총 평가금액", screenTotalCurrency: "JPY" },
-      { screenTotal: "801000", screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" },
-      [{ screenTotal: 801_000 }],
+      { screenTotalText: "", screenTotalLabel: "", screenTotalCurrency: "KRW" },
+      { screenTotalText: "801,000원", screenTotalLabel: "", screenTotalCurrency: "KRW" },
+      { screenTotalText: "801,000원", screenTotalLabel: "총 평가금액", screenTotalCurrency: "JPY" },
+      { screenTotal: 801_000, screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" }, // 숫자 칸은 받지 않는다(글자 칸만)
+      { screenTotalText: 801_000, screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" },
+      { screenTotalText: "+801,000원", screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" },
+      { screenTotalText: "801,000원", screenTotalLabel: "총 평가금액", screenTotalCurrency: "USD" },
+      { screenTotalText: "$801.50", screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" },
+      [{ screenTotalText: "801,000원" }],
       "not json",
       "",
     ]) {
@@ -176,7 +184,7 @@ describe("화면 합계 전용 호출(assetType=stock-total)", () => {
   });
   it("값을 읽은 정상 응답에서는 console 출력이 0건이다", async () => {
     const spies = (["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => {}));
-    reply({ screenTotal: 801_000, screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" });
+    reply({ screenTotalText: "801,000원", screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" });
     await call("stock-total");
     for (const s of spies) {
       expect(s).not.toHaveBeenCalled();
@@ -190,6 +198,76 @@ describe("화면 합계 전용 호출(assetType=stock-total)", () => {
     for (const l of ["", "  ", 5, null]) expect(sanitizeScreenTotal(100, l, "KRW")).toBeNull();
     for (const c of ["EUR", "JPY", "", undefined]) expect(sanitizeScreenTotal(100, "총 평가금액", c)).toBeNull();
     expect(sanitizeScreenTotal(100, "가".repeat(80), "KRW")?.label).toHaveLength(30);
+  });
+});
+
+describe("화면 금액 글자 → 숫자(qa D-1: 모델이 숫자를 직접 쓰면 5,500,000 → 550000000으로 틀어졌다)", () => {
+  it("qa 픽스처 값: 화면 글자 그대로면 자릿수가 보존된다", async () => {
+    expect(parseScreenAmount("5,500,000원")).toBe(5_500_000);
+    expect(parseScreenAmount("7,845,000원")).toBe(7_845_000);
+    reply({ screenTotalText: "5,500,000원", screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" });
+    expect((await call("stock-total")).body).toEqual({ screenTotal: { value: 5_500_000, label: "총 평가금액", currency: "KRW" } });
+    reply({ screenTotalText: "7,845,000 원", screenTotalLabel: "총 평가금액", screenTotalCurrency: "KRW" });
+    expect((await call("stock-total")).body.screenTotal.value).toBe(7_845_000);
+  });
+  it.each([
+    ["5,500,000", 5_500_000],
+    ["5500000", 5_500_000],
+    ["₩5,500,000", 5_500_000],
+    ["5,500,000 KRW", 5_500_000],
+    [" 5,500,000 원 ", 5_500_000],
+    ["999원", 999],
+    ["12,345,678,900원", 12_345_678_900],
+    ["123,456,789원", 123_456_789],
+    ["$12,345.67", 12_345.67],
+    ["12,345.67 USD", 12_345.67],
+    ["USD 1,000", 1000],
+    ["0.5", 0.5],
+  ])("일반 표기 %s → %d", (text, want) => expect(parseScreenAmount(text)).toBe(want));
+  it.each([
+    ["550만원", 5_500_000],
+    ["550만 원", 5_500_000],
+    ["1억", 100_000_000],
+    ["1억원", 100_000_000],
+    ["1.2억", 120_000_000],
+    ["1.25억원", 125_000_000],
+    ["784.5만원", 7_845_000],
+    ["1억 2,345만원", 123_450_000],
+    ["1억2345만6789원", 123_456_789],
+    ["1억 2,345만 6,789원", 123_456_789],
+    ["2,345만 6,789원", 23_456_789],
+    ["1억 500원", 100_000_500],
+    ["1,234억원", 123_400_000_000],
+    ["0.5만원", 5000],
+  ])("한글 단위 %s → %d", (text, want) => expect(parseScreenAmount(text)).toBe(want));
+  it.each([
+    "", " ", "원", "억", "만원", "0", "0원", "0만원",
+    "5,500,00", "55,00,000", "5,5000,000", ",500", "5,500,", "5.500.000", "5,500.000.1", "1,23",
+    "+5,500,000원", "-5,500,000원", "−5,500,000", "▲5,500,000", "▼5,500,000", "12.5%", "+12.5%",
+    "약 550만원", "5,500,000원(예수금 포함)", "550만원대", "5천만원", "3백만원", "5,500천원", "1조원",
+    "1억 12,345만원", "1억 2,345만 12,345원", "2만 10,000원", "1.5억 2,000만원", "1.5만 500원", "만 5,000", "1억만원",
+    "5,500,000원 7,845,000원", "오백만원", "1e7", "0x10", "Infinity", "NaN",
+    "1".repeat(41),
+  ])("규칙 밖 표기 %j → null(줄 숨김)", (text) => expect(parseScreenAmount(text)).toBeNull());
+  it("문자열이 아니면 null", () => {
+    for (const v of [5_500_000, null, undefined, {}, [], true]) expect(parseScreenAmount(v)).toBeNull();
+  });
+  it("통화와 글자가 어긋나면 null, 맞으면 값", () => {
+    const L = "총 평가금액";
+    expect(readScreenTotalFields("5,500,000원", L, "KRW")).toEqual({ value: 5_500_000, label: L, currency: "KRW" });
+    expect(readScreenTotalFields("5,500,000", L, "KRW")?.value).toBe(5_500_000);
+    expect(readScreenTotalFields("$12,345.67", L, "USD")).toEqual({ value: 12_345.67, label: L, currency: "USD" });
+    expect(readScreenTotalFields("12,345.67", L, "USD")?.value).toBe(12_345.67);
+    for (const [t, c] of [["5,500,000원", "USD"], ["550만", "USD"], ["₩5,500,000", "USD"], ["$5,500", "KRW"], ["5,500 USD", "KRW"], ["5,500,000원", "JPY"], ["5,500,000원", ""]]) {
+      expect(readScreenTotalFields(t, L, c)).toBeNull();
+    }
+    expect(readScreenTotalFields("5,500,000원", "", "KRW")).toBeNull();
+  });
+  it("프롬프트: 금액은 화면 글자 그대로 옮기고 자릿수·쉼표를 바꾸지 않는다", () => {
+    const p = buildScreenTotalPrompt();
+    expect(p).toContain("화면에 적힌 글자 그대로 옮긴 문자열");
+    expect(p).toContain("자릿수와 쉼표 위치를 바꾸지 말고");
+    expect(p).not.toContain("숫자만)");
   });
 });
 
@@ -208,13 +286,14 @@ describe("서버 저장·캐시·로그 0 (소스 grep)", () => {
   it("screen-total.ts: console은 호출 오류 메시지 1건뿐이고 읽은 값·응답 본문을 싣지 않는다. 저장·캐시 호출 0", () => {
     const logs = total.split("\n").filter((l) => /console\./.test(l));
     expect(logs).toHaveLength(1);
-    expect(logs[0]).not.toMatch(/screenTotal|rawText|parsed|label|value|result/);
+    expect(logs[0]).not.toMatch(/screenTotal|rawText|parsed|label|value|result|text/i);
     expect(total).not.toMatch(/getCacheStorage|kv\.|redis|localStorage|writeFile|setCache|incrementCounter/i);
   });
   it("프롬프트: 라벨이 글자로 있을 때만 읽고, 행을 더해 만들지 않으며, 손익·예수금은 합계가 아니다", () => {
     const p = buildScreenTotalPrompt();
-    expect(p).toContain("화면에 글자로 적혀 있고");
-    expect(p).toContain("더하거나 계산해서 합계를 만들지 말 것");
+    expect(p).toContain("합계 라벨(예");
+    expect(p).toContain("없거나 불확실하면 읽지 않는다");
+    expect(p).toContain("종목 값을 더해 계산하지 말 것");
     expect(p).toContain("총 평가손익");
     expect(p).toContain("예수금");
   });

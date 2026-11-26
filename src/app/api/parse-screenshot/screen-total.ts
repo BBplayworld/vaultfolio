@@ -28,28 +28,77 @@ export function sanitizeScreenTotal(value: unknown, label: unknown, currency: un
   return { value, label: trimmed, currency: currency as ScreenTotal["currency"] };
 }
 
+/**
+ * 화면에 적힌 금액 글자를 숫자로 바꾼다(5.164 qa D-1). 모델이 숫자를 직접 쓰면 자릿수가 틀어질 수 있어(5,500,000 → 550000000)
+ * 모델에게는 화면 글자 그대로("5,500,000원")를 받고 변환은 여기서만 한다. 규칙에 맞지 않으면 null(= 총액 없음, 줄 숨김).
+ * - 통화 표시(원·₩·$·KRW·USD)와 공백은 떼어 낸다. 부호(+·-·▲·▼)나 %가 있으면 합계가 아니라 손익·수익률이므로 null.
+ * - 쉼표는 세 자리 묶음일 때만 인정한다("5,500,00"·"55,00,000"은 잘못 옮긴 글자로 보고 null). 쉼표 없는 숫자도 인정.
+ * - 한글 단위: `N억`·`N만`·나머지 순서로 더한다("1억 2,345만 6,789원" = 123,456,789, "550만원" = 5,500,000, "1.2억" = 120,000,000).
+ *   억·만 아래 칸은 각각 1억·1만 미만이어야 한다. `천`·`백` 등 다른 단위 글자는 null.
+ * - 소수점은 그대로 둔다(달러 "12,345.67"). 결과는 소수 둘째 자리까지.
+ */
+export function parseScreenAmount(text: unknown): number | null {
+  if (typeof text !== "string") return null;
+  let t = text.replace(/\s/g, "");
+  if (!t || t.length > 40) return null;
+  if (/[+\-−–▲▼△▽%]/.test(t)) return null;
+  t = t.replace(/^(₩|￦|\$|KRW|USD)/i, "").replace(/(원|KRW|USD|달러)$/i, "");
+  const num = (x: string): number | null => (/^(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$/.test(x) ? Number(x.replace(/,/g, "")) : null);
+  const m = /^(?:([\d,.]+)억)?(?:([\d,.]+)만)?([\d,.]+)?$/.exec(t);
+  if (!m || (m[1] === undefined && m[2] === undefined && m[3] === undefined)) return null;
+  const eok = m[1] === undefined ? 0 : num(m[1]);
+  const man = m[2] === undefined ? 0 : num(m[2]);
+  const rest = m[3] === undefined ? 0 : num(m[3]);
+  if (eok === null || man === null || rest === null) return null;
+  const unit = m[1] !== undefined || m[2] !== undefined;
+  if (unit) {
+    // 단위 표기에서는 아래 칸이 윗 단위를 넘을 수 없고, 소수는 맨 끝 단위 칸에만 올 수 있다
+    if (m[1] !== undefined && man >= 10_000) return null;
+    if (rest >= 10_000) return null;
+    if (m[1] !== undefined && !Number.isInteger(eok) && (m[2] !== undefined || m[3] !== undefined)) return null;
+    if (m[2] !== undefined && !Number.isInteger(man) && m[3] !== undefined) return null;
+  }
+  const value = Math.round((eok * 100_000_000 + man * 10_000 + rest) * 100) / 100;
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** 금액 글자와 통화가 서로 어긋나면(원·만·억 ↔ USD, $ ↔ KRW) 믿지 않는다 */
+function currencyConflicts(text: string, currency: unknown): boolean {
+  if (currency === "USD") return /[원₩￦만억]|KRW/i.test(text);
+  if (currency === "KRW") return /\$|USD|달러/i.test(text);
+  return false;
+}
+
+/** 모델 응답 3필드(금액 글자·라벨·통화) → 응답 값. 하나라도 어긋나면 null */
+export function readScreenTotalFields(text: unknown, label: unknown, currency: unknown): ScreenTotal | null {
+  if (typeof text !== "string" || currencyConflicts(text, currency)) return null;
+  return sanitizeScreenTotal(parseScreenAmount(text), label, currency);
+}
+
 export const SCREEN_TOTAL_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    screenTotal: { type: Type.NUMBER },
+    screenTotalText: { type: Type.STRING },
     screenTotalLabel: { type: Type.STRING },
     screenTotalCurrency: { type: Type.STRING, enum: ["KRW", "USD"] },
   },
-  required: ["screenTotal", "screenTotalLabel", "screenTotalCurrency"],
+  required: ["screenTotalText", "screenTotalLabel", "screenTotalCurrency"],
 };
 
 export const buildScreenTotalPrompt = () => `증권 앱 보유종목 화면에서 "보유 주식 평가금액 합계" 한 가지만 읽어라. 종목 행은 읽지 않는다.
 
-읽는 조건: 합계를 뜻하는 라벨(예: "총 평가금액"·"총평가금액"·"평가금액 합계"·"주식 평가금액")이 화면에 글자로 적혀 있고, 그 라벨 옆이나 바로 아래에 금액이 숫자로 적혀 있을 때만 읽는다.
+읽는 조건: 화면에 합계 라벨(예 "총 평가금액"·"총평가금액"·"평가금액 합계"·"주식 평가금액")로 명시된 금액이 숫자로 보일 때만 읽는다. 없거나 불확실하면 읽지 않는다.
 
 필드:
-screenTotal=그 라벨에 딸린 금액(쉼표·단위를 뺀 숫자만), screenTotalLabel=화면에 적힌 라벨 글자 그대로(고쳐 쓰거나 줄이지 말 것), screenTotalCurrency=그 금액의 통화(원이면 KRW·달러면 USD)
+screenTotalText=그 라벨에 딸린 금액을 화면에 적힌 글자 그대로 옮긴 문자열(쉼표·소수점·단위 포함. 예: 화면에 "5,500,000원"이면 "5,500,000원", "1억 2,345만원"이면 "1억 2,345만원", "$12,345.67"이면 "$12,345.67"). 숫자를 계산·환산·반올림하지 말고, 자릿수와 쉼표 위치를 바꾸지 말고, 0을 더하거나 빼지 말 것.
+screenTotalLabel=그 금액 바로 옆·위의 라벨 글자 그대로(고쳐 쓰거나 줄이지 말 것)
+screenTotalCurrency=그 금액의 통화(원이면 KRW·달러면 USD)
 
-합계 라벨이 화면에 없으면 screenTotal=0, screenTotalLabel="", screenTotalCurrency="KRW"로 답한다.
+합계 라벨이 화면에 없으면 screenTotalText="", screenTotalLabel="", screenTotalCurrency="KRW"로 답한다.
 
 금지:
-- 종목 행의 금액을 더하거나 계산해서 합계를 만들지 말 것. 화면에 적힌 숫자만 옮긴다.
-- "총 평가손익"·"평가손익"·"수익률"·"매입금액"·"총 매입금액"·"예수금"·"주문가능금액"은 합계가 아니다. 이런 라벨만 보이면 screenTotal=0.
+- 종목 값을 더해 계산하지 말 것. 화면에 보이는 글자만 옮긴다.
+- "총 평가손익"·"평가손익"·"수익률"·"매입금액"·"총 매입금액"·"예수금"·"주문가능금액"은 합계가 아니다. 이런 라벨만 보이면 screenTotalText="".
 - 종목 한 줄의 평가금액을 합계로 답하지 말 것.`;
 
 const noTotal = () => NextResponse.json({ screenTotal: null });
@@ -74,7 +123,7 @@ export async function respondScreenTotal(request: Request, apiKey: string, image
       config: {
         thinkingConfig: { thinkingBudget: 0 },
         temperature: 0,
-        maxOutputTokens: 128,
+        maxOutputTokens: 256,
         responseMimeType: "application/json",
         responseSchema: SCREEN_TOTAL_SCHEMA,
       },
@@ -105,5 +154,5 @@ export async function respondScreenTotal(request: Request, apiKey: string, image
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return noTotal();
   const o = parsed as Record<string, unknown>;
-  return NextResponse.json({ screenTotal: sanitizeScreenTotal(o.screenTotal, o.screenTotalLabel, o.screenTotalCurrency) });
+  return NextResponse.json({ screenTotal: readScreenTotalFields(o.screenTotalText, o.screenTotalLabel, o.screenTotalCurrency) });
 }
