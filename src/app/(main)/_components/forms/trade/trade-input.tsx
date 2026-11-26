@@ -35,6 +35,7 @@ import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
+import { resolveTradeRate } from "@/lib/trade/trade-form";
 import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effective-target";
 import { LinkAccountRow } from "./link-account-row";
 import { trackLinkedTrade, trackTradeNewStock } from "@/lib/trade/link-track";
@@ -115,6 +116,9 @@ export function TradeInput() {
   const [pickedNew, setPickedNew] = useState<(PickedTicker & { quote: { state: "loading" | "ok" | "fail"; price?: number; baseDate?: string; name?: string } }) | null>(null);
   const [tickerNote, setTickerNote] = useState(false); // AC-4 — 검색 종목이 이미 보유라 보유 종목으로 바꿨다는 안내
   const quoteSeq = useRef(0);
+  // 체결 환율 칸 — 사용자가 직접 고쳤는지(고친 값은 자동 채움이 덮지 않는다). rateAuto = 지금 칸 값이 자동으로 채운 현재 환율
+  const rateTouched = useRef(false);
+  const [rateAuto, setRateAuto] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // 보유 주식 목록 (delisted 제외)
@@ -198,37 +202,35 @@ export function TradeInput() {
   if (pickedNew) lastPickedRef.current = pickedNew;
   const shownPicked = pickedNew ?? lastPickedRef.current;
   const quoteLoading = pickedNew?.quote.state === "loading"; // 시세 확인 중에는 저장을 잠깐 막는다(실패 폴백과 엇갈리지 않게)
+  // 외화 거래의 체결 환율 단일 값 — 칸 값(>0), 비었으면 현재 환율. 미리보기·연결 금액·원화 입력 환산·저장이 모두 이 값(#119·#311)
+  const currentRate = selectedStock?.currency === "USD" ? exchangeRates.USD : selectedStock?.currency === "JPY" ? exchangeRates.JPY : 0;
+  const linkRate = resolveTradeRate({ input: watchedExRate, currentRate, isForeign });
 
   // 반영 후 예상 포지션 인라인 미리보기 (팝업 대체)
   const reflectionPreview = useMemo(() => {
     if (!(reflected || isNewSelected) || !selectedStock || !(watchedQty > 0) || !(watchedPrice > 0)) return null;
     // 유효 체결 단가 — USD 원화 입력 시 달러 환산(저장 로직과 동일)
     let price = watchedPrice;
-    if (selectedStock.currency === "USD" && priceInKrw) {
-      const rate = watchedExRate || exchangeRates.USD;
-      if (rate) price = Math.round((price / rate) * 1000) / 1000;
+    if (selectedStock.currency === "USD" && priceInKrw && linkRate) {
+      price = Math.round((price / linkRate) * 1000) / 1000;
     }
     const pos = getPositionSnapshot(selectedStock);
     if (tradeType === "sell" && watchedQty > pos.quantity) return { oversell: true as const };
-    const tentativeTx = { type: tradeType, quantity: watchedQty, price, exchangeRate: watchedExRate } as Transaction;
+    const tentativeTx = { type: tradeType, quantity: watchedQty, price, exchangeRate: linkRate } as Transaction;
     return { before: pos, after: computeNewPosition(pos, tentativeTx) };
-  }, [reflected, isNewSelected, selectedStock, watchedQty, watchedPrice, watchedExRate, priceInKrw, tradeType, exchangeRates.USD]);
+  }, [reflected, isNewSelected, selectedStock, watchedQty, watchedPrice, linkRate, priceInKrw, tradeType]);
 
   // 연결 계좌 평가 — 화면 표시(미리보기·오류)와 제출 차단이 같은 값을 쓴다
   const effReflected = reflected || isNewSelected;
   const effectivePrice = useMemo(() => {
     if (selectedStock?.currency === "USD" && priceInKrw) {
-      const rate = watchedExRate || exchangeRates.USD;
-      return rate ? Math.round((watchedPrice / rate) * 1000) / 1000 : watchedPrice;
+      return linkRate ? Math.round((watchedPrice / linkRate) * 1000) / 1000 : watchedPrice;
     }
     return watchedPrice;
-  }, [selectedStock?.currency, priceInKrw, watchedExRate, exchangeRates.USD, watchedPrice]);
+  }, [selectedStock?.currency, priceInKrw, linkRate, watchedPrice]);
   const watchedDate = form.watch("date");
-  // 외화 거래의 원화 환산 환율 — 체결 환율 칸 값, 비었으면 현재 환율(미리보기·저장·짝 기록이 같은 값, #119)
-  const currentRate = selectedStock?.currency === "USD" ? exchangeRates.USD : selectedStock?.currency === "JPY" ? exchangeRates.JPY : 0;
-  const linkRate = watchedExRate && watchedExRate > 0 ? watchedExRate : currentRate > 0 ? currentRate : undefined;
   const linkTrade = selectedStock
-    ? { type: tradeType, quantity: watchedQty || 0, price: effectivePrice || 0, currency: selectedStock.currency || "KRW", exchangeRate: isForeign ? linkRate : undefined, date: watchedDate, name: selectedStock.name }
+    ? { type: tradeType, quantity: watchedQty || 0, price: effectivePrice || 0, currency: selectedStock.currency || "KRW", exchangeRate: linkRate, date: watchedDate, name: selectedStock.name }
     : null;
   const linkEval: LinkEval = linkTrade && watchedQty > 0 && effectivePrice > 0
     ? evaluateLink(assetData, linkTrade, linkValue, effReflected)
@@ -264,6 +266,14 @@ export function TradeInput() {
     form.setValue("stockId", formStockId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formStockId, lockedStock]);
+
+  // 해외 종목이 정해지면 체결 환율 칸을 현재 환율로 채워 보여 준다(#311). 사용자가 고친 값은 그대로, 자동 값은 통화·환율이 바뀌면 다시 채운다
+  useEffect(() => {
+    if (!isForeign || rateTouched.current) return;
+    form.setValue("exchangeRate", currentRate > 0 ? currentRate : undefined);
+    setRateAuto(currentRate > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isForeign, currentRate]);
 
   // 체결일 입력 제한 — 미래 금지(max=오늘), 보존기간 밖 금지(min=오늘-N년)
   const todayStr = todayKst(); // 상한도 KST 오늘(현금 입력과 동일 기준)
@@ -312,6 +322,8 @@ export function TradeInput() {
     setSelectedGroupId("");
     setTarget(undefined);
     setLinkValue(LINK_NONE);
+    rateTouched.current = false;
+    setRateAuto(false);
     clearSearch();
   }, [form, clearSearch]);
 
@@ -397,14 +409,15 @@ export function TradeInput() {
 
   const buildTransaction = (data: TradeFormValues): Transaction => {
     const stock = resolveStock(data.stockId)!;
-    // 해외(USD) 원화 입력 시 달러 환산 — 체결환율 우선, 없으면 현재환율
+    // 체결 환율 = 화면의 linkRate와 같은 규칙(칸 값>0 → 현재 환율 → 없음). 0 저장 0건, 국내는 항상 undefined(#311)
+    const stockForeign = stock.currency === "USD" || stock.currency === "JPY";
+    const stockRate = stock.currency === "USD" ? exchangeRates.USD : stock.currency === "JPY" ? exchangeRates.JPY : 0;
+    const exchangeRate = resolveTradeRate({ input: data.exchangeRate, currentRate: stockRate, isForeign: stockForeign });
+    // 해외(USD) 원화 입력 시 같은 환율로 달러 환산
     let price = data.price;
-    if (stock.currency === "USD" && priceInKrw) {
-      const rate = data.exchangeRate || exchangeRates.USD;
-      if (rate) price = Math.round((price / rate) * 1000) / 1000;
+    if (stock.currency === "USD" && priceInKrw && exchangeRate) {
+      price = Math.round((price / exchangeRate) * 1000) / 1000;
     }
-    // 원화 계좌·대출 연결이면 체결 환율을 저장 시점에 반드시 채운다(칸을 지워도 — 엔진 환산과 짝 금액이 같아야 함)
-    const exchangeRate = !(data.exchangeRate! > 0) && linkEval.state === "ok" && linkEval.conv ? linkEval.conv.rate : data.exchangeRate;
     return {
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       stockId: data.stockId,
@@ -841,7 +854,7 @@ export function TradeInput() {
                     {isUsd && (
                       <p className="text-sm text-muted-foreground">
                         {priceInKrw
-                          ? `KRW — 저장 시 달러로 환산 (÷ ${exchangeRates.USD ? Math.round(exchangeRates.USD).toLocaleString() : "..."})`
+                          ? `KRW — 저장 시 달러로 환산 (÷ ${linkRate ? Math.round(linkRate).toLocaleString() : "..."})`
                           : "USD (소수점 3자리 가능)"}
                       </p>
                     )}
@@ -861,14 +874,23 @@ export function TradeInput() {
                         체결 환율 {selectedStock?.currency === "JPY" ? "(원/100¥)" : "(원/$)"}
                       </FormLabel>
                       <FormControl>
+                        {/* 빈 값(미수신·지움)은 정수 모드로 두어 `0` 대신 빈 칸+placeholder로 보이게 한다(NumberInput 소수 모드는 0을 `0`으로 표시) */}
                         <NumberInput
+                          data-testid="exrate-input"
+                          className="tabular-nums"
                           value={field.value ?? 0}
-                          onChange={field.onChange}
-                          allowDecimals={true}
+                          onChange={(v) => { rateTouched.current = true; setRateAuto(false); field.onChange(v); }}
+                          allowDecimals={(field.value ?? 0) > 0}
                           maxDecimals={2}
+                          placeholder={currentRate > 0 ? undefined : "환율을 불러오지 못했어요"}
                           quickButtons={[]}
                         />
                       </FormControl>
+                      {rateAuto && (
+                        <p data-testid="exrate-auto-help" className="text-sm text-muted-foreground break-keep text-pretty mt-0.5">
+                          지금 환율이에요. 체결 때 환율로 고칠 수 있어요
+                        </p>
+                      )}
                     </FormItem>
                   )}
                 />
