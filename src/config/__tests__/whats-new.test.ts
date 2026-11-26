@@ -40,6 +40,13 @@ describe("WHATS_NEW 데이터 형식", () => {
     for (const e of WHATS_NEW) if (e.featureId) expect(ids.has(e.featureId), e.id).toBe(true);
   });
 
+  it("5.163 거래소별 합계: 블록이 거래소 2곳 이상일 때만 보이므로 바로 가기(featureId) 없이 본문에 조건을 밝힌다(qa D-1, C87)", () => {
+    const e = WHATS_NEW.find((x) => x.id === "20261127-01")!;
+    expect(e.featureId).toBeUndefined();
+    expect(e.body).toContain("2곳\u00a0이상이면");
+    expect(e.body).toContain("상세 암호화폐");
+  });
+
   it("길이: title 2~32자, body 48자 이하", () => {
     for (const e of WHATS_NEW) {
       expect(e.title.length, e.id).toBeGreaterThanOrEqual(2);

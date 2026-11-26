@@ -62,6 +62,14 @@ describe("BrokerTotalsBlock", () => {
     expect(texts(html, "broker-row-value").every((v) => v.startsWith("$"))).toBe(true);
   });
 
+  it("5.163: 행을 코인 거래소별과 함께 써도 주식 행은 그대로(맞추기 버튼 행마다 1개, 금액 칸 클래스 불변, `N종목`)", () => {
+    const html = renderToStaticMarkup(<BrokerTotalsBlock stocks={STOCKS} exchangeRates={RATES} displayCurrency="KRW" />);
+    expect(html.match(/data-testid="broker-row-resync"/g)).toHaveLength(4);
+    expect(html).toContain('<div class="shrink-0 text-right"><p data-testid="broker-row-value"');
+    expect(html).not.toContain("ml-auto\"><p");
+    expect(texts(html, "broker-row-count").every((t) => /^\d+종목$/.test(t))).toBe(true);
+  });
+
   it("투자 권유 문구 0", () => {
     const html = renderToStaticMarkup(<BrokerTotalsBlock stocks={STOCKS} exchangeRates={RATES} displayCurrency="KRW" />);
     expect(html).not.toMatch(/사세요|파세요|추천|비중을 (맞추|조정)/);

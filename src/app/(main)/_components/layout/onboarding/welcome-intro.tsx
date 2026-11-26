@@ -27,7 +27,7 @@ export function WelcomeHero({ enter }: { enter: boolean }) {
         나만의 비밀 자산 금고
       </h1>
       <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed text-pretty break-keep">
-        흩어진 자산을 한 화면에서 정리해 보세요.
+        계좌 연동 없이, 여러 증권사 주식을 한 화면에 모아 보세요.
       </p>
     </section>
   );

@@ -119,14 +119,17 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
             <span className="text-sm font-semibold text-muted-foreground">{label}</span>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
-            <span>종목명</span>
-            <span className="text-right">배당월</span>
-            <span className="text-right">주당</span>
-            <span data-testid="dividend-col-paid" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 지급` : "지급금액"}</span>
-            <span data-testid="dividend-col-total" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 합계` : "합계"}</span>
+          {/* 359px 이하는 행 2단(#326): 1단 이름·메타·배당월 칩 전폭, 2단 주당|지급|합계 3열. DOM 한 벌, 배치만 바꾼다(360 이상 불변).
+              접두는 `max-[360px]:`다 — Tailwind 4의 max-[N]은 `width < N`이라 `max-[359px]:`는 359px 뷰포트에 걸리지 않는다. `min-[360px]:`와 정확히 맞물린다 */}
+          <div role="table" aria-label={`${label} 배당 종목`} data-testid="dividend-table" data-category={key}>
+          <div role="row" className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b max-[360px]:grid-cols-[minmax(0,1fr)_5rem_5.5rem] max-[360px]:gap-x-2">
+            <span role="columnheader" className="max-[360px]:col-start-1 max-[360px]:row-start-1">종목명</span>
+            <span role="columnheader" data-testid="dividend-col-months" className="text-right max-[360px]:sr-only">배당월</span>
+            <span role="columnheader" data-testid="dividend-col-pershare" className="text-right max-[360px]:col-start-1 max-[360px]:row-start-1">주당</span>
+            <span role="columnheader" data-testid="dividend-col-paid" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 지급` : "지급금액"}</span>
+            <span role="columnheader" data-testid="dividend-col-total" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 합계` : "합계"}</span>
           </div>
-          <div className="divide-y">
+          <div role="rowgroup" className="divide-y">
             {filtered.map(({ stock, beforePurchaseMonths, actualMonths, estimatedMonths, perShareForeign, perShareKRW, currency, annualTotal, annualForeign, annualActual, annualForeignActual, monthlyTotal, monthlyForeign, monthlyActual, monthlyForeignActual, frequency }) => {
               const ticker = normalizeTicker(stock);
               const isDomestic = DOMESTIC_CATEGORIES.has(stock.category);
@@ -137,12 +140,13 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
               return (
                 <div
                   key={stock.id}
-                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center"
+                  role="row"
+                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center max-[360px]:grid-cols-[minmax(0,1fr)_5rem_5.5rem] max-[360px]:gap-x-2 max-[360px]:gap-y-2 max-[360px]:items-start"
                   data-testid="dividend-stock-row"
                 >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1">
-                      <p data-testid="dividend-stock-name" className="text-sm font-semibold truncate">{stock.name || ticker}</p>
+                  <div role="cell" className="min-w-0 max-[360px]:col-span-3 max-[360px]:flex max-[360px]:flex-wrap max-[360px]:items-center max-[360px]:gap-x-1.5">
+                    <div className="flex items-center gap-1 max-[360px]:basis-full max-[360px]:min-w-0">
+                      <p data-testid="dividend-stock-name" className="text-sm font-semibold truncate max-[360px]:whitespace-normal max-[360px]:line-clamp-2 max-[360px]:break-keep max-[360px]:[overflow-wrap:anywhere]">{stock.name || ticker}</p>
                       {frequency && (
                         <Badge className={`hidden md:inline-flex ${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 md:h-5 shrink-0`}>
                           {FREQUENCY_LABEL[frequency]}
@@ -150,15 +154,15 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                       )}
                     </div>
                     {frequency && (
-                      <div data-testid="dividend-stock-meta" className="flex items-center gap-x-1 md:hidden mt-0.5">
+                      <div data-testid="dividend-stock-meta" className="flex shrink-0 items-center gap-x-1 md:hidden mt-0.5">
                         <Badge className={`${ASSET_THEME.categoryBox} text-xs px-1 py-0 h-4 shrink-0`}>
                           {FREQUENCY_LABEL[frequency]}
                         </Badge>
                       </div>
                     )}
-                    {stock.purchaseDate && <p className="text-xs text-muted-foreground mt-1">매수 {stock.purchaseDate}</p>}
+                    {stock.purchaseDate && <p data-testid="dividend-stock-purchase" className="text-xs text-muted-foreground mt-1 max-[360px]:mt-0.5 max-[360px]:whitespace-nowrap max-[360px]:tabular-nums">매수 {stock.purchaseDate}</p>}
                   </div>
-                  <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end">
+                  <div role="cell" data-testid="dividend-stock-months" className="flex flex-wrap gap-1 sm:gap-1.5 justify-end max-[360px]:col-span-3 max-[360px]:justify-start">
                     {beforePurchaseMonths.map((m) => (
                       <Badge
                         key={`before-${m}`}
@@ -188,7 +192,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                       </Badge>
                     ))}
                   </div>
-                  <div className="text-right">
+                  <div role="cell" data-testid="dividend-stock-pershare" className="text-right max-[360px]:whitespace-nowrap">
                     {!isDomestic && currency === "USD" ? (
                       <>
                         <p className="text-xs tabular-nums" style={{ color: MAIN_PALETTE[10] }}>${perShareForeign.toFixed(4)}</p>
@@ -199,15 +203,19 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                     )}
                     <p className="text-xs tabular-nums break-keep text-muted-foreground">보유 {stock.quantity}주</p>
                   </div>
-                  <div className="text-right whitespace-nowrap">
+                  <div role="cell" data-testid="dividend-cell-paid" className="text-right whitespace-nowrap max-[360px]:flex max-[360px]:flex-col max-[360px]:items-end">
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (
                       <p className="text-xs tabular-nums text-muted-foreground">${displayForeignActual.toFixed(2)}</p>
+                    )}
+                    {/* 2단(359 이하)에서 외화 지급이 0이면 첫 줄 자리를 채워 `-`를 합계의 원화 줄과 같은 높이에 둔다 */}
+                    {!isDomestic && currency === "USD" && !(displayForeignActual > 0) && (
+                      <p aria-hidden className="text-xs min-[360px]:hidden">&nbsp;</p>
                     )}
                     <p data-testid="dividend-paid-amount" className="text-xs xl:text-sm font-bold tabular-nums text-foreground">
                       {displayActual > 0 ? formatCurrency(displayActual) : <span className="text-muted-foreground">-</span>}
                     </p>
                   </div>
-                  <div className="text-right whitespace-nowrap">
+                  <div role="cell" data-testid="dividend-cell-total" className="text-right whitespace-nowrap max-[360px]:flex max-[360px]:flex-col max-[360px]:items-end">
                     {!isDomestic && currency === "USD" && (
                       <p className="text-xs tabular-nums text-muted-foreground ">${displayForeign.toFixed(2)}</p>
                     )}
@@ -218,6 +226,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       ))}

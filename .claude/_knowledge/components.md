@@ -162,6 +162,12 @@ _components/
 ### BrokerTotalsBlock (`views/detail/tabs/broker-totals-block.tsx`, #5.160 #319; 5.162 메타 줄 `N종목`·`· 비중` 조각별 nowrap)
 - 상세·주식 selector 아래 접기형 `증권사별 · N곳`(기본 접힘, `useState`만, 패널 항상 마운트 grid-rows+inert). props `stocks`(지금 탭 행)·`exchangeRates`·`displayCurrency`. 묶음 2개 미만이면 `null`. 행 testId `broker-row`(`-name`·`-share`·`-count`·`-value`·`-profit`·`-resync`), `broker-totals(-toggle|-panel|-note)`. 행 `맞추기` = `dispatchAddStock("screenshot", broker)`(미지정 행은 broker 없음). 인증카드 미렌더. export `formatBrokerUnits(units, scale)`·`formatShareTenths`.
 
+### MonthlyDividendStocks 359px 이하 2단 (`views/activity/monthly-dividend-stocks.tsx`, #5.163 #326)
+- 359px 이하: 행 = 1단(이름 전폭 `line-clamp-2`·배지+매수 날짜 메타 1줄·칩 좌측 정렬 `col-span-3`) + 2단 3열 `minmax(0,1fr)_5rem_5.5rem`(주당·보유 / 지급 / 합계, 우측 정렬). 머리글 같은 3열, `배당월`은 `sr-only`. **DOM 한 벌**, 배치는 `max-[360px]:`(= width < 360)만 — 360 이상 불변. `role="table"`(aria-label `{그룹} 배당 종목`)·`rowgroup`·`row`·`columnheader` 5·`cell` 5. testId: 기존 `dividend-stock-row`·`-stock-name`·`-stock-meta`·`-paid-amount`·`-est-amount`·`-col-paid`·`-col-total` + 신규 `dividend-table`(`data-category`)·`-col-months`·`-col-pershare`·`-stock-purchase`·`-stock-months`·`-stock-pershare`·`-cell-paid`·`-cell-total`.
+
+### ExchangeTotalsBlock (`views/detail/tabs/exchange-totals-block.tsx`, #5.163 #325)
+- 상세·암호화폐 selector 아래·비중바 위 접기형 `거래소별 · N곳`(기본 접힘, `useState`만, 패널 항상 마운트 grid-rows+inert). props `crypto`(`assetData.crypto` 전체). 묶음 2개 미만·총 평가금 0이면 `null`. **읽기 전용**: 버튼은 토글 1개뿐(`맞추기` 없음). 행 = `BrokerRow`(broker-totals-block에서 export) 재사용 — `onResync` 생략 시 버튼 DOM 0, `countText`로 `코인 N개`. testId `exchange-totals(-toggle|-panel|-note)` + 행은 `broker-row*` 그대로. 미지정 안내 `거래소를 적지 않은 코인이에요.`. 인증카드 `data-screenshot-hide`. 주식 블록을 제네릭화하지 않는다(값 계산만 다른 얇은 래퍼).
+
 ### stock-tab.tsx export 목록 (share-card·welcome-guide에서 재사용)
 
 - `StockBarChart`, `StockRowItem`, `StockRowHeader`, `StockSummaryHeader`, `StockCategorySection`, **`StockCard`**(screenshotMode 지원)
@@ -390,6 +396,7 @@ weight라 생략). `NAV_ITEMS`의 `{ id: "home", icon: Home }` 자체는 타입�
 첫 진입 안내 페이지. `page.tsx`의 `isWelcomeGuide` 분기에서 `<AppGuide />` 위에 표시.
 
 ### WelcomeHero · WelcomeTrustLine · RootFirstPaint (`layout/onboarding/welcome-intro.tsx`, #4.61)
+- 부제 문구(5.163 #325): `계좌 연동 없이, 여러 증권사 주식을 한 화면에 모아 보세요.` — 문구 고정 테스트 3곳(`welcome-guide`·`welcome-intro`·`welcome-non-trial-snapshot`)
 - 웰컴 첫 부분(① 히어로 h1·부제, ② 신뢰 한 줄)의 **공용 조각**(`"use client"`·훅·window 없음 → 서버/클라이언트 첫 렌더 동일). `WelcomeGuide`와 `RootFirstPaint`가 같은 코드를 렌더한다(복제 금지). `WelcomeHero({enter})`: `enter=false`면 `ENTER` 없음. 래퍼 클래스 상수 `WELCOME_PAGE_WRAP`·`WELCOME_ROOT`·`WELCOME_TRUST_WRAP`과 `ENTER`(진입 stagger 클래스)도 여기 정본.
 - `RootFirstPaint` = `page.tsx`의 `!isDataLoaded` 분기(`data-first-paint`, testid `first-paint-shell`). 히어로+신뢰 줄만, 버튼·CTA·미리보기 없음. `html[data-has-assets]`(layout.tsx head, 키 3개 존재만 판정)이면 `globals.css` 1규칙으로 `display:none`.
 - `WelcomeGuide({ skipHeroEnter })`: 사전 조각을 거친 첫 웰컴 mount만 히어로·신뢰 줄 ENTER 생략(mount 시점 값 고정). `page.tsx`가 `skipHeroEnterRef`로 전달, 다른 화면이 렌더되면 해제.
