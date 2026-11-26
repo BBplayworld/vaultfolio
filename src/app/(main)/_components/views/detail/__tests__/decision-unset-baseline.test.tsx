@@ -52,6 +52,8 @@ vi.mock("../../activity/market-entry-line", () => ({
 }));
 
 import { StockCard, StockRowHeader, StockTab } from "../tabs/stock-tab";
+// #317 종목 한 장 배당 줄은 별도 테스트(stock-page-dividend.test.tsx) — 여기서는 배당 조회 없음으로 둔다
+vi.mock("../../activity/use-dividend-data", () => ({ useDividendData: () => ({ groups: [], calc: { byStock: new Map(), annual: { paid: 0, expected: 0, total: 0 }, months: [] }, isLoading: false, loadedCount: 0, failedCount: 0, totalCount: 0, jpyCount: 0 }) }));
 import { StockPageBody } from "../stock-page/stock-page-view";
 import { GrowTileValueLine } from "../stock-tools";
 import { computeStockMetrics } from "../asset-detail-tabs";
