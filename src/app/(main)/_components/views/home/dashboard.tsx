@@ -13,6 +13,8 @@ import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot, SnapshotGrade } from "@/types/asset";
 import { AttributionRecordList } from "../attribution-records";
+import { PriceAsOfLine, usePriceAsOfLine } from "../price-asof-line";
+import type { PriceAsOfLineValue } from "@/lib/finance/price-freshness";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
 import { HomeTipBox } from "./home-tip-box";
@@ -354,6 +356,7 @@ export function NetAssetSummaryBox({
   marketLine = "off",
   onMarketOpen,
   myStock,
+  priceAsOf,
   composeSlot,
 }: {
   netAsset: number;
@@ -377,6 +380,8 @@ export function NetAssetSummaryBox({
   onMarketOpen?: () => void;
   /** 내 종목 오늘 줄(#246) — 홈 Dashboard만 넘긴다. 인증카드·웰컴 미리보기는 넘기지 않아 DOM 0 */
   myStock?: MyStockLineValue;
+  /** '언제 시세' 각주 줄(#309) — 홈 Dashboard만 넘긴다. 인증카드·웰컴 미리보기는 넘기지 않아 DOM 0 */
+  priceAsOf?: PriceAsOfLineValue | null;
 }) {
   // Hero·총액은 전액 표기(formatPriceByMode) — 도넛 라벨·범례·막대는 폭 제약상 축약 유지
   const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
@@ -586,6 +591,8 @@ export function NetAssetSummaryBox({
         )}
         {/* 내 종목 오늘(#246) — 카드 맨 끝 1곳. 원인 없는 날·접힘·펼침(`접기` 아래) 모두 같은 노드 */}
         {myStock && !screenshotMode && <MyStockLine value={myStock} underFold={showLine && open} />}
+        {/* '언제 시세'(#309) — 카드 맨 아래 각주, 금액 전체의 출처라 숫자·변동·원인 뒤(ui.md 2장) */}
+        {priceAsOf && !screenshotMode && <PriceAsOfLine value={priceAsOf} className="mt-2" />}
       </div>
 
       {visibleTabs.length > 1 && onSegmentClick && (
@@ -909,6 +916,7 @@ export function Dashboard() {
   const market = useMarketEntryValue("daily", true, headerChange !== null);
   const marketLine = marketLineState({ hasHeaderChange: headerChange !== null, hasTickerStock: market.hasTickerStock, markets: market.markets });
   // 내 종목 오늘 줄(#246) — 누르면 상세·주식 목록(정렬 그대로)
+  const priceAsOf = usePriceAsOfLine(assetData.stocks, "주식 ");
   const myStock = useMyStockToday(headerChange !== null, () => {
     track("feature_use", { category: "home_my_stock" });
     navigate({ type: "detail", tab: "stocks" });
@@ -991,6 +999,7 @@ export function Dashboard() {
                     navigate({ type: "activity", tab: "change-market", init: { period: "day" } });
                   }}
                   myStock={myStock}
+                  priceAsOf={priceAsOf}
                 />
 
                 {/* col-2: 세부 분포 탭 콘텐츠 */}
