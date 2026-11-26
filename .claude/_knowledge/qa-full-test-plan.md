@@ -469,8 +469,10 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: `clearAssetData` 후 `SYNC_STATE_KEY` 재기록(S9), 자동 push는 사용자 편집 신호만(파생 변경·pull로 무한 push 루프 없음), **`clearAssetData` keepKeys에 `secretasset_pwa_auth*` 보존(S11 앱잠금 해시 유실 방지)**
 
 ### F-SYNC. 가격·환율 동기화
-- 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트
-- 👤 **기기 동기화 pull 후 시세 갱신** — 다른 기기 변경 반영(pull) 직후 "오늘의 주식 및 환율 정보를 모두 업데이트했습니다." 토스트가 뜨고 현재가·환율이 갱신되는지(양쪽 기기 모두 자산 보유 상태에서)
+- 👤 종목 현재가·환율(USD/JPY) 자동 갱신, 갱신 완료 토스트(5.155 #309 문구: 받을 것 없음 `시세가 이미 최신이에요` / 전부 성공 `주식 시세를 새로 받았어요` / 일부·배치 실패 `N종목은 시세를 못 받아 이전 값으로 보여요`(루프 끝 1번, '새로 받았어요' 0) / 서킷 `지금은 주식 시세를 받을 수 없어 이전 값으로 보여요`(세션 1회) / 환율 실패 `환율을 못 받아 이전 환율로 보여요`. 정보 토스트·같은 id 대체, `[`·`]`·`API`·`습니다` 0)
+- 👤 **기기 동기화 pull 후 시세 갱신** — 다른 기기 변경 반영(pull) 직후 위 시세 토스트가 뜨고 현재가·환율이 갱신되는지(양쪽 기기 모두 자산 보유 상태에서)
+- 👤 **화면 복귀 재조회(5.155 #309)** — 트리거는 `visibilitychange→visible`·`pageshow(persisted)`만(타이머·잠금 해제·online 0). 칸이 같으면 10회 복귀해도 `/api/finance`·`/api/finance/crypto`·`/api/finance/profit` 요청 0·`dataResetVersion` 불변·토스트 0. 장중 정시를 넘긴 뒤 복귀: 주식 요청 1회(티커/3 배치), 토스트 0, 홈 줄 갱신. visible·pageshow 겹침 1회, 잠금·체험·오프라인 0, 앱 열기·pull 사슬 진행 중 0, 같은 칸에서 빠진 종목·서킷은 다음 칸까지 재시도 0. 복귀 중 pull → epoch 취소로 응답 미반영·코인·스냅샷 단계 생략(C44 최신본 병합). 자동: `lib/finance/__tests__/price-freshness-resync.test.ts`·`lib/pwa/__tests__/page-resume.test.ts`
+- 👤 **'언제 시세' 줄(5.155 #309, `price-asof`)** — 홈 순자산 카드 맨 아래(`주식 14시 시세`·`주식 11/25 14시 시세`·`주식 11/21 종가`·`주식 미국 11/25 종가`)·상세 주식 요약 박스 맨 아래(접두어 없음, 분류 탭 종목 기준, 전체 = 홈). 대표값 = 이번 세션 실패 티커를 뺀 대상(티커·비상장 아님·상장폐지 아님) 중 가장 오래된 실제 시각, 실패 있으면 ` · N종목 이전 시세`(전부 실패면 꼬리만). 대상 0·baseDate 없음+실패 0·체험·캡처·웰컴·인증카드 DOM 0, 마스킹에도 보임. 자동: `price-freshness-asof.test.ts`(국내 10시 어제 날짜 칸 함정·16/20시·해외 DST/표준·휴장·혼재)·`price-freshness-failed.test.ts`·`views/home/__tests__/price-asof-309.test.tsx`
 - ⚙ `getStockCacheSlot` 장중 1시간/장외 날짜 슬롯, outdated 판정, 3개씩 배치+1초 간격
 - ⚙ **국내주식 실시간가**(`fetchStocksFromKorea`, `inquire-price`/`FHKST01010100`): 과거엔 `search-stock-info`의 `thdt_clpr`(당일 종가)를 썼으나 실시간성이 부족해 실시간 현재가 필드(`stck_prpr`)로 전환. 종목명·시장구분("코스피"/"코스닥"/"국내ETF")은 `kr-master.ts`(로컬 정적 마스터, API 호출 없음)로 대체 — `inquire-price` 응답엔 해당 필드 없음
 - ⚙ **국내주식 분류(KOSPI200 등) 90일 캐시 분리**: 가격(1시간 슬롯)과 별도로 `fetchDomesticClassifications`(`search-stock-info`)를 90일 분류 캐시(`storage.getStockClassification`)가 없는 티커에만 호출 — 최초 등록 시에만 가격+분류 2회, 이후 매시간은 가격만 1회
@@ -638,6 +640,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **새 소식 X = 읽음(#4.82)**: 홈 팁 X → `markWhatsNewSeen()` + home_tip close 1, 같은 세션 팁 0, 새 세션에서 새 소식 팁 없음(7일 시계). 시트는 열리지 않음.
 - ⚙ **preview `?demo=1`(#4.36, #4.82 갱신)**: 튜토리얼 전체 건너뜀 + 표식 `secretasset_preview_demo_tutorial_skipped`(새 소식 읽음은 기록하지 않음). `?demo=empty`는 표식 있을 때만 튜토리얼·읽음 키 삭제. 운영 무동작
 - ⚙ **팁 셸 공통(#4.36)**: 제목·설명 `break-keep wrap-break-word`, X `relative after:absolute after:-inset-1`(히트 40×40)
+- 👤 **홈 Hero 퍼센트 부호(5.155 #309)**: 음수 `(−1.2%)`(U+2212, `formatHeroPct`), 양수 `(+1.2%)`, 표시값 0.0이면 `(0.0%)`(부호 없음, `(−0.0%)` 금지). 다른 화면 퍼센트는 범위 밖. 자동: `report/__tests__/hero-cause-display.test.ts`
 - 👤 **홈 Hero 증감(#4.36)**: 금액·% 각각 `whitespace-nowrap`, 증감 span `flex-wrap gap-y-0.5`, 라벨 `break-keep` — 320·375에서 "+661만/원" 분리·가로 넘침 없음. 하단 고지 `<p>` 2개 `break-keep text-pretty`
 - 👤 **홈 전일대비 영역 정돈(#5.105)**: 360·390·430·1280 × 다크(라이트 390) — 변동 줄 + 보조 줄 1줄(`home-cause-line`, 줄바꿈 0), 카드 밖 `home-market-today[data-placement=slot]` 0(패널 안 `panel`만). 카드 폭 W≥480(#5.133 qa D-1로 440→480: 날짜 표기로 구간 +35~40px. 뷰포트 모바일 약 536 이상·PC 약 1145 이상, 1160·1280 등)만 `· M/D 종가 코스피 +x.x%` 표시(#5.133 C142: 지수 줄과 같은 날짜, 휴장 `M/D 코스피 휴장`), W<480(360~530 모바일·1024~1140 PC)은 보조 줄 지수 구간 숨김·펼침 패널에만(C99 경계 479/480). `외 N개`는 W<260 숨김. 큰 금액(±9,999만)에서도 원인 라벨 말줄임 0. 접속 간격 ≥2일이면 라벨 `M/D 이후`·보조 줄 지수 0. 화면 전체 `지난 접속` 0, `예측` 칩 Hero 1개(`home-cause-estimated`, 패널 0). 지수 표기 `종가`/`휴장`(0.0% 0), 값은 패널 지수 줄·시장과 비교 '하루'와 문자열 일치. 원인 없음·예측만이면 카드 밖 현행 줄. 캡처 모드 보조 줄·지수 0. 홈 재진입 시 패널 접힘, 신규 저장 키·GA 0.
 - 👤 **원인 없는 날 시장 줄(#5.120)**: 변동 없음·예측만 360/390/1280 — `home-market-today[data-placement=card]`가 순자산 카드 안(변동 줄 아래), 카드 밖 `slot` 0, 원인 있는 날 main과 픽셀 동일, 360 scrollWidth ≤ clientWidth, 캡처·지수 off·첫 저장 당일 0

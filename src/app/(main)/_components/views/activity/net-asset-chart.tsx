@@ -37,7 +37,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, getProfitLossColor, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
-import { DataSourceBadge } from "../data-source-badge";
 import { GROUP_BADGE, SECTION } from "../../layout/ui/report-section";
 import { readDailySnapshots, readMonthlySnapshots } from "@/lib/asset/snapshot-storage";
 import { readExchangeHistory } from "@/lib/finance/profit-utils";
@@ -440,7 +439,6 @@ export function YearlyNetAssetChart({ view }: { view?: NetAssetView } = {}) {
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5">
                 <CardTitle className={PAGE_TITLE}>순자산 변화</CardTitle>
-                <DataSourceBadge kind="closing" />
               </div>
               <CardDescription>순자산 추이와 이번 달 일별 변화</CardDescription>
             </div>
