@@ -118,9 +118,9 @@ export function StockPageDividendRow({ stocks }: { stocks: readonly Stock[] }) {
     if (jpyCount === 0) return null;
     return (
       <div data-testid="stock-page-dividend" data-state="jpy" className="border-t border-border/40 -mx-4 px-4">
-        <p data-testid="stock-page-dividend-jpy" className="flex min-h-12 flex-wrap items-center text-sm text-muted-foreground">
-          <span className="whitespace-nowrap">{"배당 조회 안 됨 "}</span>
-          <span className="whitespace-nowrap"><span aria-hidden>·</span>{" 엔화 종목"}</span>
+        <p data-testid="stock-page-dividend-jpy" className="flex min-h-12 flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
+          <span className="whitespace-nowrap">배당 조회 안 됨</span>
+          <span className="whitespace-nowrap"><span aria-hidden>·</span>&nbsp;엔화 종목</span>
         </p>
       </div>
     );
