@@ -121,8 +121,9 @@ export function buildMonthlyTotals(calc: DividendCalcResult): MonthlyTotal[] {
 }
 
 
-// 결론 줄 — DOT_WRAP_ROW와 같은 왼쪽 8px 자르기에, 위·아래만 10px 열어 칩의 40px 히트영역이 잘리지 않게 한다(#329)
-const CONCLUSION_ROW = "-ml-2 [clip-path:inset(-0.625rem_-100vw_-0.625rem_0.5rem)]";
+// 결론 줄 — DOT_WRAP_ROW처럼 왼쪽을 잘라 줄 머리 가운뎃점을 숨기되, 위·아래는 10px 열어 칩의 40px 히트영역이 잘리지 않게 한다(#329).
+// 왼쪽은 8px가 아니라 5px만 자른다(ui-review R2) — 둘째 줄 맨 앞 칩의 포커스 링 3px가 온전히 보이고, 점 글리프(x≈4~8)는 여전히 잘린다
+const CONCLUSION_ROW = "-ml-2 [clip-path:inset(-0.625rem_-100vw_-0.625rem_0.3125rem)]";
 
 /**
  * 받은 기록 칩(#329) — 내가 적은 것 = 중립 회색 면, 앱이 계산한 것(지급·예상) = 글자.

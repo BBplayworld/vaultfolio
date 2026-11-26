@@ -46,8 +46,10 @@ type CashTxFormValues = z.infer<typeof cashTxFormSchema>;
 const NO_STOCK = "none";
 const KIND_BOX = "flex flex-row items-center gap-2 rounded-lg bg-muted/40 dark:bg-muted/20 p-3";
 const KIND_LABEL = "flex min-h-10 min-w-0 flex-1 cursor-pointer flex-col justify-center leading-none";
-const KIND_HELP_TEXT = "block text-sm leading-snug text-muted-foreground break-keep text-pretty";
-const KIND_HELP = `mt-0.5 ${KIND_HELP_TEXT}`;
+const KIND_HELP = "mt-0.5 block text-sm leading-snug text-muted-foreground break-keep text-pretty";
+// 정기 상자 도움말 2종 — 배당을 켜면 OFF 문구로 바뀐다(보이지 않는 쪽은 자리만 잡는다)
+const RECURRING_HELP_ON = <>해제 시 <span className="whitespace-nowrap">비정기(성과급 등)로</span> 기록됩니다</>;
+const RECURRING_HELP_OFF = "배당을 끄면 선택할 수 있어요";
 
 export function CashTxInput() {
   const { assetData, addCashTransaction, addCashTransactionWithBalance } = useAssetData();
@@ -297,16 +299,18 @@ export function CashTxInput() {
                       onCheckedChange={(v) => form.setValue("recurring", v === true)}
                       aria-describedby="cash-tx-recurring-help"
                     />
-                    <label htmlFor="cash-tx-recurring" className={`${KIND_LABEL} ${dividend ? "cursor-default" : ""}`}>
-                      <span className={`text-sm font-medium ${dividend ? "text-muted-foreground" : ""}`}>매월 정기 입금 (월급·목돈)</span>
-                      {/* 두 도움말을 같은 칸에 겹쳐 그린다 — 배당을 켜고 꺼도 상자 높이·아래 칸 위치가 변하지 않는다(줄 수가 다른 320~375 포함) */}
-                      <span className="mt-0.5 grid [&>*]:[grid-area:1/1]">
-                        <span id={dividend ? undefined : "cash-tx-recurring-help"} data-testid={dividend ? undefined : "tx-help"} aria-hidden={dividend} className={`${KIND_HELP_TEXT} ${dividend ? "invisible" : ""}`}>
-                          해제 시 <span className="whitespace-nowrap">비정기(성과급 등)로</span> 기록됩니다
+                    {/* label 단위로 두 상태를 겹친다(ui-review R1) — 보이는 묶음(제목 + 지금 도움말)과 자리만 잡는 묶음(제목 + 다른 상태 도움말).
+                        긴 쪽이 높이를 정해 배당을 켜고 꺼도 상자 높이·아래 칸 위치가 그대로이고, 짧은 쪽은 세로 가운데라 체크박스 중심 = 글 중심 */}
+                    <label htmlFor="cash-tx-recurring" className={`grid min-h-10 min-w-0 flex-1 items-center leading-none [&>*]:[grid-area:1/1] ${dividend ? "cursor-default" : "cursor-pointer"}`}>
+                      <span className="flex flex-col">
+                        <span className={`text-sm font-medium ${dividend ? "text-muted-foreground" : ""}`}>매월 정기 입금 (월급·목돈)</span>
+                        <span id="cash-tx-recurring-help" data-testid="tx-help" className={KIND_HELP}>
+                          {dividend ? RECURRING_HELP_OFF : RECURRING_HELP_ON}
                         </span>
-                        <span id={dividend ? "cash-tx-recurring-help" : undefined} data-testid={dividend ? "tx-help" : undefined} aria-hidden={!dividend} className={`${KIND_HELP_TEXT} ${dividend ? "" : "invisible"}`}>
-                          배당을 끄면 선택할 수 있어요
-                        </span>
+                      </span>
+                      <span aria-hidden className="invisible flex flex-col">
+                        <span className="text-sm font-medium">매월 정기 입금 (월급·목돈)</span>
+                        <span className={KIND_HELP}>{dividend ? RECURRING_HELP_ON : RECURRING_HELP_OFF}</span>
                       </span>
                     </label>
                   </div>
@@ -339,7 +343,7 @@ export function CashTxInput() {
                               <SelectTrigger
                                 id="cash-tx-dividend-stock"
                                 data-testid="cash-tx-dividend-stock"
-                                className="relative w-full min-w-0 after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-[''] [&>span]:truncate"
+                                className="relative w-full min-w-0 after:absolute after:inset-x-0 after:-inset-y-[3px] after:content-[''] [&>span]:truncate"
                               >
                                 <SelectValue />
                               </SelectTrigger>

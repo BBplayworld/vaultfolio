@@ -151,6 +151,24 @@ describe("결선(소스 고정)", () => {
     expect([...build.matchAll(/^\s{6}(\w+):/gm)].map((m) => m[1])).toEqual(["id", "cashId", "type", "amount", "currency", "recurring", "date", "memo", "reflected", "reflectedAt", "reflectionId", "createdAt"]);
   });
 
+  it("ui-review R1~R3: 정기 상자는 label 단위로 두 상태를 겹치고, 결론 줄 clip 왼쪽은 5px, 종목 Select 히트는 ±3px", () => {
+    const form = read("../../../forms/asset-update/input/cash-tx-input.tsx");
+    const label = form.slice(form.indexOf('<label htmlFor="cash-tx-recurring"'), form.indexOf("</label>", form.indexOf('<label htmlFor="cash-tx-recurring"')));
+    expect(label).toContain("grid min-h-10 min-w-0 flex-1 items-center leading-none [&>*]:[grid-area:1/1]");
+    expect(label.match(/매월 정기 입금 \(월급·목돈\)/g)).toHaveLength(2);             // 보이는 묶음 + 자리 묶음
+    expect(label).toContain('<span aria-hidden className="invisible flex flex-col">'); // 자리 묶음은 읽히지 않는다
+    expect(label.match(/id="cash-tx-recurring-help"/g)).toHaveLength(1);              // 도움말 id는 보이는 쪽 1개
+    expect(label).toContain("{dividend ? RECURRING_HELP_OFF : RECURRING_HELP_ON}");
+    expect(label).toContain("{dividend ? RECURRING_HELP_ON : RECURRING_HELP_OFF}");
+    expect(form).toContain('const RECURRING_HELP_OFF = "배당을 끄면 선택할 수 있어요";');
+    expect(form).toContain("after:-inset-y-[3px]");
+    expect(form).not.toContain("after:-inset-y-0.5");
+    const chart = read("../dividend-chart.tsx");
+    expect(chart).toContain('const CONCLUSION_ROW = "-ml-2 [clip-path:inset(-0.625rem_-100vw_-0.625rem_0.3125rem)]";');
+    // 공용 상수는 그대로
+    expect(read("../../../layout/ui/dot-wrap.tsx")).toContain('export const DOT_WRAP_ROW = "-ml-2 [clip-path:inset(-2px_-100vw_-2px_0.5rem)]";');
+  });
+
   it("거래 행: 배지 글자는 `배당` 고정(면), 종목명은 날짜 아래 줄", () => {
     const src = read("../../detail/cash-tx/cash-tx-view.tsx");
     expect(src).toMatch(/data-testid="tx-dividend-badge" variant="secondary"[^>]*>배당<\/Badge>/);
