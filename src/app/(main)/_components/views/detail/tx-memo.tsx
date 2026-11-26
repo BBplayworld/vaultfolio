@@ -4,7 +4,7 @@
 // 잘린 메모만 버튼(1탭 그 자리 펼침/재탭 접힘), 잘리지 않은 메모는 누를 수 없는 줄. 잘림 판정은 렌더 후 높이 비교 + 폭 변경 대응.
 import { useEffect, useState } from "react";
 
-const TEXT = "block text-sm max-[359px]:text-xs text-muted-foreground break-keep [overflow-wrap:anywhere]";
+const TEXT = "text-sm max-[359px]:text-xs text-muted-foreground break-keep [overflow-wrap:anywhere]";
 
 export function TxMemo({ memo }: { memo: string }) {
   const [el, setEl] = useState<HTMLSpanElement | null>(null);
@@ -29,7 +29,7 @@ export function TxMemo({ memo }: { memo: string }) {
       data-testid="tx-memo"
       aria-expanded={open}
       aria-label={open ? "메모 접기" : "메모 전체 보기"}
-      className="block w-full text-left"
+      className="block w-full text-left py-1 -my-1 min-h-10"
       onClick={() => setOpen((v) => !v)}
     >
       {text}

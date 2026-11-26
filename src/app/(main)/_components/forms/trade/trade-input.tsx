@@ -914,6 +914,11 @@ export function TradeInput() {
                           지금 환율이에요. 체결 때 환율로 고칠 수 있어요
                         </p>
                       )}
+                      {!rateAuto && !((field.value ?? 0) > 0) && currentRate > 0 && (
+                        <p data-testid="exrate-empty-help" className="text-sm text-muted-foreground break-keep text-pretty mt-0.5">
+                          비워 두면 지금 환율로 저장해요
+                        </p>
+                      )}
                     </FormItem>
                   )}
                 />
