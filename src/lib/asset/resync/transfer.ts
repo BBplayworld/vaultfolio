@@ -89,6 +89,21 @@ export function planResyncSave(fresh: AssetData, result: Pick<ApplyResult, "stoc
   return { data: { ...fresh, stocks: result.stocks, transactions, loans }, moved: transfers.length, movedTx };
 }
 
+/** 지운 코인 id 목록으로 코인 거래를 정리한 데이터를 돌려주는 함수 — 호출측이 `planDeleteCryptos(data, ids, rates)`를 넘긴다 */
+export type PlanDeleteCryptos = (data: AssetData, ids: string[]) => AssetData;
+
+/**
+ * 코인 맞추기 적용 결과를 저장 데이터로 만든다(5.161). 삭제 id = 저장 직전 fresh.crypto에 있고 nextCrypto에 없는 id —
+ * 체크한 행 id가 아니라 실제로 사라진 id로 계산해, 이름이 바뀌어 매칭된 코인의 거래가 지워지지 않게 한다.
+ * 거래 정리 규칙은 직접 삭제(planDeleteCryptos)를 그대로 쓴다. 지운 코인이 없으면 거래는 같은 참조로 둔다.
+ */
+export function planCryptoResyncSave(fresh: AssetData, nextCrypto: AssetData["crypto"], planDelete: PlanDeleteCryptos): AssetData {
+  const kept = new Set(nextCrypto.map((c) => c.id));
+  const deleted = fresh.crypto.filter((c) => !kept.has(c.id)).map((c) => c.id);
+  if (deleted.length === 0) return { ...fresh, crypto: nextCrypto };
+  return { ...fresh, crypto: nextCrypto, cryptoTransactions: planDelete(fresh, deleted).cryptoTransactions ?? [] };
+}
+
 /** 화면 상태(trade-view-store·stock-page-store)의 대상에서 없어진 종목 id를 걸러낸다. 그룹이 비면 null(호출측이 clear), 바뀐 게 없으면 같은 참조 */
 export function pruneStockTarget<T extends { groupStockIds: string[]; initialStockId?: string | null }>(target: T, liveIds: Set<string>): T | null {
   const group = target.groupStockIds.filter((id) => liveIds.has(id));

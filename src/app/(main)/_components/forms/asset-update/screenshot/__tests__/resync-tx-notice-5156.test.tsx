@@ -1,7 +1,7 @@
 // #310(5.156) 맞추기 미리보기 거래 기록 고지 — 삭제·이관 상태별 문구(ui.md 10절). 정적 렌더(jsdom 없음)
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ResyncTxNotice } from "../holdings-resync-dialog";
+import { KindCtx, ResyncTxNotice } from "../holdings-resync-dialog";
 
 const html = (clearing: boolean, transferring: boolean) => renderToStaticMarkup(<ResyncTxNotice clearing={clearing} transferring={transferring} />);
 const KEEP = "거래 기록은 그대로 남아요.";
@@ -34,5 +34,13 @@ describe("ResyncTxNotice", () => {
     expect(h.indexOf(CLEAR)).toBeGreaterThan(-1);
     expect(h.indexOf(MOVE)).toBeGreaterThan(h.indexOf(CLEAR));
     expect(h.match(/break-keep/g)).toHaveLength(2);
+  });
+  it("코인 맞추기(5.161): 정리 문구는 '코인', 삭제 0이면 현행 문구", () => {
+    const coin = (clearing: boolean) =>
+      renderToStaticMarkup(<KindCtx.Provider value="crypto"><ResyncTxNotice clearing={clearing} transferring={false} /></KindCtx.Provider>);
+    expect(coin(true)).toContain("지우는 코인은 거래 기록도 함께 정리돼요");
+    expect(coin(true)).not.toContain(KEEP);
+    expect(coin(false)).toContain(KEEP);
+    expect(coin(false)).not.toContain("함께 정리돼요");
   });
 });
