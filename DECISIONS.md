@@ -778,3 +778,4 @@
 - 2026-11-26 **v5.160 머지**(PR #324, squash 9c13292, 22:50 KST) = issue-5.162 = #323 배당 문구·숫자 마감(risk:low, CEO 승인). 320 배당 표 변경은 축소로 제외(후속: 행 2단 ui.md 선행). 허브 배당 카드 #288 R1 판독 경계 = 머지 시각. 회고 C155.
 - 2026-11-26 22:55 KST **대표 지시**: 지금부터 11/27 09:00 KST까지 모든 에이전트는 Fable 모델 사용, 쉼 없이 작업 진행. (오케스트레이터: Agent 호출 시 model=fable)
 - 2026-11-26 #325 tech-review 판정(오케스트레이터): 코인 거래소별 합계는 읽기 전용(맞추기 버튼 없음 — 코인 resync가 거래소 기본값 미지원), computeExchangeTotals 얇은 래퍼 + BrokerRow 재사용, 소계 정본 getAssetSummary().cryptoValue(수량>0 전체). GA crypto_exchange_open 1개 포함(stock_broker_open과 판독 대칭).
+- 2026-11-26 #326 320 배당 표 2단을 열린 릴리스 5.163에 추가(열린 릴리스 1개 규칙). 사양 issues/5.163-326-dividend-table-320/5.163-ui.md(매수 날짜는 1단 메타 줄 — 2단 4열 최장 합 284.6px>254px).
