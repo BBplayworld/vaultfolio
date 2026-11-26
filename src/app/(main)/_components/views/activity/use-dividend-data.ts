@@ -7,7 +7,7 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 import { dividendQueryOptions, countFailedDividends } from "@/lib/finance/dividend-client";
-import { computeDividends, dividendStockKey, type DividendCalcResult } from "@/lib/finance/dividend-calc";
+import { computeDividends, dividendStockKey, isDividendExcludedCurrency, type DividendCalcResult } from "@/lib/finance/dividend-calc";
 import { kstTodayString } from "@/lib/asset/import-inherit";
 import type { Stock } from "@/types/asset";
 import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
@@ -31,14 +31,18 @@ export interface DividendData {
   loadedCount: number;
   failedCount: number;
   totalCount: number;
+  /** 배당 조회에서 뺀 엔화 종목 수(ticker·카테고리 묶음 기준) */
+  jpyCount: number;
 }
 
 export function useDividendData({ enabled = true }: { enabled?: boolean } = {}): DividendData {
   const { assetData, exchangeRates } = useAssetData();
 
-  // 상장폐지 종목 제외 — 배당 받을 수 없음. 거래정지는 포함 (보유 중)
+  // 상장폐지 종목 제외 — 배당 받을 수 없음. 거래정지는 포함 (보유 중). 엔화는 조회하지 않는다
   const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted");
-  const grouped = Array.from(groupStocksByTickerCategory(base).values()).map((items) => ({
+  const target = base.filter((s) => !isDividendExcludedCurrency(s));
+  const jpyCount = groupStocksByTickerCategory(base.filter(isDividendExcludedCurrency)).size;
+  const grouped = Array.from(groupStocksByTickerCategory(target).values()).map((items) => ({
     key: dividendStockKey(items[0]),
     stock: mergeStockGroup(items),
     items,
@@ -72,5 +76,6 @@ export function useDividendData({ enabled = true }: { enabled?: boolean } = {}):
     loadedCount: queries.filter((q) => !q.isLoading).length,
     failedCount: countFailedDividends(queries),
     totalCount: queries.length,
+    jpyCount,
   };
 }

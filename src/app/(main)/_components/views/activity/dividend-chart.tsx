@@ -12,7 +12,7 @@ import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { niceAxisTicks, formatAxisWon, pickVisibleLabels } from "@/lib/finance/dividend-axis";
 import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
-import { isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
+import { isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE, jpyDividendNotice } from "@/lib/finance/dividend-client";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
 import { monthSums, type DividendCalcResult } from "@/lib/finance/dividend-calc";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
@@ -112,7 +112,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
   const [estimateMode, setEstimateMode] = useState<"all" | "actual">("all");
 
-  const { groups, calc, isLoading, loadedCount, failedCount, totalCount } = useDividendData({ enabled: isActive });
+  const { groups, calc, isLoading, loadedCount, failedCount, totalCount, jpyCount } = useDividendData({ enabled: isActive });
 
   const monthlyTotals = buildMonthlyTotals(calc);
   // 막대 높이 최댓값 기준 둥근 Y축 눈금 + 겹치지 않는 값 라벨
@@ -149,6 +149,8 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
 
   // 투입 대비 배당(#4.46) — 조회가 모두 끝난 뒤에만 계산
   const dividendYield = !isLoading && annualTotal > 0 ? computeDividendYield(groups, usdRate, estimateMode, calc) : null;
+  // 엔화 종목 안내(#313) — 엔화만 있어 빈 화면이면 빈 화면 둘째 줄이 대신한다
+  const jpyOnly = jpyCount > 0 && groups.length === 0;
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -158,16 +160,16 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
                 <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
-                <InfoHint summary="아직 안 받은 달은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
+                <InfoHint summary="지급일이 안 된 배당은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
                   <p>미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
                   <p>해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>
-                  <p><span className="font-semibold text-foreground">매수일</span> 이전 지급분은 계산에서 제외됩니다.</p>
+                  <p>거래 기록이 있으면 지급일에 갖고 있던 수량으로 계산해요. 판 종목은 빠져요.</p>
                   <p>투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
                 </InfoHint>
               </div>
               {/* 월 선택 배지와 설명이 같은 칸을 공유 — 선택·해제해도 헤더 높이가 변하지 않아 차트가 밀리지 않는다 */}
               <div className="grid min-h-6 items-center [&>*]:[grid-area:1/1]" data-testid="dividend-sub-slot">
-                <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>보유 주식 기준 올해 배당금</CardDescription>
+                <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>지금 보유 종목 기준 · 세전 추정</CardDescription>
                 {selectedMonth !== undefined && (
                   <Badge asChild variant="outline">
                     <button
@@ -284,13 +286,17 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             <p className="text-sm text-muted-foreground text-pretty break-keep">{DIVIDEND_FETCH_FAILED_MESSAGE}</p>
           )}
 
+          {!isLoading && jpyCount > 0 && !jpyOnly && (
+            <p data-testid="dividend-jpy-notice" className="text-sm text-muted-foreground text-pretty break-keep">{jpyDividendNotice(jpyCount)}</p>
+          )}
+
           {!isLoading && annualTotal === 0 ? (
             isDividendUnknown(failedCount, annualTotal) ? null : (
             <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
-                <p className="text-muted-foreground text-sm">올해 배당 데이터가 없습니다.</p>
-                <p className="text-muted-foreground text-sm mt-1">
-                  보유 주식에 배당금이 없거나 KIS API가 설정되지 않았습니다.
+                <p className="text-muted-foreground text-sm">올해 배당이 아직 없어요</p>
+                <p data-testid={jpyOnly ? "dividend-jpy-notice" : undefined} className="text-muted-foreground text-sm mt-1 text-pretty break-keep">
+                  {jpyOnly ? jpyDividendNotice(jpyCount) : "지금 보유 종목 기준으로 올해 받을 배당이 없어요"}
                 </p>
               </div>
             </div>
