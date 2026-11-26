@@ -6,7 +6,7 @@
 
 ## 2026-11-26
 ### 배당 문구·숫자 마감 (issue-5.162, #323, risk:low)
-- 머리 `지급일에 보유한 수량 기준 · 세전 추정`·빈 상태·InfoHint(없으면 지금 수량·액면분할 한계) 문구 정정. `roundedAnnual(calc)`(지급·예상 각각 반올림 후 합산)를 Hero·결론 줄·허브·성적표 입력의 단일 정본으로, 월 행 total = totalActual + totalEstimated(결론 줄 예상 = 12월 Hero = 허브 예상). 320: 막대 합계 라벨 x clamp, 표 매수 날짜 nowrap·md 미만 YY.MM.DD, 증권사별 메타 조각별 nowrap. 액면분할 S1~S4 재현 테스트(현재 값 고정·계산 수정 없음). 저장·동기화 변경 0. 스냅샷 `decision-unset-baseline`은 증권사 메타 마크업 변경으로 갱신.
+- 머리 `지급일에 보유한 수량 기준 · 세전 추정`·빈 상태·InfoHint(없으면 지금 수량·액면분할 한계) 문구 정정. `roundedAnnual(calc)`(지급·예상 각각 반올림 후 합산)를 Hero·결론 줄·허브·성적표 입력의 단일 정본으로, 월 행 total = totalActual + totalEstimated(결론 줄 예상 = 12월 Hero = 허브 예상). 320: 막대 합계 라벨 x clamp, 증권사별 메타 조각별 nowrap. 액면분할 S1~S4 재현 테스트(현재 값 고정·계산 수정 없음). 저장·동기화 변경 0. 스냅샷 `decision-unset-baseline`은 증권사 메타 마크업 변경으로 갱신.
 ### 맞추기 정확성 마감 — 코인 고아 거래 정리·'최근 3년 거래 N건'·토스트 되돌리기 (issue-5.161, #321, risk:medium)
 - 코인 맞추기에서 체크해 지운 코인의 거래가 남아 결산·홈 원인에 더해지던 결함을 직접 삭제(`planDeleteCryptos`) 규칙으로 정리(`planCryptoResyncSave`, 삭제 id = 저장 직전 fresh에 있고 결과에 없는 id). 되돌리기는 `buildCryptoResyncUndoEntries`로 `crypto`+`cryptoTransactions`. 미리보기 고지 코인도 `지우는 코인은 거래 기록도 함께 정리돼요`. 종목 한 장 `거래내역 N건` → `최근 3년 거래 N건`(세는 방식 불변). 결함 수정(D-1): FAB 경유 맞추기를 닫은 뒤 토스트 `되돌리기`가 Radix 모달의 body `pointer-events:none`을 상속해 눌리지 않던 것을 `Toaster`(`ui/sonner.tsx`) `toastOptions.className="pointer-events-auto"` 한 곳으로 해결(전 토스트 적용, 숨김 토스트는 sonner 규칙 유지). 결과 대조 1줄은 행 회귀로 5.162로 분리. 저장 키·스키마·동기화·공유 토큰·서버 전송 변경 0(C151). 새 소식 없음(정확성 수정·문구 정돈).
 ### 상세·주식 증권사별 합계 (issue-5.160, #319, risk:low)

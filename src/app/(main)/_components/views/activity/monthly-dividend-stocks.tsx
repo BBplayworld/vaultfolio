@@ -58,9 +58,6 @@ const monthsIn = (state: DividendMonthState[], want: DividendMonthState) =>
   state.flatMap((st, i) => (st === want ? [i + 1] : []));
 const cents = (v: number) => Math.round(v * 100) / 100;
 
-// md 미만 매수 날짜 YY.MM.DD(320 한 줄 유지, 5.162)
-const shortDate = (d: string) => (/^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(2, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}` : d);
-
 export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
   const { exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
@@ -122,7 +119,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
             <span className="text-sm font-semibold text-muted-foreground">{label}</span>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_4.25rem_4.75rem] max-[359px]:grid-cols-[minmax(2.5rem,1fr)_3rem_3.25rem_4.1rem_4.5rem] max-[359px]:px-0.5 max-[359px]:gap-x-0.5 sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
+          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
             <span>종목명</span>
             <span className="text-right">배당월</span>
             <span className="text-right">주당</span>
@@ -140,7 +137,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
               return (
                 <div
                   key={stock.id}
-                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_4.25rem_4.75rem] max-[359px]:grid-cols-[minmax(2.5rem,1fr)_3rem_3.25rem_4.1rem_4.5rem] max-[359px]:px-0.5 max-[359px]:gap-x-0.5 sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center"
+                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center"
                   data-testid="dividend-stock-row"
                 >
                   <div className="min-w-0">
@@ -159,11 +156,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                         </Badge>
                       </div>
                     )}
-                    {stock.purchaseDate && (
-                      <p data-testid="dividend-stock-purchase" className="text-xs text-muted-foreground mt-1 max-[359px]:text-2xs max-[359px]:tracking-tighter whitespace-nowrap tabular-nums overflow-hidden text-ellipsis">
-                        <span className="max-[399px]:hidden">매수 </span><span className="md:hidden">{shortDate(stock.purchaseDate)}</span><span className="hidden md:inline">{stock.purchaseDate}</span>
-                      </p>
-                    )}
+                    {stock.purchaseDate && <p className="text-xs text-muted-foreground mt-1">매수 {stock.purchaseDate}</p>}
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end">
                     {beforePurchaseMonths.map((m) => (
@@ -195,30 +188,30 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                       </Badge>
                     ))}
                   </div>
-                  <div className="flex flex-col items-end text-right">
+                  <div className="text-right">
                     {!isDomestic && currency === "USD" ? (
                       <>
-                        <p className="text-xs max-sm:text-2xs tabular-nums whitespace-nowrap" style={{ color: MAIN_PALETTE[10] }}>${perShareForeign.toFixed(4)}</p>
-                        <p className="text-xs max-sm:text-2xs tabular-nums whitespace-nowrap text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
+                        <p className="text-xs tabular-nums" style={{ color: MAIN_PALETTE[10] }}>${perShareForeign.toFixed(4)}</p>
+                        <p className="text-xs tabular-nums text-muted-foreground">{perShareKRW.toLocaleString()}원</p>
                       </>
                     ) : (
-                      <p className="text-xs max-sm:text-2xs tabular-nums whitespace-nowrap" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
+                      <p className="text-xs tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
                     )}
-                    <p className="text-xs max-sm:text-2xs tabular-nums whitespace-nowrap text-muted-foreground">보유 {stock.quantity}주</p>
+                    <p className="text-xs tabular-nums break-keep text-muted-foreground">보유 {stock.quantity}주</p>
                   </div>
-                  <div className="flex flex-col items-end text-right whitespace-nowrap">
+                  <div className="text-right whitespace-nowrap">
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (
                       <p className="text-xs tabular-nums text-muted-foreground">${displayForeignActual.toFixed(2)}</p>
                     )}
-                    <p data-testid="dividend-paid-amount" className="whitespace-nowrap text-xs max-sm:text-2xs xl:text-sm font-bold tabular-nums text-foreground">
+                    <p data-testid="dividend-paid-amount" className="text-xs xl:text-sm font-bold tabular-nums text-foreground">
                       {displayActual > 0 ? formatCurrency(displayActual) : <span className="text-muted-foreground">-</span>}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end text-right whitespace-nowrap">
+                  <div className="text-right whitespace-nowrap">
                     {!isDomestic && currency === "USD" && (
                       <p className="text-xs tabular-nums text-muted-foreground ">${displayForeign.toFixed(2)}</p>
                     )}
-                    <p data-testid="dividend-est-amount" className={`whitespace-nowrap text-xs max-sm:text-2xs xl:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
+                    <p data-testid="dividend-est-amount" className={`text-xs xl:text-sm font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                       {formatCurrency(displayTotal)}
                     </p>
                   </div>

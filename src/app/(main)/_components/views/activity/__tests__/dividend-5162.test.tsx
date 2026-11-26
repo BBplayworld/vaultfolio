@@ -1,4 +1,4 @@
-// #323(5.162) 배당 문구·숫자 마감 — 화면별 문자열 일치(C150)·확정 문구·표 날짜·월 행 합
+// #323(5.162) 배당 문구·숫자 마감 — 화면별 문자열 일치(C150)·확정 문구·월 행 합
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -12,7 +12,6 @@ const mocked = vi.hoisted(() => ({ value: {} as unknown }));
 vi.mock("../use-dividend-data", async (importOriginal) => ({ ...(await importOriginal<typeof import("../use-dividend-data")>()), useDividendData: () => mocked.value }));
 
 import { DividendCard, buildMonthlyTotals } from "../dividend-chart";
-import { MonthlyDividendStocks } from "../monthly-dividend-stocks";
 import { useDividendAnnualTotals } from "../performance-hub";
 import { buildDividendGroups } from "../use-dividend-data";
 
@@ -67,25 +66,5 @@ describe("5.162 확정 문구", () => {
     const { html } = setup([stock({})], []);
     expect(html).toContain("보유 종목에서 올해 받을 배당이 없어요");
     expect(html).not.toContain("지금 보유 종목 기준");
-  });
-});
-
-describe("5.162 표 매수 날짜", () => {
-  it("한 줄 nowrap, md 미만 YY.MM.DD · md 이상 원문", () => {
-    const { groups, calc } = setup([stock({ purchaseDate: "2020-01-02" })], [pay(`${YEAR}-12-15`, 100, true)]);
-    const html = renderToStaticMarkup(<MonthlyDividendStocks selectedMonth={undefined} groups={groups} calc={calc} />);
-    expect(html).toMatch(/data-testid="dividend-stock-purchase" class="[^"]*whitespace-nowrap/);
-    expect(html).toContain("20.01.02");
-    // 320(<360)은 이름 칸 폭 안에서 끝나도록 '매수 ' 접두를 숨기고 열을 재배분, 넘치면 말줄임
-    expect(html).toContain("max-[399px]:hidden");
-    expect(html).toContain("max-[359px]:grid-cols-");
-    expect(html).toContain("max-[359px]:text-2xs");
-    expect(html).toContain("minmax(2.5rem,1fr)_3rem_3.25rem_4.1rem_4.5rem");
-    // 금액 셀(주당·지급·합계) 줄바꿈 0
-    expect(html).toMatch(/data-testid="dividend-paid-amount" class="whitespace-nowrap /);
-    expect(html).toMatch(/data-testid="dividend-est-amount" class="whitespace-nowrap /);
-    expect(html).toMatch(/text-2xs tabular-nums whitespace-nowrap/);
-    expect(html).toContain("tabular-nums overflow-hidden text-ellipsis");
-    expect(html).toContain("2020-01-02");
   });
 });
