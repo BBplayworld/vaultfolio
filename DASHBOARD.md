@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-26 20:40 KST** · 운영 최신 **v5.158** · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
+> **마지막 갱신: 2026-11-26 21:20 KST** · 운영 최신 **v5.158** (v5.159 머지·스모크 중) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -22,7 +22,7 @@
 | **v5.156** [PR #316](https://github.com/BBplayworld/vaultfolio/pull/316) | #311 기록 입력 정확도 | **운영 반영 11/26 19:36 KST** · 스모크 PASS | — |
 | **v5.157** [PR #318](https://github.com/BBplayworld/vaultfolio/pull/318) | #317 상세에서 보는 배당 | **운영 반영 11/26 19:53~57 KST** · 스모크 PASS | — |
 | **v5.158** [PR #320](https://github.com/BBplayworld/vaultfolio/pull/320) | #319 상세·주식 증권사별 합계 | **운영 반영 11/26 20:26~38 KST** · 스모크 PASS | — |
-| **#321** [PR #322](https://github.com/BBplayworld/vaultfolio/pull/322) | 맞추기 정확성 마감(코인 고아 거래·결과 대조 1줄) | qa·ui-review 중 | CEO |
+| **v5.159** [PR #322](https://github.com/BBplayworld/vaultfolio/pull/322) | #321 맞추기 정확성 마감(코인 고아 거래·토스트 되돌리기) | **머지 11/26** · 운영 스모크 중 | 대조 1줄 → 5.162 |
 | **v5.152** [PR #307](https://github.com/BBplayworld/vaultfolio/pull/307) | #306 데이터 안전 회귀 테스트(앱 코드 0) | **운영 반영 11/26 04:30 KST** | — |
 | **다음** | 상세·현금 320 현금 거래 9자리 출금 겹침 | 11/27 10:17 착수 예약 | 하루 1머지 |
 | **v5.151** [PR #305](https://github.com/BBplayworld/vaultfolio/pull/305) | #304 홈 Hero·원인 행 표시 일치(bug) | **운영 반영 11/26 04:17 KST** · 운영 스모크 PASS | 가드레일: 홈 변동 원인 열기 기기 수·'숫자 안 맞음' 제보 0 |
