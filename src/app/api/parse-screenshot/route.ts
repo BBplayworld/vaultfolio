@@ -7,6 +7,7 @@ import { GEMINI_SERVER_DAILY_LIMIT } from "@/lib/cache-storage";
 import { isTinyImage } from "./image-size";
 import { reconcileImagePrices } from "./price-consistency";
 import { stripTrailingQuantity } from "./name-normalize";
+import { parseStockPayload, type ScreenTotal } from "./screen-total";
 import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
 
 export const maxDuration = 30;
@@ -21,9 +22,8 @@ type ParseAssetType = "stock" | "crypto" | "cash" | "loan" | "trade" | "crypto-t
 // 주식 스키마 / 프롬프트 / 후처리
 // ─────────────────────────────────────────────────────────
 
-const STOCK_SCHEMA = {
-  type: Type.ARRAY,
-  items: {
+// 행 스키마 — 최상위는 { rows, screenTotal… } 객체(5.161). 화면 합계는 행과 분리된 필드다
+const STOCK_ROW_SCHEMA = {
     type: Type.OBJECT,
     properties: {
       name: { type: Type.STRING },
@@ -40,7 +40,17 @@ const STOCK_SCHEMA = {
       brokerHint: { type: Type.STRING },
     },
     required: ["name", "quantity", "quantityMissing", "profitRate", "section"],
+};
+
+const STOCK_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    rows: { type: Type.ARRAY, items: STOCK_ROW_SCHEMA },
+    screenTotal: { type: Type.NUMBER },
+    screenTotalLabel: { type: Type.STRING },
+    screenTotalCurrency: { type: Type.STRING, enum: ["KRW", "USD", "JPY"] },
   },
+  required: ["rows", "screenTotal", "screenTotalLabel", "screenTotalCurrency"],
 };
 
 const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 정보를 추출하라.
@@ -48,7 +58,9 @@ const buildStockPrompt = () => `증권 앱 보유종목 화면에서 종목별 �
 필드:
 name=종목명(그대로·정확히·수량·괄호 숫자·다음 줄 숫자를 붙이지 말 것. 이름이 두 줄로 줄바꿈되면 한 이름으로 합침(단어 중간에서 끊겼으면 공백 없이, 단어 사이면 공백 한 칸). 이름이 잘려 끝이 "("·"…"면 그 기호는 빼고 보이는 글자까지만), ticker=티커(국내 종목은 종목명만 정확히 추출하고 6자리 코드는 불확실하면 빈칸""·후처리 마스터가 종목명으로 코드 확정·SPY 등 해외주식에 국내 코드 임의 매핑 절대 금지·해외주식은 해외 티커 추론·모르면 ""), quantity=보유수량(숫자만), quantityMissing=수량이 화면에 없어서 1로 설정했으면 true·실제 수량이 있으면 false, currentPrice=현재가(화면에 숫자로 명시된 경우만·없으면 0), averagePrice=평균단가(화면에 숫자로 명시된 경우만·없으면 0), currentValue=총평가금액(종목명 우측에 위치한 가장 큰 금액 숫자·단위 제외하고 숫자만·없으면 0), profitAmount=평가손익 금액(부호포함·수익률 옆의 금액 숫자·단위 제외·없으면 0), profitRate=손익률(부호포함·퍼센트 숫자 그대로: 8.39%면 8.39이며 0.0839로 바꾸지 말 것·없으면 0), section=국내|해외|기타, currency=통화(KRW|USD|JPY), brokerHint=화면에서 증권사명이 텍스트로 보이면 그대로 추출(예:"토스증권"·"미래에셋"·"키움")·없으면 ""
 
-무시: 계좌번호·총평가금액·광고배너
+무시: 계좌번호·광고배너. 화면 맨 위·아래의 합계 줄(총평가금액 등)은 rows의 행으로 만들지 말 것(종목 행만 rows에 담는다).
+
+화면 합계(행과 별도 필드): screenTotal=화면에 합계 라벨(예 "총 평가금액"·"총평가금액"·"총자산")로 명시된 금액 숫자 1개(단위 제외·종목 값을 더해 계산하지 말고 화면에 보이는 숫자만·없거나 불확실하면 0), screenTotalLabel=그 금액 바로 옆·위의 라벨 글자 그대로(없으면 ""), screenTotalCurrency=그 금액의 통화(KRW|USD|JPY).
 
 2줄 헤더 표 규칙: 한 칸 머리에 라벨 2개가 위·아래로 쌓여 있으면(예: 위"현재가"/아래"평균단가", 위"매입가"/아래"현재가", 위"평가손익"/아래"수익률") 각 행의 해당 칸도 숫자 2개가 위·아래로 쌓여 있다. 머리 라벨의 위·아래 순서를 행의 위·아래 숫자에 그대로 대응시킬 것(증권사마다 순서가 다름·순서를 가정하지 말고 머리를 보고 판단). "매입가"·"평균단가"·"평단가"·"매수평균가"는 averagePrice, "현재가"는 currentPrice. 검산: (현재가-평균단가)/평균단가×100이 수익률과 일치해야 한다.
 
@@ -677,14 +689,15 @@ const RATIO_LIMIT_MESSAGE = "오늘 미리보기 이용이 많아 마감됐어�
 
 // 타입별 후처리 + 응답 — Gemini 결과와 작은 이미지 가드(빈 배열)가 같은 응답 형태를 쓴다
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function respondParsed(assetType: ParseAssetType, geminiRaw: any[], todayStr: string) {
+function respondParsed(assetType: ParseAssetType, geminiRaw: any[], todayStr: string, screenTotal: ScreenTotal | null = null) {
   if (assetType === "crypto") return NextResponse.json({ cryptos: processCryptoResults(geminiRaw as GeminiCrypto[], todayStr) });
   if (assetType === "cash") return NextResponse.json({ cashes: processCashResults(geminiRaw as GeminiCash[], todayStr) });
   if (assetType === "loan") return NextResponse.json({ loans: processLoanResults(geminiRaw as GeminiLoan[], todayStr) });
   if (assetType === "trade") return NextResponse.json({ trades: processTradeResults(geminiRaw as GeminiTrade[], todayStr) });
   if (assetType === "crypto-trade") return NextResponse.json({ cryptoTrades: processCryptoTradeResults(geminiRaw as GeminiCryptoTrade[], todayStr) });
   // stock (기본)
-  return NextResponse.json({ stocks: processStockResults(geminiRaw as GeminiStock[], todayStr) });
+  // 화면 합계는 행(stocks)과 분리된 필드 — 없으면 키 자체를 싣지 않는다(구형 응답과 같은 모양, 5.161). 서버는 저장·로그하지 않는다
+  return NextResponse.json({ stocks: processStockResults(geminiRaw as GeminiStock[], todayStr), ...(screenTotal ? { screenTotal } : {}) });
 }
 
 export async function POST(request: Request) {
@@ -784,7 +797,8 @@ export async function POST(request: Request) {
       config: {
         thinkingConfig: { thinkingBudget: 0 },
         temperature: 0,
-        maxOutputTokens: 2048,
+        // 주식은 합계 필드·rows 래핑이 더해져 256 여유를 더한다(5.161). 그 밖의 타입은 그대로
+        maxOutputTokens: assetType === "stock" ? 2304 : 2048,
         responseMimeType: "application/json",
         responseSchema,
       },
@@ -816,9 +830,19 @@ export async function POST(request: Request) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let geminiRaw: any[];
+    let screenTotal: ScreenTotal | null = null;
     try {
-      geminiRaw = JSON.parse(rawText);
-      if (!Array.isArray(geminiRaw)) throw new Error("배열이 아닌 응답");
+      const parsed: unknown = JSON.parse(rawText);
+      if (assetType === "stock") {
+        // 주식: 최상위 배열·{ rows, screenTotal… } 둘 다 받는다(하위호환)
+        const p = parseStockPayload(parsed);
+        if (!p) throw new Error("rows가 없는 응답");
+        geminiRaw = p.rows;
+        screenTotal = p.screenTotal;
+      } else {
+        if (!Array.isArray(parsed)) throw new Error("배열이 아닌 응답");
+        geminiRaw = parsed;
+      }
     } catch {
       return NextResponse.json(
         { error: "파싱 결과를 읽을 수 없습니다. 다른 스크린샷으로 시도해보세요." },
@@ -826,7 +850,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return respondParsed(assetType, geminiRaw, todayStr);
+    return respondParsed(assetType, geminiRaw, todayStr, screenTotal);
 
   } catch (e) {
     const message = e instanceof Error ? e.message : "알 수 없는 오류";

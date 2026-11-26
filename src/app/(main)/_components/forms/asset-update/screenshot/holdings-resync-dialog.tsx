@@ -30,6 +30,12 @@ import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restor
 import {
   applyResync,
   buildCryptoResyncUndoEntries,
+  collectReconcileRows,
+  reconcileGaCategory,
+  reconcileLines,
+  reconcileTotal,
+  type ReconcileView,
+  type ScreenTotalInfo,
   buildResyncUndoEntries,
   cryptoToStock,
   matchExchangeHint,
@@ -95,6 +101,8 @@ interface Shot {
   url: string;
   status: ShotStatus;
   items: RawScreenItem[];
+  /** 서버가 같은 이미지에서 읽은 화면 합계(주식만). 기기 메모리에서 결과 대조에만 쓴다(5.161) */
+  screenTotal?: ScreenTotalInfo | null;
 }
 
 type Step = "upload" | "preview" | "result";
@@ -137,7 +145,7 @@ interface ResyncUndo {
 }
 
 export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initialBroker }: Props) {
-  const { assetData, saveData, exchangeRates, syncTodayExchangeRate } = useAssetData();
+  const { assetData, saveData, exchangeRates, exchangeRateDate, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const usdRate = exchangeRates.USD || 1380;
   const isCrypto = kind === "crypto";
@@ -166,6 +174,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   const [applying, setApplying] = useState(false);
   const [transferOn, setTransferOn] = useState<Set<string>>(new Set()); // 이관 카드 '옮김' 체크(#310, 기본 해제)
   const [applied, setApplied] = useState<ResyncCounts | null>(null);
+  const [reconcile, setReconcile] = useState<ReconcileView>({ state: "hidden" }); // 결과 화면 대조 1줄(메모리만, 5.161)
   const [appliedMoved, setAppliedMoved] = useState<{ moved: number; movedTx: number } | null>(null);
   const [undoInfo, setUndoInfo] = useState<{ skipped: number } | null>(null);
   const [undoing, setUndoing] = useState(false);
@@ -252,6 +261,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     setApplying(false);
     setApplied(null);
     setAppliedMoved(null);
+    setReconcile({ state: "hidden" });
     setUndoInfo(null);
     setUndoing(false);
     startedRef.current = false;
@@ -285,7 +295,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       form.append("image", shot.file);
       if (isCrypto) form.append("assetType", "crypto");
       const res = await fetch("/api/parse-screenshot", { method: "POST", body: form, signal });
-      const data = (await res.json().catch(() => ({}))) as { stocks?: RawScreenItem[]; cryptos?: Parameters<typeof parsedCryptoToRaw>[0][]; code?: string };
+      const data = (await res.json().catch(() => ({}))) as { stocks?: RawScreenItem[]; screenTotal?: ScreenTotalInfo; cryptos?: Parameters<typeof parsedCryptoToRaw>[0][]; code?: string };
       if (res.status === 429) {
         trackParse(kind, "limit");
         update(shot.id, { status: "limit" });
@@ -297,7 +307,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       const parsed = isCrypto ? data.cryptos?.map((c) => parsedCryptoToRaw(c, usdRate)) : data.stocks;
       if (res.ok && parsed && parsed.length > 0) {
         trackParse(kind, "success");
-        update(shot.id, { status: "ok", items: parsed });
+        update(shot.id, { status: "ok", items: parsed, screenTotal: isCrypto ? null : data.screenTotal ?? null });
       } else if (res.status === 422 && data.code === "truncated") {
         trackParse(kind, "fail");
         update(shot.id, { status: "truncated" });
@@ -397,10 +407,34 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
     undoRef.current = { entries: isCrypto ? buildCryptoResyncUndoEntries(fresh, next) : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
     track("feature_use", { category: "resync_apply" });
+    if (!isCrypto) {
+      // 결과 대조 1줄(주식만, 기기 메모리 비교) — 적용 1회당 GA 구간 1개만 보낸다(금액·%·이름 미전송)
+      const view = computeReconcile(fresh, d, result);
+      setReconcile(view);
+      track("feature_use", { category: reconcileGaCategory(view) });
+    }
     setApplied(result.counts);
     setAppliedMoved(plan && plan.moved > 0 ? { moved: plan.moved, movedTx: plan.movedTx } : null);
     setApplying(false);
     setStep("result");
+  };
+
+  // 맞춘 직후 화면 합계 대조(순수 계산은 lib/asset/resync/reconcile.ts). 숨김 조건 판정에 필요한 상태만 모은다
+  const computeReconcile = (fresh: ReturnType<typeof getAssetData>, d: DiffResult, result: ReturnType<typeof applyResync>): ReconcileView => {
+    const okShots = shots.filter((s) => s.status === "ok");
+    const collected = collectReconcileRows({ diff: d, sel, result, existing: fresh.stocks, rates: exchangeRates });
+    return reconcileTotal({
+      screenTotal: okShots.length === 1 ? okShots[0].screenTotal : null,
+      rows: collected.rows,
+      flags: {
+        okShots: okShots.length,
+        shotProblem: failedRemoved || shots.some((s) => s.status === "failed" || s.status === "truncated" || s.status === "limit"),
+        unapplied: collected.unapplied,
+        stalePrice: collected.stalePrice,
+        foreignRateUnsynced: collected.hasForeign && !exchangeRateDate,
+        undone: false,
+      },
+    });
   };
 
   // ── 되돌리기(결과 화면 버튼·닫은 직후 토스트 두 곳뿐) ─────────────────
@@ -504,6 +538,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
           {step === "result" && applied && (
             <div data-screenshot-hide data-testid="resync-result" className="space-y-2 rounded-xl bg-muted/40 p-4" aria-live="polite">
               <p className="text-sm text-foreground tabular-nums">{summaryParts({ ...applied, same: 0, needs: 0 })}</p>
+              {!undoInfo && <ReconcileLines view={reconcile} />}
               {appliedMoved && (
                 <p data-testid="resync-result-transfer" className="text-sm text-foreground tabular-nums">
                   <span className="whitespace-nowrap">증권사를 옮긴 종목 <span className="font-semibold">{appliedMoved.moved}</span>개</span>
@@ -1082,6 +1117,19 @@ export function ResyncTxNotice({ clearing, transferring }: { clearing: boolean; 
         </p>
       )}
     </>
+  );
+}
+
+/** 맞춘 결과 대조 1~2줄(5.161). 총액이 없거나 숨김 조건이면 DOM 0 */
+export function ReconcileLines({ view }: { view: ReconcileView }) {
+  const lines = reconcileLines(view);
+  if (lines.length === 0) return null;
+  return (
+    <div data-testid="resync-reconcile" className="space-y-0.5">
+      {lines.map((l, i) => (
+        <p key={i} className="text-sm text-foreground tabular-nums text-pretty break-keep">{l}</p>
+      ))}
+    </div>
   );
 }
 

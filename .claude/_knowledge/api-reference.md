@@ -169,6 +169,7 @@ v73A만 GET 시 TTL 30일 리셋(Sliding), v72Z는 연장 안 함(30일 내 자�
 ```
 Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock"|"crypto"|"cash"|"loan" }
 → { stocks|cryptos|cashes|loans: Array<{...}> }   // rawText 미반환(S-4.28)
+   stock은 { stocks, screenTotal?: { value, label, currency } } — 화면 합계는 행과 분리된 필드(5.161). 요청 본문 불변, 서버는 저장·캐시·로그 0, 총액 없음·검증 실패면 키 없음
 ```
 
 **주요 응답 필드:**
@@ -180,7 +181,7 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 **서버 한도:** 하루 1500회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP 없는 시간당 전역 150(`rl:gemini:global:{KST 시}`) + L1 분당 5 + 기기당 30(클라이언트 `use-gemini-usage`) — `reserveGeminiCalls` 원자 예약, 초과 시 429. /ratio 입구 풀 일 60(IP 한도 없음)
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
-**Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
+**Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`(주식만 2304, 5.161 합계 필드·rows 래핑 여유). 주식 응답 JSON은 `{rows, screenTotal, screenTotalLabel, screenTotalCurrency}`이며 파서는 최상위 배열도 받는다, `thinkingBudget:0`, `responseMimeType:"application/json"`
 
 ### POST /api/xray-classify
 X-Ray 종목 분류(NDJSON 스트리밍). **파일:** `src/app/api/xray-classify/route.ts`
