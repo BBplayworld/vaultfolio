@@ -28,6 +28,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       duration={2000}
       mobileOffset={{ bottom: "12px" }}
+      // Radix 모달이 body에 걸어 둔 pointer-events:none을 토스트가 상속해 시트·대화상자가 열린 동안 토스트 버튼(예: 되돌리기)이 눌리지 않던 문제(5.161 D-1).
+      // 클래스(0,1,0)라 숨김 토스트의 sonner 규칙 [data-visible=false]{pointer-events:none}(0,2,0)은 그대로 이긴다
+      toastOptions={{ className: "pointer-events-auto" }}
       swipeDirections={isStandalone ? ["bottom"] : undefined}
       icons={{
         success: <CircleCheckIcon className="size-4" />,

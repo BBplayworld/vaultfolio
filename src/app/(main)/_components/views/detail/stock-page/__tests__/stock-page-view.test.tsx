@@ -192,7 +192,7 @@ describe("요청·상태", () => {
   it("거래내역 N건 링크 = 그룹 전체 거래 수(매수·매도)", () => {
     const s = stock({ id: "a" });
     const html = render([s], [tx({ stockId: "a" }), tx({ stockId: "a", type: "sell" }), tx({ stockId: "other" })]);
-    expect(text(html)).toContain("거래내역 2건");
+    expect(text(html)).toContain("최근 3년 거래 2건");
   });
   it("평단 0이면 평단선 없음", () => {
     expect(tid(render([stock({ averagePrice: 0 })], []), "stock-page-avg-line")).toBe(false);
@@ -234,7 +234,7 @@ describe("4.84 C 매도 점 — 마름모·문구 (C80 매도만 기록 종목 �
     expect(text(html)).toContain("점을 누르면 매도 기록을 볼 수 있어요");
     expect(text(html)).not.toContain("매수를 기록하면");
     expect(tid(html, "chart-legend")).toBe(false);
-    expect(text(html)).toContain("거래내역 1건");
+    expect(text(html)).toContain("최근 3년 거래 1건");
   });
   it("창 밖 매도: 매도 포함이면 `1년보다 전 거래 N건`(매수·매도 합산), 점 없는 날 안내가 대신하지 않는다", () => {
     const html = render([s()], [tx({ stockId: "a", date: "2024-05-01" }), tx({ stockId: "a", date: "2024-06-01", type: "sell" })]);

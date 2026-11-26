@@ -48,6 +48,14 @@ export function buildResyncUndoEntries(before: AssetData, after: AssetData): Ove
   ];
 }
 
+/** 코인 맞추기 1건의 되돌리기 목록 — crypto·cryptoTransactions 두 컬렉션(5.161). 거래 정리를 되돌리지 못하면 기록이 유실된다 */
+export function buildCryptoResyncUndoEntries(before: AssetData, after: AssetData): OverwriteEntry[] {
+  return [
+    ...buildUndoEntries(before.crypto, after.crypto, "crypto"),
+    ...buildUndoEntries(before.cryptoTransactions ?? [], after.cryptoTransactions ?? [], "cryptoTransactions"),
+  ];
+}
+
 /** 되돌리는 순간의 현재 데이터(getAssetData() 새로 읽은 값)에 적용한다. 목록에 든 컬렉션(주식 맞추기는 stocks·transactions·loans)만 바뀌고 나머지는 그대로다 */
 export function planUndo(entries: OverwriteEntry[], current: AssetData): UndoResult {
   const plan = planRevert(entries, captureSnapshot(current));

@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { NewDateRow } from "./new-date-row";
 import { defaultNewPurchaseDate, isValidNewPurchaseDate } from "@/lib/asset/import-inherit";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { planDeleteStocks, useAssetData } from "@/contexts/asset-data-context";
+import { planDeleteCryptos, planDeleteStocks, useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { SCREENSHOT_UPLOAD_NOTICE } from "@/config/security-copy";
 import { cryptoExchanges, securitiesFirms, stockCategories } from "@/config/asset-options";
@@ -29,8 +29,8 @@ import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
 import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
+  buildCryptoResyncUndoEntries,
   buildResyncUndoEntries,
-  buildUndoEntries,
   cryptoToStock,
   matchExchangeHint,
   parsedCryptoToRaw,
@@ -43,6 +43,7 @@ import {
   detectTransfers,
   isUnassignedBroker,
   mergeScreens,
+  planCryptoResyncSave,
   planResyncSave,
   planUndo,
   pruneStockTarget,
@@ -78,7 +79,7 @@ const COPY = {
   stock: { broker: "증권사", unit: "주식", item: "종목", qty: "주" },
   crypto: { broker: "거래소", unit: "코인", item: "코인", qty: "개" },
 } as const;
-const KindCtx = createContext<ResyncKind>("stock");
+export const KindCtx = createContext<ResyncKind>("stock");
 const useKind = () => useContext(KindCtx);
 const useT = () => COPY[useKind()];
 const TOAST_ID = "holdings-resync-undo";
@@ -382,7 +383,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     const nextCrypto = isCrypto ? stocksToCrypto(fresh.crypto, before, result.stocks) : fresh.crypto;
     // 주식: 체크 삭제 종목의 거래를 직접 삭제와 같은 규칙으로 정리해 stocks·transactions·loans를 한 번에 저장(#310)
     const plan = isCrypto ? null : planResyncSave(fresh, result, (d, ids) => planDeleteStocks(d, ids, exchangeRates));
-    const next = plan ? plan.data : { ...fresh, crypto: nextCrypto };
+    // 코인: 체크 삭제 코인의 거래도 직접 삭제와 같은 규칙(planDeleteCryptos)으로 정리(5.161)
+    const next = plan ? plan.data : planCryptoResyncSave(fresh, nextCrypto, (d, ids) => planDeleteCryptos(d, ids, exchangeRates));
     const ok = saveData(next);
     if (!ok) {
       setApplying(false);
@@ -393,7 +395,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     if (!isCrypto) pruneStockTargets(next.stocks);
     const prevRefreshedAt = lastRefreshedAt(kind);
     const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
-    undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
+    undoRef.current = { entries: isCrypto ? buildCryptoResyncUndoEntries(fresh, next) : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
     track("feature_use", { category: "resync_apply" });
     setApplied(result.counts);
     setAppliedMoved(plan && plan.moved > 0 ? { moved: plan.moved, movedTx: plan.movedTx } : null);
@@ -879,8 +881,8 @@ function PreviewStep({ diff, sel, existing, transfers, transactions, setTransfer
       else n.delete(id);
       return n;
     });
-  // 고지 문구(#310 ui 10절): 실제로 지워지고 평가액이 남아 거래가 정리되는 종목이 있는가(코인은 거래 정리 없음)
-  const clearsTx = kind === "stock" && clearsTradeRecords(existing, diff, sel);
+  // 고지 문구(#310 ui 10절): 실제로 지워지고 평가액이 남아 거래가 정리되는 종목·코인이 있는가
+  const clearsTx = clearsTradeRecords(existing, diff, sel);
   const transferring = kind === "stock" && checkedTransfers(diff, sel).length > 0;
   const txCountOf = (id: string) => transactions.filter((t) => t.stockId === id).length;
 
@@ -1056,6 +1058,7 @@ const NOTICE_CLASS = "flex items-start gap-2 text-sm text-muted-foreground text-
 
 /** 미리보기 거래 기록 고지(#310): 삭제로 거래가 정리되거나 이관으로 거래가 옮겨질 때 그 사실을, 둘 다 아니면 현행 문구 */
 export function ResyncTxNotice({ clearing, transferring }: { clearing: boolean; transferring: boolean }) {
+  const T = useT();
   if (!clearing && !transferring) {
     return (
       <p data-testid="resync-notice-1" className={NOTICE_CLASS}>
@@ -1069,7 +1072,7 @@ export function ResyncTxNotice({ clearing, transferring }: { clearing: boolean; 
       {clearing && (
         <p data-testid="resync-notice-1" className={NOTICE_CLASS}>
           {NOTICE_ICON}
-          <span>지우는 종목은 거래 기록도 함께 정리돼요</span>
+          <span>지우는 {T.item}은 거래 기록도 함께 정리돼요</span>
         </p>
       )}
       {transferring && (
