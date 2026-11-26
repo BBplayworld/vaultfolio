@@ -32,8 +32,9 @@ export function dispatchAddTrade(stockId?: string) {
   window.dispatchEvent(new CustomEvent("trigger-add-trade", { detail: { stockId } }));
 }
 
-export function dispatchAddCashTx(cashId?: string) {
-  window.dispatchEvent(new CustomEvent("trigger-add-cash-tx", { detail: { cashId } }));
+/** dividend = 성과 › 배당의 받은 기록 칩에서 열 때(#329) — 입금·'배당으로 받은 돈' 체크로 시작한다(UI 상태일 뿐 저장 0) */
+export function dispatchAddCashTx(cashId?: string, opts?: { dividend?: boolean }) {
+  window.dispatchEvent(new CustomEvent("trigger-add-cash-tx", { detail: opts?.dividend ? { cashId, dividend: true } : { cashId } }));
 }
 
 export function dispatchAddLoanTx(loanId?: string) {

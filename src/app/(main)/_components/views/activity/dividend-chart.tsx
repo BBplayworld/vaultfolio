@@ -20,6 +20,11 @@ import { useDividendData } from "./use-dividend-data";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../layout/ui/dot-wrap";
 import { kstTodayString } from "@/lib/asset/import-inherit";
+import { PenLine } from "lucide-react";
+import { useDividendTags } from "@/hooks/use-cash-tx-tags";
+import { sumReceivedDividend } from "@/lib/finance/received-dividend";
+import { getMultiplier } from "../detail/asset-detail-tabs";
+import { dispatchAddCashTx } from "../../layout/navigation/asset-dispatch";
 
 
 const CATEGORY_KEYS = ["domestic", "foreign", "irp", "isa", "pension"] as const;
@@ -116,8 +121,40 @@ export function buildMonthlyTotals(calc: DividendCalcResult): MonthlyTotal[] {
 }
 
 
+// 결론 줄 — DOT_WRAP_ROW와 같은 왼쪽 8px 자르기에, 위·아래만 10px 열어 칩의 40px 히트영역이 잘리지 않게 한다(#329)
+const CONCLUSION_ROW = "-ml-2 [clip-path:inset(-0.625rem_-100vw_-0.625rem_0.5rem)]";
+
+/**
+ * 받은 기록 칩(#329) — 내가 적은 것 = 중립 회색 면, 앱이 계산한 것(지급·예상) = 글자.
+ * 누르면 화면 이동 없이 현금 입금 폼이 '배당으로 받은 돈'을 켠 채 열린다. 기록이 생긴 뒤에도 같은 칩이 진입이다.
+ * 높이 = 줄 높이(1lh)라 결론 줄 높이를 늘리지 않는다. amount가 없으면 `받은 배당 적기`.
+ */
+function ReceivedChip({ label, amount, testId, month }: { label: string; amount?: number; testId: string; month?: number }) {
+  const hasAmount = amount !== undefined && amount > 0;
+  const text = hasAmount ? formatPriceByMode(amount) : "";
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      data-state={hasAmount ? "sum" : "empty"}
+      data-received={hasAmount ? amount : 0}
+      data-month={month}
+      aria-label={hasAmount ? `${label} ${text}, 받은 배당 적기` : undefined}
+      onClick={(e) => {
+        e.currentTarget.focus(); // 클릭으로 포커스가 가지 않는 브라우저에서도 닫힌 뒤 이 칩으로 돌아오게
+        dispatchAddCashTx(undefined, { dividend: true });
+      }}
+      className="relative inline-flex h-[1lh] cursor-pointer items-center gap-1 rounded-full bg-secondary px-2 align-top text-muted-foreground whitespace-nowrap outline-none after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-brand/40 motion-safe:transition-[background-color,scale] motion-safe:duration-150 motion-safe:active:scale-[0.96]"
+    >
+      <PenLine className="size-3.5 shrink-0" aria-hidden />
+      {label}
+      {hasAmount && <span className="font-semibold text-foreground tabular-nums">{text}</span>}
+    </button>
+  );
+}
+
 export function DividendCard({ isActive = true }: { isActive?: boolean }) {
-  const { exchangeRates } = useAssetData();
+  const { assetData, exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
 
@@ -160,6 +197,14 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const jpyOnly = jpyCount > 0 && groups.length === 0;
   // 결론 줄(#317) — 지급·예상은 Hero 합계를 나눈 값(줄 합 = Hero), 다음 지급 달·종목 수는 계산 결과에서 고르기만 한다
   const next = annualTotal > 0 ? nextDividendMonth(calc, kstTodayString()) : null;
+  // 받은 기록(#329) — 현금 입금에 배당으로 적은 실제 입금액(입금일 기준, 올해). 계산값(지급·예상)에 더하거나 빼지 않는다.
+  // 달별 반올림 합 = 연 합계(C150), 지급·예상과 같은 포맷터. 외화 입금은 지금 환율로 환산
+  const dividendTags = useDividendTags();
+  const received = sumReceivedDividend(assetData.cashTransactions ?? [], dividendTags, Number(kstTodayString().slice(0, 4)), (c) => getMultiplier(c, exchangeRates));
+  // 결론 줄 셋째 자리는 언제나 1개: 받은 기록 합계 칩 → (현금 계좌가 있으면) 받은 배당 적기 칩 → (현금 계좌 0) 다음 지급
+  const thirdSlot: "chip" | "next" | null = received.annual > 0 || (assetData.cash ?? []).length > 0 ? "chip" : next ? "next" : null;
+  const monthReceived = selectedMonth !== undefined ? received.months[selectedMonth - 1] ?? 0 : 0;
+  const hasLead = annualActual > 0 || annualExpected > 0;
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -170,7 +215,8 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
               <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
               <InfoHint summary="지급일이 안 된 배당은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
                 <p className="break-keep">거래 기록이 있으면 지급일에 갖고 있던 수량, 없으면 지금 수량으로 계산해요. 판 종목은 빠져요. 액면분할한 종목은 분할 전 배당이 실제와 다를 수 있어요.</p>
-                <p className="break-keep">투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
+                <p className="break-keep text-pretty">예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 투입 대비 배당은 평단이 없거나 엔화인 종목을 뺀 값이에요.</p>
+                <p className="break-keep text-pretty">받은 기록은 현금 입금에 배당으로 적은 실제 입금액 합이라, 세전으로 계산한 지급과 예상과는 다를 수 있어요.</p>
               </InfoHint>
             </div>
             {/* 월 선택 배지와 설명이 같은 칸을 공유 — 선택·해제해도 헤더 높이가 변하지 않아 차트가 밀리지 않는다 */}
@@ -192,6 +238,12 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           </div>
         </CardHeader>
         <CardContent className={`space-y-6 ${ASSET_THEME.contentPad}`}>
+          {/* 계산 합계 0 · 받은 기록만 있음(다 판 사용자) — Hero가 없어 기간을 알리는 `올해`를 붙인 칩 혼자(#329) */}
+          {annualTotal === 0 && received.annual > 0 && (
+            <div data-testid="dividend-received-solo" className="text-sm text-muted-foreground">
+              <ReceivedChip label="올해 받은 기록" amount={received.annual} testId="dividend-received" />
+            </div>
+          )}
           {/* Hero — 연간 / 선택 월 배당 */}
           {annualTotal > 0 && (
             <div>
@@ -216,34 +268,49 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
               <p className={`text-2xl font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                 {formatPriceByMode(heroValue)}
               </p>
-              {/* 결론 줄(#317) — 월 선택 시 투입 대비 배당과 같이 숨기되 높이는 유지(차트 안 밀림) */}
-              <p
-                data-testid="dividend-conclusion"
-                data-paid={annualActual}
-                data-expected={annualExpected}
-                data-next-month={next?.month ?? ""}
-                data-next-count={next?.count ?? ""}
-                aria-hidden={selectedMonth !== undefined}
-                className={`mt-1 flex flex-wrap gap-x-1 gap-y-0.5 text-sm text-muted-foreground tabular-nums transition-opacity duration-150 motion-reduce:transition-none ${DOT_WRAP_ROW} ${
-                  selectedMonth !== undefined ? "opacity-0 select-none" : "opacity-100"
-                }`}
-              >
-                {annualActual > 0 && (
-                  <span data-testid="dividend-conclusion-paid" className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>
-                    지급 <span className="font-semibold text-foreground">{formatPriceByMode(annualActual)}</span>
-                  </span>
+              {/* 결론 줄(#317) — 월 선택 시 투입 대비 배당과 같이 숨기되 높이는 유지(차트 안 밀림).
+                  셋째 자리(#329): 받은 기록 칩 / 받은 배당 적기 칩 / 다음 지급 중 하나. 월 선택 중에는 같은 칸에 그 달 칩을 겹쳐 그린다(높이는 연간 줄이 정한다) */}
+              <div className="mt-1 grid items-start text-sm text-muted-foreground tabular-nums [&>*]:[grid-area:1/1]">
+                <p
+                  data-testid="dividend-conclusion"
+                  data-paid={annualActual}
+                  data-expected={annualExpected}
+                  data-next-month={next?.month ?? ""}
+                  data-next-count={next?.count ?? ""}
+                  aria-hidden={selectedMonth !== undefined}
+                  inert={selectedMonth !== undefined}
+                  className={`flex flex-wrap gap-x-1 gap-y-0.5 transition-opacity duration-150 motion-reduce:transition-none ${CONCLUSION_ROW} ${
+                    selectedMonth !== undefined ? "opacity-0 select-none" : "opacity-100"
+                  }`}
+                >
+                  {annualActual > 0 && (
+                    <span data-testid="dividend-conclusion-paid" className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>
+                      지급 <span className="font-semibold text-foreground">{formatPriceByMode(annualActual)}</span>
+                    </span>
+                  )}
+                  {annualExpected > 0 && (
+                    <span data-testid="dividend-conclusion-expected" className={`whitespace-nowrap ${annualActual > 0 ? "" : DOT_WRAP_FIRST}`}>
+                      {annualActual > 0 && <DotLead />}예상 <span className="font-semibold">{formatPriceByMode(annualExpected)}</span>
+                    </span>
+                  )}
+                  {thirdSlot === "chip" && (
+                    <span data-testid="dividend-conclusion-received" className={`whitespace-nowrap ${hasLead ? "" : DOT_WRAP_FIRST}`}>
+                      {hasLead && <DotLead />}
+                      <ReceivedChip label={received.annual > 0 ? "받은 기록" : "받은 배당 적기"} amount={received.annual} testId="dividend-received" />
+                    </span>
+                  )}
+                  {thirdSlot === "next" && next && (
+                    <span data-testid="dividend-conclusion-next" className={`whitespace-nowrap ${hasLead ? "" : DOT_WRAP_FIRST}`}>
+                      {hasLead && <DotLead />}다음 지급 <span className="font-semibold text-foreground">{next.month}월 {next.count}종목</span>
+                    </span>
+                  )}
+                </p>
+                {selectedMonth !== undefined && monthReceived > 0 && (
+                  <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">
+                    <ReceivedChip label={`${selectedMonth}월 받은 기록`} amount={monthReceived} testId="dividend-received-month" month={selectedMonth} />
+                  </div>
                 )}
-                {annualExpected > 0 && (
-                  <span data-testid="dividend-conclusion-expected" className={`whitespace-nowrap ${annualActual > 0 ? "" : DOT_WRAP_FIRST}`}>
-                    {annualActual > 0 && <DotLead />}예상 <span className="font-semibold">{formatPriceByMode(annualExpected)}</span>
-                  </span>
-                )}
-                {next && (
-                  <span data-testid="dividend-conclusion-next" className={`whitespace-nowrap ${annualActual > 0 || annualExpected > 0 ? "" : DOT_WRAP_FIRST}`}>
-                    {(annualActual > 0 || annualExpected > 0) && <DotLead />}다음 지급 <span className="font-semibold text-foreground">{next.month}월 {next.count}종목</span>
-                  </span>
-                )}
-              </p>
+              </div>
               {dividendYield && (
                 <div
                   data-testid="dividend-yield"

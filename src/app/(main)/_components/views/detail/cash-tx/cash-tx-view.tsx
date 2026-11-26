@@ -15,6 +15,7 @@ import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { reflectedDeleteBalance, cashBalanceFloor } from "@/lib/trade/cash-tx-utils";
 import type { CashTransaction } from "@/types/asset";
 import { TxMemo } from "../tx-memo";
+import { useDividendTags } from "@/hooks/use-cash-tx-tags";
 
 type DatePreset = "1m" | "3m" | "1y" | "all";
 type TypeFilter = "all" | "deposit" | "withdrawal";
@@ -43,6 +44,8 @@ function presetFrom(preset: DatePreset): string {
 export function CashTxView() {
   const { assetData, deleteCashTransaction, deleteCashTransactionWithBalance } = useAssetData();
   const target = useCashTxViewStore((s) => s.target);
+  // 배당으로 적은 입금(#329) — 분류 표시는 분리 키에서 읽는다(거래 레코드에는 없다)
+  const dividendTags = useDividendTags();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [deleteTarget, setDeleteTarget] = useState<CashTransaction | null>(null);
@@ -147,6 +150,7 @@ export function CashTxView() {
           <div className="divide-y divide-border dark:divide-border/40 dark:rounded-xl dark:bg-card dark:shadow-sm dark:px-4">
             {list.map((t) => {
               const isDep = t.type === "deposit";
+              const dividendTag = isDep ? dividendTags[t.id] : undefined;
               return (
                 <div key={t.id} className="flex items-center gap-3 py-2.5 max-[359px]:flex-wrap max-[359px]:gap-y-0.5">
                   <div className={`size-8 rounded-full flex items-center justify-center shrink-0 ${isDep ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"}`}>
@@ -156,9 +160,12 @@ export function CashTxView() {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-semibold">{isDep ? "입금" : "출금"}</span>
                       {isDep && t.recurring && <Badge variant="outline" className="text-2xs px-1 py-0 leading-tight text-amber-600 border-amber-600">정기</Badge>}
+                      {/* 내가 적은 배당 = 면(secondary). 정기·기록만은 선 — 글자는 `배당` 고정, 종목명은 날짜 아래 줄 */}
+                      {dividendTag && <Badge data-testid="tx-dividend-badge" variant="secondary" className="text-2xs px-1.5 py-0 leading-tight font-semibold">배당</Badge>}
                       {!t.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
                     </div>
                     <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span></p>
+                    {dividendTag?.stockName && <p data-testid="tx-dividend-stock" className="text-sm max-[359px]:text-xs text-muted-foreground truncate">{dividendTag.stockName}</p>}
                     {t.memo && <TxMemo memo={t.memo} />}
                   </div>
                   <span className={`text-sm font-bold tabular-nums shrink-0 max-[359px]:ml-auto ${isDep ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>

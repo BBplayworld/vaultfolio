@@ -41,8 +41,8 @@ export interface CashTxTags {
 }
 
 export const CASH_TX_TAG_LIMIT = { item: 512, top: 4096, text: 80 } as const;
-// 현금 거래 id — `ctx_<시각>_<난수>`·`ctx_link_<거래 id>`. 접두가 고정이라 위험 키(__proto__ 등)는 통과하지 못한다
-const TX_ID = /^ctx_[A-Za-z0-9_.:\-]{1,80}$/;
+// 현금 거래 id — `ctx_<시각>_<난수>`(연결 기록 id도 같은 접두). 접두가 고정이라 위험 키(__proto__ 등)는 통과하지 못한다
+const TX_ID = /^ctx_[A-Za-z0-9_.:-]{1,80}$/;
 const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const ITEM_KNOWN = ["kind", "ticker", "stockName"];
 
