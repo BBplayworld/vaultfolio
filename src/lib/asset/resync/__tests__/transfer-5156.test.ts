@@ -1,6 +1,6 @@
 // #310(5.156) 증권사 이관 후보 감지 — 같은 tickerKey·category, 이번 장 범위 밖(kept)에 남은 다른 증권사 종목이 정확히 1개, 화면 행 정확히 1개
 import { describe, expect, it } from "vitest";
-import { computeDiff, detectTransfers, mergeScreens, pruneStockTarget, resolveScreens } from "..";
+import { clearsTradeRecords, computeDiff, detectTransfers, mergeScreens, pruneStockTarget, resolveScreens } from "..";
 import { row, screen, st, USD } from "./fixtures";
 import type { Stock } from "@/types/asset";
 import type { RawScreen } from "../types";
@@ -103,5 +103,25 @@ describe("pruneStockTarget(화면 상태 정리)", () => {
     expect(pruneStockTarget(t, new Set(["z"]))).toBeNull();
     const noInit = { groupStockIds: ["a", "b"] };
     expect(pruneStockTarget(noInit, new Set(["a"]))).toEqual({ groupStockIds: ["a"] });
+  });
+});
+
+describe("clearsTradeRecords(미리보기 고지 조건)", () => {
+  const sel = (remove: string[], transfer: string[] = []) => ({ include: new Set<string>(), remove: new Set(remove), pick: {}, qty: {}, ticker: {}, transfer: new Set(transfer) });
+  it("삭제 체크 0 → false, 평가액 남은 종목 삭제 → true", () => {
+    const d = diffOf([A, K], [screen(0, [row("000660", 1, 100_000, toss)])]);
+    expect(clearsTradeRecords([A, K], d, sel([]))).toBe(false);
+    expect(clearsTradeRecords([A, K], d, sel(["a"]))).toBe(true);
+  });
+  it("수량 0·상장폐지 종목 삭제는 거래를 남기므로 false", () => {
+    const z = { ...A, quantity: 0 };
+    const dl = { ...A, inactiveStatus: "delisted" as const };
+    for (const x of [z, dl]) expect(clearsTradeRecords([x, K], diffOf([x, K], [screen(0, [row("000660", 1, 100_000, toss)])]), sel(["a"]))).toBe(false);
+  });
+  it("이관 A(합치기)·이어받기로 살아남는 종목은 정리 대상이 아니다", () => {
+    const d = diffOf([A, B], [screen(0, [row("005930", 10, 70_000, toss)])]);
+    expect(clearsTradeRecords([A, B], d, sel([], ["a"]))).toBe(false);
+    const d2 = diffOf([A, K], [screen(0, [row("005930", 10, 70_000, toss), row("000660", 1, 100_000, toss)])]);
+    expect(clearsTradeRecords([A, K], d2, sel(["a"]))).toBe(false); // 추가 행이 A를 이어받음
   });
 });

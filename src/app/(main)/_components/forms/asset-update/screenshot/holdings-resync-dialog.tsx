@@ -36,6 +36,8 @@ import {
   parsedCryptoToRaw,
   stocksToCrypto,
   changeCount,
+  checkedTransfers,
+  clearsTradeRecords,
   computeDiff,
   defaultRemoveIds,
   detectTransfers,
@@ -868,6 +870,9 @@ function PreviewStep({ diff, sel, existing, transfers, transactions, setTransfer
       else n.delete(id);
       return n;
     });
+  // 고지 문구(#310 ui 10절): 실제로 지워지고 평가액이 남아 거래가 정리되는 종목이 있는가(코인은 거래 정리 없음)
+  const clearsTx = kind === "stock" && clearsTradeRecords(existing, diff, sel);
+  const transferring = kind === "stock" && checkedTransfers(diff, sel).length > 0;
   const txCountOf = (id: string) => transactions.filter((t) => t.stockId === id).length;
 
   return (
@@ -1027,16 +1032,44 @@ function PreviewStep({ diff, sel, existing, transfers, transactions, setTransfer
       )}
 
       <div className="space-y-2">
-        <p data-testid="resync-notice-1" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
-          <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
-          <span>거래 기록은 그대로 남아요. <NR>손익·세금</NR> 계산에 쓸 <NR>매수·매도</NR>는 거래 기록으로 남겨 주세요.</span>
-        </p>
+        <ResyncTxNotice clearing={clearsTx} transferring={transferring} />
         <p data-testid="resync-notice-2" className="flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep">
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />
           <span>바뀐 수량·평단은 이번 달 <NR>결산 증감</NR>에 함께 반영돼요</span>
         </p>
       </div>
     </div>
+  );
+}
+
+const NOTICE_ICON = <Info className="mt-0.5 size-4 shrink-0 text-sky-600/70 dark:text-sky-400/70" aria-hidden />;
+const NOTICE_CLASS = "flex items-start gap-2 text-sm text-muted-foreground text-pretty break-keep";
+
+/** 미리보기 거래 기록 고지(#310): 삭제로 거래가 정리되거나 이관으로 거래가 옮겨질 때 그 사실을, 둘 다 아니면 현행 문구 */
+export function ResyncTxNotice({ clearing, transferring }: { clearing: boolean; transferring: boolean }) {
+  if (!clearing && !transferring) {
+    return (
+      <p data-testid="resync-notice-1" className={NOTICE_CLASS}>
+        {NOTICE_ICON}
+        <span>거래 기록은 그대로 남아요. <NR>손익·세금</NR> 계산에 쓸 <NR>매수·매도</NR>는 거래 기록으로 남겨 주세요.</span>
+      </p>
+    );
+  }
+  return (
+    <>
+      {clearing && (
+        <p data-testid="resync-notice-1" className={NOTICE_CLASS}>
+          {NOTICE_ICON}
+          <span>지우는 종목은 거래 기록도 함께 정리돼요</span>
+        </p>
+      )}
+      {transferring && (
+        <p data-testid="resync-notice-transfer" className={NOTICE_CLASS}>
+          {NOTICE_ICON}
+          <span>옮기는 종목의 거래 기록은 새 증권사 종목으로 이어져요</span>
+        </p>
+      )}
+    </>
   );
 }
 

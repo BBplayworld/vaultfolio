@@ -188,6 +188,17 @@ export function inheritedPreds(diff: DiffResult, sel: ResyncSelection, existing?
   return out;
 }
 
+/**
+ * 이번 적용으로 거래 기록이 정리되는 종목이 있는가(#310 미리보기 고지). 실제로 지워지는 id(이어받기·이관 A 제외) 중
+ * planDeleteStocks가 거래를 남기는 평가액 0(수량·시세 0, 상장폐지)이 아닌 것이 1개 이상
+ */
+export function clearsTradeRecords(existing: Stock[], diff: DiffResult, sel: ResyncSelection): boolean {
+  const ids = removableIds(diff, sel);
+  for (const s of inheritedPreds(diff, sel, existing).values()) ids.delete(s.id);
+  for (const t of checkedTransfers(diff, sel)) ids.delete(t.from.id);
+  return existing.some((s) => ids.has(s.id) && s.inactiveStatus !== "delisted" && s.quantity * s.currentPrice > 0);
+}
+
 /** 삭제 후보·유지 묶음 행의 상태 라벨. 체크됐지만 같은 종목 이어받기로 쓰이면 지워지지 않으므로 '변경'(#144) */
 export function removeRowLabel(checked: boolean, inherited: boolean): "삭제" | "변경" | "유지" {
   return !checked ? "유지" : inherited ? "변경" : "삭제";
