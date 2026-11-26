@@ -42,6 +42,7 @@ import {
   mergeScreens,
   planResyncSave,
   planUndo,
+  pruneStockTarget,
   resolveRow,
   PICK_NEW,
   resolveScreens,
@@ -58,6 +59,8 @@ import {
   type ResyncSelection,
 } from "@/lib/asset/resync";
 import type { OverwriteEntry } from "@/lib/cloud-sync/overwrite-guard";
+import { useTradeViewStore } from "@/stores/trade-view-store";
+import { useStockPageStore } from "@/stores/stock-page-store";
 import type { Stock } from "@/types/asset";
 
 const MAX_SHOTS = 5;
@@ -94,6 +97,23 @@ interface Props {
   kind?: ResyncKind;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+/** 맞추기·되돌리기로 사라진 종목 id를 거래내역·종목 한 장 화면 상태에서 걸러낸다(#310). 그룹이 비면 clear */
+function pruneStockTargets(stocks: Stock[]) {
+  const live = new Set(stocks.map((s) => s.id));
+  const tv = useTradeViewStore.getState();
+  if (tv.target) {
+    const n = pruneStockTarget(tv.target, live);
+    if (!n) tv.clear();
+    else if (n !== tv.target) useTradeViewStore.setState({ target: n });
+  }
+  const sp = useStockPageStore.getState();
+  if (sp.target) {
+    const n = pruneStockTarget(sp.target, live);
+    if (!n) sp.clear();
+    else if (n !== sp.target) useStockPageStore.setState({ target: n });
+  }
 }
 
 const NR = ({ children }: { children: React.ReactNode }) => <span className="whitespace-nowrap">{children}</span>;
@@ -344,7 +364,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     const result = applyResync(before, d, sel, { today: todayKst(), usdRate, now: Date.now() });
     const nextCrypto = isCrypto ? stocksToCrypto(fresh.crypto, before, result.stocks) : fresh.crypto;
     // 주식: 체크 삭제 종목의 거래를 직접 삭제와 같은 규칙으로 정리해 stocks·transactions·loans를 한 번에 저장(#310)
-    const next = isCrypto ? { ...fresh, crypto: nextCrypto } : planResyncSave(fresh, result, (d, ids) => planDeleteStocks(d, ids, exchangeRates)).data;
+    const plan = isCrypto ? null : planResyncSave(fresh, result, (d, ids) => planDeleteStocks(d, ids, exchangeRates));
+    const next = plan ? plan.data : { ...fresh, crypto: nextCrypto };
     const ok = saveData(next);
     if (!ok) {
       setApplying(false);
@@ -352,6 +373,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
       return;
     }
     toast.dismiss(TOAST_ID);
+    if (!isCrypto) pruneStockTargets(next.stocks);
     const prevRefreshedAt = lastRefreshedAt(kind);
     const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
     undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
@@ -377,6 +399,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
       return;
     }
     restoreCategoryRefreshed(u.kind, u.prevRefreshedAt, u.appliedAt); // 맞춤 표시 원복(그 사이 다시 맞췄다면 유지)
+    if (u.kind === "stock") pruneStockTargets(plan.data.stocks);
     track("feature_use", { category: "resync_undo" });
     if (!fromToast) {
       setUndoInfo({ skipped: plan.skipped });

@@ -1,6 +1,6 @@
 // #310(5.156) 증권사 이관 후보 감지 — 같은 tickerKey·category, 이번 장 범위 밖(kept)에 남은 다른 증권사 종목이 정확히 1개, 화면 행 정확히 1개
 import { describe, expect, it } from "vitest";
-import { computeDiff, detectTransfers, mergeScreens, resolveScreens } from "..";
+import { computeDiff, detectTransfers, mergeScreens, pruneStockTarget, resolveScreens } from "..";
 import { row, screen, st, USD } from "./fixtures";
 import type { Stock } from "@/types/asset";
 import type { RawScreen } from "../types";
@@ -90,5 +90,18 @@ describe("detectTransfers", () => {
 
   it("빈 데이터 → 0", () => {
     expect(detectTransfers(diffOf([], [screen(0, [row("005930", 10, 70_000, toss)])]))).toEqual([]);
+  });
+});
+
+describe("pruneStockTarget(화면 상태 정리)", () => {
+  const t = { groupStockIds: ["a", "b"], initialStockId: "a" as string | null, name: "x" };
+  it("없는 id를 거르고 initialStockId가 사라지면 null", () => {
+    expect(pruneStockTarget(t, new Set(["b"]))).toEqual({ ...t, groupStockIds: ["b"], initialStockId: null });
+  });
+  it("바뀐 게 없으면 같은 참조, 그룹이 비면 null", () => {
+    expect(pruneStockTarget(t, new Set(["a", "b"]))).toBe(t);
+    expect(pruneStockTarget(t, new Set(["z"]))).toBeNull();
+    const noInit = { groupStockIds: ["a", "b"] };
+    expect(pruneStockTarget(noInit, new Set(["a"]))).toEqual({ groupStockIds: ["a"] });
   });
 });

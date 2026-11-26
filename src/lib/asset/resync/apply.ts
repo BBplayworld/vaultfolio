@@ -1,4 +1,4 @@
-// 보유 현황 맞추기(#91) — 적용(순수). 거래 배열은 건드리지 않고 stocks만 새로 만든다.
+// 보유 현황 맞추기(#91) — 적용(순수). 거래 배열은 건드리지 않고 stocks만 새로 만든다(거래·대출 정리·재지정은 transfer.ts planResyncSave).
 // 연결 항목은 기존 객체에서 수량·평단(화면 실값)·증권사 채움만 바꾸고 id·매수일·매입 환율·메모·비활성 필드를 승계한다(S4·S5).
 // #139: 매칭에 실패해 '추가'가 된 행이 이번에 지우는 같은 종목(티커·시장 같음)을 이어받는다 — 새 id·오늘 매수일로
 // 다시 만들면 거래 기록(stockId)이 끊기고 매수일 이전 배당이 빠졌다. 정말 새 종목의 매수일은 올해 1월 1일(대표 결정 11-10).
@@ -6,6 +6,7 @@ import type { Stock } from "@/types/asset";
 import { evaluateLink, type DiffResult, type DiffRow, type LinkChange } from "./diff";
 import { sameBroker, tickerKey } from "./match";
 import type { ResyncOptions } from "./types";
+import { checkedTransfers } from "./transfer";
 
 export interface ResyncSelection {
   /** 확인 필요 행 중 `이 항목도 맞추기`를 체크한 rowId */
@@ -22,6 +23,8 @@ export interface ResyncSelection {
   fx?: number;
   /** 새 종목 매수일 일괄 입력(#146, 메모리 상태). 없으면 올해 1월 1일 */
   purchaseDate?: string;
+  /** 증권사 이관 카드(#310)에서 '옮김'으로 체크한 옛 종목(A) id. 없거나 비면 v5.152와 같다 */
+  transfer?: Set<string>;
 }
 
 /** otherType 행의 후보 선택에서 '새 항목으로 추가'를 고른 값(고른 유형으로 새로 추가, 기존 다른 유형 항목은 그대로) */
@@ -88,7 +91,11 @@ export function summarize(diff: DiffResult, sel: ResyncSelection, existing?: Sto
     else if (a.type === "same") c.same += 1;
     else if (row.status === "needs") c.needs += 1;
   }
-  c.remove = removableIds(diff, sel).size - inherits.size;
+  // 이관 체크(#310): 체크 1건 = 변경 1(삭제로 세지 않음). 이어받기 쪽은 위에서 추가 행이 이미 변경으로 세졌다
+  const transfers = checkedTransfers(diff, sel);
+  c.change += transfers.filter((t) => t.path === "merge").length;
+  const notRemoved = new Set([...[...inherits.values()].map((s) => s.id), ...transfers.map((t) => t.from.id)]);
+  c.remove = [...removableIds(diff, sel)].filter((id) => !notRemoved.has(id)).length;
   return c;
 }
 
@@ -100,10 +107,18 @@ export function removableIds(diff: DiffResult, sel: ResyncSelection): Set<string
 
 export const changeCount = (counts: ResyncCounts) => counts.add + counts.change + counts.remove;
 
+/** 적용된 이관 1건(#310). inherit는 toId = fromId(거래 재작성 0), merge는 toId = B.id(거래·대출 연결 A→B) */
+export interface AppliedTransfer {
+  fromId: string;
+  toId: string;
+  path: "inherit" | "merge";
+}
+
 export interface ApplyResult {
   stocks: Stock[];
   counts: ResyncCounts;
   addedIds: string[];
+  transfers: AppliedTransfer[];
 }
 
 /** 맞추기로 새로 추가되는 종목의 매수일 기본값 = 그해 1월 1일(today는 KST YYYY-MM-DD). 올해 배당이 빠지지 않게 하고 상세에서 고칠 수 있다(#139) */
@@ -155,7 +170,14 @@ export function inheritedPreds(diff: DiffResult, sel: ResyncSelection, existing?
   const pool = existing ?? [...diff.removes.map((r) => r.stock), ...diff.kept];
   const removing = pool.filter((e) => ids.has(e.id));
   const taken = new Set<string>();
+  // 이관 카드로 체크한 쌍(#310)은 순위로 고르지 않고 A로 고정한다 — 다른 장에서 같은 티커를 함께 지워도 엉뚱한 종목을 잇지 않게
+  for (const t of checkedTransfers(diff, sel)) {
+    taken.add(t.from.id);
+    const r = diff.rows.find((x) => x.rowId === t.rowId);
+    if (t.path === "inherit" && r && resolveRow(r, sel).type === "add") out.set(t.rowId, t.from);
+  }
   for (const row of diff.rows) {
+    if (out.has(row.rowId)) continue;
     const a = resolveRow(row, sel);
     if (a.type !== "add") continue;
     const pred = pickPredecessor(row.item!, a.ticker, removing, taken);
@@ -202,6 +224,22 @@ export function applyResync(
   const removeIds = removableIds(diff, sel);
   for (const id of updated.keys()) removeIds.delete(id);
   const inherits = inheritedPreds(diff, sel, existing);
+  const transfers: AppliedTransfer[] = [];
+
+  // 이관 합치기(#310): A를 지우고 B가 남는다. 수량·평단은 화면 값(위 change), 매수일만 둘 중 이른 날
+  for (const t of checkedTransfers(diff, sel)) {
+    if (t.path === "inherit") {
+      // 이어받기: 아래 추가 행 처리에서 A가 id·매수일을 승계하고 증권사·계좌만 화면 값으로 바뀐다(거래 재작성 0)
+      if (inherits.get(t.rowId)?.id === t.from.id) transfers.push({ fromId: t.from.id, toId: t.from.id, path: "inherit" });
+      continue;
+    }
+    if (!t.to || t.to.id === t.from.id) continue;
+    removeIds.add(t.from.id);
+    const b = updated.get(t.to.id) ?? t.to;
+    const pd = earlierDate(t.from.purchaseDate, b.purchaseDate);
+    if (pd !== b.purchaseDate) updated.set(b.id, { ...b, purchaseDate: pd });
+    transfers.push({ fromId: t.from.id, toId: t.to.id, path: "merge" });
+  }
 
   adds.forEach(({ a, item, rowId }) => {
     // 같은 종목을 지우고 다시 추가하는 경우 → 기존 기록 승계(id·매수일·매입 환율·메모·비활성 필드), 수량·평단·증권사·계좌만 화면 값
@@ -237,5 +275,12 @@ export function applyResync(
   });
 
   const stocks = [...existing.filter((e) => !removeIds.has(e.id)).map((e) => updated.get(e.id) ?? e), ...added];
-  return { stocks, counts: summarize(diff, sel, existing), addedIds: added.map((s) => s.id) };
+  return { stocks, counts: summarize(diff, sel, existing), addedIds: added.map((s) => s.id), transfers };
+}
+
+/** 두 매수일 중 이른 날(빈 값은 무시) */
+function earlierDate(a: string | undefined, b: string | undefined): string {
+  if (!a) return b ?? "";
+  if (!b) return a;
+  return a < b ? a : b;
 }

@@ -6,12 +6,13 @@ import { computeAttributionBetween } from "../asset-report";
 import { computeSettlementCauses } from "@/app/(main)/_components/views/activity/change-hero";
 import { applyResync, buildResyncUndoEntries, computeDiff, defaultRemoveIds, mergeScreens, planResyncSave, planUndo, resolveScreens, type ResyncSelection } from "@/lib/asset/resync";
 import { emptySel, row, screen, st } from "@/lib/asset/resync/__tests__/fixtures";
+import { computeForeignRealizedGain, getYearEndTaxSimulation } from "@/lib/tax-utils";
 import type { AssetData, MonthlyAssetSnapshot, Stock } from "@/types/asset";
 
 const RATES = { USD: 1400, JPY: 900 };
 const START = "2026-09-30";
 const END = "2026-11-08";
-const CASH = 1_000_000;
+const CASH = 0; // 스냅샷 현금 = assetData 현금(빈 배열)과 맞춘다 — 어긋나면 원인 매핑에 가짜 '기록 안 된 변화'가 생긴다
 
 const data = (stocks: Stock[], transactions: AssetData["transactions"] = [], o: Partial<AssetData> = {}): AssetData => ({
   realEstate: [], stocks, crypto: [], cash: [], loans: [],
@@ -116,5 +117,156 @@ describe("#310 결함 — 맞추기 체크 삭제 종목의 거래 정리(직접
     const fresh = data([keep], txs.slice(2));
     const r = resyncSave(fresh, [row("005930", 2, 50_000, hint)]);
     expect(r.saved.transactions).toBe(fresh.transactions);
+  });
+});
+
+describe("#310 증권사 이관 — 합치기(대표 사례: A·B 모두 저장 → B 화면으로 맞추기 → 카드 체크)", () => {
+  const A = st("a", "005930", "domestic", "미래에셋증권", 10, 60_000, { purchaseDate: "2024-05-01", currentPrice: 70_000 });
+  const B = st("b", "005930", "domestic", "토스증권", 10, 60_000, { purchaseDate: "2026-06-01", currentPrice: 70_000 });
+  const txs = [tx("t1", "a", "buy", 6, 55_000, "2024-05-01"), tx("t2", "a", "buy", 4, 66_000, "2026-09-10"), tx("t3", "b", "buy", 1, 70_000, "2026-11-02")];
+  const loan = { id: "l1", type: "mortgage-stock", name: "담보", balance: 1_000_000, interestRate: 5, startDate: "2025-01-01", linkedStockId: "a" } as unknown as AssetData["loans"][number];
+  const other = { ...loan, id: "l2", linkedStockId: "b" };
+  const fresh = () => data([A, B], txs, { loans: [loan, other] });
+  const screenRow = [row("005930", 10, 60_000, hint)];
+  const check = (sel: ResyncSelection) => { sel.transfer = new Set(["a"]); };
+
+  it("체크 → A 삭제·거래와 대출 연결 B로·B 매수일 = 이른 날, 수량·평단은 화면 값, 고아 0", () => {
+    const f = fresh();
+    const r = resyncSave(f, screenRow, check);
+    expect(r.saved.stocks.map((s) => s.id)).toEqual(["b"]);
+    expect(r.saved.stocks[0]).toMatchObject({ quantity: 10, averagePrice: 60_000, broker: "토스증권", purchaseDate: "2024-05-01" });
+    expect(r.saved.transactions.map((t) => [t.id, t.stockId])).toEqual([["t1", "b"], ["t2", "b"], ["t3", "b"]]);
+    // 재작성 필드는 stockId뿐
+    r.saved.transactions.forEach((t, i) => expect({ ...t, stockId: txs[i].stockId }).toEqual(txs[i]));
+    expect(r.saved.transactions[2]).toBe(txs[2]);
+    expect(r.saved.loans.map((l) => l.linkedStockId)).toEqual(["b", "b"]);
+    expect(r.saved.loans[1]).toBe(other);
+    expect(orphans(r.saved)).toBe(0);
+    expect(r.result.counts).toMatchObject({ change: 1, remove: 0, add: 0 });
+    expect(r.plan).toMatchObject({ moved: 1, movedTx: 2 });
+  });
+
+  it("결산·홈 원인: 순자산 차이 = −A 평가액, '기록 안 된 변화' 0, 매수+매도 = 원가 차이", () => {
+    const f = fresh();
+    const r = resyncSave(f, screenRow, check);
+    const c = causes(f, r.saved);
+    expect(c.deltaNet).toBe(-10 * 70_000);
+    expect(c.unrecorded).toBe(0);
+    expect(c.buy + c.sell).toBe(c.dCost);
+  });
+
+  it("이관 전 닫힌 달(9월) 원인 금액은 이관 전후 같다", () => {
+    const f = fresh();
+    const r = resyncSave(f, screenRow, check);
+    const s8 = snap(data([{ ...A, quantity: 6 }, B]), "2026-08", "2026-08-31");
+    const s9 = snap(f, "2026-09", "2026-09-30");
+    const eff = (d: AssetData) => computeAttributionBetween(s8, s9, {}, d, RATES, false)!.effects;
+    expect(eff(r.saved)).toEqual(eff(f));
+  });
+
+  it("미체크 = v5.152와 같은 결과(stocks·transactions·loans)", () => {
+    const f = fresh();
+    const r = resyncSave(f, screenRow);
+    expect(r.saved.stocks).toEqual(f.stocks);
+    expect(r.saved.transactions).toBe(f.transactions);
+    expect(r.saved.loans).toBe(f.loans);
+    expect(r.plan).toMatchObject({ moved: 0, movedTx: 0 });
+    expect(r.result.transfers).toEqual([]);
+  });
+
+  it("되돌리기 왕복: 세 컬렉션 레코드가 적용 전과 같다", () => {
+    const f = fresh();
+    const r = resyncSave(f, screenRow, check);
+    const back = planUndo(buildResyncUndoEntries(f, r.saved), r.saved);
+    const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
+    expect(back.skipped).toBe(0);
+    expect(byId(back.data.stocks)).toEqual(byId(f.stocks));
+    expect(byId(back.data.transactions)).toEqual(byId(f.transactions));
+    expect(byId(back.data.loans)).toEqual(byId(f.loans));
+  });
+
+  it("이관 뒤 B를 직접 고치고 되돌리기: B는 건너뛰고 A·거래는 돌아와 고아 0", () => {
+    const f = fresh();
+    const r = resyncSave(f, screenRow, check);
+    const edited = { ...r.saved, stocks: r.saved.stocks.map((s) => ({ ...s, quantity: 11 })) };
+    const back = planUndo(buildResyncUndoEntries(f, r.saved), edited);
+    expect(back.skipped).toBe(1);
+    expect(back.data.stocks.find((s) => s.id === "b")!.quantity).toBe(11);
+    expect(back.data.stocks.some((s) => s.id === "a")).toBe(true);
+    expect(back.data.transactions.filter((t) => t.stockId === "a").map((t) => t.id)).toEqual(["t1", "t2"]);
+    expect(orphans(back.data)).toBe(0);
+  });
+
+  it("멱등: 저장본으로 같은 화면을 다시 맞추면 후보 0·재작성 0", () => {
+    const r1 = resyncSave(fresh(), screenRow, check);
+    const r2 = resyncSave(r1.saved, screenRow, check);
+    expect(r2.result.transfers).toEqual([]);
+    expect(r2.saved.transactions).toBe(r1.saved.transactions);
+    expect(r2.saved.loans).toBe(r1.saved.loans);
+  });
+
+  it("세금: 해외 종목 합치기 전후 실현손익 동일", () => {
+    const fa = st("fa", "AAPL", "foreign", "미래에셋증권", 5, 100, { purchaseExchangeRate: 1300 });
+    const fb = st("fb", "AAPL", "foreign", "토스증권", 5, 100, { purchaseExchangeRate: 1300 });
+    const ftx = [tx("b1", "fa", "buy", 10, 100, "2026-02-01", "USD", 1300), tx("s1", "fa", "sell", 5, 150, "2026-03-01", "USD", 1350)];
+    const f = data([fa, fb], ftx);
+    const r = resyncSave(f, [row("AAPL", 5, 100, hint)], (sel) => { sel.transfer = new Set(["fa"]); });
+    expect(r.saved.stocks.map((s) => s.id)).toEqual(["fb"]);
+    const before = computeForeignRealizedGain(f, 2026, RATES);
+    expect(before).not.toBeNull();
+    expect(computeForeignRealizedGain(r.saved, 2026, RATES)).toEqual(before);
+    expect(getYearEndTaxSimulation(r.saved, 2026, RATES).baselineGainKrw).toBe(getYearEndTaxSimulation(f, 2026, RATES).baselineGainKrw);
+  });
+});
+
+describe("#310 증권사 이관 — 이어받기(B 행이 추가)", () => {
+  const A = st("a", "005930", "domestic", "미래에셋증권", 10, 60_000, { purchaseDate: "2024-05-01" });
+  const K = st("k", "000660", "domestic", "토스증권", 1, 100_000);
+  const txs = [tx("t1", "a", "buy", 10, 60_000, "2024-05-01")];
+  const loan = { id: "l1", type: "mortgage-stock", name: "담보", balance: 1, interestRate: 5, startDate: "2025-01-01", linkedStockId: "a" } as unknown as AssetData["loans"][number];
+  const items = [row("005930", 10, 60_000, hint), row("000660", 1, 100_000, hint)];
+
+  it("체크 → A id 생존·broker=B·매수일 그대로, 거래·대출 diff 0, 추가 0·변경 1", () => {
+    const f = data([A, K], txs, { loans: [loan] });
+    const r = resyncSave(f, items, (sel) => { sel.transfer = new Set(["a"]); });
+    const a = r.saved.stocks.find((s) => s.id === "a")!;
+    expect(r.saved.stocks.map((s) => s.id)).toEqual(["a", "k"]);
+    expect(a).toMatchObject({ broker: "토스증권", category: "domestic", purchaseDate: "2024-05-01", description: A.description });
+    expect(r.saved.transactions).toBe(f.transactions);
+    expect(r.saved.loans).toBe(f.loans);
+    expect(r.result.counts).toMatchObject({ add: 0, change: 1, remove: 0 });
+    expect(r.result.transfers).toEqual([{ fromId: "a", toId: "a", path: "inherit" }]);
+    expect(r.plan).toMatchObject({ moved: 1, movedTx: 1 });
+    expect(causes(f, r.saved).unrecorded).toBe(0);
+  });
+
+  it("미체크 = 새 종목 추가(v5.152 동작), A는 유지", () => {
+    const f = data([A, K], txs);
+    const r = resyncSave(f, items);
+    expect(r.result.counts).toMatchObject({ add: 1, remove: 0 });
+    expect(r.saved.stocks.some((s) => s.id === "a" && s.broker === "미래에셋증권")).toBe(true);
+    expect(r.saved.transactions).toBe(f.transactions);
+  });
+
+  it("체크한 쌍은 순위로 고르지 않고 A로 고정 — 다른 장에서 같은 티커를 함께 지워도 그 종목을 잇지 않는다", () => {
+    const S = st("s", "005930", "domestic", "삼성증권", 3, 60_000, { purchaseDate: "2020-01-01" });
+    const S2 = st("s2", "035420", "domestic", "삼성증권", 1, 200_000);
+    const sTx = [tx("u1", "s", "buy", 3, 60_000, "2020-01-01")];
+    const f = data([A, K, S, S2], [...txs, ...sTx]);
+    const screens = [screen(0, items), screen(1, [row("035420", 1, 200_000, { brokerHint: "삼성증권" })])];
+    const run = (transfer: boolean) => {
+      const resolved = resolveScreens(screens, f.stocks, { usdRate: RATES.USD });
+      const diff = computeDiff(f.stocks, mergeScreens(resolved), resolved);
+      const sel: ResyncSelection = { ...emptySel(), remove: new Set([...defaultRemoveIds(diff), "s"]), ...(transfer ? { transfer: new Set(["a"]) } : {}) };
+      const result = applyResync(f.stocks, diff, sel, { today: END, usdRate: RATES.USD, now: 1 });
+      return planResyncSave(f, result, del).data;
+    };
+    // 기존 동작(카드 미체크): 지우는 S를 순위로 이어받는다
+    expect(run(false).stocks.find((s) => s.ticker === "005930" && s.broker === "토스증권")!.id).toBe("s");
+    const saved = run(true);
+    expect(saved.stocks.find((s) => s.ticker === "005930")!.id).toBe("a");
+    expect(saved.stocks.map((s) => s.id).sort()).toEqual(["a", "k", "s2"]);
+    expect(saved.transactions.map((t) => t.id)).toEqual(["t1"]); // S의 거래는 직접 삭제 규칙으로 정리
+    expect(orphans(saved)).toBe(0);
   });
 });

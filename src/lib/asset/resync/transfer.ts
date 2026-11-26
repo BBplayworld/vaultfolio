@@ -3,7 +3,7 @@
 // 남겨 두면 반영 거래가 reflectedTradeFlow·tradedStockIds에 계속 합산돼 결산·홈 원인에 잔차가 생겼다.
 // 삭제 규칙 함수는 contexts에 있으므로 호출측이 넘긴다(lib → contexts 의존 금지, 규칙 재구현 금지).
 import type { AssetData, Stock } from "@/types/asset";
-import type { ApplyResult } from "./apply";
+import type { ApplyResult, ResyncSelection } from "./apply";
 import type { DiffResult } from "./diff";
 import { isUnassignedBroker, sameBroker, tickerKey } from "./match";
 
@@ -51,18 +51,49 @@ export function detectTransfers(diff: DiffResult): TransferCandidate[] {
   return out;
 }
 
+/** 카드에서 '옮김'으로 체크한 후보만(sel.transfer). 비어 있으면 [] — v5.152와 같은 결과 */
+export function checkedTransfers(diff: DiffResult, sel: Pick<ResyncSelection, "transfer">): TransferCandidate[] {
+  if (!sel.transfer || sel.transfer.size === 0) return [];
+  return detectTransfers(diff).filter((c) => sel.transfer!.has(c.from.id));
+}
+
 /** 지운 종목 id 목록으로 거래를 정리한 데이터를 돌려주는 함수 — 호출측이 `planDeleteStocks(data, ids, rates)`를 넘긴다 */
 export type PlanDeleteStocks = (data: AssetData, ids: string[]) => AssetData;
 
 export interface ResyncSavePlan {
   /** 저장할 데이터 1건(stocks·transactions·loans를 함께) */
   data: AssetData;
+  /** 증권사를 옮긴 종목 수(#310) */
+  moved: number;
+  /** 옮긴 종목에 이어진 거래 수 — 합치기는 stockId를 다시 쓴 건수, 이어받기는 A의 거래 수 그대로 */
+  movedTx: number;
 }
 
-/** 맞추기 적용 결과를 저장 데이터로 만든다. fresh = 저장 직전 getAssetData() 최신본, result = 같은 fresh.stocks로 계산한 applyResync 결과 */
-export function planResyncSave(fresh: AssetData, result: Pick<ApplyResult, "stocks">, planDelete: PlanDeleteStocks): ResyncSavePlan {
+/**
+ * 맞추기 적용 결과를 저장 데이터로 만든다. fresh = 저장 직전 getAssetData() 최신본, result = 같은 fresh.stocks로 계산한 applyResync 결과.
+ * - 합치기(#310): 거래 stockId·대출 linkedStockId를 A→B로 다시 쓴다(그 밖의 필드·수량·평단·환율·reflected 불변).
+ * - 결함 수정: 실제로 지운 종목(합치기 A 제외)의 거래는 planDeleteStocks 규칙으로 정리한다. 대출 연결은 직접 삭제처럼 그대로 둔다.
+ * 바뀌지 않은 거래·대출은 같은 참조를 유지한다(되돌리기 목록에 안 들어감).
+ */
+export function planResyncSave(fresh: AssetData, result: Pick<ApplyResult, "stocks"> & Partial<Pick<ApplyResult, "transfers">>, planDelete: PlanDeleteStocks): ResyncSavePlan {
+  const transfers = result.transfers ?? [];
+  const remap = new Map(transfers.filter((t) => t.path === "merge" && t.toId !== t.fromId).map((t) => [t.fromId, t.toId]));
+  const fromIds = new Set(transfers.map((t) => t.fromId));
+  const txs = fresh.transactions ?? [];
+  const movedTx = txs.filter((t) => fromIds.has(t.stockId)).length;
+  let transactions = remap.size > 0 ? txs.map((t) => (remap.has(t.stockId) ? { ...t, stockId: remap.get(t.stockId)! } : t)) : fresh.transactions;
+  const loans = remap.size > 0 ? fresh.loans.map((l) => (l.linkedStockId && remap.has(l.linkedStockId) ? { ...l, linkedStockId: remap.get(l.linkedStockId)! } : l)) : fresh.loans;
   const kept = new Set(result.stocks.map((s) => s.id));
-  const deleted = fresh.stocks.filter((s) => !kept.has(s.id)).map((s) => s.id);
-  const transactions = deleted.length > 0 ? (planDelete(fresh, deleted).transactions ?? []) : fresh.transactions;
-  return { data: { ...fresh, stocks: result.stocks, transactions } };
+  const deleted = fresh.stocks.filter((s) => !kept.has(s.id) && !remap.has(s.id)).map((s) => s.id);
+  if (deleted.length > 0) transactions = planDelete({ ...fresh, transactions }, deleted).transactions ?? [];
+  return { data: { ...fresh, stocks: result.stocks, transactions, loans }, moved: transfers.length, movedTx };
+}
+
+/** 화면 상태(trade-view-store·stock-page-store)의 대상에서 없어진 종목 id를 걸러낸다. 그룹이 비면 null(호출측이 clear), 바뀐 게 없으면 같은 참조 */
+export function pruneStockTarget<T extends { groupStockIds: string[]; initialStockId?: string | null }>(target: T, liveIds: Set<string>): T | null {
+  const group = target.groupStockIds.filter((id) => liveIds.has(id));
+  if (group.length === 0) return null;
+  const initialGone = target.initialStockId != null && !liveIds.has(target.initialStockId);
+  if (group.length === target.groupStockIds.length && !initialGone) return target;
+  return { ...target, groupStockIds: group, ...(initialGone ? { initialStockId: null } : {}) };
 }
