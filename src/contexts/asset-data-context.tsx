@@ -11,7 +11,8 @@ import { normalizeTicker, resolveStockName, type StockClassificationPatch } from
 import { upsertClassifications } from "@/lib/xray/classification-store";
 import { getStockCacheSlot } from "@/lib/finance/stock-cache-slot";
 import { getCoinCacheSlot } from "@/lib/finance/coin-cache-slot";
-import { EMPTY_PRICE_ATTEMPTS, currentPriceSlots, hasResyncWork, planPriceResync, type PriceAttempts } from "@/lib/finance/price-freshness";
+import { EMPTY_PRICE_ATTEMPTS, currentPriceSlots, failedPriceTickers, hasResyncWork, isPriceAsOfTarget, planPriceResync, type PriceAttempts } from "@/lib/finance/price-freshness";
+import { usePriceSyncStatusStore } from "@/stores/price-sync-status-store";
 import { createSingleFlight, onPageResume } from "@/lib/pwa/page-resume";
 import { todayKst } from "@/lib/tax-utils";
 import { buildLink, cryptoLinkTrade, findLinkedRecord, removeLink, stockLinkTrade, type LinkChoice } from "@/lib/trade/linked-record";
@@ -295,19 +296,23 @@ const MSG = {
   // PIN
   PIN_INVALID_LENGTH: "PIN 번호는 4자리여야 합니다.",
   PIN_MISMATCH: "PIN 번호가 일치하지 않습니다.",
-  // 주식/환율 동기화
-  STOCK_UP_TO_DATE: "오늘의 주식·암호화폐·환율 정보가 모두 최신입니다.",
-  STOCK_SYNC_COMPLETE: "오늘의 주식·암호화폐·환율 정보를 모두 업데이트했습니다.",
-  STOCK_SYNC_FAILED: "[주식 현재가 갱신 실패]",
-  EXCHANGE_SYNC_FAILED: "[환율 동기화 실패]",
-  KIS_API_UNAVAILABLE: "외부 증권 API 점검으로 인한 오류",
+  // 주식/환율 동기화(#309: 사용자 말투, 내부 용어·괄호 0 — 앱 열기·pull 경로만, 복귀 재조회는 토스트 0)
+  STOCK_UP_TO_DATE: "시세가 이미 최신이에요",
+  STOCK_SYNC_COMPLETE: "주식 시세를 새로 받았어요",
+  STOCK_SYNC_PARTIAL: (n: number) => `${n}종목은 시세를 못 받아 이전 값으로 보여요`,
+  EXCHANGE_SYNC_FAILED: "환율을 못 받아 이전 환율로 보여요",
+  KIS_API_UNAVAILABLE: "지금은 주식 시세를 받을 수 없어 이전 값으로 보여요",
 } as const;
+
+// 시세 토스트는 같은 id로 대체 — 한 번의 받기에서 주식 1 + 환율 1을 넘지 않는다
+const STOCK_TOAST_ID = "price-sync-stock";
+const EXCHANGE_TOAST_ID = "price-sync-exchange";
 
 // 중요 이벤트: toast + console 동시 출력
 const notify = {
   success: (msg: string) => { dismissStaleToasts(); toast.success(msg); console.log(`[SUCCESS] ${msg}`); },
   error: (msg: string) => { dismissStaleToasts(); toast.error(msg); console.error(`[ERROR] ${msg}`); },
-  info: (msg: string) => { dismissStaleToasts(); toast.info(msg); console.log(`[INFO] ${msg}`); },
+  info: (msg: string, id?: string) => { dismissStaleToasts(); toast.info(msg, id ? { id } : undefined); console.log(`[INFO] ${msg}`); },
 };
 
 // KIS 외부 API 일시 오류 토스트는 세션당 1회만 노출 (배치 반복 중복 방지)
@@ -316,7 +321,7 @@ let kisUnavailableNotified = false;
 function notifyKisUnavailableOnce(silent = false) {
   if (silent || kisUnavailableNotified) return;
   kisUnavailableNotified = true;
-  notify.error(MSG.KIS_API_UNAVAILABLE);
+  notify.info(MSG.KIS_API_UNAVAILABLE, STOCK_TOAST_ID);
 }
 
 // 순자산·항목별 합계 공통 계산기
@@ -577,7 +582,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         if (data.JPY) updateExchangeRate("JPY", data.JPY);
       }
     } catch (e) {
-      if (!silent) notify.error(MSG.EXCHANGE_SYNC_FAILED);
+      if (!silent) notify.info(MSG.EXCHANGE_SYNC_FAILED, EXCHANGE_TOAST_ID);
       console.error(e);
     }
   }, [updateExchangeRate]);
@@ -642,7 +647,8 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     if (outdatedStocks.length === 0) {
       if (hasMarketCache) {
         if (isCanceled()) return data;
-        if (!silent) notify.info(MSG.STOCK_UP_TO_DATE);
+        usePriceSyncStatusStore.getState().setFailedTickers([]);
+        if (!silent) notify.info(MSG.STOCK_UP_TO_DATE, STOCK_TOAST_ID);
         return data;
       }
       // market 캐시 없음: 오늘자 ticker로 1회 조회해 stockMarkets만 채움
@@ -678,11 +684,21 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         } catch { /* abort 또는 네트워크 오류: 다음 반복에서 isCanceled가 차단 */ }
       }
       if (isCanceled()) return data;
-      if (!silent) notify.info(MSG.STOCK_UP_TO_DATE);
+      usePriceSyncStatusStore.getState().setFailedTickers([]);
+      if (!silent) notify.info(MSG.STOCK_UP_TO_DATE, STOCK_TOAST_ID);
       return data;
     }
 
     let current = data;
+    // 부분 실패 집계(#309): 받으려던 티커 − 패치가 만들어진 티커. 서킷으로 멈춰 요청 못 한 배치도 실패로 센다
+    const patchedTickers = new Set<string>();
+    const publishFailed = () => {
+      // 표시 대상(비상장·상장폐지 제외)만 센다 — 줄의 N과 같은 집합
+      const intended = Array.from(outdatedTickers).filter(([, s]) => isPriceAsOfTarget(s)).map(([t]) => t);
+      const failed = failedPriceTickers(intended, patchedTickers);
+      usePriceSyncStatusStore.getState().setFailedTickers(failed);
+      return failed;
+    };
 
     for (let i = 0; i < outdatedStocks.length; i += BATCH_SIZE) {
       if (isCanceled()) return current;
@@ -697,6 +713,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         const res = await fetch(`/api/finance?type=stock&tickers=${tickersParam}`, { signal: controller.signal });
         if (res.headers.get("X-KIS-Unavailable") === "1") {
           if (isCanceled()) return current;
+          publishFailed();
           notifyKisUnavailableOnce(silent);
           return current; // 서킷 open: 외부 호출 중단 + 완료 토스트 스킵
         }
@@ -715,6 +732,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
           // 응답은 저장 시점의 최신본에 시세 필드만 병합(#104) — 요청이 도는 동안의 사용자 편집·삭제를 되돌리지 않는다
           const patches = buildStockPricePatches(current.stocks, stocksData as Record<string, StockQuote | undefined>, { domestic: slotDomestic, foreign: slotForeign });
           if (isCanceled()) return current;
+          for (const p of Object.values(patches)) patchedTickers.add(p.key);
           const latest = getAssetData();
           current = { ...latest, stocks: applyPricePatches(latest.stocks, patches, stockKeyOf) };
           setAssetData(current);
@@ -723,13 +741,14 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         // AbortError는 정상 취소 — toast 표시 없이 종료
         if (controller.signal.aborted || (e instanceof Error && e.name === "AbortError")) return current;
-        if (!silent) notify.error(MSG.STOCK_SYNC_FAILED);
+        // 배치 예외: 중간 토스트 없이 그 배치 티커를 실패로 남기고 계속 — 끝에서 1번만 알린다
         console.error(e);
       }
     }
 
     if (isCanceled()) return current;
-    if (!silent) notify.info(MSG.STOCK_SYNC_COMPLETE);
+    const failed = publishFailed();
+    if (!silent) notify.info(failed.length === 0 ? MSG.STOCK_SYNC_COMPLETE : MSG.STOCK_SYNC_PARTIAL(failed.length), STOCK_TOAST_ID);
     return current;
   }, []);
 

@@ -1,6 +1,6 @@
 /**
  * price-freshness.ts (#309, 5.155)
- * 시세 신선도 순수 함수 — 복귀 재조회 사전 판정.
+ * 시세 신선도 순수 함수 — 복귀 재조회 사전 판정·실패 종목 집계.
  * 저장 키 0: 기존 Stock.baseDate(캐시 칸)·exchangeSyncDate와 메모리 값만 읽는다.
  */
 import type { Crypto, Stock } from "@/types/asset";
@@ -84,3 +84,13 @@ export function planPriceResync(input: {
 }
 
 export const hasResyncWork = (p: ResyncPlan): boolean => p.exchange || p.stock || p.coin;
+
+/** 받으려던 티커 중 패치가 만들어지지 않은 티커(정렬). 서킷으로 요청하지 못한 배치도 패치가 없으므로 포함된다 */
+export function failedPriceTickers(intended: Iterable<string>, patched: Iterable<string>): string[] {
+  const ok = new Set(patched);
+  return Array.from(new Set(intended)).filter((t) => !ok.has(t)).sort();
+}
+
+/** 표시 대상 종목: 티커 있음·비상장 아님·상장폐지 아님 */
+export const isPriceAsOfTarget = (s: Stock): boolean =>
+  !!normalizeTicker(s) && s.category !== "unlisted" && s.inactiveStatus !== "delisted";
