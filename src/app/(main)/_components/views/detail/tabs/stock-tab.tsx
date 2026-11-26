@@ -17,7 +17,6 @@ import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatShortCurrency } from "@/lib/number-utils";
-import { DataSourceBadge } from "../../data-source-badge";
 import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
@@ -46,6 +45,8 @@ import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, growTileVa
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { DUE_TEXT, GrowDueEntry } from "../../activity/grow-due-entry";
+import { PriceAsOfLine, usePriceAsOfLine } from "../../price-asof-line";
+import type { PriceAsOfLineValue } from "@/lib/finance/price-freshness";
 
 export const CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -366,7 +367,7 @@ export function StockRowItem({ stock, color, pct, currentVal, profit, profitRate
 }
 
 // 주식 요약 헤더
-export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, todayChip }: {
+export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, currencyGain, maskFn, screenshotMode = false, shotBig = false, displayCurrency, onDisplayCurrencyChange, usdRate = 1, disableUsd = false, todayChip, priceAsOf }: {
   totalValue: number;
   totalProfit: number;
   totalProfitRate: number;
@@ -379,6 +380,8 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
   usdRate?: number;
   disableUsd?: boolean;
   todayChip?: TodayChipView | null;
+  /** '언제 시세' 줄(#309) — 상세 주식 탭만 넘긴다(인증카드 DOM 0) */
+  priceAsOf?: PriceAsOfLineValue | null;
 }) {
   const currency = displayCurrency ?? "KRW";
   const fmtFull = maskFn ?? ((v: number) => formatByDisplayCurrency(v, currency, usdRate, "full"));
@@ -427,6 +430,7 @@ export function StockSummaryHeader({ totalValue, totalProfit, totalProfitRate, c
           )}
         </span>
       }
+      footnote={!screenshotMode && priceAsOf ? <PriceAsOfLine value={priceAsOf} className="mt-2" /> : undefined}
     />
   );
 }
@@ -659,7 +663,6 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
         <div>
           <div className="flex items-center gap-1.5">
             <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
-            <DataSourceBadge kind="realtime" />
           </div>
           <p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
           {showSecondary && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: "var(--accent-teal)" }}>{secondaryText(stock.currentPrice)}</p>}
@@ -1162,6 +1165,12 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
 
   const { groupedStocks, groupKeyOf, mergedStocks, totalValue, totalProfit, totalProfitRate, barItems, barColors, summary, exchangeRates, refData, todayChip, marketMap } =
     useFilteredStockData(activeCategory, effectiveDisplayCurrency);
+  // '언제 시세'(#309) — 지금 고른 분류 탭 종목 기준(전체 탭 = 홈과 같은 값)
+  const tabStocks = useMemo(
+    () => (activeCategory === "all" ? assetData.stocks : assetData.stocks.filter((s) => s.category === activeCategory)),
+    [assetData.stocks, activeCategory],
+  );
+  const priceAsOf = usePriceAsOfLine(tabStocks);
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
@@ -1228,6 +1237,7 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
           usdRate={exchangeRates.USD}
           disableUsd={!hasForeignStock}
           todayChip={todayChip}
+          priceAsOf={priceAsOf}
         />
 
         {/* 내 주식 도구 타일(시장과 비교·X-Ray·내 자산 점검·세금, 4.83·#245 — 인증카드 제외) */}

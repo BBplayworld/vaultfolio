@@ -12,8 +12,9 @@ import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor, pickDonutLabelColor } fr
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot, SnapshotGrade } from "@/types/asset";
-import { DataSourceBadge } from "../data-source-badge";
 import { AttributionRecordList } from "../attribution-records";
+import { PriceAsOfLine, usePriceAsOfLine } from "../price-asof-line";
+import type { PriceAsOfLineValue } from "@/lib/finance/price-freshness";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
 import { HomeTipBox } from "./home-tip-box";
@@ -26,7 +27,7 @@ import { computeAttributionView } from "../activity/week-attribution";
 import type { ReactNode } from "react";
 import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
 import { pickTopCause, weekTrendTitle } from "@/lib/report/home-today";
-import { formatHeroDelta, heroCauseTexts } from "@/lib/report/hero-cause-display";
+import { formatHeroDelta, formatHeroPct, heroCauseTexts } from "@/lib/report/hero-cause-display";
 import { marketLineState, type MarketLineState } from "@/lib/finance/market-compare";
 import { CauseMarketSegment, MarketLine, causeMarketText, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
 import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
@@ -349,13 +350,13 @@ export function NetAssetSummaryBox({
   onSegmentClick,
   visibleTabs = [],
   screenshotMode = false,
-  showRealtimeBadge = false,
   grade,
   onGradeClick,
   market,
   marketLine = "off",
   onMarketOpen,
   myStock,
+  priceAsOf,
   composeSlot,
 }: {
   netAsset: number;
@@ -370,7 +371,6 @@ export function NetAssetSummaryBox({
   /** 필터 칸이 없을 때 그 자리에 그릴 블록(#250 홈 전용 — 웰컴·인증카드는 넘기지 않아 diff 0) */
   composeSlot?: ReactNode;
   screenshotMode?: boolean;
-  showRealtimeBadge?: boolean;
   /** 자산 성적표 최신 등급(성적표 화면 방문 시 기록됨) — 있으면 우상단에 미니 트로피 배지 노출 */
   grade?: SnapshotGrade | null;
   onGradeClick?: () => void;
@@ -380,6 +380,8 @@ export function NetAssetSummaryBox({
   onMarketOpen?: () => void;
   /** 내 종목 오늘 줄(#246) — 홈 Dashboard만 넘긴다. 인증카드·웰컴 미리보기는 넘기지 않아 DOM 0 */
   myStock?: MyStockLineValue;
+  /** '언제 시세' 각주 줄(#309) — 홈 Dashboard만 넘긴다. 인증카드·웰컴 미리보기는 넘기지 않아 DOM 0 */
+  priceAsOf?: PriceAsOfLineValue | null;
 }) {
   // Hero·총액은 전액 표기(formatPriceByMode) — 도넛 라벨·범례·막대는 폭 제약상 축약 유지
   const hasRightSide = totalAsset !== undefined && totalLiability !== undefined;
@@ -433,7 +435,6 @@ export function NetAssetSummaryBox({
               <span className={`text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
             )}
             <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
-            {showRealtimeBadge && <DataSourceBadge kind="realtime" />}
           </div>
 
           <div className="mt-1">
@@ -449,7 +450,7 @@ export function NetAssetSummaryBox({
                 // 금액·%는 각각 한 덩어리(금액·단위 분리 방지), 좁은 폭에선 flex-wrap으로 %·라벨이 다음 행(#4.36)
                 <span className={`inline-flex flex-wrap gap-y-0.5 items-center text-base font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
                   <span className="whitespace-nowrap">{formatHeroDelta(change.deltaNet)}</span>
-                  <span className="text-sm font-bold ml-1 whitespace-nowrap">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
+                  <span className="text-sm font-bold ml-1 whitespace-nowrap">({formatHeroPct(change.pct)})</span>
                   {/* 라벨·쉐브론은 한 덩어리 — 쉐브론만 다음 줄에 떨어지지 않게(#4.36 ui-review R1) */}
                   <span className="inline-flex items-center ml-1.5">
                   <span className="text-sm font-medium text-muted-foreground break-keep">{change.label}</span>
@@ -590,6 +591,8 @@ export function NetAssetSummaryBox({
         )}
         {/* 내 종목 오늘(#246) — 카드 맨 끝 1곳. 원인 없는 날·접힘·펼침(`접기` 아래) 모두 같은 노드 */}
         {myStock && !screenshotMode && <MyStockLine value={myStock} underFold={showLine && open} />}
+        {/* '언제 시세'(#309) — 카드 맨 아래 각주, 금액 전체의 출처라 숫자·변동·원인 뒤(ui.md 2장) */}
+        {priceAsOf && !screenshotMode && <PriceAsOfLine value={priceAsOf} className="mt-2" />}
       </div>
 
       {visibleTabs.length > 1 && onSegmentClick && (
@@ -780,7 +783,6 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
     >
       <div className="flex w-full items-center gap-1.5">
         <p data-testid="home-week-title" className="text-sm font-semibold text-muted-foreground">{weekTrendTitle(snapshots)}</p>
-        <DataSourceBadge kind="closing" />
         {clickable && <ChevronRight aria-hidden className="ml-auto size-4 shrink-0 text-muted-foreground" />}
       </div>
       {snapshots.length === 1 && (
@@ -914,6 +916,7 @@ export function Dashboard() {
   const market = useMarketEntryValue("daily", true, headerChange !== null);
   const marketLine = marketLineState({ hasHeaderChange: headerChange !== null, hasTickerStock: market.hasTickerStock, markets: market.markets });
   // 내 종목 오늘 줄(#246) — 누르면 상세·주식 목록(정렬 그대로)
+  const priceAsOf = usePriceAsOfLine(assetData.stocks, "주식 ");
   const myStock = useMyStockToday(headerChange !== null, () => {
     track("feature_use", { category: "home_my_stock" });
     navigate({ type: "detail", tab: "stocks" });
@@ -987,7 +990,6 @@ export function Dashboard() {
                   onSegmentClick={handleSegmentClick}
                   visibleTabs={visibleTabs}
                   composeSlot={composeKind ? <HomeCompose kind={composeKind} /> : undefined}
-                  showRealtimeBadge
                   grade={latestGrade}
                   onGradeClick={() => navigate({ type: "activity", tab: "report" })}
                   market={market}
@@ -997,6 +999,7 @@ export function Dashboard() {
                     navigate({ type: "activity", tab: "change-market", init: { period: "day" } });
                   }}
                   myStock={myStock}
+                  priceAsOf={priceAsOf}
                 />
 
                 {/* col-2: 세부 분포 탭 콘텐츠 */}

@@ -33,7 +33,7 @@ const BASELINE_CASES: Record<string, Record<string, unknown>> = {
 };
 
 const renderBox = (props: Record<string, unknown>) =>
-  renderToStaticMarkup(<NetAssetSummaryBox netAsset={1_000_000_000} treemapData={[]} showRealtimeBadge {...(props as object)} />);
+  renderToStaticMarkup(<NetAssetSummaryBox netAsset={1_000_000_000} treemapData={[]} {...(props as object)} />);
 
 describe("#246 줄 없는 홈 순자산 카드 기준 스냅샷", () => {
   for (const [name, props] of Object.entries(BASELINE_CASES)) {

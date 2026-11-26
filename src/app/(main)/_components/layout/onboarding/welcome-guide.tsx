@@ -202,7 +202,6 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
             treemapData={PREVIEW_TREEMAP}
             change={{ deltaNet: previewData.dailyProfit, pct: previewData.dailyProfitRate, isBig: false, negligible: false, label: "전일 대비", estimated: false, sentence: null, causes: [] }}
             screenshotMode={true}
-            showRealtimeBadge={true}
           />
         </div>
         <p className={`text-2xs text-center break-keep ${ASSET_THEME.distributionCard.muted}`}>

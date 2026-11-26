@@ -49,7 +49,7 @@ function homeChange(view: ReturnType<typeof scenario>["view"]) {
   };
 }
 function renderHome(view: ReturnType<typeof scenario>["view"]) {
-  const html = renderToStaticMarkup(<NetAssetSummaryBox netAsset={100 * M} treemapData={[]} showRealtimeBadge change={homeChange(view)} />);
+  const html = renderToStaticMarkup(<NetAssetSummaryBox netAsset={100 * M} treemapData={[]} change={homeChange(view)} />);
   const hero = html.match(/<span class="whitespace-nowrap">([▲▼][^<]*)<\/span>/)![1];
   const line = html.match(/data-testid="home-cause-line"[\s\S]*?shrink-0 text-sm font-semibold tabular-nums[^"]*">([^<]+)</)![1];
   const rows = [...html.matchAll(/tabular-nums shrink-0[^"]*">([^<]+)<\/span><\/li>/g)].map((m) => m[1]);
