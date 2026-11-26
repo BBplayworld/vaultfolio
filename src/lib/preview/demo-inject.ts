@@ -6,6 +6,7 @@
  */
 
 import { applyImportedPayload, clearPhysicalAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
+import { clearCashTxTags } from "@/lib/asset/cash-tx-tags";
 import { buildDemoRefreshMeta, kstToday, materializeDemo } from "@/lib/preview/demo-payload";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { getClassification, upsertClassifications, type StockClassification } from "@/lib/xray/classification-store";
@@ -21,6 +22,9 @@ export async function injectDemoPayload({ nickname, mode = "demo" }: { nickname?
   const materialized = materializeDemo(mod.default, kstToday());
   const payload = mode === "trial" ? withoutSeedGrades(materialized) : materialized;
   const next = nickname === undefined ? payload : withNickname(payload, nickname);
+  // 데모 주입은 교체 의미 — 현금 거래 분류 표시(#329)는 수신이 합집합이라, 주입 전에 키를 비워 앞선 데이터의 표시가 남지 않게 한다.
+  // 검증 실패로 주입이 throw해도 표시만 비워진다(금액·잔액·거래는 그대로). 데모 payload에 `cashTxTags`가 있으면 아래에서 그 값이 들어간다
+  clearCashTxTags();
   applyImportedPayload(next);
   // 데모 주입은 교체 의미 — 데모 payload에 실물 키가 없으면(applyImportedPayload는 키 없음=로컬 유지) 기존 실물을 비운다(#58)
   const ad = (next as { assetData?: { physicalAssets?: unknown } }).assetData;

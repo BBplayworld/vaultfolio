@@ -19,6 +19,7 @@ import { Z_LAYER } from "@/config/theme";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { clearAssetData, clearPhysicalAssets, getAssetData, hasAnyAssets, STORAGE_KEYS } from "@/lib/asset/asset-storage";
 import { clearStockLabels } from "@/lib/asset/stock-labels";
+import { clearCashTxTags } from "@/lib/asset/cash-tx-tags";
 import { resolvePreviewAction } from "@/lib/preview/demo-payload";
 import { injectDemoPayload, skipDemoTutorial, stripQueryParams } from "@/lib/preview/demo-inject";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
@@ -90,6 +91,7 @@ function PreviewGateInner({ children }: { children?: ReactNode }) {
       clearAssetData();
       clearPhysicalAssets();
       clearStockLabels(); // 주식 이름표(#239) 분리 키 — 빈 화면 점검은 이름표도 비운다
+      clearCashTxTags(); // 현금 거래 분류 표시(#329) 분리 키도 비운다
       stripDemoQuery();
       setPhase("ready");
       setDemoDone(true); // 선택 카드는 이 페이지 수명 동안 띄우지 않는다

@@ -49,6 +49,9 @@ export const STORAGE_KEYS = {
   // 주식 이름표·점검 기록(#239) — 실물과 같은 이유로 `secretasset_` 접두를 쓰지 않는다(점 구분).
   // 가져오기·동기화 pull의 clearAssetData에 걸리지 않고, 구버전으로 롤백해도 남는다. 읽기·쓰기는 lib/asset/stock-labels.ts
   stockLabels: "secretasset.stock_labels",
+  // 현금 거래 분류 표시(#329 받은 배당 기록) — 이름표와 같은 이유로 점 구분. 값 { v:1, [현금 거래 id]: { kind, ticker?, stockName? } }.
+  // 금액·날짜는 넣지 않는다(정본은 현금 거래). 읽기·쓰기는 lib/asset/cash-tx-tags.ts
+  cashTxTags: "secretasset.cash_tx_tags",
 } as const;
 
 export const LEGACY_KEYS = {
