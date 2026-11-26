@@ -76,7 +76,7 @@ const change = (o: Record<string, unknown> = {}) => ({
 });
 const box = (props: Record<string, unknown>) =>
   renderToStaticMarkup(
-    <NetAssetSummaryBox netAsset={1_000_000_000} treemapData={[]} showRealtimeBadge {...(props as object)} />,
+    <NetAssetSummaryBox netAsset={1_000_000_000} treemapData={[]} {...(props as object)} />,
   );
 
 describe("B 가장 큰 원인 1줄", () => {

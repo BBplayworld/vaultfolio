@@ -17,7 +17,6 @@ import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatShortCurrency } from "@/lib/number-utils";
-import { DataSourceBadge } from "../../data-source-badge";
 import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
@@ -659,7 +658,6 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
         <div>
           <div className="flex items-center gap-1.5">
             <p className={ASSET_THEME.cardDetailLabel}>현재가</p>
-            <DataSourceBadge kind="realtime" />
           </div>
           <p className={ASSET_THEME.cardDetailValueBold} style={{ color: "var(--accent-teal)" }}>{formatCurrencyDisplay(stock.currentPrice, stock.currency)}</p>
           {showSecondary && <p className={ASSET_THEME.cardDetailPriceKRW} style={{ color: "var(--accent-teal)" }}>{secondaryText(stock.currentPrice)}</p>}

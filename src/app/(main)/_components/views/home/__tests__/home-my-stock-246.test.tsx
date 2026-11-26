@@ -23,7 +23,7 @@ const market: MarketEntryValue = {
 const up: MyStockPick = { name: "엔비디아", label: "11/18 종가", rateText: "+3.2%", sign: "up", rate: 3.2, more: 5 };
 const down: MyStockPick = { name: "엔비디아", label: "11/18 종가", rateText: "-3.2%", sign: "down", rate: -3.2, more: 5 };
 const box = (props: Record<string, unknown>) =>
-  renderToStaticMarkup(<NetAssetSummaryBox netAsset={100_000_000} treemapData={[]} showRealtimeBadge {...(props as object)} />);
+  renderToStaticMarkup(<NetAssetSummaryBox netAsset={100_000_000} treemapData={[]} {...(props as object)} />);
 const slotOf = (html: string) => html.match(/<div[^>]*data-testid="home-my-stock-slot"[\s\S]*$/)![0];
 const btnOf = (html: string) => html.match(/<button[^>]*data-testid="home-my-stock"[\s\S]*?<\/button>/)![0];
 const my = (pick: MyStockPick | null, state: "on" | "pending" | "off" = "on") => ({ state, pick, onOpen: () => {} });

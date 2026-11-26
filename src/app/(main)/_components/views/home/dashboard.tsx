@@ -12,7 +12,6 @@ import { ASSET_THEME, MAIN_PALETTE, getProfitLossColor, pickDonutLabelColor } fr
 import { realEstateTypes } from "@/config/asset-options";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { DailyAssetSnapshot, SnapshotGrade } from "@/types/asset";
-import { DataSourceBadge } from "../data-source-badge";
 import { AttributionRecordList } from "../attribution-records";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 import { useNickname } from "@/hooks/use-nickname";
@@ -349,7 +348,6 @@ export function NetAssetSummaryBox({
   onSegmentClick,
   visibleTabs = [],
   screenshotMode = false,
-  showRealtimeBadge = false,
   grade,
   onGradeClick,
   market,
@@ -370,7 +368,6 @@ export function NetAssetSummaryBox({
   /** 필터 칸이 없을 때 그 자리에 그릴 블록(#250 홈 전용 — 웰컴·인증카드는 넘기지 않아 diff 0) */
   composeSlot?: ReactNode;
   screenshotMode?: boolean;
-  showRealtimeBadge?: boolean;
   /** 자산 성적표 최신 등급(성적표 화면 방문 시 기록됨) — 있으면 우상단에 미니 트로피 배지 노출 */
   grade?: SnapshotGrade | null;
   onGradeClick?: () => void;
@@ -433,7 +430,6 @@ export function NetAssetSummaryBox({
               <span className={`text-sm font-semibold ${ASSET_THEME.primary.text}`}>{nickname}</span>
             )}
             <p className={`text-sm font-semibold ${ASSET_THEME.text.muted}`}>순자산</p>
-            {showRealtimeBadge && <DataSourceBadge kind="realtime" />}
           </div>
 
           <div className="mt-1">
@@ -780,7 +776,6 @@ export function WeekTrendCard({ snapshots }: { snapshots: DailyAssetSnapshot[] }
     >
       <div className="flex w-full items-center gap-1.5">
         <p data-testid="home-week-title" className="text-sm font-semibold text-muted-foreground">{weekTrendTitle(snapshots)}</p>
-        <DataSourceBadge kind="closing" />
         {clickable && <ChevronRight aria-hidden className="ml-auto size-4 shrink-0 text-muted-foreground" />}
       </div>
       {snapshots.length === 1 && (
@@ -987,7 +982,6 @@ export function Dashboard() {
                   onSegmentClick={handleSegmentClick}
                   visibleTabs={visibleTabs}
                   composeSlot={composeKind ? <HomeCompose kind={composeKind} /> : undefined}
-                  showRealtimeBadge
                   grade={latestGrade}
                   onGradeClick={() => navigate({ type: "activity", tab: "report" })}
                   market={market}
