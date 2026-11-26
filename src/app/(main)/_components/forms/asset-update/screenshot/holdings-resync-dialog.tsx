@@ -38,6 +38,7 @@ import {
   changeCount,
   computeDiff,
   defaultRemoveIds,
+  detectTransfers,
   isUnassignedBroker,
   mergeScreens,
   planResyncSave,
@@ -57,6 +58,7 @@ import {
   type RawScreenItem,
   type ResyncCounts,
   type ResyncSelection,
+  type TransferCandidate,
 } from "@/lib/asset/resync";
 import type { OverwriteEntry } from "@/lib/cloud-sync/overwrite-guard";
 import { useTradeViewStore } from "@/stores/trade-view-store";
@@ -152,7 +154,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   const [fxText, setFxText] = useState("");
   const [newDate, setNewDate] = useState(() => defaultNewPurchaseDate());
   const [applying, setApplying] = useState(false);
+  const [transferOn, setTransferOn] = useState<Set<string>>(new Set()); // 이관 카드 '옮김' 체크(#310, 기본 해제)
   const [applied, setApplied] = useState<ResyncCounts | null>(null);
+  const [appliedMoved, setAppliedMoved] = useState<{ moved: number; movedTx: number } | null>(null);
   const [undoInfo, setUndoInfo] = useState<{ skipped: number } | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -205,8 +209,10 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     for (const id of defaultRemoveIds(diff)) if (removeOv[id] !== false) remove.add(id);
     for (const [id, v] of Object.entries(removeOv)) if (v) remove.add(id);
     const fx = Number(fxText);
-    return { include, remove, pick, qty, ticker: tickers, fx: fx > 0 ? fx : undefined, purchaseDate: newDate };
-  }, [diff, removeOv, include, pick, qty, tickers, fxText, newDate]);
+    return { include, remove, pick, qty, ticker: tickers, fx: fx > 0 ? fx : undefined, purchaseDate: newDate, ...(isCrypto ? {} : { transfer: transferOn }) };
+  }, [diff, removeOv, include, pick, qty, tickers, fxText, newDate, transferOn, isCrypto]);
+  // 증권사 이관 후보(#310) — 주식만. 0이면 카드 DOM 0
+  const transfers = useMemo(() => (isCrypto ? [] : detectTransfers(diff)), [diff, isCrypto]);
   const counts = useMemo(() => summarize(diff, sel, existing), [diff, sel, existing]);
   const changes = changeCount(counts);
   // 실제로 새로 만들어질 항목 수(이어받기 제외) — 매수일 1월 1일 안내 조건(#139 O1)
@@ -232,8 +238,10 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     setTickers({});
     setFxText("");
     setNewDate(defaultNewPurchaseDate());
+    setTransferOn(new Set());
     setApplying(false);
     setApplied(null);
+    setAppliedMoved(null);
     setUndoInfo(null);
     setUndoing(false);
     startedRef.current = false;
@@ -379,6 +387,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
     track("feature_use", { category: "resync_apply" });
     setApplied(result.counts);
+    setAppliedMoved(plan && plan.moved > 0 ? { moved: plan.moved, movedTx: plan.movedTx } : null);
     setApplying(false);
     setStep("result");
   };
@@ -462,6 +471,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
               diff={diff}
               sel={sel}
               existing={existing}
+              transfers={transfers}
+              transactions={assetData.transactions ?? []}
+              setTransferOn={setTransferOn}
               counts={counts}
               freshAdds={freshAdds}
               include={include}
@@ -480,6 +492,13 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
           {step === "result" && applied && (
             <div data-screenshot-hide data-testid="resync-result" className="space-y-2 rounded-xl bg-muted/40 p-4" aria-live="polite">
               <p className="text-sm text-foreground tabular-nums">{summaryParts({ ...applied, same: 0, needs: 0 })}</p>
+              {appliedMoved && (
+                <p data-testid="resync-result-transfer" className="text-sm text-foreground tabular-nums">
+                  <span className="whitespace-nowrap">증권사를 옮긴 종목 <span className="font-semibold">{appliedMoved.moved}</span>개</span>
+                  {" · "}
+                  <span className="whitespace-nowrap">이은 거래 <span className="font-semibold">{appliedMoved.movedTx}</span>건</span>
+                </p>
+              )}
               <p className="text-sm text-muted-foreground text-pretty break-keep">
                 {undoInfo
                   ? undoInfo.skipped > 0
@@ -783,6 +802,10 @@ interface PreviewProps {
   diff: DiffResult;
   sel: ResyncSelection;
   existing: Stock[];
+  /** 증권사 이관 후보(#310, 주식만) */
+  transfers: TransferCandidate[];
+  transactions: { stockId: string }[];
+  setTransferOn: React.Dispatch<React.SetStateAction<Set<string>>>;
   counts: ResyncCounts;
   /** 이어받기를 뺀 실제 신규 생성 건수 */
   freshAdds: number;
@@ -799,7 +822,7 @@ interface PreviewProps {
   setNewDate: (v: string) => void;
 }
 
-function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate, newDate, setNewDate }: PreviewProps) {
+function PreviewStep({ diff, sel, existing, transfers, transactions, setTransferOn, counts, freshAdds, include, setInclude, setRemoveOv, setPick, setQty, setTickers, fxText, setFxText, usdRate, newDate, setNewDate }: PreviewProps) {
   const T = useT();
   const kind = useKind();
   const groupTitle = (broker: string, category: Stock["category"]) => (kind === "crypto" ? broker : `${broker} · ${categoryShort(category)}`);
@@ -835,12 +858,50 @@ function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclu
   const rowLabel = (id: string) => removeRowLabel(removeChecked(id), inheritedIds.has(id));
   const rowLabelClass = (id: string) => ({ 삭제: "text-destructive", 변경: "text-foreground", 유지: "text-muted-foreground" })[rowLabel(id)];
   const toggleRemove = (id: string, on: boolean) => setRemoveOv((p) => ({ ...p, [id]: on }));
+  // 이관 후보 A는 접힌 '다른 증권사 종목' 목록에서 뺀다(같은 항목에 체크 칸 2개 금지, #310)
+  const transferIds = new Set(transfers.map((t) => t.from.id));
+  const keptRows = diff.kept.filter((s) => !transferIds.has(s.id));
+  const toggleTransfer = (id: string, on: boolean) =>
+    setTransferOn((p) => {
+      const n = new Set(p);
+      if (on) n.add(id);
+      else n.delete(id);
+      return n;
+    });
+  const txCountOf = (id: string) => transactions.filter((t) => t.stockId === id).length;
 
   return (
     <div className="space-y-4">
       <p data-testid="resync-summary" aria-live="polite" aria-atomic className="text-sm text-foreground tabular-nums text-pretty break-keep">
         {summaryParts(counts)}
       </p>
+      {transfers.length > 0 && (
+        <section data-testid="resync-transfer-card" aria-labelledby="resync-transfer-title" className="space-y-1 rounded-xl bg-muted/40 p-4" data-screenshot-hide>
+          <h3 id="resync-transfer-title" className="text-sm font-bold text-pretty break-keep">같은 종목이 다른 증권사에도 남아 있어요</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed text-pretty break-keep">증권사를 옮겼다면 체크해 주세요. 체크한 종목과 거래 기록을 새 증권사 종목으로 옮겨요.</p>
+          <ul className="divide-y divide-border/40">
+            {transfers.map((t) => {
+              const on = sel.transfer?.has(t.from.id) ?? false;
+              const m = txCountOf(t.from.id);
+              return (
+                <CheckRow
+                  key={t.from.id}
+                  id={t.from.id}
+                  testId={`resync-transfer-check-${t.from.id}`}
+                  checked={on}
+                  onChange={(v) => toggleTransfer(t.from.id, v)}
+                  name={t.from.name}
+                  label={on ? "옮김" : "유지"}
+                  labelClass={on ? "text-foreground" : "text-muted-foreground"}
+                  sub={`${t.from.broker} · 수량 ${fmt(t.from.quantity)} → ${t.toBroker}`}
+                  note={m > 0 ? `거래 기록 ${m}건을 함께 옮겨요` : "옮길 거래 기록은 없어요"}
+                  noteId={`resync-transfer-note-${t.from.id}`}
+                />
+              );
+            })}
+          </ul>
+        </section>
+      )}
       {diff.rows.some((r) => r.reasons.includes("brokerUnconfirmed")) && (
         <p className="text-sm text-muted-foreground text-pretty break-keep">{T.broker}를 못 정한 장이 있어서 삭제는 모두 꺼 뒀어요</p>
       )}
@@ -895,18 +956,18 @@ function PreviewStep({ diff, sel, existing, counts, freshAdds, include, setInclu
         );
       })}
 
-      {diff.kept.length > 0 && (
+      {keptRows.length > 0 && (
         <Collapsible open={openKept} onOpenChange={setOpenKept}>
           <CollapsibleTrigger data-testid="resync-kept-toggle" className="flex min-h-10 w-full items-center justify-between gap-2 text-left text-sm font-medium text-pretty break-keep">
             <span>
-              스크린샷에 없는 다른 <NR>{T.broker}·미지정{kind === "stock" ? "·비상장" : ""}</NR> 종목 {diff.kept.length}개
+              스크린샷에 없는 다른 <NR>{T.broker}·미지정{kind === "stock" ? "·비상장" : ""}</NR> 종목 {keptRows.length}개
               <span className="block text-sm font-normal text-muted-foreground">기본으로 그대로 둬요</span>
             </span>
             <ChevronDown className={`size-4 shrink-0 motion-safe:transition-[rotate] ${openKept ? "rotate-180" : ""}`} aria-hidden />
           </CollapsibleTrigger>
           <CollapsibleContent>
             <ul className="divide-y divide-border/40 rounded-xl bg-muted/40 px-4 py-1" data-screenshot-hide>
-              {diff.kept.map((s) => (
+              {keptRows.map((s) => (
                 <CheckRow
                   key={s.id}
                   id={s.id}
