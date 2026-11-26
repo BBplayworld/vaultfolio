@@ -155,6 +155,7 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "sync_overwrite_undo" }, "동기화 되돌리기"],
     ["feature_use", { category: "resync_start" }, "보유 현황 맞추기 시작"],
     ["feature_use", { category: "stock_broker_open" }, "상세·주식·증권사별 열기"],
+    ["feature_use", { category: "crypto_exchange_open" }, "상세·암호화폐·거래소별 열기"],
     ["feature_use", { category: "resync_apply" }, "보유 현황 맞추기 적용"],
     ["feature_use", { category: "resync_undo" }, "보유 현황 맞추기 되돌리기"],
     ["feature_use", { category: "balance_resync" }, "잔액 맞추기 저장"],

@@ -5,6 +5,8 @@
 ---
 
 ## 2026-11-26
+### 웰컴 첫 문장·상세 암호화폐 거래소별 합계 (issue-5.163, #325, risk:low)
+- 웰컴 부제가 다른 자산 앱과의 차이를 말하지 않던 문제: `WelcomeHero` 부제를 `계좌 연동 없이, 여러 증권사 주식을 한 화면에 모아 보세요.`로(글자만. h1·신뢰 줄·버튼·GA 이벤트·title 불변, 320~390 2줄). 거래소를 2곳 이상 쓰면 거래소별 금액을 코인 카드마다 펼쳐 더해야 하던 문제: 상세·암호화폐 selector 아래·비중바 위에 접기형 `ExchangeTotalsBlock`(`거래소별 · N곳`, 기본 접힘·`useState`만, 읽기 전용 — `맞추기` 버튼 DOM 0). 순수 함수 `computeExchangeTotals`(`lib/asset/exchange-totals.ts`, broker-totals의 얇은 래퍼): 수량>0 전체(헤더와 같은 모집단), 거래소명은 공백·대소문자를 뺀 **완전 일치**만 목록 라벨(`코인`≠`코인원`, `matchExchangeHint` 부분 일치 미사용), `기타`는 지정 묶음, 빈 값·`항목 N`만 `거래소 미지정`(맨 아래). 행 문자열 합 = 헤더 `총 암호화폐 평가금액`·`평가손익`(`apportionUnits`, C150), 비중 합 100.0%. 묶음 2개 미만·총 평가금 0이면 DOM 0, `data-screenshot-hide`. 행은 `BrokerRow` 재사용(export, `onResync` 없으면 버튼 미렌더·`countText`=`코인 N개`, 버튼 없는 행은 금액 칸 `ml-auto`). GA `feature_use` category `crypto_exchange_open`(title `상세·암호화폐·거래소별 열기`, 페이지 수명 1회, 거래소명·금액 미전송). 새 소식 `20261127-01`(featureId `crypto`). 저장 스키마·키·동기화·서버 전송 변경 0.
 ### 배당 문구·숫자 마감 (issue-5.162, #323, risk:low)
 - 머리 `지급일에 보유한 수량 기준 · 세전 추정`·빈 상태·InfoHint(없으면 지금 수량·액면분할 한계) 문구 정정. `roundedAnnual(calc)`(지급·예상 각각 반올림 후 합산)를 Hero·결론 줄·허브·성적표 입력의 단일 정본으로, 월 행 total = totalActual + totalEstimated(결론 줄 예상 = 12월 Hero = 허브 예상). 320: 막대 합계 라벨 x clamp, 증권사별 메타 조각별 nowrap. 액면분할 S1~S4 재현 테스트(현재 값 고정·계산 수정 없음). 저장·동기화 변경 0. 스냅샷 `decision-unset-baseline`은 증권사 메타 마크업 변경으로 갱신.
 ### 맞추기 정확성 마감 — 코인 고아 거래 정리·'최근 3년 거래 N건'·토스트 되돌리기 (issue-5.161, #321, risk:medium)

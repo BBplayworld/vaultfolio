@@ -24,7 +24,8 @@ export function formatBrokerUnits(units: number, scale: 1 | 100): string {
 
 export const formatShareTenths = (t: number) => `${(t / 10).toFixed(1)}%`;
 
-function BrokerRow({ row, scale, onResync }: { row: BrokerTotalRow; scale: 1 | 100; onResync: (broker?: string) => void }) {
+/** 합계 행 — 주식 증권사별·코인 거래소별(#325) 공용. onResync가 없으면 `맞추기` 버튼을 그리지 않는다(DOM 0). countText 기본 `N종목` */
+export function BrokerRow({ row, scale, onResync, countText }: { row: BrokerTotalRow; scale: 1 | 100; onResync?: (broker?: string) => void; countText?: string }) {
   const zero = row.profitUnits === 0;
   const color = zero ? "text-muted-foreground" : getProfitLossColor(row.profitUnits);
   const sign = row.profitUnits > 0 ? "+" : "";
@@ -34,28 +35,31 @@ function BrokerRow({ row, scale, onResync }: { row: BrokerTotalRow; scale: 1 | 1
       <div className="flex min-w-16 flex-1 flex-col gap-0.5">
         <span data-testid="broker-row-name" className={`${ASSET_THEME.cardInfoName} break-keep`}>{row.name}</span>
         <span className="text-sm text-muted-foreground tabular-nums">
-          <span data-testid="broker-row-count" className="whitespace-nowrap">{row.count}종목</span>
+          <span data-testid="broker-row-count" className="whitespace-nowrap">{countText ?? `${row.count}종목`}</span>
           {" "}
           <span data-testid="broker-row-share" className="whitespace-nowrap">· {formatShareTenths(row.shareTenths)}</span>
         </span>
       </div>
-      <div className="shrink-0 text-right">
+      {/* 맞추기 버튼이 없는 행(코인 거래소별)은 359px 이하에서 금액이 다음 줄로 내려가도 오른쪽 끝에 붙인다 */}
+      <div className={`shrink-0 text-right${onResync ? "" : " ml-auto"}`}>
         <p data-testid="broker-row-value" className={`${ASSET_THEME.cardAmountMain} whitespace-nowrap ${ASSET_THEME.text.default}`}>{formatBrokerUnits(row.valueUnits, scale)}</p>
         <div data-testid="broker-row-profit" className={`${ASSET_THEME.cardAmountProfitRow} justify-end`}>
           <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{sign}{formatBrokerUnits(row.profitUnits, scale)}</span>
           <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{rate}</span>
         </div>
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        data-testid="broker-row-resync"
-        aria-label={`${row.name} 맞추기`}
-        onClick={() => onResync(row.unassigned ? undefined : row.name)}
-        className="h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96] max-[359px]:ml-auto max-[359px]:basis-full max-[359px]:justify-end"
-      >
-        맞추기
-      </Button>
+      {onResync && (
+        <Button
+          type="button"
+          variant="ghost"
+          data-testid="broker-row-resync"
+          aria-label={`${row.name} 맞추기`}
+          onClick={() => onResync(row.unassigned ? undefined : row.name)}
+          className="h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96] max-[359px]:ml-auto max-[359px]:basis-full max-[359px]:justify-end"
+        >
+          맞추기
+        </Button>
+      )}
     </div>
   );
 }

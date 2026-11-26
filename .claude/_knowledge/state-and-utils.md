@@ -1131,3 +1131,8 @@ computePriceChange(points) → % | null
 ### broker-totals (`src/lib/asset/broker-totals.ts`, #5.160 #319)
 - `computeBrokerTotals(stocks, rates, displayCurrency)` → `{ rows, scale }`. 행 = `{ name, unassigned, count, valueUnits, profitUnits, profitRate|null, shareTenths }`(units = 원/센트). 묶음 = `sameBroker`·`isUnassignedBroker`, 평가·손익 = `computeStockTotals` 묶음별 호출 + `apportionUnits`(최대 잔여)로 합 = 헤더. 비중 = `largestRemainderTenths`.
 - `resolveScreensWithDefaultBroker(screens, existing, opts, defaultBroker?)`(`resync/merge.ts`) — 확정 못 한 장에만 증권사 기본값. `dispatchAddStock(mode, broker?)`·`HoldingsResyncDialog initialBroker?`(UI 상태, 저장 0).
+
+### exchange-totals (`src/lib/asset/exchange-totals.ts`, #5.163 #325)
+- `computeExchangeTotals(crypto)` → `BrokerTotalRow[]`(broker-totals와 같은 행 모양, units = 원). 모집단 = 수량>0 전체(목록의 `value>0` 필터 미사용 — 헤더 `getAssetSummary().cryptoValue·cryptoProfit`과 같음). 합계 target은 헤더와 같은 순서·같은 식으로 더한 값의 `Math.round`, `apportionUnits`로 행 합 = 헤더 표시값. 비중 `largestRemainderTenths`(합 1000). 정렬 = 평가금 내림차순, 미지정 맨 아래. 코인 수 = 거래소 안 심볼(대소문자 무시) 고유 수.
+- `exactExchangeLabel(raw)` — 공백·대소문자를 뺀 값이 `cryptoExchanges` 라벨·value와 **완전히 같을 때만** 라벨. 부분 일치가 필요한 가져오기·맞추기는 기존 `matchExchangeHint`(`resync/crypto.ts`)를 그대로 쓴다. 자유 텍스트 묶음 키는 공백만 뺀 글자 그대로.
+- GA: `feature_use` category `crypto_exchange_open` → title `상세·암호화폐·거래소별 열기`(`ga.ts` 허용 목록·`featureTitleOf`).

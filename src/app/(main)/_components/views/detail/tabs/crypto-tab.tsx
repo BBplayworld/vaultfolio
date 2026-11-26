@@ -17,6 +17,7 @@ import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-de
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { Crypto } from "@/types/asset";
 import { displayShareWidths } from "@/lib/report/min-share";
+import { ExchangeTotalsBlock } from "./exchange-totals-block";
 
 function computeCryptoMetrics(coin: Crypto) {
   const value = coin.quantity * coin.currentPrice;
@@ -270,6 +271,9 @@ export function CryptoTab() {
             ariaLabel="암호화폐 카테고리"
           />
         </div>
+
+        {/* 거래소별 합계(#325) — 묶음 2개 이상·총 평가금>0일 때만, 접힘 기본·읽기 전용. 인증카드 DOM 0 */}
+        <ExchangeTotalsBlock crypto={assetData.crypto} />
 
         {barItems.length > 0 && totalValue > 0 && (
           <div className="space-y-2">
