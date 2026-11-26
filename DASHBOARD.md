@@ -29,7 +29,7 @@
 | **v5.161** [PR #330](https://github.com/BBplayworld/vaultfolio/pull/330) | #325 웰컴 첫 문장·코인 거래소별 합계 + #326 320 배당 표 2단 | **운영 반영 11/27 00:42~53 KST** · 스모크 PASS | 웰컴 새 4주 판독(00:53~12/25) |
 | ~~5.164~~ [#327](https://github.com/BBplayworld/vaultfolio/issues/327) | 저장 스키마 passthrough | **보류**(받은 배당 기록이 분리 키 방식이라 불필요, 예·적금 재개 시) | — |
 | **v5.162** [PR #331](https://github.com/BBplayworld/vaultfolio/pull/331) | #328 맞추기 결과 대조 1줄('맞아요'만, 축소) | **운영 반영 11/27 02:03~14 KST** · 스모크 PASS | 철수선 4주(~12/25) |
-| **5.165** [#332](https://github.com/BBplayworld/vaultfolio/issues/332) | 배당 표 2단 640 미만·max-[359px] 정리 · [PR #333](https://github.com/BBplayworld/vaultfolio/pull/333) | **v5.163 머지 11/27 08:30** · 스모크 대기 | — |
+| **5.165** [#332](https://github.com/BBplayworld/vaultfolio/issues/332) | 배당 표 2단 640 미만·max-[359px] 정리 · [PR #333](https://github.com/BBplayworld/vaultfolio/pull/333) | **v5.163 머지 11/27 08:30** · 운영 스모크 미수행(접속 차단, 재시도 대기) | — |
 | **5.166** [#329](https://github.com/BBplayworld/vaultfolio/issues/329) | 받은 배당 기록(분리 키, risk:high) | 개발 완료(T1~T11 PASS) · ui-review 중 | 5.165 머지 → main 병합 → qa → CEO |
 | **v5.160** [PR #324](https://github.com/BBplayworld/vaultfolio/pull/324) | #323 배당 문구·숫자 마감(지급일 수량 문구·예상 단일 정본·차트 320) | **운영 반영 11/26 22:50~23:04 KST** · 스모크 PASS | 320 배당 표 2단 → 별도 |
 | **v5.152** [PR #307](https://github.com/BBplayworld/vaultfolio/pull/307) | #306 데이터 안전 회귀 테스트(앱 코드 0) | **운영 반영 11/26 04:30 KST** | — |
