@@ -7,10 +7,15 @@ import {
   parsedCryptoToRaw, planUndo, resolveScreens, resyncInflowDate, resyncNewPurchaseDate, stocksToCrypto,
 } from "..";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
+import { computeDividends } from "@/lib/finance/dividend-calc";
 import { assetDataSchema, stockSchema } from "@/types/asset";
 import type { AssetData, Crypto, Stock } from "@/types/asset";
 import type { Transaction } from "@/types/transaction";
 import { emptySel, row, run, screen, st, TODAY, USD } from "./fixtures";
+
+// 분자는 배당 공용 계산(#313, 5.157). 오늘 2026-11-30 = 기존 연-월 "2026-11" 기준과 같은 지급 판정(이 픽스처는 확정 지급만)
+const yieldArgs = (items: { stock: Stock; payouts: never }[], rate: number) =>
+  [items, rate, "actual", computeDividends(items, [], rate, "2026-11-30")] as const;
 
 const JAN1 = "2026-01-01";
 const tx = (id: string, stockId: string, ticker: string, date: string): Transaction => ({
@@ -27,7 +32,7 @@ const PAYOUTS = [
 ];
 const paidThisYear = (s: Stock) => {
   // 분자만 보려고 분모(평단×수량)를 1로 둔다
-  const r = computeDividendYield([{ stock: { ...s, averagePrice: 1 / s.quantity }, payouts: PAYOUTS as never }], USD, "actual", "2026-11");
+  const r = computeDividendYield(...yieldArgs([{ stock: { ...s, averagePrice: 1 / s.quantity }, payouts: PAYOUTS as never }], USD));
   return r ? Math.round((r.pct / 100) * (s.currency === "USD" ? USD : 1)) : 0;
 };
 const linked = (stocks: Stock[], txs: Transaction[]) => txs.every((t) => stocks.some((s) => s.id === t.stockId));

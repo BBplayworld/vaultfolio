@@ -1,16 +1,14 @@
 "use client";
 
-import { LoadingNote, LOADING_LABEL } from "@/components/ui/loading-note";
-import { useQueries } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
-import type { DividendPayoutResult, DividendFrequency } from "@/lib/finance/finance-service";
-import { dividendQueryOptions } from "@/lib/finance/dividend-client";
+import type { DividendFrequency } from "@/lib/finance/finance-service";
+import type { DividendCalcResult, DividendMonthState } from "@/lib/finance/dividend-calc";
 import type { Stock } from "@/types/asset";
-import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+import type { DividendGroup } from "./use-dividend-data";
 
 const FREQUENCY_LABEL: Record<DividendFrequency, string> = {
   annual: "연간",
@@ -51,128 +49,51 @@ interface StockDividendRow {
 
 interface Props {
   selectedMonth: number | undefined;
+  /** 배당 차트와 같은 공용 훅 결과 — 표는 재계산하지 않고 종목별 값(calc.byStock)만 표시한다(#313) */
+  groups: DividendGroup[];
+  calc: DividendCalcResult;
 }
 
-export function MonthlyDividendStocks({ selectedMonth }: Props) {
-  const { assetData, exchangeRates } = useAssetData();
+const monthsIn = (state: DividendMonthState[], want: DividendMonthState) =>
+  state.flatMap((st, i) => (st === want ? [i + 1] : []));
+const cents = (v: number) => Math.round(v * 100) / 100;
+
+export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
+  const { exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
 
-  const stocksWithTicker = (() => {
-    // 상장폐지 종목 제외 — 배당 받을 수 없음. 거래정지는 포함 (보유 중)
-    const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted");
-    const grouped = groupStocksByTickerCategory(base);
-    return Array.from(grouped.values()).map(mergeStockGroup);
-  })();
-
-  const queries = useQueries({
-    queries: stocksWithTicker.map((stock) => {
-      const ticker = normalizeTicker(stock);
-      const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
-      return {
-        ...dividendQueryOptions(ticker, type),
-      };
-    }),
-  });
-
-  const isLoading = queries.some((q) => q.isLoading);
-
-  const rows: StockDividendRow[] = stocksWithTicker
-    .map((stock, i): StockDividendRow | null => {
-      const allPayouts: DividendPayoutResult[] = Array.isArray(queries[i]?.data)
-        ? (queries[i].data as DividendPayoutResult[])
-        : [];
-      // 매수월(년-월)과 같은 달이면 매수일 이전 지급도 포함
-      const purchaseYM = stock.purchaseDate ? stock.purchaseDate.slice(0, 7) : null;
-      const payouts = stock.purchaseDate
-        ? allPayouts.filter((p) => p.payoutDate.slice(0, 7) >= purchaseYM! || p.payoutDate >= stock.purchaseDate!)
-        : allPayouts;
-      if (allPayouts.length === 0) return null;
-
-      const firstPayout = payouts[0] ?? allPayouts[0];
-      if (!firstPayout) return null;
-      const currency = firstPayout.currency || (stock.currency === "USD" ? "USD" : "KRW");
+  const rows: StockDividendRow[] = groups
+    .map(({ key, stock, payouts }): StockDividendRow | null => {
+      const d = calc.byStock.get(key);
+      if (!d || payouts.length === 0) return null;
+      const firstPayout = d.firstPayout ?? payouts[0];
+      const currency = stock.currency === "USD" ? "USD" : "KRW";
       const rate = currency === "USD" ? usdRate : 1;
-      const beforePurchaseMonths = stock.purchaseDate
-        ? [...new Set(
-          allPayouts
-            .filter((p) => p.payoutDate.slice(0, 7) < purchaseYM!)
-            .map((p) => parseInt(p.payoutDate.split("-")[1], 10))
-            .filter(Boolean)
-        )].sort((a, b) => a - b)
-        : [];
-      // 지급 여부는 payoutDate의 년-월 <= 오늘(KST) 년-월 기준 (isEstimated 플래그보다 날짜 우선)
-      const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-      const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
-      const isPaid = (p: DividendPayoutResult) => p.payoutDate.slice(0, 7) <= currentYM;
-      const actualMonths = [
-        ...new Set(payouts.filter(isPaid).map((p) => parseInt(p.payoutDate.split("-")[1], 10)).filter(Boolean)),
-      ].sort((a, b) => a - b);
-      const estimatedMonths = [
-        ...new Set(payouts.filter((p) => !isPaid(p)).map((p) => parseInt(p.payoutDate.split("-")[1], 10)).filter(Boolean)),
-      ].sort((a, b) => a - b);
-      const payoutMonths = [...new Set([...actualMonths, ...estimatedMonths])].sort((a, b) => a - b);
-
-      const annualTotal = Math.round(
-        payouts.reduce((sum, p) => sum + p.amountPerShare * stock.quantity * rate, 0)
-      );
-      const annualForeign =
-        currency === "USD"
-          ? Math.round(payouts.reduce((sum, p) => sum + (p.amountForeign ?? p.amountPerShare) * stock.quantity, 0) * 100) / 100
-          : 0;
-      const perShareForeign = currency === "USD" ? (firstPayout.amountForeign ?? firstPayout.amountPerShare) : 0;
-      const perShareKRW = Math.round(firstPayout.amountPerShare * rate);
-      const actualPayouts = payouts.filter(isPaid);
-      const annualActual = Math.round(actualPayouts.reduce((sum, p) => sum + p.amountPerShare * stock.quantity * rate, 0));
-      const annualForeignActual =
-        currency === "USD"
-          ? Math.round(actualPayouts.reduce((sum, p) => sum + (p.amountForeign ?? p.amountPerShare) * stock.quantity, 0) * 100) / 100
-          : 0;
-      const monthlyPayout = selectedMonth !== undefined
-        ? payouts.find((p) => parseInt(p.payoutDate.split("-")[1], 10) === selectedMonth)
-        : undefined;
-      const monthlyTotal = monthlyPayout
-        ? Math.round(monthlyPayout.amountPerShare * rate * stock.quantity)
-        : 0;
-      const monthlyForeign =
-        currency === "USD" && monthlyPayout
-          ? Math.round((monthlyPayout.amountForeign ?? monthlyPayout.amountPerShare) * stock.quantity * 100) / 100
-          : 0;
-      const monthlyActualPayout = selectedMonth !== undefined
-        ? actualPayouts.find((p) => parseInt(p.payoutDate.split("-")[1], 10) === selectedMonth)
-        : undefined;
-      const monthlyActual = monthlyActualPayout
-        ? Math.round(monthlyActualPayout.amountPerShare * rate * stock.quantity)
-        : 0;
-      const monthlyForeignActual =
-        currency === "USD" && monthlyActualPayout
-          ? Math.round((monthlyActualPayout.amountForeign ?? monthlyActualPayout.amountPerShare) * stock.quantity * 100) / 100
-          : 0;
-
+      // 배당월 배지: 그 달 지급이 모두 '지급'이면 N월, 하나라도 예상이면 N월 예정, 그때 보유 0이면 흐린 N월
+      const actualMonths = monthsIn(d.monthState, "paid");
+      const estimatedMonths = monthsIn(d.monthState, "expected");
+      const m = selectedMonth !== undefined ? selectedMonth - 1 : -1;
       return {
         stock,
-        beforePurchaseMonths,
+        beforePurchaseMonths: monthsIn(d.monthState, "inactive"),
         actualMonths,
         estimatedMonths,
-        payoutMonths,
-        perShareForeign,
-        perShareKRW,
+        payoutMonths: [...actualMonths, ...estimatedMonths].sort((a, b) => a - b),
+        perShareForeign: currency === "USD" ? (firstPayout.amountForeign ?? firstPayout.amountPerShare) : 0,
+        perShareKRW: Math.round(firstPayout.amountPerShare * rate),
         currency,
-        annualTotal,
-        annualForeign,
-        annualActual,
-        annualForeignActual,
-        monthlyTotal,
-        monthlyForeign,
-        monthlyActual,
-        monthlyForeignActual,
+        annualTotal: Math.round(d.paid + d.expected),
+        annualForeign: cents(d.paidForeign + d.expectedForeign),
+        annualActual: Math.round(d.paid),
+        annualForeignActual: cents(d.paidForeign),
+        monthlyTotal: m >= 0 ? Math.round(d.perMonth.paid[m] + d.perMonth.expected[m]) : 0,
+        monthlyForeign: m >= 0 ? cents(d.perMonth.paidForeign[m] + d.perMonth.expectedForeign[m]) : 0,
+        monthlyActual: m >= 0 ? Math.round(d.perMonth.paid[m]) : 0,
+        monthlyForeignActual: m >= 0 ? cents(d.perMonth.paidForeign[m]) : 0,
         frequency: firstPayout.frequency,
       };
     })
     .filter((r): r is StockDividendRow => r !== null);
-
-  if (isLoading) {
-    return <LoadingNote active label={LOADING_LABEL.dividend} className="flex justify-center py-3" />;
-  }
 
   const grouped = CATEGORY_GROUPS.map(({ key, label, color }) => {
     const items = rows.filter((r) => r.stock.category === key);
