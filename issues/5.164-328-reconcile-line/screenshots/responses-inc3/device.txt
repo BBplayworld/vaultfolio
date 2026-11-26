@@ -1,0 +1,20 @@
+A1 | {"screenTotal":{"value":5500000,"label":"총 평가금액","currency":"KRW"}} | label=true implausible=false | diff | 증권사 화면 합계와 26.9% 달라요. 시세 시각이 달라 조금 다를 수 있어요 / 화면에 안 담긴 종목이 있을 수 있어요 | resync_check_diff
+A2 | {"error":"요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."} | - | hidden |  | resync_check_skip
+B1 | {"screenTotal":null} | - | hidden |  | resync_check_none
+B2 | {"screenTotal":null} | - | hidden |  | resync_check_none
+C1 | {"screenTotal":{"value":7845000,"label":"총 평가금액","currency":"KRW"}} | label=true implausible=false | diff | 증권사 화면 합계와 23.8% 달라요. 시세 시각이 달라 조금 다를 수 있어요 / 화면에 안 담긴 종목이 있을 수 있어요 | resync_check_diff
+C2 | {"screenTotal":{"value":7845000,"label":"총 평가금액","currency":"KRW"}} | label=true implausible=false | diff | 증권사 화면 합계와 23.8% 달라요. 시세 시각이 달라 조금 다를 수 있어요 / 화면에 안 담긴 종목이 있을 수 있어요 | resync_check_diff
+D1 | {"screenTotal":null} | - | hidden |  | resync_check_none
+D2 | {"screenTotal":null} | - | hidden |  | resync_check_none
+E1 | {"screenTotal":{"value":1250000,"label":"예수금","currency":"KRW"}} | label=false implausible=true | hidden |  | resync_check_none
+E2 | {"screenTotal":{"value":1250000,"label":"예수금","currency":"KRW"}} | label=false implausible=true | hidden |  | resync_check_none
+F1 | {"screenTotal":{"value":123450000,"label":"총 평가금액","currency":"KRW"}} | label=true implausible=false | match | 증권사 화면 합계와 맞아요 | resync_check_match
+F2 | {"screenTotal":{"value":123450000,"label":"총 평가금액","currency":"KRW"}} | label=true implausible=false | match | 증권사 화면 합계와 맞아요 | resync_check_match
+G1 | {"screenTotal":{"value":8530000,"label":"주식 평가금액","currency":"KRW"}} | label=true implausible=false | match | 증권사 화면 합계와 맞아요 | resync_check_match
+G2 | {"screenTotal":{"value":8530000,"label":"주식 평가금액","currency":"KRW"}} | label=true implausible=false | match | 증권사 화면 합계와 맞아요 | resync_check_match
+H1 | {"screenTotal":{"value":12345.67,"label":"총 평가금액","currency":"USD"}} | label=true implausible=true | hidden |  | resync_check_none
+H2 | {"screenTotal":{"value":12345.67,"label":"총 평가금액","currency":"USD"}} | label=true implausible=true | hidden |  | resync_check_none
+I1 | {"screenTotal":null} | - | hidden |  | resync_check_none
+I2 | {"screenTotal":null} | - | hidden |  | resync_check_none
+J1 | {"screenTotal":{"value":4550000,"label":"보유 종목 4","currency":"KRW"}} | label=false implausible=true | hidden |  | resync_check_none
+J2 | {"screenTotal":{"value":4550000,"label":"보유 종목 4","currency":"KRW"}} | label=false implausible=true | hidden |  | resync_check_none
