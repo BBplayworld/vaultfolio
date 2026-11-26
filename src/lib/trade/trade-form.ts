@@ -10,3 +10,12 @@ export function resolveTradeRate(opts: { input: number | undefined; currentRate:
   if (opts.input !== undefined && opts.input > 0) return opts.input;
   return opts.currentRate > 0 ? opts.currentRate : undefined;
 }
+
+/**
+ * 과거 날짜 질문('이미 들어 있나요?') 표시 조건 — 날짜가 KST 오늘보다 앞이고 비어 있지 않을 때.
+ * 신규 자산(항상 반영)은 묻지 않는다. today는 todayKst()를 넘긴다(UTC 자정 기준이면 00~09시에 어긋남).
+ */
+export function shouldAskPastDate(opts: { date: string; today: string; isNewSelected?: boolean }): boolean {
+  if (opts.isNewSelected || !opts.date) return false;
+  return opts.date < opts.today;
+}

@@ -1,8 +1,8 @@
 // #311(5.158) 기록 입력 정확도 — 체결 환율 단일 값(0 저장 금지), 0 거래 백업 왕복 불변
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveTradeRate } from "../trade/trade-form";
+import { resolveTradeRate, shouldAskPastDate } from "../trade/trade-form";
 import { applyImportedPayload, getAssetData, saveAssetData } from "../asset/asset-storage";
-import { computeForeignRealizedGain } from "../tax-utils";
+import { computeForeignRealizedGain, todayKst } from "../tax-utils";
 import { emptyData, g, memoryStorage } from "./physical-fixtures";
 import type { AssetData } from "@/types/asset";
 
@@ -61,5 +61,27 @@ describe("체결 환율 0 기존 거래 — 백업 왕복 불변(저장 변경 0
     expect(after.transactions.find((t) => t.id === "t2")?.exchangeRate).toBe(0); // 기존 레코드는 다시 쓰지 않는다
     expect(computeForeignRealizedGain(after, 2026, rates)).toEqual(gainBefore);
     expect(gainBefore!.gainKrw).toBeCloseTo(10 * 130 * 1400 - 10 * 100 * 1300, 0); // 매도 대금 0원이 아니다
+  });
+});
+
+describe("과거 날짜 질문 표시 조건(KST)", () => {
+  afterEach(() => vi.useRealTimers());
+  it("오늘·빈 날짜·신규 자산이면 묻지 않고, 어제면 묻는다", () => {
+    expect(shouldAskPastDate({ date: "2026-11-26", today: "2026-11-26" })).toBe(false);
+    expect(shouldAskPastDate({ date: "", today: "2026-11-26" })).toBe(false);
+    expect(shouldAskPastDate({ date: "2026-11-25", today: "2026-11-26" })).toBe(true);
+    expect(shouldAskPastDate({ date: "2026-11-25", today: "2026-11-26", isNewSelected: true })).toBe(false);
+  });
+  it("KST 00~09시: UTC로는 아직 전날이어도 KST 어제 날짜면 묻는다", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-25T15:30:00Z")); // KST 11-26 00:30, UTC 11-25
+    expect(todayKst()).toBe("2026-11-26");
+    expect(shouldAskPastDate({ date: "2026-11-25", today: todayKst() })).toBe(true);
+    expect(shouldAskPastDate({ date: "2026-11-26", today: todayKst() })).toBe(false);
+  });
+  it("KST 23:59: 같은 날은 묻지 않는다", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-26T14:59:00Z")); // KST 11-26 23:59
+    expect(shouldAskPastDate({ date: "2026-11-26", today: todayKst() })).toBe(false);
   });
 });

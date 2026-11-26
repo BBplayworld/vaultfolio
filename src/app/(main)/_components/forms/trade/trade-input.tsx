@@ -35,7 +35,8 @@ import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
-import { resolveTradeRate } from "@/lib/trade/trade-form";
+import { resolveTradeRate, shouldAskPastDate } from "@/lib/trade/trade-form";
+import { PastDateQuestion } from "../common/past-date-question";
 import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effective-target";
 import { LinkAccountRow } from "./link-account-row";
 import { trackLinkedTrade, trackTradeNewStock } from "@/lib/trade/link-track";
@@ -119,6 +120,7 @@ export function TradeInput() {
   // 체결 환율 칸 — 사용자가 직접 고쳤는지(고친 값은 자동 채움이 덮지 않는다). rateAuto = 지금 칸 값이 자동으로 채운 현재 환율
   const rateTouched = useRef(false);
   const [rateAuto, setRateAuto] = useState(false);
+  const [answered, setAnswered] = useState(false); // 과거 날짜 질문에 답했거나 체크박스를 직접 눌렀는지(화면 전용, 저장 0)
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // 보유 주식 목록 (delisted 제외)
@@ -229,6 +231,8 @@ export function TradeInput() {
     return watchedPrice;
   }, [selectedStock?.currency, priceInKrw, linkRate, watchedPrice]);
   const watchedDate = form.watch("date");
+  // 과거 날짜 질문 — 신규 자산(항상 반영)은 묻지 않는다. 답하기 전에는 연결 계좌의 맞춘 잔액 경고를 숨긴다(#311)
+  const askPast = shouldAskPastDate({ date: watchedDate, today: todayKst(), isNewSelected });
   const linkTrade = selectedStock
     ? { type: tradeType, quantity: watchedQty || 0, price: effectivePrice || 0, currency: selectedStock.currency || "KRW", exchangeRate: linkRate, date: watchedDate, name: selectedStock.name }
     : null;
@@ -324,6 +328,7 @@ export function TradeInput() {
     setLinkValue(LINK_NONE);
     rateTouched.current = false;
     setRateAuto(false);
+    setAnswered(false);
     clearSearch();
   }, [form, clearSearch]);
 
@@ -930,6 +935,16 @@ export function TradeInput() {
                 )}
               />
 
+              {/* 과거 날짜 질문 — 반영 체크박스 바로 위, 같은 reflected 값을 바꾸는 입구(#311) */}
+              {askPast && (
+                <PastDateQuestion
+                  kind="stock"
+                  answered={answered}
+                  reflected={reflected}
+                  onAnswer={(v) => { setAnswered(true); form.setValue("reflected", v); }}
+                />
+              )}
+
               {/* 반영 체크박스 */}
               <FormField
                 control={form.control}
@@ -939,7 +954,7 @@ export function TradeInput() {
                     <FormControl>
                       <Checkbox
                         checked={field.value || isNewSelected}
-                        onCheckedChange={field.onChange}
+                        onCheckedChange={(v) => { setAnswered(true); field.onChange(v); }}
                         disabled={isNewSelected}
                       />
                     </FormControl>
@@ -959,7 +974,7 @@ export function TradeInput() {
 
               {/* 연결 계좌 — 즉시 반영 박스 바로 아래(#103) */}
               {linkTrade && (
-                <LinkAccountRow data={assetData} trade={linkTrade} reflected={effReflected} value={linkValue} onChange={handleLinkChange} ev={linkEval} />
+                <LinkAccountRow data={assetData} trade={linkTrade} reflected={effReflected} value={linkValue} onChange={handleLinkChange} ev={linkEval} hideResyncWarning={askPast && !answered} />
               )}
 
               {/* 반영 후 예상 포지션 미리보기 */}
