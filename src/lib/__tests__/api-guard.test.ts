@@ -14,6 +14,7 @@ import {
   GEMINI_GLOBAL_HOURLY_LIMIT,
   exceedsDailyGlobal,
   RATIO_POOL,
+  STOCK_TOTAL_POOL,
   isRatioEntry,
   l1SizeForTest,
 } from "@/server/api-guard";
@@ -256,6 +257,45 @@ describe("reserveGeminiCalls — /ratio 입구 풀", () => {
     }
     spy.mockResolvedValue(1);
     expect(await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, RATIO_POOL)).toBeNull();
+  });
+});
+
+describe("reserveGeminiCalls — 화면 합계 전용 풀(5.164 stock-total)", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const MSG = "마감";
+  const totalKey = () => `rl:gemini-stock-total:${todayKst()}`;
+  beforeEach(async () => {
+    await resetCounter(totalKey());
+    await resetCounter(`rl:gemini-ratio:${todayKst()}`);
+    await resetCounter(hourKeyNow());
+  });
+
+  it("풀 값: 이름 stock-total, 일 60(전역 한도와 별개 값)", () => {
+    expect(STOCK_TOTAL_POOL).toEqual({ name: "stock-total", dailyLimit: 60 });
+  });
+
+  it("61번째 합계 호출은 429이고, 행 인식(풀 없음)·/ratio 풀 몫은 줄지 않는다", async () => {
+    const storage = getCacheStorage();
+    vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(1);
+    for (let i = 0; i < STOCK_TOTAL_POOL.dailyLimit; i++) {
+      expect(await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, STOCK_TOTAL_POOL)).toBeNull();
+    }
+    const denied = await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, STOCK_TOTAL_POOL);
+    expect(denied?.status).toBe(429);
+    // 거절된 호출은 시간당 카운터에서 되돌려지고 풀 카운터는 상한에 머문다(횟수만 센다)
+    expect(await storage.incrementCounter(hourKeyNow(), 0, 3600)).toBe(STOCK_TOTAL_POOL.dailyLimit);
+    expect(await storage.incrementCounter(totalKey(), 0, 3600)).toBe(STOCK_TOTAL_POOL.dailyLimit);
+    // 풀이 마감돼도 행 인식 호출은 통과하고 /ratio 풀 카운터는 0
+    expect(await reserveGeminiCalls(req("http://a.test/api"), 1, MSG)).toBeNull();
+    expect(await storage.incrementCounter(`rl:gemini-ratio:${todayKst()}`, 0, 3600)).toBe(0);
+    expect(await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, RATIO_POOL)).toBeNull();
+  });
+
+  it("일 전역 예약 실패(전역 한도 초과)면 합계 풀 카운터도 되돌려진다", async () => {
+    const storage = getCacheStorage();
+    vi.spyOn(Object.getPrototypeOf(storage), "reserveGeminiDaily").mockResolvedValue(null);
+    expect((await reserveGeminiCalls(req("http://a.test/api"), 1, MSG, STOCK_TOTAL_POOL))?.status).toBe(429);
+    expect(await storage.incrementCounter(totalKey(), 0, 3600)).toBe(0);
   });
 });
 

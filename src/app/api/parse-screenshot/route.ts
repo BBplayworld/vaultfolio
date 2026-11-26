@@ -8,6 +8,7 @@ import { isTinyImage } from "./image-size";
 import { reconcileImagePrices } from "./price-consistency";
 import { stripTrailingQuantity } from "./name-normalize";
 import { guardRequest, isRatioEntry, RATIO_POOL, reserveGeminiCalls } from "@/server/api-guard";
+import { respondScreenTotal, STOCK_TOTAL_MODE } from "./screen-total";
 
 export const maxDuration = 30;
 
@@ -736,6 +737,9 @@ export async function POST(request: Request) {
   if (!matchesImageSignature(new Uint8Array(arrayBuffer, 0, Math.min(16, arrayBuffer.byteLength)), imageFile.type)) {
     return NextResponse.json({ error: "JPG, PNG, WEBP, HEIC 형식만 지원합니다." }, { status: 400 });
   }
+
+  // 화면 합계 전용 호출(5.164) — 행 인식과 분리된 분기. 아래 행 경로(프롬프트·스키마·설정·응답)는 건드리지 않는다
+  if (assetTypeRaw === STOCK_TOTAL_MODE) return respondScreenTotal(request, apiKey, arrayBuffer, imageFile.type);
 
   // 너무 작은 이미지(긴 변 < 200px)는 Gemini를 부르지 않고 빈 결과를 돌려준다 — 한도 차감 전에 거른다.
   // 판독 실패·HEIC는 통과. 크기·바이트는 로그하지 않는다(#109)
