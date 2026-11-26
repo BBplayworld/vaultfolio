@@ -78,9 +78,16 @@ describe("닫은 뒤 토스트 되돌리기(5.161 확인)", () => {
     expect(undone.crypto.map((c) => c.id).sort()).toEqual(["a", "b"]);
     expect(undone.nickname).toBe("그 사이 바꾼 값");
   });
-  it("토스트(sonner) z-index가 시트·대화상자(10001~10002)보다 높아 가려지지 않는다", () => {
-    const sonner = readFileSync("node_modules/sonner/dist/index.mjs", "utf8");
-    const z = Math.max(...[...sonner.matchAll(/z-index:\s*(\d+)/g)].map((m) => Number(m[1])));
+  it("모달(body pointer-events:none)이 열려 있어도 토스트 버튼이 눌린다 — 토스트가 pointer-events:auto를 받고 sonner 규칙이 이를 덮지 않는다(D-1)", () => {
+    const wrapper = readFileSync("src/components/ui/sonner.tsx", "utf8");
+    // 계산값 auto: Toaster가 모든 토스트에 pointer-events-auto 클래스를 준다(Tailwind pointer-events: auto)
+    expect(wrapper).toMatch(/toastOptions=\{\{\s*className:\s*"pointer-events-auto"/);
+    const css = readFileSync("node_modules/sonner/dist/index.mjs", "utf8");
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*pointer-events[^{}]*)\}/g)].map((m) => `${m[1].trim()}{${m[2]}}`).filter((r) => r.startsWith("[data-sonner"));
+    // sonner가 pointer-events를 건드리는 곳은 숨김 토스트뿐(그 외 규칙이 auto를 덮지 않는다)
+    expect(rules.every((r) => r.includes("[data-visible=false]") && r.includes("pointer-events:none"))).toBe(true);
+    // 토스트 z-index는 시트·대화상자(10002)보다 높다
+    const z = Math.max(...[...css.matchAll(/z-index:\s*(\d+)/g)].map((m) => Number(m[1])));
     expect(z).toBeGreaterThan(10002);
   });
 });

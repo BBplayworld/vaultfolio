@@ -447,7 +447,7 @@ export function StockPageBody({ target, labelStore }: { target: NonNullable<Retu
             onClick={openTrades}
             className="flex min-h-12 w-full items-center justify-between text-sm font-medium active:bg-muted/40 transition-[background-color]"
           >
-            <span>최근 {TRANSACTION_RETENTION_YEARS}년 거래 {tradeCount.toLocaleString()}건</span>
+            <span className="tabular-nums">최근 {TRANSACTION_RETENTION_YEARS}년 거래 {tradeCount.toLocaleString()}건</span>
             <ChevronRight className="size-4 text-muted-foreground" />
           </button>
         </div>
