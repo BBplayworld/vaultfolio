@@ -1,7 +1,7 @@
 // #310(5.156) 맞추기 미리보기 거래 기록 고지 — 삭제·이관 상태별 문구(ui.md 10절). 정적 렌더(jsdom 없음)
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { KindCtx, ReconcileLines, ResyncTxNotice } from "../holdings-resync-dialog";
+import { KindCtx, ResyncTxNotice } from "../holdings-resync-dialog";
 
 const html = (clearing: boolean, transferring: boolean) => renderToStaticMarkup(<ResyncTxNotice clearing={clearing} transferring={transferring} />);
 const KEEP = "거래 기록은 그대로 남아요.";
@@ -42,21 +42,5 @@ describe("ResyncTxNotice", () => {
     expect(coin(true)).not.toContain(KEEP);
     expect(coin(false)).toContain(KEEP);
     expect(coin(false)).not.toContain("함께 정리돼요");
-  });
-});
-
-// 5.161 결과 대조 1줄 — 표시 조건(총액 없음·숨김이면 DOM 0)
-describe("ReconcileLines", () => {
-  const h = (v: Parameters<typeof ReconcileLines>[0]["view"]) => renderToStaticMarkup(<ReconcileLines view={v} />);
-  it("숨김 → DOM 0", () => expect(h({ state: "hidden" })).toBe(""));
-  it("일치 → 1줄", () => {
-    const m = h({ state: "match" });
-    expect(m).toContain('data-testid="resync-reconcile"');
-    expect(m).toContain("증권사 화면 합계와 맞아요");
-  });
-  it("차이 → 2줄 문장", () => {
-    const m = h({ state: "diff", ratePct: "2.4", names: ["삼성전자", "TIGER 미국S&amp;P500"], more: 1 });
-    expect(m).toContain("증권사 화면 합계와 2.4% 달라요. 시세 시각이 달라 조금 다를 수 있어요");
-    expect(m).toContain("차이가 큰 종목: 삼성전자, TIGER 미국S&amp;amp;P500 외 1개");
   });
 });

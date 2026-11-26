@@ -5,8 +5,6 @@
 ---
 
 ## 2026-11-26
-### 맞추기 정확성 마감 — 코인 고아 거래 정리·결과 대조 1줄·'최근 3년 거래 N건' (issue-5.161, #321, risk:medium)
-- 코인 맞추기에서 체크해 지운 코인의 거래가 남아 결산·홈 원인에 더해지던 결함을 직접 삭제(`planDeleteCryptos`) 규칙으로 정리(`planCryptoResyncSave`, 삭제 id = 저장 직전 fresh에 있고 결과에 없는 id). 되돌리기는 `buildCryptoResyncUndoEntries`로 `crypto`+`cryptoTransactions` 두 컬렉션. 미리보기 고지 코인도 `지우는 코인은 거래 기록도 함께 정리돼요`. 종목 한 장 링크 `거래내역 N건` → `최근 3년 거래 N건`(세는 방식 불변). 주식 맞추기 결과 화면에 증권사 화면 합계 대조 1줄(`resync/reconcile.ts`, 허용 오차 max(0.5%, 1,000원), 숨김 조건 전부 테스트, GA `resync_check_match|diff|none`). 서버 `parse-screenshot` 주식 응답에 행과 분리된 `screenTotal {value,label,currency}` 추가(요청 본문 불변·서버 저장/캐시/로그 0, 파서는 배열·`{rows}` 둘 다 수용, 주식 `maxOutputTokens` 2304). 새 소식 `20261126-06`. 저장 키·스키마·동기화·공유 토큰 변경 0(C151).
 ### 상세·주식 증권사별 합계 (issue-5.160, #319, risk:low)
 - 증권사 2곳 이상·ISA·연금을 함께 쓰면 증권사별 합을 종목 카드마다 펼쳐 더해야 하던 문제. 상세·주식 카테고리 selector 아래·목록 위에 접기형 `BrokerTotalsBlock`(`증권사별 · N곳`, 기본 접힘·`useState`만): 증권사마다 평가금·손익·수익률·`N종목`·비중. 순수 함수 `computeBrokerTotals`(`lib/asset/broker-totals.ts`) — 지금 탭·달러 보기 기준, 묶음마다 `computeStockTotals` 재사용, 행 단위 `sameBroker` 묶음, 미지정 `증권사 미지정` 맨 아래, 상장폐지·수량 0 제외, 원(달러 보기 센트) 최대 잔여로 문자열 합 = 헤더(C150), 비중 `largestRemainderTenths`. 행 `맞추기` = 기존 `trigger-add-stock`에 `broker` 전달 → `HoldingsResyncDialog initialBroker`(확정 못 한 장의 선택 칸 기본값만, `resolveScreensWithDefaultBroker`). 묶음 1개·주식 0건 DOM 0, 인증카드 미렌더. GA `stock_broker_open`(`상세·주식·증권사별 열기`, 페이지 수명 1회). 새 소식 `20261126-05`. 저장 키·스키마·동기화·서버 전송 변경 0(C151 N/A). '마지막 맞춘 날' 제외.
 ### 상세에서 보는 배당 — 종목 한 장 배당 줄·성과 › 배당 압축 (issue-5.159, #317, risk:low)
