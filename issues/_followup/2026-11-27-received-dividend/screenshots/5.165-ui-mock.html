@@ -1,0 +1,95 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:oklch(0.96 0.004 250);--fg:oklch(13.604% 0.00969 18.328);--card:#fff;--popover:#fff;--muted:oklch(0.88 0 0);--mf:oklch(0.45 0 0);--sec:oklch(0.895 0 0);--secfg:oklch(0.205 0 0);--border:oklch(0.91 0 0);--input:oklch(0.58 0 0);--brand:#5b6fbf;--dialog:var(--bg);
+--t2xs:11px;--txs:12px;--tsm:14px;--tbase:16px;--tlg:18px;--t2xl:24px}
+.dark{--bg:oklch(0.16 0.010 265);--fg:oklch(0.965 0.004 265);--card:oklch(0.225 0.012 265);--popover:oklch(0.275 0.014 265);--muted:oklch(0.31 0.014 265);--mf:oklch(0.74 0.016 265);--sec:oklch(0.31 0.014 265);--secfg:oklch(0.965 0.004 265);--border:oklch(1 0 0 / 10%);--input:oklch(1 0 0 / 15%);--dialog:var(--popover)}
+@media(min-width:768px){:root{--t2xs:12px;--txs:13px;--tsm:15px;--tbase:17px;--tlg:19px;--t2xl:27px}}
+@media(min-width:1280px){:root{--t2xs:12px;--txs:14px;--tsm:16px;--tbase:18px;--tlg:20px;--t2xl:30px}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI","Malgun Gothic",Roboto,system-ui,sans-serif;background:var(--bg);color:var(--fg);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.page{padding:0 12px 40px;max-width:1280px;margin:0 auto}
+h6{font-size:11px;color:#c06;font-weight:600;margin:18px 0 6px;font-family:monospace}
+.sm{font-size:var(--tsm);line-height:calc(1.25/.875)} .mf{color:var(--mf)} .sb{font-weight:600} .b{font-weight:700} .tn{font-variant-numeric:tabular-nums} .nw{white-space:nowrap} .fgc{color:var(--fg)}
+.hero{font-size:var(--t2xl);line-height:calc(2/1.5);font-weight:700}
+/* 결론 줄 */
+.concl{margin-top:4px;display:flex;flex-wrap:wrap;column-gap:4px;row-gap:2px;margin-left:-8px;clip-path:inset(-12px -100vw -12px 8px)}
+.first{margin-left:8px}
+.dot{margin-left:-4px;display:inline-block;width:12px;text-align:center;font-weight:400;color:var(--mf)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:999px;background:var(--sec);border:0;font:inherit;color:var(--mf);cursor:pointer;vertical-align:top;position:relative}
+.chip svg{width:14px;height:14px;flex:none}
+.chip b{font-weight:600;color:var(--fg)}
+.slot{display:grid}.slot>*{grid-area:1/1}.hid{opacity:0}
+.yield{margin-top:12px}
+/* 다이얼로그 */
+.dialog{width:100%;max-width:calc(100% - 8px);background:var(--dialog);border-radius:20px;padding:24px;margin:0 auto;box-shadow:0 10px 15px -3px rgb(0 0 0/.1);display:grid;gap:16px}
+@media(min-width:640px){.dialog{max-width:448px}}
+.dlgwrap{padding:0 4px}
+.box{border-radius:12px;background:color-mix(in oklab,var(--muted) 40%,transparent);padding:12px}
+.dark .box{background:color-mix(in oklab,var(--muted) 20%,transparent)}
+.crow{display:flex;align-items:center;gap:8px}
+.cb{width:16px;height:16px;flex:none;border-radius:4px;border:1px solid var(--input);display:grid;place-content:center;color:#fff;box-shadow:0 1px 2px rgb(0 0 0/.05)}
+.dark .cb{background:color-mix(in oklab,var(--input) 30%,transparent)}
+.cb.on{background:var(--brand);border-color:var(--brand)} .cb.dis{opacity:.5}
+.lbl{display:flex;flex-direction:column;justify-content:center;min-height:40px;margin:-2px 0}
+.lbl .t{font-size:var(--tsm);line-height:1;font-weight:500}
+.lbl .h{font-size:var(--tsm);line-height:calc(1.25/.875);color:var(--mf);margin-top:2px;word-break:keep-all;text-wrap:pretty}
+.sub{padding-left:24px;padding-top:12px;display:grid;gap:8px}
+.flabel{font-size:var(--tsm);line-height:1;font-weight:500}
+.sel{display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px;padding:8px 12px;border-radius:12px;background:color-mix(in oklab,var(--muted) 60%,transparent);font-size:var(--tsm);white-space:nowrap;width:100%;min-width:0}
+.dark .sel{background:color-mix(in oklab,var(--muted) 50%,transparent);border:1px solid var(--input)}
+.sel span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sel i{flex:none;width:16px;height:16px;color:var(--mf);font-style:normal;line-height:16px;text-align:center}
+.dup{border-radius:12px;background:rgb(245 158 11/.1);padding:12px;display:grid;gap:4px;font-size:var(--tsm);line-height:calc(1.25/.875)}
+.dark .dup{background:rgb(245 158 11/.2)}
+/* 거래 행 */
+.list{}.dark .list{border-radius:16px;background:var(--card);padding:0 16px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border)}
+.row:first-child{border-top:0}
+.ic{width:32px;height:32px;border-radius:50%;flex:none;background:rgb(239 68 68/.1)}
+.tx{min-width:0;flex:1}
+.tl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bdg{display:inline-flex;align-items:center;border-radius:999px;border:1px solid transparent;padding:0 4px;font-size:var(--t2xs);line-height:1.25;font-weight:500;white-space:nowrap;flex:none}
+.bdg.reg{color:#d97706;border-color:#d97706}.bdg.rec{color:var(--mf);border-color:var(--border)}
+.bdg.div{background:var(--sec);color:var(--secfg);padding:0 6px;font-weight:600}
+.date,.stk,.memo{font-size:var(--tsm);line-height:calc(1.25/.875);color:var(--mf)}
+.stk{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.amt{font-size:var(--tsm);font-weight:700;flex:none;color:#ef4444}.dark .amt{color:#fb7185}
+.del{width:30px;height:30px;border-radius:12px;background:var(--sec);flex:none}
+@media(max-width:359px){.row{flex-wrap:wrap;row-gap:2px}.tx{order:9;flex-basis:100%;padding-left:44px}.amt{margin-left:auto}.date,.stk,.memo{font-size:var(--txs);line-height:calc(1/.75)}}
+</style></head><body><div class="page" id="page"></div>
+<script>
+const pen='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>';
+const dot='<span class="dot" aria-hidden="true"> · </span>';
+const chip=(label,val)=>`<button class="chip nw tn" data-chip>${pen}<span>${label}${val?` <b>${val}</b>`:''}</span></button>`;
+function concl(id,parts){return `<p class="concl sm mf tn" data-concl="${id}">`+parts.map((p,i)=>`<span class="nw ${i==0?'first':''}" data-piece>${i?dot:''}${p}</span>`).join('')+`</p>`}
+const v=(l,x,fg)=>`${l} <span class="sb ${fg?'fgc':''}">${x}</span>`;
+function hero(title,label,num,body,y=true){return `<h6>${title}</h6><div data-hero><p class="sm mf sb">${label}</p><p class="hero tn">${num}</p>${body}${y?'<div class="yield"><span class="sm mf" style="font-weight:500">투입 대비 배당</span> <span class="sb tn" style="font-size:var(--tbase)">3.42%</span></div>':''}</div>`}
+let h='';
+h+=hero('A0 현행 (지급·예상·다음 지급) 보통','올해 배당','1,234,560원',concl('cur',[v('지급','456,000원',1),v('예상','778,560원'),v('다음 지급','12월 5종목',1)]));
+h+=hero('A0m 현행 최장','올해 배당','35,802,467원',concl('curmax',[v('지급','12,345,678원',1),v('예상','23,456,789원'),v('다음 지급','12월 28종목',1)]));
+h+=hero('A1 신규 합계 — 보통','올해 배당','1,234,560원',concl('sum',[v('지급','456,000원',1),v('예상','778,560원'),chip('받은 기록','398,200원')]));
+h+=hero('A2 신규 합계 — 최장','올해 배당','35,802,467원',concl('summax',[v('지급','12,345,678원',1),v('예상','23,456,789원'),chip('받은 기록','123,456,789원')]));
+h+=hero('A3 기록 0건 · 현금 계좌 있음','올해 배당','1,234,560원',concl('empty',[v('지급','456,000원',1),v('예상','778,560원'),chip('받은 배당 적기','')]));
+h+=hero('A4 예상만(1월) + 합계','올해 배당','778,560원',concl('exponly',[v('예상','778,560원'),chip('받은 기록','8,200원')]));
+h+=hero('A5 월 선택 — 기록 있음(높이 유지)','11월 지급 배당','12,345,678원',`<div class="slot" data-slot="month">${concl('hidden',[v('지급','12,345,678원',1),v('예상','23,456,789원'),chip('받은 기록','123,456,789원')]).replace('class="concl','class="hid concl')}<p class="sm mf tn" style="margin-top:4px" data-concl="month">${chip('11월 받은 기록','12,345,678원')}</p></div>`);
+h+=hero('A6 계산 0 · 기록만(다 판 사용자)','','',`<p class="sm mf tn" data-concl="solo">${chip('올해 받은 기록','398,200원')}</p>`,false).replace('<p class="sm mf sb"></p><p class="hero tn"></p>','');
+h+=hero('A7 spec 원안 순서(비교용, 채택 안 함)','올해 배당','1,234,560원',concl('specorder',[v('지급','456,000원',1),chip('받은 기록','398,200원'),v('예상','778,560원')]));
+// 다이얼로그
+const cb=(s)=>`<span class="cb ${s}">${s.includes('on')?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>':''}</span>`;
+const box=(state,t,hh,sub,dis)=>`<div class="box" data-box><div class="crow">${cb(state)}<label class="lbl"><span class="t ${dis?'mf':''}" data-lbl>${t}</span><span class="h" data-help>${hh}</span></label></div>${sub||''}</div>`;
+const sel=(x)=>`<div class="sub"><span class="flabel">종목 (선택)</span><div class="sel" data-sel><span>${x}</span><i>⌄</i></div></div>`;
+const REG='매월 정기 입금 (월급·목돈)',REGH='해제 시 <span class="nw">비정기(성과급 등)로</span> 기록됩니다';
+const DIVH='<span class="nw">성과 › 배당의</span> 받은 기록에 더해져요';
+function dlg(title,inner){return `<h6>${title}</h6><div class="dlgwrap"><div class="dialog" data-dialog><div style="display:grid;gap:8px" data-group>${inner}</div></div></div>`}
+h+=dlg('B1 입금 — 둘 다 꺼짐',box('',REG,REGH)+box('','배당으로 받은 돈',DIVH));
+h+=dlg('B2 정기 켜짐',box('on',REG,REGH)+box('','배당으로 받은 돈',DIVH));
+h+=dlg('B3 배당 켜짐 — 정기 비활성 + 종목 칸',box('dis',REG,'배당을 끄면 선택할 수 있어요','',1)+box('on','배당으로 받은 돈',DIVH,sel('선택 안 함')));
+h+=dlg('B4 배당 켜짐 — 긴 종목명',box('dis',REG,'배당을 끄면 선택할 수 있어요','',1)+box('on','배당으로 받은 돈',DIVH,sel('TIGER 미국배당다우존스타겟커버드콜2호')));
+h+=`<h6>B5 중복 확인</h6><div class="dlgwrap"><div class="dialog" data-dialog><div class="dup"><p style="font-weight:500;color:#d97706">이미 동일한 입출금이 있습니다</p><p class="mf">계좌·날짜·금액·유형이 동일한 기록이 이미 있습니다.</p><p class="tn" data-dupline><span class="nw">배당 입금</span> · <span class="nw">2026-11-20</span> · <span class="nw">1,234,567,890원</span></p></div></div></div>`;
+// 거래 행
+const row=(badges,date,stk,memo,amt)=>`<div class="row" data-row><div class="ic"></div><div class="tx"><div class="tl" data-tl><span class="sm sb">입금</span>${badges}</div><p class="date tn nw">${date}</p>${stk?`<p class="stk" data-stk>${stk}</p>`:''}${memo?`<p class="memo">${memo}</p>`:''}</div><span class="amt tn" data-amt>${amt}</span><div class="del"></div></div>`;
+const BR='<span class="bdg reg">정기</span>',BD='<span class="bdg div" data-bdg>배당</span>',BO='<span class="bdg rec" data-bdg-rec>기록만</span>';
+h+=`<h6>C 현금 거래 행</h6><div class="list" data-list>`+row(BR,'2026-11-25','','','+3,500,000원')+row(BD,'2026-11-20','','','+12,340원')+row(BD,'2026-11-15','삼성전자','','+361,000원')+row(BD+BO,'2026-08-14','TIGER 미국배당다우존스타겟커버드콜2호','3분기 분배금','+1,234,567,890원')+row(BO,'2026-07-01','','','+50,000원')+`</div>`;
+document.getElementById('page').innerHTML=h;
+if(new URLSearchParams(location.search).get('dark'))document.documentElement.classList.add('dark');
+</script></body></html>
