@@ -58,6 +58,9 @@ const monthsIn = (state: DividendMonthState[], want: DividendMonthState) =>
   state.flatMap((st, i) => (st === want ? [i + 1] : []));
 const cents = (v: number) => Math.round(v * 100) / 100;
 
+// md 미만 매수 날짜 YY.MM.DD(320 한 줄 유지, 5.162)
+const shortDate = (d: string) => (/^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(2, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}` : d);
+
 export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
   const { exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
@@ -156,7 +159,11 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                         </Badge>
                       </div>
                     )}
-                    {stock.purchaseDate && <p className="text-xs text-muted-foreground mt-1">매수 {stock.purchaseDate}</p>}
+                    {stock.purchaseDate && (
+                      <p data-testid="dividend-stock-purchase" className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
+                        매수 <span className="md:hidden">{shortDate(stock.purchaseDate)}</span><span className="hidden md:inline">{stock.purchaseDate}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end">
                     {beforePurchaseMonths.map((m) => (

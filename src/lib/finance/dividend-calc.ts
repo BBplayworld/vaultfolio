@@ -198,3 +198,13 @@ export function nextDividendMonth(
   }
   return null;
 }
+
+/**
+ * 연 합계 단일 정본(5.162, C150) — 지급·예상을 각각 먼저 반올림한 뒤 합산한다.
+ * 결론 줄·Hero·허브·성적표 입력이 모두 이 값을 쓰므로 지급 + 예상 = 합계, 예상 문자열이 화면마다 같다.
+ */
+export function roundedAnnual(calc: Pick<DividendCalcResult, "annual">): { paid: number; expected: number; total: number } {
+  const paid = Math.round(calc.annual.paid);
+  const expected = Math.round(calc.annual.expected);
+  return { paid, expected, total: paid + expected };
+}

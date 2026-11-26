@@ -34,9 +34,9 @@ function BrokerRow({ row, scale, onResync }: { row: BrokerTotalRow; scale: 1 | 1
       <div className="flex min-w-16 flex-1 flex-col gap-0.5">
         <span data-testid="broker-row-name" className={`${ASSET_THEME.cardInfoName} break-keep`}>{row.name}</span>
         <span className="text-sm text-muted-foreground tabular-nums">
-          <span data-testid="broker-row-count">{row.count}종목</span>
-          {" · "}
-          <span data-testid="broker-row-share" className="whitespace-nowrap">{formatShareTenths(row.shareTenths)}</span>
+          <span data-testid="broker-row-count" className="whitespace-nowrap">{row.count}종목</span>
+          {" "}
+          <span data-testid="broker-row-share" className="whitespace-nowrap">· {formatShareTenths(row.shareTenths)}</span>
         </span>
       </div>
       <div className="shrink-0 text-right">

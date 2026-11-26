@@ -785,8 +785,9 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-DIVIDEND-CALC. 배당 공용 계산 ([dividend-calc.ts](../../src/lib/finance/dividend-calc.ts)) — #313 5.157
 - ⚙ 계좌별 원본 행으로 먼저 계산 후 합산(병합 × 지금 수량 금지), 반영 거래가 있으면 지급일 시점 수량 역산(당일 매수 제외·당일 매도 포함·매수일 = 지급일 0원), 폴백(거래 0건·음수·NaN·manual 덮어쓰기가 지급일 뒤) = 지금 수량, 수량 0 = 0원. 지급 = `payoutDate <= 오늘 KST && !isEstimated`(연-월 판정 0). 엔화 종목 쿼리 0·합계 제외. 차트 월 합 = 표 종목 합 = 허브·성적표 `annualTotal`(반올림 1회). 서버 캐시 히트가 `isEstimated:true` 보존(응답 형식·캐시 키 v12·쿼리 키 v11 불변)
-- 👤 성과 › 배당: 설명 `지금 보유 종목 기준 · 세전 추정`(허브·표·Hero 반복 0), 섞인 달(주로 이번 달) 막대 선택 → `{m}월 배당` + `일부 예상`, 금액 = 툴팁 합계, 엔화 종목 있으면 `엔화 종목 N개는 배당 조회 안 됨 · 합계에서 빠져 있어요`, 빈 화면 `올해 배당이 아직 없어요`/`지금 보유 종목 기준으로 올해 받을 배당이 없어요`, 화면 'KIS' 0. 320·390 겹침·한 글자 줄바꿈 0. 성적표 과거 등급 재계산 0(배당 입력 감소로 신규 기록 등급 변동은 정상 — 판독 경계 = 머지일)
-- 테스트: `src/lib/finance/__tests__/dividend-calc.test.ts`, `views/activity/__tests__/use-dividend-data.test.ts`, `api/finance/dividend/__tests__/route-cache-estimated.test.ts`
+- 👤 성과 › 배당: 설명 `지급일에 보유한 수량 기준 · 세전 추정`(허브·표·Hero 반복 0, 5.162 문구 정정), 섞인 달(주로 이번 달) 막대 선택 → `{m}월 배당` + `일부 예상`, 금액 = 툴팁 합계, 엔화 종목 있으면 `엔화 종목 N개는 배당 조회 안 됨 · 합계에서 빠져 있어요`, 빈 화면 `올해 배당이 아직 없어요`/`지금 보유 종목 기준으로 올해 받을 배당이 없어요`, 화면 'KIS' 0. 320·390 겹침·한 글자 줄바꿈 0. 성적표 과거 등급 재계산 0(배당 입력 감소로 신규 기록 등급 변동은 정상 — 판독 경계 = 머지일)
+- ⚙ 5.162: `roundedAnnual` 단일 정본 — 결론 줄 예상 = 12월 월 행 예상 = 허브 annualEstimated 문자열 일치, 지급+예상 = Hero, 월 행 total = 지급+예상. 액면분할 S1~S4 현재 값 고정(분할 이력 없음 한계). 👤 320: 1·12월 막대 라벨 안 잘림, 표 매수 날짜 1줄(md 미만 YY.MM.DD), 증권사 메타 `N종목`/`· 비중` 조각 사이에서만 꺾임
+- 테스트: `src/lib/finance/__tests__/dividend-calc.test.ts`, `views/activity/__tests__/dividend-5162.test.tsx`, `views/activity/__tests__/use-dividend-data.test.ts`, `api/finance/dividend/__tests__/route-cache-estimated.test.ts`
 
 ### F-MORE-SETTINGS. 더보기·설정 ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) — #4.46 #81
 - 👤 더보기 섹션 순서 프로필 · 공유 · 백업 · 지원 + 설정 행(4.89에서 '도구' 섹션·세금 관리 행 제거), 공유·백업 안 순서 공유·동기화 → 백업 → 가져오기 → 저장 현황, 자산 0에서도 가져오기 동작(숨은 input 항상 렌더), 설정에 가져오기·저장 현황 없음·순서 보안→화면→표시→데이터→버전·삭제 행 맨 아래, 다크 모드 ON/OFF 배지(`aria-pressed`), 백업·가져오기·캐시·삭제 문구 변경 0

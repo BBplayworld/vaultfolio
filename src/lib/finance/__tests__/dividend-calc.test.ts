@@ -1,6 +1,6 @@
 // #313(5.157) 배당 공용 계산 — tech-review §6 1~10 + spec 9-1 경계 3건(당일 매수·당일 매도·매수일 = 지급일)
 import { describe, expect, it } from "vitest";
-import { computeDividends, heldQtyAt, isDividendPaid, monthSums, dividendStockKey, nextDividendMonth } from "../dividend-calc";
+import { computeDividends, heldQtyAt, isDividendPaid, monthSums, roundedAnnual, dividendStockKey, nextDividendMonth } from "../dividend-calc";
 import { computeDividendYield } from "../dividend-yield";
 import { groupStocksByTickerCategory, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import type { Stock, Transaction } from "@/types/asset";
@@ -259,5 +259,41 @@ describe("nextDividendMonth(#317) — 결과에서 고르기만 한다", () => {
     const past = computeDividends([{ stock: a, payouts: [pay("2026-05-15", 100, { isEstimated: true })] }], [], 1400, TODAY);
     expect(past.annual.expected).toBeGreaterThan(0);
     expect(nextDividendMonth(past, TODAY)).toBeNull();
+  });
+});
+
+describe("5.162 roundedAnnual — 지급·예상 각각 반올림 후 합산", () => {
+  it("지급 10.4 + 예상 10.4 → 10 + 10 = 20(합계 반올림 − 지급 반올림 = 11이 아니다)", () => {
+    const calc = computeDividends([{ stock: stock({}), payouts: [pay("2026-01-15", 0.104), pay("2026-12-15", 0.104, { isEstimated: true })] }], [], 1400, TODAY);
+    expect(roundedAnnual(calc)).toEqual({ paid: 10, expected: 10, total: 20 });
+  });
+  it("예상 0이면 total = paid", () => {
+    const calc = computeDividends([{ stock: stock({}), payouts: [pay("2026-01-15", 0.104)] }], [], 1400, TODAY);
+    expect(roundedAnnual(calc)).toEqual({ paid: 10, expected: 0, total: 10 });
+  });
+});
+
+// 액면분할 재현(5.162 #323) — 앱에 분할 이력 데이터가 없어 heldQtyAt은 거래 수량을 그대로 +/−한다.
+// S1·S2·S4는 현재(한계) 값을 고정한다. 분할 전 지급분 수량 오차 — 계산 수정은 별도 릴리스(분할 이력 데이터 필요).
+describe("5.162 액면분할 재현 S1~S4 (현재 값 고정 + 한계)", () => {
+  const march = "2026-03-15";
+  // 분할 이력 없음 → 분할 전 지급분 수량 오차, 계산 수정은 별도 릴리스
+  it("S1 1월 10주 → 4월 2:1 분할 → 5월 5주 추가(지금 25): 3월 지급 = 20주(올바른 값 10주, 과대 한계)", () => {
+    const s = stock({ quantity: 25 });
+    expect(heldQtyAt(s, [tx({ quantity: 5, date: "2026-05-10" })], march)).toEqual({ qty: 20, qtyUsed: "derived" });
+  });
+  // 분할 이력 없음 → 분할 전 지급분 수량 오차, 계산 수정은 별도 릴리스
+  it("S2 분할 후 수량 20 수동 수정(4월): 3월 지급 = 20주 폴백(올바른 값 10주, 과대 한계)", () => {
+    const s = stock({ quantity: 20, positionSource: "manual", positionEffectiveDate: "2026-04-10" } as Partial<Stock>);
+    expect(heldQtyAt(s, [tx({ quantity: 10, date: "2026-01-02" })], march)).toEqual({ qty: 20, qtyUsed: "current" });
+  });
+  it("S3 통제군: S1 종목의 7월 지급 = 25주(정확)", () => {
+    const s = stock({ quantity: 25 });
+    expect(heldQtyAt(s, [tx({ quantity: 5, date: "2026-05-10" })], "2026-07-15")).toEqual({ qty: 25, qtyUsed: "derived" });
+  });
+  // 분할 이력 없음 → 분할 전 지급분 수량 오차, 계산 수정은 별도 릴리스
+  it("S4 1월 20주 → 4월 2:1 병합 → 5월 5주 추가(지금 15): 3월 지급 = 10주(올바른 값 20주, 과소 한계)", () => {
+    const s = stock({ quantity: 15 });
+    expect(heldQtyAt(s, [tx({ quantity: 5, date: "2026-05-10" })], march)).toEqual({ qty: 10, qtyUsed: "derived" });
   });
 });
