@@ -77,10 +77,14 @@ describe("5.162 표 매수 날짜", () => {
     expect(html).toMatch(/data-testid="dividend-stock-purchase" class="[^"]*whitespace-nowrap/);
     expect(html).toContain("20.01.02");
     // 320(<360)은 이름 칸 폭 안에서 끝나도록 '매수 ' 접두를 숨기고 열을 재배분, 넘치면 말줄임
-    expect(html).toContain("max-[359px]:hidden");
+    expect(html).toContain("max-[399px]:hidden");
     expect(html).toContain("max-[359px]:grid-cols-");
     expect(html).toContain("max-[359px]:text-2xs");
-    expect(html).toContain("minmax(3.5rem,1fr)");
+    expect(html).toContain("minmax(2.5rem,1fr)_3rem_3.25rem_4.1rem_4.5rem");
+    // 금액 셀(주당·지급·합계) 줄바꿈 0
+    expect(html).toMatch(/data-testid="dividend-paid-amount" class="whitespace-nowrap /);
+    expect(html).toMatch(/data-testid="dividend-est-amount" class="whitespace-nowrap /);
+    expect(html).toMatch(/text-2xs tabular-nums whitespace-nowrap/);
     expect(html).toContain("tabular-nums overflow-hidden text-ellipsis");
     expect(html).toContain("2020-01-02");
   });
