@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeNewPosition, recomputeFromLog, rollbackTransaction } from "../trade/trade-utils";
+import { computeNewPosition, recomputeFromLog, reverseTransaction, rollbackTransaction } from "../trade/trade-utils";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
 
 const makeSnapshot = (overrides: Partial<PositionSnapshot> = {}): PositionSnapshot => ({
@@ -189,5 +189,25 @@ describe("코인 거래 재사용 (trade-utils 구조적 타입 완화)", () => 
     const result = rollbackTransaction(current, txs, "ctx2");
     expect(result.quantity).toBeCloseTo(1, 6);
     expect(result.avgPrice).toBeCloseTo(100_000_000, -2);
+  });
+});
+
+// #311 — 체결 환율 0 읽기 보정은 tax-utils 한 곳만 한다. 포지션 정·역 계산은 그대로 두어
+// 이미 0으로 순방향 계산된 저장 포지션을 삭제·되돌리기·재연결할 때 대칭이 유지돼야 한다(회귀 고정).
+describe("체결 환율 0 — 정·역 대칭 유지(#311)", () => {
+  const pos = makeSnapshot({ quantity: 10, avgPrice: 100, avgExchangeRate: 1300 });
+  for (const rate of [0, undefined, 1400]) {
+    it(`exchangeRate=${String(rate)}: 매수 적용 후 역연산하면 원래 포지션`, () => {
+      const tx = makeTx({ type: "buy", quantity: 10, price: 120, currency: "USD", exchangeRate: rate });
+      const after = computeNewPosition(pos, tx);
+      const back = reverseTransaction({ ...pos, ...after }, tx);
+      expect(back.quantity).toBe(10);
+      expect(back.avgPrice).toBeCloseTo(100, 6);
+      expect(back.avgExchangeRate).toBeCloseTo(1300, 6);
+    });
+  }
+  it("0은 지금도 순방향에서 그대로 쓰인다(보정 안 함의 증명) — 평균 환율 650", () => {
+    const tx = makeTx({ type: "buy", quantity: 10, price: 120, currency: "USD", exchangeRate: 0 });
+    expect(computeNewPosition(pos, tx).avgExchangeRate).toBeCloseTo(650, 6);
   });
 });

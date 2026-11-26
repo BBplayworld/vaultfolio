@@ -250,6 +250,40 @@ describe("tax-utils · computeForeignRealizedGain (AC6·AC7)", () => {
     expect(r?.gainKrw).toBeCloseTo(100 * 30 * 1400, 0);
   });
 
+  // #311 — 예전 폼에서 체결 환율 칸을 지우면 0이 저장됐다. 읽을 때만 '값 없음'으로 보정(현재 환율 + estimated)
+  describe("체결 환율 0 읽기 보정(#311)", () => {
+    const run = (sellRate: number | undefined, buyRate: number | undefined = 1300) => {
+      const data = emptyData();
+      data.stocks = [makeStock({ id: "s1", category: "foreign", currency: "USD" })];
+      data.transactions = [
+        makeTx({ stockId: "s1", type: "buy", quantity: 100, price: 100, date: "2026-01-10", exchangeRate: buyRate }),
+        makeTx({ stockId: "s1", type: "sell", quantity: 100, price: 130, date: "2026-06-10", exchangeRate: sellRate, createdAt: "2026-06-10T00:00:00.000Z" }),
+      ];
+      return computeForeignRealizedGain(data, 2026, RATES)!;
+    };
+    it("양수: 그 값 그대로, estimated=false", () => {
+      const r = run(1350);
+      expect(r.gainKrw).toBeCloseTo(100 * 130 * 1350 - 100 * 100 * 1300, 0);
+      expect(r.estimated).toBe(false);
+    });
+    it("undefined: 현재 환율로 대체, estimated=true", () => {
+      const r = run(undefined);
+      expect(r.gainKrw).toBeCloseTo(100 * 130 * 1400 - 100 * 100 * 1300, 0);
+      expect(r.estimated).toBe(true);
+    });
+    it("0: undefined와 같은 결과(매도 대금 0원 아님), estimated=true", () => {
+      const zero = run(0);
+      expect(zero.gainKrw).toBeCloseTo(run(undefined).gainKrw, 0);
+      expect(zero.gainKrw).toBeGreaterThan(0);
+      expect(zero.estimated).toBe(true);
+    });
+    it("매수 환율 0: 원가 환율 없음 → 매도 환율로 대체(estimated), 취득가 0원 아님", () => {
+      const r = run(1400, 0);
+      expect(r.gainKrw).toBeCloseTo(100 * 30 * 1400, 0);
+      expect(r.estimated).toBe(true);
+    });
+  });
+
   it("국내주식 거래는 집계에서 제외된다", () => {
     const data = emptyData();
     data.stocks = [makeStock({ id: "s1", category: "domestic", currency: "KRW" })];

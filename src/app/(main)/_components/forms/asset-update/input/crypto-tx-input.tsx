@@ -188,7 +188,7 @@ export function CryptoTxInput() {
         if (guard.reason === "oversell") {
           form.setError("quantity", { message: `보유 수량(${pos.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개)을 초과합니다` });
         } else if (guard.reason === "already_reflected") {
-          toast.error("이미 반영된 거래입니다.");
+          toast.error("이미 반영된 거래예요");
         }
         return;
       }
@@ -220,7 +220,7 @@ export function CryptoTxInput() {
     if (ok) {
       track("transaction_save", { asset_type: "crypto", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
       trackLinkedTrade(link);
-      toast.success(link ? linkSavedToast(tx.type, link.kind) : tx.type === "buy" ? "매수 거래가 기록되었습니다." : "매도 거래가 기록되었습니다.");
+      toast.success(link ? linkSavedToast(tx.type, link.kind) : tx.type === "buy" ? "매수 거래를 기록했어요" : "매도 거래를 기록했어요");
       resetAndClose();
     }
   };
@@ -449,7 +449,7 @@ export function CryptoTxInput() {
               </p>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 유지했습니다."); resetAndClose(); }}>기존 유지</Button>
+              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 그대로 뒀어요"); resetAndClose(); }}>기존 유지</Button>
               <Button type="button" variant="secondary" onClick={() => { if (dupPending) commit(dupPending.tx, dupPending.coin); }}>새로 추가</Button>
               <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>취소</Button>
             </DialogFooter>

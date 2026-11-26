@@ -255,7 +255,9 @@ describe("화면 소스 단언 — 환율 채움·안내 1줄·문구 규칙", (
   const input = read("app/(main)/_components/forms/trade/trade-input.tsx");
   const row = read("app/(main)/_components/forms/trade/link-account-row.tsx");
   it("buildTransaction이 연결 환산 시 체결 환율을 저장 시점에 채운다(화면 setValue만으로 처리하지 않음)", () => {
-    expect(input).toMatch(/!\(data\.exchangeRate! > 0\) && linkEval\.state === "ok" && linkEval\.conv \? linkEval\.conv\.rate/);
+    // 5.158(#311): 연결 여부와 무관하게 칸 값>0 → 현재 환율 → 없음(0 저장 0건). 화면 linkRate와 같은 함수(resolveTradeRate)
+    expect(input).toMatch(/const exchangeRate = resolveTradeRate\(\{ input: data\.exchangeRate, currentRate: stockRate, isForeign: stockForeign \}\)/);
+    expect(input).toMatch(/const linkRate = resolveTradeRate\(\{ input: watchedExRate, currentRate, isForeign \}\)/);
     expect(input).toContain("onChange={handleLinkChange}");
   });
   it("환산 배수 사본 금지: tradeKrwRate는 asset-report 한 곳 export", () => {

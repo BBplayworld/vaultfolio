@@ -56,7 +56,7 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
   const [month, setMonth] = useState(() => initialMonth ?? pickSettlementMonth(readMonthlySnapshots(), kstToday()));
   const [aiOpen, setAiOpen] = useState(false);
 
-  const computed = useMemo((): { ok: true; value: SettlementResult } | { ok: false } => {
+  const computed = useMemo((): { ok: true; value: SettlementResult } | { ok: false; error: unknown } => {
     try {
       const w = resolveSettlementWindow(monthly, month, today, firstRecord);
       const start = w.start;
@@ -67,10 +67,19 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
         liveCash: summary.cashValue, exchangeHistory: readExchangeHistory(), assetData, rates: exchangeRates,
       });
       return { ok: true, value: { window: w, prevValue, currValue, delta, pct, mapped, live, estimatedLabel, cashTracked } };
-    } catch {
-      return { ok: false };
+    } catch (error) {
+      return { ok: false, error };
     }
   }, [monthly, month, today, firstRecord, assetData, exchangeRates, summary]);
+
+  // 결산 계산 실패 — 화면 마운트당 console 1회, 오류 이름·메시지만(자산 값·월 값은 남기지 않는다, #311). GA 변경 0
+  const errorLoggedRef = useRef(false);
+  useEffect(() => {
+    if (computed.ok || errorLoggedRef.current) return;
+    errorLoggedRef.current = true;
+    const e = computed.error;
+    console.error("[settlement] 결산 계산 실패", e instanceof Error ? `${e.name}: ${e.message}` : typeof e);
+  }, [computed]);
 
   // 월별 기록(#127) — 선택 달과 무관(월 화살표로 바뀌지 않음). 이번 달 줄 = 결산과 같은 live breakdown·summary.netAsset
   const liveBreakdown = computed.ok ? computed.value.live.breakdown : undefined;
@@ -127,7 +136,7 @@ export function SettlementView({ initialMonth, source, focus }: { initialMonth?:
           title={settlementName(month, today, false)}
           titleTestId="settlement-title"
           actions={arrows}
-          message={<span data-testid="settlement-error">결산을 불러오지 못했어요. 다른 달을 선택해 보세요</span>}
+          message={<span data-testid="settlement-error">결산을 계산하지 못했어요. 다시 열어도 같으면 &apos;의견·요청 보내기&apos;로 알려 주세요</span>}
           contentKey={month}
         />
       </div>

@@ -13,6 +13,7 @@ import { dispatchAddLoanTx } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import type { LoanTransaction } from "@/types/asset";
+import { TxMemo } from "../tx-memo";
 
 type DatePreset = "1m" | "3m" | "1y" | "all";
 type TypeFilter = "all" | "repay" | "borrow";
@@ -149,7 +150,8 @@ export function LoanTxView() {
                       <span className="text-sm font-semibold">{isRepay ? "상환" : "추가 대출"}</span>
                       {!t.reflected && <Badge data-testid="tx-record-only-badge" variant="outline" className="text-2xs px-1 py-0 leading-tight text-muted-foreground">기록만</Badge>}
                     </div>
-                    <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span>{t.memo ? ` · ${t.memo}` : ""}</p>
+                    <p className="text-sm max-[359px]:text-xs text-muted-foreground tabular-nums"><span className="whitespace-nowrap">{t.date}</span></p>
+                    {t.memo && <TxMemo memo={t.memo} />}
                   </div>
                   <span className={`text-sm font-bold tabular-nums shrink-0 ${isRepay ? "text-red-500 dark:text-rose-400" : "text-blue-500 dark:text-blue-400"}`}>
                     {isRepay ? "+" : "−"}{formatCurrency(t.amount)}

@@ -212,7 +212,7 @@ computeRebuyQuantity(gainPerShareKrw, quantity, baseGainKrw)
   //   이전엔 baseline만으로 1회 계산돼 다른 종목 선택/해제에 반응하지 않는 버그가 있었음)
 ```
 데이터는 `src/config/tax-calendar.ts`(`TAX_EVENTS`·`TAX_EVENTS_BY_MONTH`·`TAX_TAG_LABEL`·`FOREIGN_CAPITAL_GAIN_DEDUCTION`)가 단일 출처. **외부 API·네트워크 없음.**
-실현차익은 `trade-utils.computeNewPosition`으로 이동평균 원가를 replay해 산출하며, 매수 로그·체결 환율 누락 시 현재 평단·환율로 폴백하고 `estimated: true`를 세운다.
+실현차익은 `trade-utils.computeNewPosition`으로 이동평균 원가를 replay해 산출하며, 매수 로그·체결 환율 누락 시 현재 평단·환율로 폴백하고 `estimated: true`를 세운다. 체결 환율 0도 누락으로 읽는다(#5.158, 읽기 보정만).
 닫기 상태는 `STORAGE_KEYS.taxNotice` 단일 키(`{ dismissedMonth: "YYYY-MM" }`) — `backup-status.ts`와 동일한 기기 로컬 메타 패턴이라 `asset-storage.ts` keepKeys에 보존되고 sync payload에는 넣지 않는다(R14 핑퐁 방지).
 
 ### onboarding-wizard-status.ts (S-4.29)
@@ -1051,9 +1051,18 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 - `new-stock.ts`(순수): `MARKET_CATEGORIES`(kr 4종/us 1종)·`findHeldByPicked`(AC-4, 양쪽 `normalizeTicker`·시장 군 비교)·`buildPickedStockDraft`·`withInitialPrice`(조회 실패 → 현재가 = 유효 체결 단가, `baseDate` 비움 — 오늘 날짜를 넣으면 시세 갱신이 건너뛴다). `link-track.ts` `trackTradeNewStock(link)`: 새 종목 저장 성공 뒤 `trade_new_stock`(+연결이면 `_linked`) 1회
 - `ticker-search-nav.ts`: `nextSearchKey(key, activeIndex, length)` 검색 키보드 이동(공용 `TickerSearchField`)
 
+### 직접 입력 기록 폼 공용 순수 함수 (`src/lib/trade/trade-form.ts`, #5.158 #311)
+```typescript
+resolveTradeRate({ input, currentRate, isForeign }): number | undefined // 체결 환율 단일 값: 칸>0 → 현재 환율>0 → undefined. 0 반환 0, 국내 undefined
+shouldAskPastDate({ date, today, isNewSelected? }): boolean            // 과거 날짜 질문 표시(date < todayKst(), 빈 날짜·신규 자산 false)
+roundTradePrice(value, currency): number                                // '현재가 넣기' 반올림 USD 3·JPY 4·KRW 0
+```
+- 거래 폼 `linkRate`(칸·미리보기·연결 금액·`÷ N`)와 `buildTransaction` 저장이 `resolveTradeRate` 하나를 쓴다. 해외 종목이 정해지면 칸을 현재 환율로 채우고(`rateTouched` ref로 사용자가 고친 값은 유지, 자동 값은 통화·환율 변경 시 재채움) 안내 `exrate-auto-help`. `trade-utils`(포지션 정·역)는 저장 포지션과 대칭이어야 해서 여기에 두지 않았다.
+- 체결 환율 0(예전 폼에서 칸을 지워 저장) 읽기 보정은 `tax-utils.computeForeignRealizedGain` 한 곳(replay·매도 환율 모두 '값 없음' → 현재 환율 + `estimated`). `trade-utils`·`tradeKrwRate`는 손대지 않는다(후자는 이미 `>0` 검사).
+
 ### 거래 연결 계좌 (`src/lib/trade/linked-record.ts`·`link-text.ts`, #4.58 #103)
 - `linked-record.ts`(순수, 정본): `cashLinkId`/`loanLinkId`(`ctx_link_<거래id>`·`ltx_link_<거래id>`)·`linkedTradeIdOf`·`findLinkedRecord`·`linkAmount`(수량×단가±수수료, 통화 최소 단위 반올림)·`isLinkDateAllowed`(거래일이 오늘 KST와 같은 달)·`linkCandidates`(같은 통화 현금 → 외화 거래면 원화 현금 → 대출, 0원 대출은 매도 후보 제외, #4.63 #119)·`linkAmountIn`(계좌 통화 기준 금액: 원화 환산 = `roundMoney((수량×단가±수수료)×tradeKrwRate, "KRW")` 한 번만 반올림, 환율 없으면 `"rate"`)·`needsKrwConversion`·`linkAccountCurrency`·`buildLink`(기록+잔액 patch 생성, 가드 실패 시 `{ok:false, reason}`)·`planRemoveLink`/`removeLink`(짝 기록 현재 값 기준 되돌림, `cashBalanceFloor`(cash-tx-utils, 하한 정본))·`stockLinkTrade`/`cryptoLinkTrade`. 접두어 문자열은 이 파일 밖에서 쓰지 않는다(`linked-record.test.ts` grep 단언).
-- 환산 배수는 엔진 `tradeKrwRate`(`report/asset-report.ts`, export 1줄) 하나만 쓴다(사본 금지). `LinkTrade.exchangeRate?`(메모리 전용)·`BuildLinkResult` 실패 사유 `rate`. 거래 폼 `buildTransaction`이 원화 연결 시 빈 체결 환율을 `linkEval.conv.rate`로 저장 시점에 채움(스키마·저장 키 diff 0).
+- 환산 배수는 엔진 `tradeKrwRate`(`report/asset-report.ts`, export 1줄) 하나만 쓴다(사본 금지). `LinkTrade.exchangeRate?`(메모리 전용)·`BuildLinkResult` 실패 사유 `rate`. 거래 폼 `buildTransaction`이 빈 체결 환율을 저장 시점에 `resolveTradeRate`(연결 여부 무관, 현재 환율)로 채움 — #5.158에서 `linkEval.conv.rate` 분기 대체(스키마·저장 키 diff 0).
 - `link-text.ts`: `evaluateLink`(표시 통화 = 선택 계좌 통화, `conv` 환산 정보)·`linkPreviewText`·`linkSavedToast`·`revertNoteText`·`revertToastSuffix`·`LINK_NONE`/`parseLinkValue`/`linkValueOf`. 신규 화면 문자열 금지어 단언은 `link-text.test.ts`.
 - Context: `addTransactionWithPosition(tx, id, patch, link?)`·`addTransactionsBatch(…, newStocks, link?)`·`addCryptoTransactionWithPosition(…, link?)`·`delete{Transaction,CryptoTransaction}WithPosition(…, {revertLink?})` — 모두 `saveData` 1회.
 - 결산: `matchRecordedTransferDetail` → `{out, in, viaLoan}`, `matchRecordedTransfers` = out − in. 골든 테스트 `report/__tests__/linked-settlement.test.ts`.

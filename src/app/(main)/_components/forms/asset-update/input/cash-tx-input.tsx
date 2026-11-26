@@ -25,6 +25,8 @@ import { todayKst } from "@/lib/tax-utils";
 import { roundMoney } from "@/lib/trade/linked-record";
 import { findDuplicateCashTx, isCashWithdrawalValid, isCashWithdrawalBelowFloor } from "@/lib/trade/cash-tx-utils";
 import { formatCurrencyDisplay } from "../../../views/detail/asset-detail-tabs";
+import { PastDateQuestion } from "../../common/past-date-question";
+import { shouldAskPastDate } from "@/lib/trade/trade-form";
 
 const cashTxFormSchema = z.object({
   cashId: z.string().min(1, "계좌를 선택해주세요"),
@@ -43,6 +45,7 @@ export function CashTxInput() {
   const [isOpen, setIsOpen] = useState(false);
   const [lockedCash, setLockedCash] = useState(false); // 특정 계좌 사전선택 진입
   const [dupPending, setDupPending] = useState<{ tx: CashTransaction; cash: Cash } | null>(null);
+  const [answered, setAnswered] = useState(false); // 과거 날짜 질문에 답했거나 체크박스를 직접 눌렀는지(화면 전용, 저장 0)
 
   const cashAccounts = assetData.cash;
 
@@ -62,7 +65,10 @@ export function CashTxInput() {
   const selectedCashId = form.watch("cashId");
   const txType = form.watch("type");
   const reflected = form.watch("reflected");
-  const warnResync = shouldWarnTxAfterResync({ txDate: form.watch("date"), reflected, refreshedAtIso: lastRefreshedAt("cash") });
+  const watchedDate = form.watch("date");
+  const askPast = shouldAskPastDate({ date: watchedDate, today: todayKst() });
+  // 질문이 떠 있고 아직 답하지 않았으면 경고는 숨긴다(질문과 겹치지 않게, ui.md 1절)
+  const warnResync = (!askPast || answered) && shouldWarnTxAfterResync({ txDate: watchedDate, reflected, refreshedAtIso: lastRefreshedAt("cash") });
   const selectedCash = cashAccounts.find((c) => c.id === selectedCashId);
   const isForeign = !!selectedCash && selectedCash.currency !== "KRW"; // 계좌 미선택이면 원화 라벨(undefined 표시 방지)
 
@@ -95,6 +101,7 @@ export function CashTxInput() {
     setIsOpen(false);
     setLockedCash(false);
     setDupPending(null);
+    setAnswered(false);
   }, [form]);
 
   const buildTx = (data: CashTxFormValues): CashTransaction => {
@@ -154,7 +161,7 @@ export function CashTxInput() {
       : addCashTransaction(tx);
     if (ok) {
       track("transaction_save", { asset_type: "cash", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
-      toast.success(tx.type === "deposit" ? "입금이 기록되었습니다." : "출금이 기록되었습니다.");
+      toast.success(tx.type === "deposit" ? "입금을 기록했어요" : "출금을 기록했어요");
       resetAndClose();
     } else {
       toast.error("저장하지 못했어요. 입력값을 확인해 주세요.");
@@ -267,13 +274,23 @@ export function CashTxInput() {
                 )}
               />
 
+              {/* 과거 날짜 질문 — 반영 체크박스 바로 위, 같은 reflected 값을 바꾸는 입구(#311) */}
+              {askPast && (
+                <PastDateQuestion
+                  kind="cash"
+                  answered={answered}
+                  reflected={reflected}
+                  onAnswer={(v) => { setAnswered(true); form.setValue("reflected", v); }}
+                />
+              )}
+
               {/* 반영 체크박스 */}
               <FormField
                 control={form.control}
                 name="reflected"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
-                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} aria-describedby={warnResync ? "cash-tx-resync-warning-text" : undefined} /></FormControl>
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={(v) => { setAnswered(true); field.onChange(v); }} aria-describedby={warnResync ? "cash-tx-resync-warning-text" : undefined} /></FormControl>
                     <div className="leading-none">
                       <FormLabel className="text-sm font-medium cursor-pointer">현재 잔액에 즉시 반영</FormLabel>
                       <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">이미 잔액에 들어간 거래면 해제하세요. 기록만 남고 잔액은 그대로예요</p>
@@ -318,7 +335,7 @@ export function CashTxInput() {
               <p className="tabular-nums">{dupPending.tx.type === "deposit" ? "입금" : "출금"} · {dupPending.tx.date} · {formatCurrencyDisplay(dupPending.tx.amount, dupPending.tx.currency)}</p>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 유지했습니다."); resetAndClose(); }}>기존 유지</Button>
+              <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 그대로 뒀어요"); resetAndClose(); }}>기존 유지</Button>
               <Button type="button" variant="secondary" onClick={() => { if (dupPending) commit(dupPending.tx, dupPending.cash); }}>새로 추가</Button>
               <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>취소</Button>
             </DialogFooter>

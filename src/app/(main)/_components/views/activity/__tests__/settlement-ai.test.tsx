@@ -73,6 +73,7 @@ describe("settlement-ai-button 노출", () => {
     h.causesThrow = true;
     const html = render();
     expect(html).toContain("settlement-error");
+    expect(html).toContain("결산을 계산하지 못했어요. 다시 열어도 같으면 &#x27;의견·요청 보내기&#x27;로 알려 주세요"); // #311 문구
     expect(html).not.toContain("settlement-ai-button");
   });
 });

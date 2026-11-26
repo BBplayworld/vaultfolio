@@ -110,7 +110,9 @@ export function computeForeignRealizedGain(
     lockedByManual: false,
   });
 
-  for (const tx of sorted) {
+  for (const sortedTx of sorted) {
+    // 체결 환율 0은 예전 폼에서 칸을 지워 저장된 값(사용자 의도 아님) — 읽을 때만 '값 없음'으로 본다(#311, 저장 변경 0)
+    const tx = sortedTx.exchangeRate !== undefined && !(sortedTx.exchangeRate > 0) ? { ...sortedTx, exchangeRate: undefined } : sortedTx;
     const cur = positions.get(tx.stockId) ?? basePosition(tx.stockId);
 
     if (tx.type === "sell" && tx.date.slice(0, 4) === String(year)) {
