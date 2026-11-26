@@ -178,3 +178,23 @@ export function monthSums(calc: DividendCalcResult): Array<{ paid: number; expec
     return { paid, expected };
   });
 }
+
+/**
+ * 다음 지급 달(#317, 5.159) — 새 금액 계산이 아니라 computeDividends 결과에서 고르기만 한다.
+ * 오늘(KST) 달 이상에서 예상(perMonth.expected)이 있는 가장 이른 달과 그 달에 예상이 있는 종목 키 수. 없으면 null.
+ * keys를 주면 그 키만 본다(종목 한 장 = 그룹 안 키).
+ */
+export function nextDividendMonth(
+  calc: DividendCalcResult,
+  todayKst: string,
+  keys?: readonly string[],
+): { month: number; count: number } | null {
+  const nowMonth = parseInt(todayKst.split("-")[1], 10);
+  const set = keys ? new Set(keys) : null;
+  const entries = Array.from(calc.byStock.values()).filter((r) => !set || set.has(r.key));
+  for (let m = Math.max(nowMonth, 1); m <= 12; m++) {
+    const count = entries.filter((r) => r.perMonth.expected[m - 1] > 0).length;
+    if (count > 0) return { month: m, count };
+  }
+  return null;
+}

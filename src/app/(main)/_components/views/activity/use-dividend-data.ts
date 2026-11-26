@@ -48,9 +48,10 @@ export function buildDividendGroups(stocks: readonly Stock[]): { grouped: Omit<D
   return { grouped, jpyCount };
 }
 
-export function useDividendData({ enabled = true }: { enabled?: boolean } = {}): DividendData {
+/** stocks를 주면 assetData.stocks 대신 그 행만으로 조회·계산한다(종목 한 장, #317) — 쿼리 옵션·키는 그대로 */
+export function useDividendData({ enabled = true, stocks }: { enabled?: boolean; stocks?: readonly Stock[] } = {}): DividendData {
   const { assetData, exchangeRates } = useAssetData();
-  const { grouped, jpyCount } = buildDividendGroups(assetData.stocks);
+  const { grouped, jpyCount } = buildDividendGroups(stocks ?? assetData.stocks);
 
   const queries = useQueries({
     queries: grouped.map(({ stock }) => {

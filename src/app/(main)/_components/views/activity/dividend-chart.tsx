@@ -14,11 +14,12 @@ import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart
 import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE, jpyDividendNotice } from "@/lib/finance/dividend-client";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
-import { monthSums, type DividendCalcResult } from "@/lib/finance/dividend-calc";
+import { monthSums, nextDividendMonth, type DividendCalcResult } from "@/lib/finance/dividend-calc";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
 import { useDividendData } from "./use-dividend-data";
 import { InfoHint } from "../../layout/ui/info-hint";
-import { InlineSelector } from "../../layout/ui/inline-selector";
+import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../layout/ui/dot-wrap";
+import { kstTodayString } from "@/lib/asset/import-inherit";
 
 
 const CATEGORY_KEYS = ["domestic", "foreign", "irp", "isa", "pension"] as const;
@@ -110,23 +111,21 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const { exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
-  const [estimateMode, setEstimateMode] = useState<"all" | "actual">("all");
 
   const { groups, calc, isLoading, loadedCount, failedCount, totalCount, jpyCount } = useDividendData({ enabled: isActive });
 
   const monthlyTotals = buildMonthlyTotals(calc);
   // 막대 높이 최댓값 기준 둥근 Y축 눈금 + 겹치지 않는 값 라벨
-  const maxBar = Math.max(0, ...monthlyTotals.map((m) => (estimateMode === "actual" ? m.totalActual : m.total)));
+  const maxBar = Math.max(0, ...monthlyTotals.map((m) => m.total));
   const yTicks = niceAxisTicks(maxBar);
-  const TotalLabel = makeTotalLabel(monthlyTotals.map((m) => (estimateMode === "actual" ? m.totalActual : m.total)));
+  const TotalLabel = makeTotalLabel(monthlyTotals.map((m) => m.total));
   // 연 합계는 공용 계산의 반올림 전 합을 1회 반올림 — 허브 카드·성적표 입력과 같은 값
   const annualActual = Math.round(calc.annual.paid);
   const annualTotal = Math.round(calc.annual.total);
 
-  // 월 선택 시: 그 달의 지급 합·예상 합 데이터로 라벨·금액 결정(날짜 기준 판정, #313). 토글 무시.
+  // 월 선택 시: 그 달의 지급 합·예상 합 데이터로 라벨·금액 결정(날짜 기준 판정, #313).
   // 지급·예상이 섞인 달(주로 이번 달)은 `{m}월 배당` + 합계 + `일부 예상`. 둘 다 0인 달만 월 번호로 지급/예상 라벨을 고른다.
-  // 월 미선택 시: 우측 토글(예상/실제)에 따라 연간 금액·라벨 결정.
-  const isActualOnly = estimateMode === "actual";
+  // 월 미선택 시: 연간 지급+예상 합계(차트는 늘 지급+예상, 지급·예상 구분은 결론 줄).
   const nowMonthKST = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCMonth() + 1;
   const monthRow = selectedMonth !== undefined ? monthlyTotals[selectedMonth - 1] : undefined;
   const monthStatus: "actual" | "estimated" | "mixed" | null = selectedMonth === undefined || !monthRow
@@ -141,59 +140,47 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
 
   const heroValue = monthStatus !== null
     ? (monthStatus === "mixed" ? monthRow!.total : monthStatus === "actual" ? monthRow!.totalActual : monthRow!.totalEstimated)
-    : (isActualOnly ? annualActual : annualTotal);
+    : annualTotal;
   const heroLabel = monthStatus !== null
     ? `${selectedMonth}월 ${monthStatus === "mixed" ? "배당" : monthStatus === "actual" ? "지급 배당" : "예상 배당"}`
-    : (isActualOnly ? "올해 지급 배당" : "올해 예상 배당");
+    : "올해 배당";
   const heroStatus = monthStatus;
 
   // 투입 대비 배당(#4.46) — 조회가 모두 끝난 뒤에만 계산
-  const dividendYield = !isLoading && annualTotal > 0 ? computeDividendYield(groups, usdRate, estimateMode, calc) : null;
+  const dividendYield = !isLoading && annualTotal > 0 ? computeDividendYield(groups, usdRate, "all", calc) : null;
   // 엔화 종목 안내(#313) — 엔화만 있어 빈 화면이면 빈 화면 둘째 줄이 대신한다
   const jpyOnly = jpyCount > 0 && groups.length === 0;
+  // 결론 줄(#317) — 지급·예상은 Hero 합계를 나눈 값(줄 합 = Hero), 다음 지급 달·종목 수는 계산 결과에서 고르기만 한다
+  const next = annualTotal > 0 ? nextDividendMonth(calc, kstTodayString()) : null;
+  const annualExpected = annualTotal - annualActual;
 
   return (
     <div className="grid grid-cols-1 gap-4">
       <Card className={ASSET_THEME.contentCard}>
         <CardHeader className={ASSET_THEME.contentPad}>
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1.5 min-w-0">
-              <div className="flex items-center gap-2">
-                <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
-                <InfoHint summary="지급일이 안 된 배당은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
-                  <p className="break-keep">미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
-                  <p className="break-keep">해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>
-                  <p className="break-keep">거래 기록이 있으면 지급일에 갖고 있던 수량으로 계산해요. 판 종목은 빠져요.</p>
-                  <p className="break-keep">투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
-                </InfoHint>
-              </div>
-              {/* 월 선택 배지와 설명이 같은 칸을 공유 — 선택·해제해도 헤더 높이가 변하지 않아 차트가 밀리지 않는다 */}
-              <div className="grid min-h-6 items-center [&>*]:[grid-area:1/1]" data-testid="dividend-sub-slot">
-                <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>지금 보유 종목 기준 · 세전 추정</CardDescription>
-                {selectedMonth !== undefined && (
-                  <Badge asChild variant="outline">
-                    <button
-                      type="button"
-                      data-testid="dividend-month-badge"
-                      onClick={() => setSelectedMonth(undefined)}
-                      className="relative z-10 h-6 justify-self-start cursor-pointer overflow-visible px-2.5 text-xs after:absolute after:-inset-y-2 after:inset-x-0 after:content-[''] hover:bg-accent focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/40 motion-safe:transition-[transform,background-color,box-shadow] motion-safe:active:scale-[0.96] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150"
-                    >
-                      {selectedMonth}월 · 전체 보기 ×
-                    </button>
-                  </Badge>
-                )}
-              </div>
+          <div className="space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
+              <InfoHint summary="지급일이 안 된 배당은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
+                <p className="break-keep">거래 기록이 있으면 지급일에 갖고 있던 수량으로 계산해요. 판 종목은 빠져요.</p>
+                <p className="break-keep">투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
+              </InfoHint>
             </div>
-            <div className={selectedMonth !== undefined ? "opacity-40 pointer-events-none" : ""}>
-              <InlineSelector
-                value={estimateMode}
-                onChange={setEstimateMode}
-                options={[
-                  { value: "all", label: "예상 포함" },
-                  { value: "actual", label: "지급만" },
-                ]}
-                ariaLabel="배당 표시 모드"
-              />
+            {/* 월 선택 배지와 설명이 같은 칸을 공유 — 선택·해제해도 헤더 높이가 변하지 않아 차트가 밀리지 않는다 */}
+            <div className="grid min-h-6 items-center [&>*]:[grid-area:1/1]" data-testid="dividend-sub-slot">
+              <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>지금 보유 종목 기준 · 세전 추정</CardDescription>
+              {selectedMonth !== undefined && (
+                <Badge asChild variant="outline">
+                  <button
+                    type="button"
+                    data-testid="dividend-month-badge"
+                    onClick={() => setSelectedMonth(undefined)}
+                    className="relative z-10 h-6 justify-self-start cursor-pointer overflow-visible px-2.5 text-xs after:absolute after:-inset-y-2 after:inset-x-0 after:content-[''] hover:bg-accent focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/40 motion-safe:transition-[transform,background-color,box-shadow] motion-safe:active:scale-[0.96] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150"
+                  >
+                    {selectedMonth}월 · 전체 보기 ×
+                  </button>
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -202,7 +189,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           {annualTotal > 0 && (
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground font-semibold">{heroLabel}</p>
+                <p data-testid="dividend-hero-label" className="text-sm text-muted-foreground font-semibold">{heroLabel}</p>
                 {heroStatus === "actual" && (
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                     지급
@@ -222,11 +209,39 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
               <p className={`text-2xl font-bold tabular-nums ${ASSET_THEME.text.default}`}>
                 {formatPriceByMode(heroValue)}
               </p>
+              {/* 결론 줄(#317) — 월 선택 시 투입 대비 배당과 같이 숨기되 높이는 유지(차트 안 밀림) */}
+              <p
+                data-testid="dividend-conclusion"
+                data-paid={annualActual}
+                data-expected={annualExpected}
+                data-next-month={next?.month ?? ""}
+                data-next-count={next?.count ?? ""}
+                aria-hidden={selectedMonth !== undefined}
+                className={`mt-1 flex flex-wrap gap-x-1 gap-y-0.5 text-sm text-muted-foreground tabular-nums transition-opacity duration-150 motion-reduce:transition-none ${DOT_WRAP_ROW} ${
+                  selectedMonth !== undefined ? "opacity-0 select-none" : "opacity-100"
+                }`}
+              >
+                {annualActual > 0 && (
+                  <span data-testid="dividend-conclusion-paid" className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>
+                    지급 <span className="font-semibold text-foreground">{formatPriceByMode(annualActual)}</span>
+                  </span>
+                )}
+                {annualExpected > 0 && (
+                  <span data-testid="dividend-conclusion-expected" className={`whitespace-nowrap ${annualActual > 0 ? "" : DOT_WRAP_FIRST}`}>
+                    {annualActual > 0 && <DotLead />}예상 <span className="font-semibold">{formatPriceByMode(annualExpected)}</span>
+                  </span>
+                )}
+                {next && (
+                  <span data-testid="dividend-conclusion-next" className={`whitespace-nowrap ${annualActual > 0 || annualExpected > 0 ? "" : DOT_WRAP_FIRST}`}>
+                    {(annualActual > 0 || annualExpected > 0) && <DotLead />}다음 지급 <span className="font-semibold text-foreground">{next.month}월 {next.count}종목</span>
+                  </span>
+                )}
+              </p>
               {dividendYield && (
                 <div
                   data-testid="dividend-yield"
                   aria-hidden={selectedMonth !== undefined}
-                  className={`mt-2 transition-opacity duration-150 motion-reduce:transition-none ${
+                  className={`mt-3 transition-opacity duration-150 motion-reduce:transition-none ${
                     selectedMonth !== undefined ? "opacity-0 select-none" : "opacity-100"
                   }`}
                 >
@@ -378,9 +393,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                       }}
                     />
                     {/* 실제 지급 Bar — 역순 선언으로 domestic이 맨 위에 쌓임 */}
-                    {[...CATEGORY_KEYS].reverse().map((cat, idx) => {
-                      const isLast = idx === CATEGORY_KEYS.length - 1;
-                      const actualOnly = estimateMode === "actual";
+                    {[...CATEGORY_KEYS].reverse().map((cat) => {
                       return (
                         <Bar
                           key={`${cat}-actual`}
@@ -388,7 +401,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                           stackId="a"
                           name={CATEGORY_LABELS[cat]}
                           fill={CATEGORY_COLORS[cat]}
-                          radius={isLast && actualOnly ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                          radius={[0, 0, 0, 0]}
                         >
                           {monthlyTotals.map((_, monthIdx) => (
                             <Cell
@@ -396,14 +409,11 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                               opacity={selectedMonth === undefined ? 1 : monthIdx + 1 === selectedMonth ? 1 : 0.3}
                             />
                           ))}
-                          {isLast && actualOnly && (
-                            <LabelList dataKey="totalActual" content={TotalLabel} />
-                          )}
                         </Bar>
                       );
                     })}
-                    {/* 예상 지급 Bar — estimateMode가 "all"일 때만 노출 */}
-                    {estimateMode === "all" && [...CATEGORY_KEYS].reverse().map((cat, idx) => {
+                    {/* 예상 지급 Bar — 늘 노출(지급 진함 + 예상 옅음) */}
+                    {[...CATEGORY_KEYS].reverse().map((cat, idx) => {
                       const isLast = idx === CATEGORY_KEYS.length - 1;
                       return (
                         <Bar
@@ -447,7 +457,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                     <span className="text-sm text-muted-foreground">{CATEGORY_LABELS[cat]}</span>
                   </div>
                 ))}
-                {estimateMode === "all" && (
+                {annualExpected > 0 && (
                   <div className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full shrink-0 bg-muted-foreground/40" />
                     <span className="text-sm text-muted-foreground">예상 (옅음)</span>

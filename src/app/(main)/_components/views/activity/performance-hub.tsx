@@ -45,7 +45,8 @@ export function useDividendAnnualTotals() {
     isLoading,
     failedCount,
     annualActual: Math.round(calc.annual.paid),
-    annualEstimated: Math.round(calc.annual.expected),
+    // 예상 = 합계 − 지급(반올림 후) — 배당 결론 줄 E와 같은 식(C150)
+    annualEstimated: Math.round(calc.annual.total) - Math.round(calc.annual.paid),
     annualTotal: Math.round(calc.annual.total),
     annualAtHeldQty: Math.round(annualAtHeldQty),
   };

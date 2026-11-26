@@ -16,6 +16,9 @@ vi.mock("../../../../layout/navigation/navigation-context", async (importOrigina
 const hook = vi.fn();
 vi.mock("@/hooks/use-price-history", () => ({ usePriceHistory: (...a: unknown[]) => hook(...a) }));
 
+const dividend = vi.hoisted(() => ({ value: { groups: [], calc: { byStock: new Map(), annual: { paid: 0, expected: 0, total: 0 }, months: [] }, isLoading: false, loadedCount: 0, failedCount: 0, totalCount: 0, jpyCount: 0 } as unknown }));
+vi.mock("../../../activity/use-dividend-data", () => ({ useDividendData: () => dividend.value }));
+
 import { StockPageBody } from "../stock-page-view";
 
 let seq = 0;

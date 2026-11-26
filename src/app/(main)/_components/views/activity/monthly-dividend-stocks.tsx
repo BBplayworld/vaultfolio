@@ -123,8 +123,8 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
             <span>종목명</span>
             <span className="text-right">배당월</span>
             <span className="text-right">주당</span>
-            <span className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 지급` : "지급금액"}</span>
-            <span className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 예상` : "예상금액"}</span>
+            <span data-testid="dividend-col-paid" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 지급` : "지급금액"}</span>
+            <span data-testid="dividend-col-total" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 합계` : "합계"}</span>
           </div>
           <div className="divide-y">
             {filtered.map(({ stock, beforePurchaseMonths, actualMonths, estimatedMonths, perShareForeign, perShareKRW, currency, annualTotal, annualForeign, annualActual, annualForeignActual, monthlyTotal, monthlyForeign, monthlyActual, monthlyForeignActual, frequency }) => {

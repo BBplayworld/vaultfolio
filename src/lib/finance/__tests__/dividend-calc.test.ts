@@ -1,6 +1,6 @@
 // #313(5.157) 배당 공용 계산 — tech-review §6 1~10 + spec 9-1 경계 3건(당일 매수·당일 매도·매수일 = 지급일)
 import { describe, expect, it } from "vitest";
-import { computeDividends, heldQtyAt, isDividendPaid, monthSums, dividendStockKey } from "../dividend-calc";
+import { computeDividends, heldQtyAt, isDividendPaid, monthSums, dividendStockKey, nextDividendMonth } from "../dividend-calc";
 import { computeDividendYield } from "../dividend-yield";
 import { groupStocksByTickerCategory, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import type { Stock, Transaction } from "@/types/asset";
@@ -237,5 +237,27 @@ describe("#310 이관 뒤 — 거래가 남은 행 id를 따라가면 이관 전
     const afterTx = [tx({ stockId: "B", type: "buy", quantity: 50, date: "2026-05-01" })];
     // 이관 전: 3월 A100 + B0(역산), 이관 후: B150 − 50(5월 매수) = 100
     expect(total(after, afterTx).annual.total).toBe(total(before, beforeTx).annual.total);
+  });
+});
+
+describe("nextDividendMonth(#317) — 결과에서 고르기만 한다", () => {
+  const a = stock({ id: "A", ticker: "005930" });
+  const b = stock({ id: "B", ticker: "000660", name: "하이닉스" });
+  const rows = [
+    { stock: a, payouts: QUARTERLY },
+    { stock: b, payouts: [pay("2026-12-20", 50, { isEstimated: true }), pay("2027-01-10", 50, { isEstimated: true })] },
+  ];
+  const calc = computeDividends(rows, [], 1400, TODAY);
+  it("오늘 달 이상 가장 이른 예상 달과 그 달 종목 수", () => {
+    expect(nextDividendMonth(calc, TODAY)).toEqual({ month: 12, count: 2 });
+  });
+  it("keys를 주면 그 키만 본다", () => {
+    expect(nextDividendMonth(calc, TODAY, [dividendStockKey(a)])).toEqual({ month: 12, count: 1 });
+    expect(nextDividendMonth(calc, TODAY, ["없음:domestic"])).toBeNull();
+  });
+  it("오늘 달 이전 예상은 잡지 않고, 남은 예상이 없으면 null", () => {
+    const past = computeDividends([{ stock: a, payouts: [pay("2026-05-15", 100, { isEstimated: true })] }], [], 1400, TODAY);
+    expect(past.annual.expected).toBeGreaterThan(0);
+    expect(nextDividendMonth(past, TODAY)).toBeNull();
   });
 });

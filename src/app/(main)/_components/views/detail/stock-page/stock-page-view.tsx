@@ -39,6 +39,13 @@ import { buildBoardRows } from "@/lib/asset/grow-board";
 import { decisionRowsOf, dueEntryText, headDecisionOf, type HeadDecision } from "@/lib/asset/grow-decision";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { GrowDueEntry } from "../../activity/grow-due-entry";
+import { useDividendData } from "../../activity/use-dividend-data";
+import { nextDividendMonth } from "@/lib/finance/dividend-calc";
+import { formatPriceByMode } from "@/lib/number-utils";
+import { kstTodayString } from "@/lib/asset/import-inherit";
+import { track } from "@/lib/analytics/ga";
+import { isPreviewEnv } from "@/lib/cloud-sync/config";
+import type { Stock } from "@/types/asset";
 
 const RANGE_OPTIONS: { value: PriceRange; label: string; testId: string }[] = [
   { value: "1y", label: "1년", testId: "stock-page-range-1y" },
@@ -97,6 +104,81 @@ export function StockPageDecision({ value }: { value: HeadDecision }) {
         </span>
       )}
     </p>
+  );
+}
+
+/**
+ * 종목 한 장 배당 줄(#317, 5.159) — 그 그룹의 (ticker, type)만 조회하고, 금액은 computeDividends 결과(byStock)만 읽는다.
+ * 조회 중·무배당·대상 아님은 줄 0, 실패·엔화는 안내 한 줄(누름 없음), 배당 있음은 누르면 성과 › 배당.
+ */
+export function StockPageDividendRow({ stocks }: { stocks: readonly Stock[] }) {
+  const { navigate } = useAssetNavigation();
+  const { groups, calc, isLoading, failedCount, jpyCount } = useDividendData({ stocks });
+  if (groups.length === 0) {
+    if (jpyCount === 0) return null;
+    return (
+      <div data-testid="stock-page-dividend" data-state="jpy" className="border-t border-border/40 -mx-4 px-4">
+        <p data-testid="stock-page-dividend-jpy" className="flex min-h-12 flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
+          <span className="whitespace-nowrap">배당 조회 안 됨</span>
+          <span className="whitespace-nowrap"><span aria-hidden>·</span>&nbsp;엔화 종목</span>
+        </p>
+      </div>
+    );
+  }
+  if (isLoading) return null;
+  if (failedCount > 0) {
+    return (
+      <div data-testid="stock-page-dividend" data-state="failed" className="border-t border-border/40 -mx-4 px-4">
+        <p data-testid="stock-page-dividend-failed" className="flex min-h-12 items-center text-sm text-muted-foreground">배당을 불러오지 못했어요</p>
+      </div>
+    );
+  }
+  // 배당 표 행(키)별 반올림의 합 — 표 행 합계(Math.round(paid+expected))를 더한 값과 같게(D1)
+  const keys = groups.map((g) => g.key);
+  let paid = 0;
+  let total = 0;
+  for (const k of keys) {
+    const r = calc.byStock.get(k);
+    if (!r) continue;
+    paid += Math.round(r.paid);
+    total += Math.round(r.paid + r.expected);
+  }
+  const expected = total - paid;
+  if (paid + expected <= 0) return null;
+  const next = nextDividendMonth(calc, kstTodayString(), keys);
+  const open = () => {
+    if (!isPreviewEnv()) track("feature_use", { category: "stock_dividend" });
+    navigate({ type: "activity", tab: "dividend" });
+  };
+  return (
+    <div data-testid="stock-page-dividend" data-state="ready" className="border-t border-border/40 -mx-4 px-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
+      <button
+        type="button"
+        data-testid="stock-page-dividend-link"
+        onClick={open}
+        className="flex min-h-12 w-full items-center justify-between gap-2 py-2.5 text-left outline-none transition-[background-color] active:bg-muted/40 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-brand/40"
+      >
+        <div className="min-w-0">
+          <p className={`flex flex-wrap gap-x-1 gap-y-0.5 text-sm tabular-nums ${DOT_WRAP_ROW}`}>
+            {paid > 0 && (
+              <span className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>
+                올해 배당 지급 <span data-testid="stock-page-dividend-paid" data-value={paid} className="font-semibold text-foreground">{formatPriceByMode(paid)}</span>
+              </span>
+            )}
+            {expected > 0 && (
+              <span className={`whitespace-nowrap text-muted-foreground ${paid > 0 ? "" : DOT_WRAP_FIRST}`}>
+                {paid > 0 ? <DotLead /> : "올해 배당 "}예상 <span data-testid="stock-page-dividend-expected" data-value={expected} className="font-semibold">{formatPriceByMode(expected)}</span>
+              </span>
+            )}
+          </p>
+          <p className={`mt-0.5 flex flex-wrap gap-x-1 gap-y-0.5 text-xs text-muted-foreground ${DOT_WRAP_ROW}`}>
+            {next && <span data-testid="stock-page-dividend-next" data-month={next.month} className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>다음 지급 {next.month}월</span>}
+            <span data-testid="stock-page-dividend-note" className={`whitespace-nowrap ${next ? "" : DOT_WRAP_FIRST}`}>{next && <DotLead />}세전 추정</span>
+          </p>
+        </div>
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      </button>
+    </div>
   );
 }
 
@@ -368,6 +450,7 @@ export function StockPageBody({ target, labelStore }: { target: NonNullable<Retu
             <ChevronRight className="size-4 text-muted-foreground" />
           </button>
         </div>
+        <StockPageDividendRow stocks={groupStocks} />
       </section>
     </div>
   );
