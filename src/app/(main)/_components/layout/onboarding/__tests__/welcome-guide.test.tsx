@@ -116,7 +116,7 @@ describe("WelcomeGuide 초기 마크업", () => {
     expect(html).not.toContain("설치 없이 웹에서 바로 시작");
     expect(html).not.toContain("로그인 없이, 서버 저장 없이");
     expect(html.match(/로그인 없/g)?.length).toBe(1);
-    expect(html).toContain("흩어진 자산을 한 화면에서 정리해 보세요.");
+    expect(html).toContain("계좌 연동 없이, 여러 증권사 주식을 한 화면에 모아 보세요.");
   });
 });
 
