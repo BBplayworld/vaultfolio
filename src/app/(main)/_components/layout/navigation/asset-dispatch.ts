@@ -18,8 +18,9 @@ export function dispatchAddPhysical() {
   window.dispatchEvent(new CustomEvent("trigger-add-physical"));
 }
 
-export function dispatchAddStock(mode: AssetMode) {
-  window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: { mode } }));
+/** broker = 보유 현황 맞추기(screenshot)에서 증권사를 자동으로 못 정한 장의 선택 칸 기본값(#319, UI 상태일 뿐 저장 0) */
+export function dispatchAddStock(mode: AssetMode, broker?: string) {
+  window.dispatchEvent(new CustomEvent("trigger-add-stock", { detail: broker ? { mode, broker } : { mode } }));
 }
 
 // 현금·대출 잔액 맞추기(#93) 화면 열기 — 보유자의 FAB `직접 입력`이 호출, BalanceResyncDialog가 수신

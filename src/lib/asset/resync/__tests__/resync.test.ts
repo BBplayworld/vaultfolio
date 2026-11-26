@@ -1,7 +1,7 @@
 // #91 보유 현황 맞추기 순수 함수 — 매칭 표·C20 픽스처 ①~⑧·S1~S5·K1~K3·완료 기준 7~13
 import { describe, expect, it } from "vitest";
 import {
-  confirmScreenBroker, isUnassignedBroker, matchExisting, sameBroker, changeCount, summarize, resolveRow,
+  confirmScreenBroker, resolveScreensWithDefaultBroker, isUnassignedBroker, matchExisting, sameBroker, changeCount, summarize, resolveRow,
 } from "..";
 import type { Stock } from "@/types/asset";
 import { emptySel, row, run, screen, st, TODAY, USD } from "./fixtures";
@@ -388,5 +388,26 @@ describe("요약·버튼 활성(완료 기준 13·14)", () => {
     // 후보 x,y,z 3 ×2 ≥ 7? 6 < 7 → 기본 체크
     expect(summarize(diff, sel)).toEqual({ add: 1, change: 1, remove: 3, same: 3, needs: 0 });
     expect(resolveRow(diff.rows[0], emptySel()).type).toBe("change");
+  });
+});
+
+describe("#319 증권사별 합계 '맞추기' — initialBroker는 확정 못 한 장의 기본값으로만", () => {
+  const ex = [st("a", "005930", "domestic", "토스증권", 1, 1), st("b", "000660", "domestic", "토스증권", 1, 1)];
+  const opts = { usdRate: USD };
+  it("확정 못 한 장(broker 없음)에는 기본값이 채워지고 brokerSource는 user", () => {
+    const r = resolveScreensWithDefaultBroker([screen(0, [row("999999", 1, 1)])], ex, opts, "키움증권");
+    expect(r[0].broker).toBe("키움증권");
+    expect(r[0].brokerSource).toBe("user");
+  });
+  it("자동 확정된 장(brokerHint·기존 항목 과반)은 그대로 둔다", () => {
+    const r = resolveScreensWithDefaultBroker([screen(0, [row("005930", 1, 1), row("000660", 1, 1)])], ex, opts, "키움증권");
+    expect(r[0].broker).toBe("토스증권");
+    const h = resolveScreensWithDefaultBroker([screen(0, [row("999999", 1, 1, { brokerHint: "토스증권" })])], ex, opts, "키움증권");
+    expect(h[0].broker).toBe("토스증권");
+  });
+  it("사용자가 직접 고른 값이 기본값보다 우선, 기본값이 없으면 현행과 같다", () => {
+    const s = [screen(0, [row("999999", 1, 1)])];
+    expect(resolveScreensWithDefaultBroker(s, ex, { ...opts, brokerOverrides: { 0: "미래에셋증권" } }, "키움증권")[0].broker).toBe("미래에셋증권");
+    expect(resolveScreensWithDefaultBroker(s, ex, opts)[0].broker).toBeUndefined();
   });
 });

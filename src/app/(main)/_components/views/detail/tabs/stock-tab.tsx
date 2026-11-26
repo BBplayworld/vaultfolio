@@ -45,6 +45,7 @@ import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, growTileVa
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { DUE_TEXT, GrowDueEntry } from "../../activity/grow-due-entry";
+import { BrokerTotalsBlock } from "./broker-totals-block";
 import { PriceAsOfLine, usePriceAsOfLine } from "../../price-asof-line";
 import type { PriceAsOfLineValue } from "@/lib/finance/price-freshness";
 
@@ -1255,6 +1256,9 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
             />
           </div>
         </div>
+
+        {/* 증권사별 합계(#319) — 묶음 2개 이상일 때만, 접힘 기본. 지금 탭·달러 보기 기준. 인증카드 DOM 0 */}
+        <BrokerTotalsBlock stocks={tabStocks} exchangeRates={exchangeRates} displayCurrency={effectiveDisplayCurrency} />
 
         {/* 비중바 + 종목 목록 (인증카드과 공통) */}
         <StockCategorySection

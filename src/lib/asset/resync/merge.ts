@@ -60,6 +60,19 @@ export function resolveScreens(screens: RawScreen[], existing: Stock[], opts: Re
   });
 }
 
+/**
+ * resolveScreens + 증권사 기본값(#319). defaultBroker는 증권사를 자동·직접 확정하지 못한 장(broker 없음)의 선택 칸 기본값으로만 쓴다.
+ * 이미 확정된 장은 그대로(다른 증권사 화면에서 엉뚱한 종목이 삭제 후보가 되지 않게). 사용자가 고른 값(brokerOverrides)이 항상 우선
+ */
+export function resolveScreensWithDefaultBroker(screens: RawScreen[], existing: Stock[], opts: ResolveOptions, defaultBroker?: string): ResolvedScreen[] {
+  const res = resolveScreens(screens, existing, opts);
+  if (!defaultBroker) return res;
+  const extra: Record<number, string> = {};
+  for (const r of res) if (r.status === "ok" && r.broker === undefined) extra[r.index] = defaultBroker;
+  if (Object.keys(extra).length === 0) return res;
+  return resolveScreens(screens, existing, { ...opts, brokerOverrides: { ...extra, ...opts.brokerOverrides } });
+}
+
 const keyOf = (i: { ticker: string; name: string; category: Stock["category"] }) =>
   `${tickerKey(i.ticker) || `name:${nameKey(i.name)}`}|${i.category}`;
 

@@ -534,6 +534,7 @@ export function StockInput() {
   // 보유 현황 맞추기 분기(#91): 스크린샷 대화상자를 열 때 주식 보유 ≥1건이면 새 대화상자, 아니면 기존 첫 등록. 열 때 1회 고정
   const [useResync, setUseResync] = useState(false);
   const [wasScreenshotOpen, setWasScreenshotOpen] = useState(false);
+  const [initialBroker, setInitialBroker] = useState<string | undefined>(); // 증권사별 합계 행의 '맞추기'(#319) — 닫으면 사라진다
   if (isScreenshotOpen !== wasScreenshotOpen) {
     setWasScreenshotOpen(isScreenshotOpen);
     if (isScreenshotOpen) setUseResync(assetData.stocks.length > 0);
@@ -543,6 +544,8 @@ export function StockInput() {
     const handler = (e: Event) => {
       const mode = (e as CustomEvent).detail?.mode;
       if (mode === "screenshot") {
+        const b = (e as CustomEvent).detail?.broker;
+        setInitialBroker(typeof b === "string" && b ? b : undefined);
         setIsScreenshotOpen(true);
       } else {
         setEditingItem(undefined);
@@ -575,7 +578,14 @@ export function StockInput() {
   return (
     <>
       {useResync ? (
-        <HoldingsResyncDialog open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} />
+        <HoldingsResyncDialog
+          open={isScreenshotOpen}
+          onOpenChange={(v) => {
+            setIsScreenshotOpen(v);
+            if (!v) setInitialBroker(undefined);
+          }}
+          initialBroker={initialBroker}
+        />
       ) : (
         <StockScreenshotImport open={isScreenshotOpen} onOpenChange={setIsScreenshotOpen} activeTab={activeTab} />
       )}

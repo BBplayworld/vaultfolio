@@ -61,6 +61,7 @@ import {
   type ResyncCounts,
   type ResyncSelection,
   type TransferCandidate,
+  resolveScreensWithDefaultBroker,
 } from "@/lib/asset/resync";
 import type { OverwriteEntry } from "@/lib/cloud-sync/overwrite-guard";
 import { useTradeViewStore } from "@/stores/trade-view-store";
@@ -101,6 +102,8 @@ interface Props {
   kind?: ResyncKind;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** 증권사별 합계 행에서 연 경우(#319) — 증권사를 자동으로 확정하지 못한 장의 선택 칸 기본값으로만 쓴다(주식 전용, 저장 0) */
+  initialBroker?: string;
 }
 
 /** 맞추기·되돌리기로 사라진 종목 id를 거래내역·종목 한 장 화면 상태에서 걸러낸다(#310). 그룹이 비면 clear */
@@ -132,7 +135,7 @@ interface ResyncUndo {
   appliedAt: string; // 적용 때 markCategoryRefreshed가 쓴 값 — 원복 비교용
 }
 
-export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Props) {
+export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initialBroker }: Props) {
   const { assetData, saveData, exchangeRates, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const usdRate = exchangeRates.USD || 1380;
@@ -140,6 +143,10 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   // 맞출 대상 목록(코인은 Stock 모양으로 옮긴 사본)
   const existing = useMemo<Stock[]>(() => (isCrypto ? assetData.crypto.map(cryptoToStock) : assetData.stocks), [isCrypto, assetData.crypto, assetData.stocks]);
   const resolveOpts = { usdRate, matchHint: isCrypto ? matchExchangeHint : undefined };
+  const defaultBroker = !isCrypto && initialBroker ? initialBroker : undefined;
+  // 사용자가 고른 것과 같은 brokerOverrides 경로 — 자동 확정된 장은 그대로 두고 확정 못 한 장에만 기본값을 채운다(#319)
+  const resolveWithDefault = (screens: RawScreen[], base: Stock[]) =>
+    resolveScreensWithDefaultBroker(screens, base, { ...resolveOpts, brokerOverrides, accountOverrides }, defaultBroker);
 
   const [step, setStep] = useState<Step>("upload");
   const [shots, setShots] = useState<Shot[]>([]);
@@ -200,11 +207,11 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
   );
   const { resolved, diff } = useMemo(() => {
     const screens: RawScreen[] = failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens;
-    const res = resolveScreens(screens, existing, { ...resolveOpts, brokerOverrides, accountOverrides });
+    const res = resolveWithDefault(screens, existing);
     const d = computeDiff(existing, mergeScreens(res), res);
     return { resolved: res, diff: d };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawScreens, failedRemoved, existing, usdRate, brokerOverrides, accountOverrides, isCrypto]);
+  }, [rawScreens, failedRemoved, existing, usdRate, brokerOverrides, accountOverrides, isCrypto, defaultBroker]);
 
   const sel = useMemo<ResyncSelection>(() => {
     const remove = new Set<string>();
@@ -369,7 +376,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     // 저장 직전 최신 보유 현황으로 다시 계산한다(그 사이 시세 갱신 등으로 낡은 값을 덮지 않게)
     const fresh = getAssetData();
     const before = isCrypto ? fresh.crypto.map(cryptoToStock) : fresh.stocks;
-    const res = resolveScreens(failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens, before, { ...resolveOpts, brokerOverrides, accountOverrides });
+    const res = resolveWithDefault(failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens, before);
     const d = computeDiff(before, mergeScreens(res), res);
     const result = applyResync(before, d, sel, { today: todayKst(), usdRate, now: Date.now() });
     const nextCrypto = isCrypto ? stocksToCrypto(fresh.crypto, before, result.stocks) : fresh.crypto;
@@ -461,6 +468,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
               resolved={resolved}
               existingBrokers={existingBrokers(existing, isCrypto ? LISTED_EXCHANGES : LISTED_FIRMS)}
               fileInputRef={fileInputRef}
+              initialBroker={defaultBroker}
               onFiles={addFiles}
               onRemove={removeShot}
               onRetry={retry}
@@ -603,9 +611,10 @@ interface UploadProps {
   onRetry: (s: Shot) => void;
   onBroker: (id: number, v: string) => void;
   onAccount: (id: number, v: Stock["category"]) => void;
+  initialBroker?: string;
 }
 
-function UploadStep({ failedRemoved, shots, running, remaining, resolved, existingBrokers: mine, fileInputRef, onFiles, onRemove, onRetry, onBroker, onAccount }: UploadProps) {
+function UploadStep({ failedRemoved, shots, running, remaining, resolved, existingBrokers: mine, fileInputRef, onFiles, onRemove, onRetry, onBroker, onAccount, initialBroker }: UploadProps) {
   const T = useT();
   const kind = useKind();
   const [dragOver, setDragOver] = useState(false);
@@ -652,7 +661,7 @@ function UploadStep({ failedRemoved, shots, running, remaining, resolved, existi
           className={`flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl p-6 text-center transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 ${dragOver ? "bg-muted/70" : "bg-muted/40 hover:bg-muted/60"}`}
         >
           <ImagePlus className="size-6 text-muted-foreground" aria-hidden />
-          <span className="text-sm font-medium text-balance break-keep">{T.broker} 보유 {T.item} 화면을 골라 주세요</span>
+          <span className="text-sm font-medium text-balance break-keep">{initialBroker ?? T.broker} 보유 {T.item} 화면을 골라 주세요</span>
           <span className="text-sm text-muted-foreground text-balance break-keep">최대 5장 · JPG, PNG, WEBP, HEIC · 장당 10MB</span>
         </button>
       )}
