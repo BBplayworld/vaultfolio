@@ -162,6 +162,9 @@ _components/
 ### BrokerTotalsBlock (`views/detail/tabs/broker-totals-block.tsx`, #5.160 #319; 5.162 메타 줄 `N종목`·`· 비중` 조각별 nowrap)
 - 상세·주식 selector 아래 접기형 `증권사별 · N곳`(기본 접힘, `useState`만, 패널 항상 마운트 grid-rows+inert). props `stocks`(지금 탭 행)·`exchangeRates`·`displayCurrency`. 묶음 2개 미만이면 `null`. 행 testId `broker-row`(`-name`·`-share`·`-count`·`-value`·`-profit`·`-resync`), `broker-totals(-toggle|-panel|-note)`. 행 `맞추기` = `dispatchAddStock("screenshot", broker)`(미지정 행은 broker 없음). 인증카드 미렌더. export `formatBrokerUnits(units, scale)`·`formatShareTenths`.
 
+### MonthlyDividendStocks 359px 이하 2단 (`views/activity/monthly-dividend-stocks.tsx`, #5.163 #326)
+- 359px 이하: 행 = 1단(이름 전폭 `line-clamp-2`·배지+매수 날짜 메타 1줄·칩 좌측 정렬 `col-span-3`) + 2단 3열 `minmax(0,1fr)_5rem_5.5rem`(주당·보유 / 지급 / 합계, 우측 정렬). 머리글 같은 3열, `배당월`은 `sr-only`. **DOM 한 벌**, 배치는 `max-[360px]:`(= width < 360)만 — 360 이상 불변. `role="table"`(aria-label `{그룹} 배당 종목`)·`rowgroup`·`row`·`columnheader` 5·`cell` 5. testId: 기존 `dividend-stock-row`·`-stock-name`·`-stock-meta`·`-paid-amount`·`-est-amount`·`-col-paid`·`-col-total` + 신규 `dividend-table`(`data-category`)·`-col-months`·`-col-pershare`·`-stock-purchase`·`-stock-months`·`-stock-pershare`·`-cell-paid`·`-cell-total`.
+
 ### ExchangeTotalsBlock (`views/detail/tabs/exchange-totals-block.tsx`, #5.163 #325)
 - 상세·암호화폐 selector 아래·비중바 위 접기형 `거래소별 · N곳`(기본 접힘, `useState`만, 패널 항상 마운트 grid-rows+inert). props `crypto`(`assetData.crypto` 전체). 묶음 2개 미만·총 평가금 0이면 `null`. **읽기 전용**: 버튼은 토글 1개뿐(`맞추기` 없음). 행 = `BrokerRow`(broker-totals-block에서 export) 재사용 — `onResync` 생략 시 버튼 DOM 0, `countText`로 `코인 N개`. testId `exchange-totals(-toggle|-panel|-note)` + 행은 `broker-row*` 그대로. 미지정 안내 `거래소를 적지 않은 코인이에요.`. 인증카드 `data-screenshot-hide`. 주식 블록을 제네릭화하지 않는다(값 계산만 다른 얇은 래퍼).
 
