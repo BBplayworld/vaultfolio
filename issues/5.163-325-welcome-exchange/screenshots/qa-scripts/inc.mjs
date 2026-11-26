@@ -1,0 +1,25 @@
+import { launch, blockExternal, setTheme, enterDemo, co } from "./lib.mjs";
+const HEAD = "http://localhost:4263"; const SH = process.argv[2]; const b = await launch(); const out = {};
+const charLines = () => { const li = document.querySelector('[data-testid="whats-new-item"]'); const res = []; const w = document.createTreeWalker(li, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { if (!n.data.trim()) continue; const lines = []; let last = null; for (let i = 0; i < n.length; i++) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); const rc = r.getClientRects()[0]; if (!rc) continue; const t = Math.round(rc.top); if (last === null || Math.abs(t - last) > 4) { lines.push(""); last = t; } lines[lines.length - 1] += n.data[i]; } res.push(lines); } return res; };
+for (const [w, theme] of [[320, "dark"], [375, "dark"], [390, "light"], [1280, "dark"]]) {
+  const ctx = await b.newContext({ viewport: { width: w, height: 900 }, timezoneId: "Asia/Seoul" }); await blockExternal(ctx); await setTheme(ctx, HEAD, theme);
+  const p = await ctx.newPage(); const errs = []; p.on("console", (m) => m.type() === "error" && !/ERR_FAILED|Failed to load resource/.test(m.text()) && errs.push(m.text().slice(0, 160)));
+  await enterDemo(p, HEAD);
+  await p.evaluate(() => window.dispatchEvent(new CustomEvent("open-whats-new", { detail: { source: "more" } }))); await p.waitForSelector('[data-testid="whats-new-sheet"]'); await p.waitForTimeout(700);
+  const items = await p.evaluate(() => [...document.querySelectorAll('[data-testid="whats-new-item"]')].map((li) => ({ t: li.innerText.replace(/\n+/g, " | ").slice(0, 120), isNew: !!li.querySelector('[data-testid="whats-new-item-new"]'), go: !!li.querySelector('[data-testid="whats-new-go"]') })));
+  out[w] = { count: items.length, newCount: items.filter((i) => i.isNew).length, first: items[0], goTotal: items.filter((i) => i.go).length, lines: await p.evaluate(charLines), hScroll: await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), sheetOverflow: await p.evaluate(() => { const s = document.querySelector('[data-testid="whats-new-sheet"]'); return s.scrollWidth - s.clientWidth; }), errs };
+  await p.screenshot({ path: `${SH}/inc-whatsnew-${w}-${theme}.png` });
+  if (w === 375) { // 다른 항목 바로 가기는 그대로 동작
+    await p.locator('[data-testid="whats-new-go"]').first().click(); await p.waitForTimeout(900); out.otherGo = p.url().split("#")[1]; }
+  await ctx.close();
+}
+// 스팟 회귀: 웰컴 부제, 거래소별 합=헤더, 배당 320 2단
+{ const ctx = await b.newContext({ viewport: { width: 320, height: 900 } }); await blockExternal(ctx); await setTheme(ctx, HEAD, "dark"); const p = await ctx.newPage();
+  await p.goto(HEAD + "/", { waitUntil: "networkidle" }).catch(() => {}); await p.waitForSelector('[data-testid="welcome-cta-wizard"]'); await p.waitForTimeout(800);
+  out.welcome = await p.evaluate(() => { const el = document.querySelector('[data-testid="welcome-hero"] p'); return { text: el.textContent, lines: Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)), cta: Math.round(document.querySelector('[data-testid="welcome-cta-wizard"]').getBoundingClientRect().top) }; }); await ctx.close();
+  const REAL = [co({ id: "r1", name: "비트코인", symbol: "BTC", exchange: "업비트", quantity: 1.2345, averagePrice: 98000000, currentPrice: 135790000 }), co({ id: "r2", name: "이더리움", symbol: "ETH", exchange: "빗썸", quantity: 12.5, averagePrice: 4300000, currentPrice: 3980000 }), co({ id: "r4", name: "솔라나", symbol: "SOL", exchange: "", quantity: 20, averagePrice: 210000, currentPrice: 250000 })];
+  const c2 = await b.newContext({ viewport: { width: 375, height: 900 } }); await blockExternal(c2); await setTheme(c2, HEAD, "dark"); const p2 = await c2.newPage(); await enterDemo(p2, HEAD, { crypto: REAL });
+  await p2.getByRole("radio", { name: "상세" }).first().click(); await p2.waitForTimeout(700); await p2.getByText("암호화폐", { exact: true }).first().click(); await p2.waitForTimeout(900); await p2.click('[data-testid="exchange-totals-toggle"]'); await p2.waitForTimeout(500);
+  out.crypto = await p2.evaluate(() => { const num = (s) => Number(s.replace(/[^0-9.-]/g, "")); const sec = document.querySelector('[data-testid="exchange-totals"]'); const rows = [...sec.querySelectorAll('[data-testid="broker-row"]')]; const hdr = document.body.innerText.match(/총 암호화폐 평가금액\s+([\d,]+)원\s+([+-][\d,]+)원/); return { toggle: sec.querySelector("button").innerText.replace(/\n/g, " "), last: rows.at(-1).dataset.broker, sumV: rows.reduce((a, r) => a + num(r.querySelector('[data-testid="broker-row-value"]').textContent), 0), sumP: rows.reduce((a, r) => a + num(r.querySelector('[data-testid="broker-row-profit"]').children[0].textContent), 0), share: +rows.reduce((a, r) => a + num(r.querySelector('[data-testid="broker-row-share"]').textContent), 0).toFixed(1), hdr: [num(hdr[1]), num(hdr[2])], buttons: sec.querySelectorAll("button").length }; });
+  await c2.close(); }
+console.log(JSON.stringify(out, null, 0)); await b.close();
