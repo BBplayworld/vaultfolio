@@ -95,8 +95,8 @@ describe("배당 종목 표 640px 미만 2단(#326·#332)", () => {
     expect(count(paid, /sm:hidden/g)).toBe(0);
   });
 
-  it("경계: 2단 전용 접두는 `max-sm:`(폭 < 640)만 쓴다 — `max-[359px]:`·`max-[360px]:`는 쓰지 않는다", () => {
-    expect(krw + usd).not.toContain("max-[359px]:");
+  it("경계: 2단 전용 접두는 `max-sm:`(폭 < 640)만 쓴다 — 359·360 임의 값 접두는 쓰지 않는다", () => {
+    expect(krw + usd).not.toMatch(/max-\[359px\]:/);
     expect(krw + usd).not.toContain("max-[360px]:");
     expect(count(krw, /max-sm:/g)).toBeGreaterThan(20);
   });

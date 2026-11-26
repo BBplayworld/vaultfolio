@@ -140,7 +140,7 @@ function Tally({ n, up, scale }: { n: number; up: number; scale: number }) {
   );
 }
 
-const ROW_COLS = "grid grid-cols-[7rem_minmax(0,1fr)_4.5rem] items-center gap-x-2 max-[359px]:grid-cols-[7rem_minmax(0,1fr)_4rem] max-[359px]:gap-x-1.5";
+const ROW_COLS = "grid grid-cols-[7rem_minmax(0,1fr)_4.5rem] items-center gap-x-2 max-[360px]:grid-cols-[7rem_minmax(0,1fr)_4rem] max-[360px]:gap-x-1.5";
 const ROW_BTN = "-mx-2 w-[calc(100%+1rem)] rounded-md px-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150";
 const FILTER_HINT = "누르면 아래 종목을 이 기록이 있는 종목으로 걸러요";
 

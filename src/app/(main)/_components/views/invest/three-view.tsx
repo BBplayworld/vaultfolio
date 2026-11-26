@@ -75,7 +75,7 @@ export function ThreeA1({ views, yr, onYear }: { views: ThreeViews; yr: number |
                 <div className="min-h-0 overflow-hidden">
                   <div className="px-2 pb-2">
                     {/* 칩을 눌러도 아래가 밀리지 않게 슬롯 높이를 예약한다 */}
-                    <div data-testid="a1-selected" role="status" aria-live="polite" className="flex min-h-14 items-center rounded-xl bg-secondary px-3 py-2 text-xs max-[359px]:min-h-16">
+                    <div data-testid="a1-selected" role="status" aria-live="polite" className="flex min-h-14 items-center rounded-xl bg-secondary px-3 py-2 text-xs max-[360px]:min-h-16">
                       {inRow(k) ? <ThreeYear year={yr as number} items={sameYearRets(views, yr as number)} /> : <span className="text-muted-foreground">{THREE_TEXT.slotHint}</span>}
                     </div>
                     <Chips years={r.years} label={r.label} yr={yr} onYear={onYear} />

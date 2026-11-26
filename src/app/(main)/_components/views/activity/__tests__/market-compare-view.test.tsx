@@ -149,7 +149,7 @@ describe("CompareNotice·MarketList", () => {
     // 이유 1개: 360 이상은 ` · ` 한 문단 그대로, 320(359px 이하)은 개수 / 이유 줄로 나눔(D3)
     const one = renderToStaticMarkup(<CompareNotice summary={summary} />);
     expect(one).not.toContain('class="block"');
-    expect(one).toContain('<span class="max-[359px]:hidden"> · </span><span class="max-[359px]:block">해외 자산');
+    expect(one).toContain('<span class="max-[360px]:hidden"> · </span><span class="max-[360px]:block">해외 자산');
   });
 
   it("목록: 등락률 높은 순 안에 시장 줄, 묶음 머리 같은 표기, 비교하지 않은 종목 묶음엔 시장 줄 없음", () => {

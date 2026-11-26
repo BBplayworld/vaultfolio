@@ -55,7 +55,7 @@ export function BrokerRow({ row, scale, onResync, countText }: { row: BrokerTota
           data-testid="broker-row-resync"
           aria-label={`${row.name} 맞추기`}
           onClick={() => onResync(row.unassigned ? undefined : row.name)}
-          className="h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96] max-[359px]:ml-auto max-[359px]:basis-full max-[359px]:justify-end"
+          className="h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96] max-[360px]:ml-auto max-[360px]:basis-full max-[360px]:justify-end"
         >
           맞추기
         </Button>

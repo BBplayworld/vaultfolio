@@ -193,7 +193,7 @@ describe("D4 320 타일 제목 줄 — chevron이 타일 안에 머문다", () =
   it("이름 span min-w-0·nowrap(어절 유지), 320 미만(359px 이하)에서 아이콘 숨김, chevron shrink-0", () => {
     const html = tiles();
     expect(html).toMatch(/<span class="min-w-0 whitespace-nowrap text-sm font-semibold/);
-    expect(html).toContain("max-[359px]:hidden");
+    expect(html).toContain("max-[360px]:hidden");
     expect(html).toMatch(/lucide-chevron-right[^>]*ml-auto size-4 shrink-0|ml-auto size-4 shrink-0[^>]*lucide-chevron-right/);
   });
 });

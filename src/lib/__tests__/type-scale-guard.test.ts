@@ -72,3 +72,11 @@ describe("타이포 금지 패턴 가드", () => {
     expect([...new Set(all)]).toEqual([`${SHARE}share-card.tsx`]);
   });
 });
+
+// #332(5.165) 좁은 폭 경계 표기 재유입 방지 — Tailwind 4의 max-[N]은 `width < N`이라 `max-[359px]:`는 359px 뷰포트에 걸리지 않는다.
+// '359px 이하'는 `max-[360px]:`로 쓰고 짝 `min-[360px]:`와 맞물린다(정본: design-system.md §5.1)
+describe("좁은 폭 경계 표기 가드", () => {
+  it("src에 max-[359px]: 접두 0개(주석 포함)", () => {
+    expect(hits(/max-\[359px\]:/g)).toEqual([]);
+  });
+});
