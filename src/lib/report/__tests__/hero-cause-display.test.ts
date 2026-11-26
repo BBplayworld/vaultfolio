@@ -1,6 +1,6 @@
 // 5.153 #304 홈 Hero·원인 행 표시 — 만원 정수 최대 나머지 배분(합 = Hero, 0만원·부호 반전 0)
 import { describe, expect, it } from "vitest";
-import { allocateManwon, formatHeroDelta, formatSignedShort, heroCauseTexts, heroManwon } from "../hero-cause-display";
+import { allocateManwon, formatHeroDelta, formatHeroPct, formatSignedShort, heroCauseTexts, heroManwon } from "../hero-cause-display";
 
 const sum = (v: number[]) => v.reduce((a, b) => a + b, 0);
 
@@ -76,5 +76,17 @@ describe("heroCauseTexts — 행 글자", () => {
   it("여러 행 순서 유지", () => {
     expect(heroCauseTexts([156_000, 300_000, 57_000], 513_000)).toEqual(["+15만원", "+30만원", "+6만원"]);
     expect(heroCauseTexts([304_000, -102_000], 202_000)).toEqual(["+30만원", "−10만원"]);
+  });
+});
+
+describe("formatHeroPct(#309) — 음수 U+2212, 표시값 0.0은 부호 없음", () => {
+  it("양수·음수·0", () => {
+    expect(formatHeroPct(1.23)).toBe("+1.2%");
+    expect(formatHeroPct(-1.23)).toBe("−1.2%");
+    expect(formatHeroPct(-1.23)).not.toContain("-");
+    expect(formatHeroPct(0)).toBe("0.0%");
+    expect(formatHeroPct(-0.04)).toBe("0.0%");
+    expect(formatHeroPct(0.04)).toBe("0.0%");
+    expect(formatHeroPct(-0.05)).toBe("−0.1%");
   });
 });

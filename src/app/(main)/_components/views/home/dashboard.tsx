@@ -27,7 +27,7 @@ import { computeAttributionView } from "../activity/week-attribution";
 import type { ReactNode } from "react";
 import { displayShareWidths, MIN_DONUT_PCT } from "@/lib/report/min-share";
 import { pickTopCause, weekTrendTitle } from "@/lib/report/home-today";
-import { formatHeroDelta, heroCauseTexts } from "@/lib/report/hero-cause-display";
+import { formatHeroDelta, formatHeroPct, heroCauseTexts } from "@/lib/report/hero-cause-display";
 import { marketLineState, type MarketLineState } from "@/lib/finance/market-compare";
 import { CauseMarketSegment, MarketLine, causeMarketText, useMarketEntryValue, type MarketEntryValue } from "../activity/market-entry-line";
 import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
@@ -450,7 +450,7 @@ export function NetAssetSummaryBox({
                 // 금액·%는 각각 한 덩어리(금액·단위 분리 방지), 좁은 폭에선 flex-wrap으로 %·라벨이 다음 행(#4.36)
                 <span className={`inline-flex flex-wrap gap-y-0.5 items-center text-base font-bold tabular-nums ${getProfitLossColor(change.deltaNet)}`}>
                   <span className="whitespace-nowrap">{formatHeroDelta(change.deltaNet)}</span>
-                  <span className="text-sm font-bold ml-1 whitespace-nowrap">({change.deltaNet >= 0 ? "+" : ""}{change.pct.toFixed(1)}%)</span>
+                  <span className="text-sm font-bold ml-1 whitespace-nowrap">({formatHeroPct(change.pct)})</span>
                   {/* 라벨·쉐브론은 한 덩어리 — 쉐브론만 다음 줄에 떨어지지 않게(#4.36 ui-review R1) */}
                   <span className="inline-flex items-center ml-1.5">
                   <span className="text-sm font-medium text-muted-foreground break-keep">{change.label}</span>
