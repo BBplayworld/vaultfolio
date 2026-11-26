@@ -5,6 +5,10 @@
 ---
 
 ## 2026-11-26
+### 시세가 '언제 값'인지 — 복귀 재조회·'언제 시세' 줄·부분 실패 토스트 (issue-5.155, #309, risk:medium)
+- 백그라운드에서 돌아와도 시세를 다시 받지 않아 아침 홈에 어제 장중 값이 남고, 몇 시 값인지 보이는 곳이 없었으며, 일부 종목이 빠져도 '모두 업데이트' 토스트가 떴다. `visibilitychange→visible`·`pageshow(persisted)`에서만 호출 전 사전 판정(`planPriceResync`)으로 칸이 바뀐 단계만 silent 재조회(칸 같으면 요청·abort·`dataResetVersion` 0, 같은 칸 재시도 0, 앱 열기·pull 사슬 진행 중·잠금·오프라인 0). 홈 순자산 카드 맨 아래·상세 주식 요약에 `PriceAsOfLine`(baseDate 칸을 실제 KST 시각으로 비교, 실패 제외 최솟값 + `N종목 이전 시세`). 시세 토스트 해요체·내부 용어 0, 배치 실패는 끝에 1번. 빈 `DataSourceBadge` 삭제, Hero 퍼센트 `−`(U+2212). 새 소식 `20261126-01`. 저장 키·스키마·서버 전송·GA 변경 0.
+
+## 2026-11-26
 ### 홈 Hero 증감과 원인 행 금액 같은 숫자로 (issue-5.153, #304, risk:medium)
 - Hero는 만원 미만 버림, 원인 행은 반올림(`fmtManwon`)이라 원인 1개인 날 `+2만원`/`+3만원`, 여럿이면 합이 어긋나던 결함. 원인 행 글자를 Hero 정본(만원 버림)에 만원 정수 최대 나머지 배분(`hero-cause-display.ts`)으로 맞추고 음수 부호를 Hero·행 모두 U+2212로. 엔진·AI·결산·`home-today` diff 0. 홈 `dashboard.tsx` `transition-all` 2곳 속성 명시. 저장·서버 전송·GA 변경 0.
 
