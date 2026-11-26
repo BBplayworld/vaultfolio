@@ -206,12 +206,9 @@ export async function GET(request: Request) {
     const cached = await storage.getDividend(cacheKey);
     if (cached) {
       log(`[배당 캐시 히트 - ${ticker}]: ${Array.isArray(cached) ? cached.length : "?"}건`);
-      const [todayYear, todayMonth] = todayStr.split("-");
-      const currentMonthEnd = `${todayYear}-${todayMonth}-31`;
-      const retagged = (cached as DividendPayoutResult[]).map((p) =>
-        p.isEstimated && p.payoutDate <= currentMonthEnd ? { ...p, isEstimated: false } : p
-      );
-      return NextResponse.json(withMessages({ data: retagged }), { headers: cdnCacheHeaders(retagged.length === 0 ? DIVIDEND_EMPTY_TTL_SEC : 6 * 3600, 600) });
+      // 저장된 원본 그대로 — 추정(isEstimated:true)을 이번 달이라고 확정으로 바꾸지 않는다(#313). 지급 판정은 클라이언트가 날짜로 한다
+      const data = cached as DividendPayoutResult[];
+      return NextResponse.json(withMessages({ data }), { headers: cdnCacheHeaders(data.length === 0 ? DIVIDEND_EMPTY_TTL_SEC : 6 * 3600, 600) });
     }
 
     if (!KIS_APP_KEY || !KIS_APP_SECRET) {

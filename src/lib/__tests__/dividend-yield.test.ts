@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { computeDividendYield } from "@/lib/finance/dividend-yield";
+import { computeDividendYield as computeYield, type DividendYieldItem } from "@/lib/finance/dividend-yield";
+import { computeDividends } from "@/lib/finance/dividend-calc";
 import type { Stock } from "@/types/asset";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 
@@ -8,7 +9,11 @@ const stock = (o: Partial<Stock>): Stock =>
 const pay = (payoutDate: string, amountPerShare: number): DividendPayoutResult =>
   ({ payoutDate, amountPerShare }) as DividendPayoutResult;
 
-const YM = "2026-06";
+// 분자는 공용 계산(#313) — 오늘 2026-06-30이면 6월 이하 확정 지급은 '지급'(기존 YM "2026-06" 기준과 같은 픽스처 결과)
+const YM = "2026-06-30";
+type Item = DividendYieldItem & { payouts: DividendPayoutResult[] };
+const computeDividendYield = (items: Item[], usdRate: number, mode: "all" | "actual", today: string) =>
+  computeYield(items, usdRate, mode, computeDividends(items, [], usdRate, today));
 
 describe("computeDividendYield (#4.46 #80)", () => {
   it("예상 포함: 지급+예상 / 매입금액", () => {
@@ -28,8 +33,8 @@ describe("computeDividendYield (#4.46 #80)", () => {
   it("평단 0·JPY는 분자·분모에서 빠지고 제외 수가 맞다", () => {
     const items = [
       { stock: stock({}), payouts: [pay("2026-03-15", 500)] },
-      { stock: stock({ id: "a", averagePrice: 0 }), payouts: [pay("2026-03-15", 9999)] },
-      { stock: stock({ id: "b", currency: "JPY", category: "foreign" }), payouts: [pay("2026-03-15", 9999)] },
+      { stock: stock({ id: "a", ticker: "A", averagePrice: 0 }), payouts: [pay("2026-03-15", 9999)] },
+      { stock: stock({ id: "b", ticker: "B", currency: "JPY", category: "foreign" }), payouts: [pay("2026-03-15", 9999)] },
     ];
     const r = computeDividendYield(items, 1400, "all", YM);
     expect(r?.text).toBe("5.0%");
@@ -46,9 +51,9 @@ describe("computeDividendYield (#4.46 #80)", () => {
   });
   it("운영 형태: 추정 평단·매입환율 없음·올해 매수·무배당 종목 포함해도 값이 나온다", () => {
     const items = [
-      { stock: stock({ id: "1", currency: "USD", category: "foreign", averagePrice: 187.3, quantity: 3, purchaseExchangeRate: undefined, purchaseDate: "2026-02-10" }), payouts: [pay("2026-03-12", 0.24), pay("2025-12-12", 0.24)] },
-      { stock: stock({ id: "2", averagePrice: 70_500, quantity: 7 }), payouts: [pay("2026-04-20", 361)] },
-      { stock: stock({ id: "3", averagePrice: 33_000, quantity: 4 }), payouts: [] },
+      { stock: stock({ id: "1", ticker: "U1", currency: "USD", category: "foreign", averagePrice: 187.3, quantity: 3, purchaseExchangeRate: undefined, purchaseDate: "2026-02-10" }), payouts: [pay("2026-03-12", 0.24), pay("2025-12-12", 0.24)] },
+      { stock: stock({ id: "2", ticker: "K2", averagePrice: 70_500, quantity: 7 }), payouts: [pay("2026-04-20", 361)] },
+      { stock: stock({ id: "3", ticker: "K3", averagePrice: 33_000, quantity: 4 }), payouts: [] },
     ];
     const r = computeDividendYield(items, 1380, "all", YM);
     expect(r).not.toBeNull();

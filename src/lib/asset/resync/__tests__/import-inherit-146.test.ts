@@ -6,10 +6,15 @@ import {
 } from "..";
 import { defaultNewPurchaseDate, freshImportCount, isValidNewPurchaseDate, kstTodayString, pairCryptoImport, pairStockImport, planCryptoImport, planStockImport } from "@/lib/asset/import-inherit";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
+import { computeDividends } from "@/lib/finance/dividend-calc";
 import { resolveKept, keyOfStock } from "@/lib/asset/holdings-conflict";
 import { assetDataSchema, cryptoSchema, stockSchema } from "@/types/asset";
 import type { Crypto, Stock } from "@/types/asset";
 import { row, run, screen, st, TODAY } from "./fixtures";
+
+// 분자는 배당 공용 계산(#313, 5.157). 오늘 2026-11-30 = 기존 연-월 "2026-11" 기준과 같은 지급 판정(이 픽스처는 확정 지급만)
+const yieldArgs = (items: { stock: Stock; payouts: never }[], rate: number) =>
+  [items, rate, "actual", computeDividends(items, [], rate, "2026-11-30")] as const;
 
 const JAN1 = "2026-01-01";
 const MS = Date.UTC(2026, 10, 8, 3, 0, 0); // 2026-11-08 12:00 KST
@@ -170,7 +175,7 @@ describe("결산 예측 투입일 (d') — 첫 등록 신규", () => {
 
 describe("배당 — 새 종목 매수일 입력이 올해 지급 예상에 반영", () => {
   const PAYOUTS = [{ payoutDate: "2026-04-15", amountPerShare: 10 }, { payoutDate: "2026-08-15", amountPerShare: 10 }];
-  const paid = (s: Stock) => Math.round((computeDividendYield([{ stock: { ...s, averagePrice: 1 / s.quantity }, payouts: PAYOUTS as never }], 1400, "actual", "2026-11")?.pct ?? 0) / 100);
+  const paid = (s: Stock) => Math.round((computeDividendYield(...yieldArgs([{ stock: { ...s, averagePrice: 1 / s.quantity }, payouts: PAYOUTS as never }], 1400))?.pct ?? 0) / 100);
   it("기본 1/1 → 올해 2회 모두, 6/2 → 6/2 이전 지급분 제외", () => {
     const base = imp(0, "005930", "domestic", "토스증권", 1, 100);
     expect(paid(planStockImport([], [base], "merge", JAN1, "2026-11-08").items[0])).toBe(20);

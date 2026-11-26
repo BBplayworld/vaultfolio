@@ -5,17 +5,14 @@ import { SKELETON_FILL } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Wallet, BadgeDollarSign, Sprout } from "lucide-react";
-import { useQueries } from "@tanstack/react-query";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { KpiCard } from "../../layout/ui/kpi-card";
 import { HubShareButton } from "../../layout/ui/hub-share-button";
-import { normalizeTicker } from "@/lib/finance/finance-service";
-import type { DividendPayoutResult } from "@/lib/finance/finance-service";
-import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
+import { isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
 import { useAssetNavigation, type ActivityTab } from "../../layout/navigation/navigation-context";
-import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+import { useDividendData } from "./use-dividend-data";
 import { useStockLabels } from "@/hooks/use-stock-labels";
 import { buildGrowBoards, growStatus } from "@/lib/asset/grow-kinds";
 import { useLatestAssetGrade } from "@/hooks/use-latest-asset-grade";
@@ -31,57 +28,25 @@ import { hasAnyAssets } from "@/lib/asset/asset-storage";
 import { HubChangeRows } from "./hub-change-rows";
 import { GUIDES } from "@/app/guide/guide-copy";
 
-const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
-
-// dividend-chart.tsx와 동일 쿼리 키 → 캐시 공유 (자산 성적표에서도 재사용)
+// 배당 차트와 같은 공용 훅·같은 쿼리 키 → 캐시·계산 공유 (자산 성적표에서도 재사용, #313)
 export function useDividendAnnualTotals() {
-  const { assetData, exchangeRates } = useAssetData();
+  const { exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
+  const { groups, calc, isLoading, failedCount } = useDividendData();
 
-  const stocksWithTicker = (() => {
-    const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted");
-    const grouped = groupStocksByTickerCategory(base);
-    return Array.from(grouped.values()).map(mergeStockGroup);
-  })();
-
-  const queries = useQueries({
-    queries: stocksWithTicker.map((stock) => {
-      const ticker = normalizeTicker(stock);
-      const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
-      return {
-        ...dividendQueryOptions(ticker, type),
-      };
-    }),
-  });
-
-  const isLoading = queries.some((q) => q.isLoading);
-  const failedCount = countFailedDividends(queries);
-
-  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
-
-  let annualActual = 0;
-  let annualEstimated = 0;
-  // 지금 수량 기준 1년 배당(가정) — 매수일과 무관하게 올해 지급·예상 배당 전부를 지금 수량으로. 불리기 결론 카드 '앞으로 · 배당'(#239)
+  // 지금 수량 기준 1년 배당(가정) — 매수일과 무관하게 올해 지급·예상 배당 전부를 지금 수량으로. 불리기 결론 카드 '앞으로 · 배당'(#239). 공용 계산 밖의 다른 정의(변경 0)
   let annualAtHeldQty = 0;
-  stocksWithTicker.forEach((stock, i) => {
-    const payouts = (queries[i]?.data as DividendPayoutResult[] | undefined) ?? [];
+  for (const { stock, payouts } of groups) {
     const rate = stock.currency === "USD" ? usdRate : 1;
-    for (const p of payouts) {
-      annualAtHeldQty += p.amountPerShare * stock.quantity * rate;
-      if (stock.purchaseDate && p.payoutDate < stock.purchaseDate) continue;
-      const amt = p.amountPerShare * stock.quantity * rate;
-      if (p.payoutDate.slice(0, 7) <= currentYM) annualActual += amt;
-      else annualEstimated += amt;
-    }
-  });
+    for (const p of payouts) annualAtHeldQty += p.amountPerShare * stock.quantity * rate;
+  }
 
   return {
     isLoading,
     failedCount,
-    annualActual: Math.round(annualActual),
-    annualEstimated: Math.round(annualEstimated),
-    annualTotal: Math.round(annualActual + annualEstimated),
+    annualActual: Math.round(calc.annual.paid),
+    annualEstimated: Math.round(calc.annual.expected),
+    annualTotal: Math.round(calc.annual.total),
     annualAtHeldQty: Math.round(annualAtHeldQty),
   };
 }

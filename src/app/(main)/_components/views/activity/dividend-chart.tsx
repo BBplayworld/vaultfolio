@@ -2,7 +2,6 @@
 
 import { LOADING_LABEL } from "@/components/ui/loading-note";
 import { useState } from "react";
-import { useQueries } from "@tanstack/react-query";
 import {
   Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList, Cell,
 } from "recharts";
@@ -13,18 +12,14 @@ import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { niceAxisTicks, formatAxisWon, pickVisibleLabels } from "@/lib/finance/dividend-axis";
 import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart";
 import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
-import { normalizeTicker } from "@/lib/finance/finance-service";
-import type { DividendPayoutResult } from "@/lib/finance/finance-service";
-import { dividendQueryOptions, countFailedDividends, isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE } from "@/lib/finance/dividend-client";
-import type { Stock } from "@/types/asset";
+import { isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE, jpyDividendNotice } from "@/lib/finance/dividend-client";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
+import { monthSums, type DividendCalcResult } from "@/lib/finance/dividend-calc";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
-import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-detail-tabs";
+import { useDividendData } from "./use-dividend-data";
 import { InfoHint } from "../../layout/ui/info-hint";
 import { InlineSelector } from "../../layout/ui/inline-selector";
 
-
-const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
 const CATEGORY_KEYS = ["domestic", "foreign", "irp", "isa", "pension"] as const;
 type CategoryKey = typeof CATEGORY_KEYS[number];
@@ -72,11 +67,6 @@ function makeTotalLabel(values: number[]) {
   };
 }
 
-interface StockDividendInfo {
-  stock: Stock;
-  payouts: DividendPayoutResult[];
-}
-
 type ActualEstimatedFields = {
   [K in CategoryKey as `${K}Actual`]: number;
 } & {
@@ -95,144 +85,72 @@ interface MonthlyTotal extends ActualEstimatedFields {
   pension: number;
 }
 
-function buildMonthlyTotals(items: StockDividendInfo[], usdRate: number): MonthlyTotal[] {
-  const actual: Record<CategoryKey, number[]> = {
-    domestic: new Array(12).fill(0),
-    foreign: new Array(12).fill(0),
-    irp: new Array(12).fill(0),
-    isa: new Array(12).fill(0),
-    pension: new Array(12).fill(0),
-  };
-  const estimated: Record<CategoryKey, number[]> = {
-    domestic: new Array(12).fill(0),
-    foreign: new Array(12).fill(0),
-    irp: new Array(12).fill(0),
-    isa: new Array(12).fill(0),
-    pension: new Array(12).fill(0),
-  };
-
-  // 지급 여부는 payoutDate의 년-월 <= 오늘(KST) 년-월 기준 (isEstimated 플래그보다 날짜 우선)
-  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const currentYM = `${nowKST.getUTCFullYear()}-${String(nowKST.getUTCMonth() + 1).padStart(2, "0")}`;
-
-  for (const { stock, payouts } of items) {
-    const cat = CATEGORY_KEYS.includes(stock.category as CategoryKey)
-      ? (stock.category as CategoryKey)
-      : null;
-    if (!cat) continue;
-    const rate = stock.currency === "USD" ? usdRate : 1;
-    for (const p of payouts) {
-      if (stock.purchaseDate && p.payoutDate < stock.purchaseDate) continue;
-      const m = parseInt(p.payoutDate.split("-")[1], 10) - 1;
-      if (m >= 0 && m < 12) {
-        const isPaid = p.payoutDate.slice(0, 7) <= currentYM;
-        const bucket = isPaid ? actual : estimated;
-        bucket[cat][m] += p.amountPerShare * stock.quantity * rate;
-      }
+// 공용 계산(computeDividends) 결과를 차트 행으로 — 막대 칸은 카테고리별 표시 반올림, 합계(total·totalActual·totalEstimated)는
+// 반올림 전 월 합을 1회 반올림한 값이라 툴팁 합계 = 월 선택 Hero 금액(#313)
+function buildMonthlyTotals(calc: DividendCalcResult): MonthlyTotal[] {
+  const sums = monthSums(calc);
+  return calc.months.map(({ month, byCategory }, i) => {
+    const row = { month: `${month}월` } as MonthlyTotal;
+    for (const cat of CATEGORY_KEYS) {
+      const a = Math.round(byCategory[cat].paid);
+      const e = Math.round(byCategory[cat].expected);
+      row[`${cat}Actual`] = a;
+      row[`${cat}Estimated`] = e;
+      row[cat] = a + e;
     }
-  }
-
-  return Array.from({ length: 12 }, (_, i) => {
-    const da = Math.round(actual.domestic[i]);
-    const fa = Math.round(actual.foreign[i]);
-    const ia = Math.round(actual.irp[i]);
-    const sa = Math.round(actual.isa[i]);
-    const pa = Math.round(actual.pension[i]);
-    const de = Math.round(estimated.domestic[i]);
-    const fe = Math.round(estimated.foreign[i]);
-    const ie = Math.round(estimated.irp[i]);
-    const se = Math.round(estimated.isa[i]);
-    const pe = Math.round(estimated.pension[i]);
-    const totalActual = da + fa + ia + sa + pa;
-    const totalEstimated = de + fe + ie + se + pe;
-    return {
-      month: `${i + 1}월`,
-      total: totalActual + totalEstimated,
-      totalActual,
-      totalEstimated,
-      domestic: da + de,
-      foreign: fa + fe,
-      irp: ia + ie,
-      isa: sa + se,
-      pension: pa + pe,
-      domesticActual: da,
-      foreignActual: fa,
-      irpActual: ia,
-      isaActual: sa,
-      pensionActual: pa,
-      domesticEstimated: de,
-      foreignEstimated: fe,
-      irpEstimated: ie,
-      isaEstimated: se,
-      pensionEstimated: pe,
-    };
+    row.totalActual = Math.round(sums[i].paid);
+    row.totalEstimated = Math.round(sums[i].expected);
+    row.total = Math.round(sums[i].paid + sums[i].expected);
+    return row;
   });
 }
 
 
 export function DividendCard({ isActive = true }: { isActive?: boolean }) {
-  const { assetData, exchangeRates } = useAssetData();
+  const { exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
   const [estimateMode, setEstimateMode] = useState<"all" | "actual">("all");
 
-  const stocksWithTicker = (() => {
-    // 상장폐지 종목 제외 — 배당 받을 수 없음. 거래정지는 포함 (보유 중)
-    const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted");
-    const grouped = groupStocksByTickerCategory(base);
-    return Array.from(grouped.values()).map(mergeStockGroup);
-  })();
+  const { groups, calc, isLoading, loadedCount, failedCount, totalCount, jpyCount } = useDividendData({ enabled: isActive });
 
-  const queries = useQueries({
-    queries: stocksWithTicker.map((stock) => {
-      const ticker = normalizeTicker(stock);
-      const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
-      const excd = "NAS";
-      return {
-        ...dividendQueryOptions(ticker, type, excd),
-        enabled: isActive,
-      };
-    }),
-  });
-
-  const isLoading = queries.some((q) => q.isLoading);
-  const loadedCount = queries.filter((q) => !q.isLoading).length;
-  const failedCount = countFailedDividends(queries);
-  const totalCount = queries.length;
-
-  const dividendItems: StockDividendInfo[] = stocksWithTicker.map((stock, i) => ({
-    stock,
-    payouts: Array.isArray(queries[i]?.data) ? (queries[i].data as DividendPayoutResult[]) : [],
-  }));
-
-  const monthlyTotals = buildMonthlyTotals(dividendItems, usdRate);
+  const monthlyTotals = buildMonthlyTotals(calc);
   // 막대 높이 최댓값 기준 둥근 Y축 눈금 + 겹치지 않는 값 라벨
   const maxBar = Math.max(0, ...monthlyTotals.map((m) => (estimateMode === "actual" ? m.totalActual : m.total)));
   const yTicks = niceAxisTicks(maxBar);
   const TotalLabel = makeTotalLabel(monthlyTotals.map((m) => (estimateMode === "actual" ? m.totalActual : m.total)));
-  const annualActual = monthlyTotals.reduce((sum, m) => sum + m.totalActual, 0);
-  const annualEstimated = monthlyTotals.reduce((sum, m) => sum + m.totalEstimated, 0);
-  const annualTotal = annualActual + annualEstimated;
+  // 연 합계는 공용 계산의 반올림 전 합을 1회 반올림 — 허브 카드·성적표 입력과 같은 값
+  const annualActual = Math.round(calc.annual.paid);
+  const annualTotal = Math.round(calc.annual.total);
 
-  // 월 선택 시: 그 월의 실제 상태(과거→지급, 미래→예상)로 라벨·금액 결정. 토글 무시.
+  // 월 선택 시: 그 달의 지급 합·예상 합 데이터로 라벨·금액 결정(날짜 기준 판정, #313). 토글 무시.
+  // 지급·예상이 섞인 달(주로 이번 달)은 `{m}월 배당` + 합계 + `일부 예상`. 둘 다 0인 달만 월 번호로 지급/예상 라벨을 고른다.
   // 월 미선택 시: 우측 토글(예상/실제)에 따라 연간 금액·라벨 결정.
   const isActualOnly = estimateMode === "actual";
   const nowMonthKST = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCMonth() + 1;
-  const isPastMonth = selectedMonth !== undefined && selectedMonth <= nowMonthKST;
   const monthRow = selectedMonth !== undefined ? monthlyTotals[selectedMonth - 1] : undefined;
+  const monthStatus: "actual" | "estimated" | "mixed" | null = selectedMonth === undefined || !monthRow
+    ? null
+    : monthRow.totalActual > 0 && monthRow.totalEstimated > 0
+      ? "mixed"
+      : monthRow.totalEstimated > 0
+        ? "estimated"
+        : monthRow.totalActual > 0 || selectedMonth <= nowMonthKST
+          ? "actual"
+          : "estimated";
 
-  const heroValue = selectedMonth !== undefined
-    ? (isPastMonth ? (monthRow?.totalActual ?? 0) : (monthRow?.totalEstimated ?? 0))
+  const heroValue = monthStatus !== null
+    ? (monthStatus === "mixed" ? monthRow!.total : monthStatus === "actual" ? monthRow!.totalActual : monthRow!.totalEstimated)
     : (isActualOnly ? annualActual : annualTotal);
-  const heroLabel = selectedMonth !== undefined
-    ? `${selectedMonth}월 ${isPastMonth ? "지급 배당" : "예상 배당"}`
+  const heroLabel = monthStatus !== null
+    ? `${selectedMonth}월 ${monthStatus === "mixed" ? "배당" : monthStatus === "actual" ? "지급 배당" : "예상 배당"}`
     : (isActualOnly ? "올해 지급 배당" : "올해 예상 배당");
-  const heroStatus: "actual" | "estimated" | null = selectedMonth !== undefined
-    ? (isPastMonth ? "actual" : "estimated")
-    : null;
+  const heroStatus = monthStatus;
 
   // 투입 대비 배당(#4.46) — 조회가 모두 끝난 뒤에만 계산
-  const dividendYield = !isLoading && annualTotal > 0 ? computeDividendYield(dividendItems, usdRate, estimateMode) : null;
+  const dividendYield = !isLoading && annualTotal > 0 ? computeDividendYield(groups, usdRate, estimateMode, calc) : null;
+  // 엔화 종목 안내(#313) — 엔화만 있어 빈 화면이면 빈 화면 둘째 줄이 대신한다
+  const jpyOnly = jpyCount > 0 && groups.length === 0;
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -242,16 +160,16 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
                 <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
-                <InfoHint summary="아직 안 받은 달은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
-                  <p>미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
-                  <p>해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>
-                  <p><span className="font-semibold text-foreground">매수일</span> 이전 지급분은 계산에서 제외됩니다.</p>
-                  <p>투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
+                <InfoHint summary="지급일이 안 된 배당은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
+                  <p className="break-keep">미지급 월은 <span className="font-semibold text-foreground">예상치</span>이며, 기업 결정에 따라 변동될 수 있습니다.</p>
+                  <p className="break-keep">해외 주식은 현지 기준일과 국내 입금일 차이로 한 달 정도 오차가 발생할 수 있습니다. (예: 3월 기준 배당 → 4월 실제 입금)</p>
+                  <p className="break-keep">거래 기록이 있으면 지급일에 갖고 있던 수량으로 계산해요. 판 종목은 빠져요.</p>
+                  <p className="break-keep">투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
                 </InfoHint>
               </div>
               {/* 월 선택 배지와 설명이 같은 칸을 공유 — 선택·해제해도 헤더 높이가 변하지 않아 차트가 밀리지 않는다 */}
               <div className="grid min-h-6 items-center [&>*]:[grid-area:1/1]" data-testid="dividend-sub-slot">
-                <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>보유 주식 기준 올해 배당금</CardDescription>
+                <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>지금 보유 종목 기준 · 세전 추정</CardDescription>
                 {selectedMonth !== undefined && (
                   <Badge asChild variant="outline">
                     <button
@@ -293,6 +211,11 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                 {heroStatus === "estimated" && (
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full border border-muted-foreground/30 text-muted-foreground">
                     예상치
+                  </span>
+                )}
+                {heroStatus === "mixed" && (
+                  <span data-testid="dividend-hero-mixed" className="shrink-0 whitespace-nowrap text-xs font-semibold px-1.5 py-0.5 rounded-full border border-muted-foreground/30 text-muted-foreground">
+                    일부 예상
                   </span>
                 )}
               </div>
@@ -341,9 +264,8 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                 />
               </div>
               <div className="space-y-1.5">
-                {stocksWithTicker.slice(0, 8).map((stock, i) => {
-                  const q = queries[i];
-                  const done = q && !q.isLoading;
+                {groups.slice(0, 8).map(({ stock, isLoading: loading }) => {
+                  const done = !loading;
                   return (
                     <div key={stock.id} className="flex items-center justify-between px-1 py-0.5">
                       <span className="text-sm text-foreground truncate max-w-[60%]">{stock.name || stock.ticker}</span>
@@ -353,8 +275,8 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                     </div>
                   );
                 })}
-                {stocksWithTicker.length > 8 && (
-                  <p className="text-xs text-muted-foreground px-1">외 {stocksWithTicker.length - 8}개 종목...</p>
+                {groups.length > 8 && (
+                  <p className="text-xs text-muted-foreground px-1">외 {groups.length - 8}개 종목...</p>
                 )}
               </div>
             </div>
@@ -364,13 +286,17 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             <p className="text-sm text-muted-foreground text-pretty break-keep">{DIVIDEND_FETCH_FAILED_MESSAGE}</p>
           )}
 
+          {!isLoading && jpyCount > 0 && !jpyOnly && (
+            <p data-testid="dividend-jpy-notice" className="text-sm text-muted-foreground text-pretty break-keep">{jpyDividendNotice(jpyCount)}</p>
+          )}
+
           {!isLoading && annualTotal === 0 ? (
             isDividendUnknown(failedCount, annualTotal) ? null : (
             <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
-                <p className="text-muted-foreground text-sm">올해 배당 데이터가 없습니다.</p>
-                <p className="text-muted-foreground text-sm mt-1">
-                  보유 주식에 배당금이 없거나 KIS API가 설정되지 않았습니다.
+                <p className="text-muted-foreground text-sm">올해 배당이 아직 없어요</p>
+                <p data-testid={jpyOnly ? "dividend-jpy-notice" : undefined} className="text-muted-foreground text-sm mt-1 text-pretty break-keep">
+                  {jpyOnly ? jpyDividendNotice(jpyCount) : "지금 보유 종목 기준으로 올해 받을 배당이 없어요"}
                 </p>
               </div>
             </div>
@@ -532,7 +458,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           })()}
 
           {!isLoading && annualTotal > 0 && (
-            <MonthlyDividendStocks selectedMonth={selectedMonth} />
+            <MonthlyDividendStocks selectedMonth={selectedMonth} groups={groups} calc={calc} />
           )}
         </CardContent>
       </Card>
