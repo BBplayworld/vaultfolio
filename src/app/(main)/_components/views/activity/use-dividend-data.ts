@@ -35,11 +35,9 @@ export interface DividendData {
   jpyCount: number;
 }
 
-export function useDividendData({ enabled = true }: { enabled?: boolean } = {}): DividendData {
-  const { assetData, exchangeRates } = useAssetData();
-
-  // 상장폐지 종목 제외 — 배당 받을 수 없음. 거래정지는 포함 (보유 중). 엔화는 조회하지 않는다
-  const base = assetData.stocks.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted");
+/** 조회 대상 묶음(순수) — 상장폐지·비상장 제외, 거래정지는 포함(보유 중), 엔화는 조회하지 않고 수만 센다 */
+export function buildDividendGroups(stocks: readonly Stock[]): { grouped: Omit<DividendGroup, "payouts" | "isLoading">[]; jpyCount: number } {
+  const base = stocks.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted");
   const target = base.filter((s) => !isDividendExcludedCurrency(s));
   const jpyCount = groupStocksByTickerCategory(base.filter(isDividendExcludedCurrency)).size;
   const grouped = Array.from(groupStocksByTickerCategory(target).values()).map((items) => ({
@@ -47,6 +45,12 @@ export function useDividendData({ enabled = true }: { enabled?: boolean } = {}):
     stock: mergeStockGroup(items),
     items,
   }));
+  return { grouped, jpyCount };
+}
+
+export function useDividendData({ enabled = true }: { enabled?: boolean } = {}): DividendData {
+  const { assetData, exchangeRates } = useAssetData();
+  const { grouped, jpyCount } = buildDividendGroups(assetData.stocks);
 
   const queries = useQueries({
     queries: grouped.map(({ stock }) => {
