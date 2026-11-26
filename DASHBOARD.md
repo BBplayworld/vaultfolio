@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-27 01:00 KST** · 운영 최신 **v5.161** · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
+> **마지막 갱신: 2026-11-27 02:04 KST** · 운영 최신 **v5.161** (v5.162 머지·스모크 대기) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -28,7 +28,8 @@
 | **v5.159** [PR #322](https://github.com/BBplayworld/vaultfolio/pull/322) | #321 맞추기 정확성 마감(코인 고아 거래·토스트 되돌리기) | **운영 반영 11/26 21:20~31 KST** · 스모크 PASS | 대조 1줄 → 재설계 후 재도입 |
 | **v5.161** [PR #330](https://github.com/BBplayworld/vaultfolio/pull/330) | #325 웰컴 첫 문장·코인 거래소별 합계 + #326 320 배당 표 2단 | **운영 반영 11/27 00:42~53 KST** · 스모크 PASS | 웰컴 새 4주 판독(00:53~12/25) |
 | ~~5.164~~ [#327](https://github.com/BBplayworld/vaultfolio/issues/327) | 저장 스키마 passthrough | **보류**(받은 배당 기록이 분리 키 방식이라 불필요, 예·적금 재개 시) | — |
-| **5.164** [#328](https://github.com/BBplayworld/vaultfolio/issues/328) | 맞추기 결과 대조 1줄(총액 별도 호출, medium) | 개발 중 | qa(C154 실호출) → CEO |
+| **v5.162** [PR #331](https://github.com/BBplayworld/vaultfolio/pull/331) | #328 맞추기 결과 대조 1줄('맞아요'만, 축소) | **머지 11/27 02:03 KST** · 스모크 대기 | 철수선 4주(~12/25) |
+| **5.165** [#332](https://github.com/BBplayworld/vaultfolio/issues/332) | 배당 표 2단 640 미만·max-[359px] 정리 | 개발 착수 | qa·ui-review → CEO |
 | **다음** | [#329](https://github.com/BBplayworld/vaultfolio/issues/329) 받은 배당 기록(분리 키, high) | spec·ui·tech-review·CTO 승인 완료 | 5.164 머지 후 |
 | **v5.160** [PR #324](https://github.com/BBplayworld/vaultfolio/pull/324) | #323 배당 문구·숫자 마감(지급일 수량 문구·예상 단일 정본·차트 320) | **운영 반영 11/26 22:50~23:04 KST** · 스모크 PASS | 320 배당 표 2단 → 별도 |
 | **v5.152** [PR #307](https://github.com/BBplayworld/vaultfolio/pull/307) | #306 데이터 안전 회귀 테스트(앱 코드 0) | **운영 반영 11/26 04:30 KST** | — |
