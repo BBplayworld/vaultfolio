@@ -12,7 +12,7 @@ import {
 type Rec = Record<string, unknown>;
 
 /** 적용 전(before)·후(after) 항목으로 되돌릴 목록을 만든다. 변경=modified, 추가=resurrected(되돌리면 제거), 삭제=remoteDeleted(되돌리면 복원). 코인은 coll="crypto" */
-export function buildUndoEntries<T extends { id: string }>(before: T[], after: T[], coll: "stocks" | "crypto" | "transactions" | "cryptoTransactions" = "stocks"): OverwriteEntry[] {
+export function buildUndoEntries<T extends { id: string }>(before: T[], after: T[], coll: "stocks" | "crypto" | "transactions" | "cryptoTransactions" | "loans" = "stocks"): OverwriteEntry[] {
   const out: OverwriteEntry[] = [];
   const beforeMap = new Map(before.map((s) => [s.id, s]));
   const afterMap = new Map(after.map((s) => [s.id, s]));
@@ -36,7 +36,19 @@ export interface UndoResult {
   skipped: number;
 }
 
-/** 되돌리는 순간의 현재 데이터(getAssetData() 새로 읽은 값)에 적용한다. 거래 배열·다른 컬렉션은 그대로다 */
+/**
+ * 주식 맞추기 1건의 되돌리기 목록 — stocks·transactions·loans 세 컬렉션(#310). 맞추기 삭제의 거래 정리·이관의 거래·대출 연결 재지정까지 함께 되돌린다.
+ * 바뀌지 않은 항목은 참조가 같아 목록에 들어가지 않는다.
+ */
+export function buildResyncUndoEntries(before: AssetData, after: AssetData): OverwriteEntry[] {
+  return [
+    ...buildUndoEntries(before.stocks, after.stocks),
+    ...buildUndoEntries(before.transactions ?? [], after.transactions ?? [], "transactions"),
+    ...buildUndoEntries(before.loans ?? [], after.loans ?? [], "loans"),
+  ];
+}
+
+/** 되돌리는 순간의 현재 데이터(getAssetData() 새로 읽은 값)에 적용한다. 목록에 든 컬렉션(주식 맞추기는 stocks·transactions·loans)만 바뀌고 나머지는 그대로다 */
 export function planUndo(entries: OverwriteEntry[], current: AssetData): UndoResult {
   const plan = planRevert(entries, captureSnapshot(current));
   return { data: applyRevert(current, plan.valid), restored: plan.valid.length, skipped: plan.dropped };

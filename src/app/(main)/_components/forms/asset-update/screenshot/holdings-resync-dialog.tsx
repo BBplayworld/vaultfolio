@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { NewDateRow } from "./new-date-row";
 import { defaultNewPurchaseDate, isValidNewPurchaseDate } from "@/lib/asset/import-inherit";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAssetData } from "@/contexts/asset-data-context";
+import { planDeleteStocks, useAssetData } from "@/contexts/asset-data-context";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { SCREENSHOT_UPLOAD_NOTICE } from "@/config/security-copy";
 import { cryptoExchanges, securitiesFirms, stockCategories } from "@/config/asset-options";
@@ -29,6 +29,7 @@ import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
 import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
+  buildResyncUndoEntries,
   buildUndoEntries,
   cryptoToStock,
   matchExchangeHint,
@@ -39,6 +40,7 @@ import {
   defaultRemoveIds,
   isUnassignedBroker,
   mergeScreens,
+  planResyncSave,
   planUndo,
   resolveRow,
   PICK_NEW,
@@ -341,7 +343,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     const d = computeDiff(before, mergeScreens(res), res);
     const result = applyResync(before, d, sel, { today: todayKst(), usdRate, now: Date.now() });
     const nextCrypto = isCrypto ? stocksToCrypto(fresh.crypto, before, result.stocks) : fresh.crypto;
-    const ok = saveData(isCrypto ? { ...fresh, crypto: nextCrypto } : { ...fresh, stocks: result.stocks });
+    // 주식: 체크 삭제 종목의 거래를 직접 삭제와 같은 규칙으로 정리해 stocks·transactions·loans를 한 번에 저장(#310)
+    const next = isCrypto ? { ...fresh, crypto: nextCrypto } : planResyncSave(fresh, result, (d, ids) => planDeleteStocks(d, ids, exchangeRates)).data;
+    const ok = saveData(next);
     if (!ok) {
       setApplying(false);
       toast.error("맞추기에 실패했어요");
@@ -350,7 +354,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock" }: Pro
     toast.dismiss(TOAST_ID);
     const prevRefreshedAt = lastRefreshedAt(kind);
     const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
-    undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildUndoEntries(fresh.stocks, result.stocks), done: false, kind, prevRefreshedAt, appliedAt };
+    undoRef.current = { entries: isCrypto ? buildUndoEntries(fresh.crypto, nextCrypto, "crypto") : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
     track("feature_use", { category: "resync_apply" });
     setApplied(result.counts);
     setApplying(false);

@@ -1,5 +1,5 @@
 // #91 C21 거래 패턴 (a)~(g) — 맞추기 결과가 결산 엔진·양도세·거래 롤백에서 직접 수정(updateStock)과 같은 방식으로 흐르는지 고정한다.
-// 맞추기는 거래 기록을 만들지도 지우지도 않는다(transactions 배열 참조 동일).
+// applyResync 자체는 거래 기록을 만들지도 지우지도 않는다(transactions 배열 참조 동일). 저장 시 체크 삭제 종목의 거래 정리는 planResyncSave(#310, resync-transfer-5156.test.ts).
 import { describe, expect, it } from "vitest";
 import { computeAssetCost } from "@/contexts/asset-data-context";
 import { computeAttributionBetween } from "../asset-report";
