@@ -96,7 +96,7 @@ describe("visibleWhatsNew — 체험에서 볼 수 없는 항목 숨김(C126, 5.
     expect(tip.count).toBe(badges.size);
     expect(badges.has("20261127-02")).toBe(false);
     expect(sheetEntries(trial, today).some((x) => x.id === "20261127-02")).toBe(false);
-    expect(tip.title).not.toContain("합계가 보이면");
+    expect(tip.title).not.toContain("화면 합계와 맞으면");
   });
   it("일반: 새 항목이 시트 목록·'새' 개수에 들어가고 팁 N과 같다", () => {
     const all = visibleWhatsNew(WHATS_NEW, false);

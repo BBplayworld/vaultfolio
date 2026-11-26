@@ -55,10 +55,8 @@ describe("ReconcileLines", () => {
     expect(m).toContain("증권사 화면 합계와 맞아요");
     expect(m.match(/<p /g)).toHaveLength(1);
   });
-  it("차이 → 2줄 문장", () => {
-    const d = h({ state: "diff", ratePct: "2.4", names: ["삼성전자", "TIGER 미국S&amp;P500"], more: 1 });
-    expect(d).toContain("증권사 화면 합계와 2.4% 달라요. 시세 시각이 달라 조금 다를 수 있어요");
-    expect(d).toContain("차이가 큰 종목: 삼성전자, TIGER 미국S&amp;amp;P500 외 1개");
-    expect(d.match(/<p /g)).toHaveLength(2);
+  it("차이 → DOM 0(축소: '맞아요'만 표시)", () => {
+    expect(h({ state: "diff", ratePct: "2.4", names: ["삼성전자", "TIGER 미국S&P500"], more: 1 })).toBe("");
+    expect(h({ state: "diff", ratePct: "2.3", names: [], more: 0 })).toBe("");
   });
 });

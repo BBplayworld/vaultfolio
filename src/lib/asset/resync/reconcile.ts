@@ -119,12 +119,12 @@ export function reconcileTotal(input: { screenTotal: ScreenTotalInfo | null | un
   return { state: "diff", ratePct: ((delta / t.value) * 100).toFixed(1), names: off.slice(0, 2).map((r) => r.name), more: Math.max(0, off.length - 2) };
 }
 
-/** 화면 문장(C138) — 상태별 1~2줄. 금액·종목 평가액은 싣지 않는다 */
+/**
+ * 화면 문장(C138) — 일치일 때만 1줄. 차이·숨김은 줄 없음(CEO 판정 '축소 후 반영': 읽은 합계가 틀릴 수 있어 '달라요'는 말하지 않는다).
+ * 차이 판정 자체(reconcileTotal의 diff)와 GA `resync_check_diff` 집계는 그대로다. 금액·종목 평가액은 싣지 않는다
+ */
 export function reconcileLines(v: ReconcileView): string[] {
-  if (v.state === "hidden") return [];
-  if (v.state === "match") return ["증권사 화면 합계와 맞아요"];
-  const second = v.names.length > 0 ? `차이가 큰 종목: ${v.names.join(", ")}${v.more > 0 ? ` 외 ${v.more}개` : ""}` : "화면에 안 담긴 종목이 있을 수 있어요";
-  return [`증권사 화면 합계와 ${v.ratePct}% 달라요. 시세 시각이 달라 조금 다를 수 있어요`, second];
+  return v.state === "match" ? ["증권사 화면 합계와 맞아요"] : [];
 }
 
 /**

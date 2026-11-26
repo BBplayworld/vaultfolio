@@ -25,33 +25,36 @@ describe("허용 오차 경계", () => {
   });
 });
 
-describe("문장(§5 표, 글자 단위)", () => {
+describe("문장 — 일치일 때만 1줄(축소: 차이는 줄 없음, GA 집계는 유지)", () => {
   it("일치: 증권사 화면 합계와 맞아요 / GA match", () => {
     const v = reconcileTotal({ screenTotal: T(10_000_000), rows: rows(10_040_000), flags: OK });
     expect(reconcileLines(v)).toEqual(["증권사 화면 합계와 맞아요"]);
     expect(reconcileGaCategory(v)).toBe("resync_check_match");
   });
-  it("차이 + 다른 행 3개: 2.4% · 큰 순서 2개 + 외 1개", () => {
+  it("차이 + 다른 행 3개: 판정은 diff(2.4% · 큰 순서 2개 + 외 1개) 그대로, 줄은 없음, GA diff", () => {
     const rs = [R("삼성전자", 5_000_000, 5_130_000), R("TIGER 미국S&P500", 3_000_000, 3_100_000), R("SK하이닉스", 1_000_000, 1_010_000), R("KODEX 200", 1_000_000, 1_000_000)];
     // 화면 합 10,000,000 vs 앱 합 10,240,000 → 2.4%
     const v = reconcileTotal({ screenTotal: T(10_000_000), rows: rs, flags: OK });
-    expect(reconcileLines(v)).toEqual([
-      "증권사 화면 합계와 2.4% 달라요. 시세 시각이 달라 조금 다를 수 있어요",
-      "차이가 큰 종목: 삼성전자, TIGER 미국S&P500 외 1개",
-    ]);
+    expect(v).toEqual({ state: "diff", ratePct: "2.4", names: ["삼성전자", "TIGER 미국S&P500"], more: 1 });
+    expect(reconcileLines(v)).toEqual([]);
     expect(reconcileGaCategory(v)).toBe("resync_check_diff");
+    expect(reconcileGaCategory(v, "done")).toBe("resync_check_diff");
   });
-  it("차이 + 다른 행 없음: 안 담긴 종목 문구", () => {
+  it("차이 + 다른 행 없음: 줄 없음, GA diff", () => {
     const rs = [R("a", 5_000_000, 5_000_000), R("b", 5_000_000, 5_000_000)];
     const v = reconcileTotal({ screenTotal: T(10_240_000), rows: rs, flags: OK });
-    expect(reconcileLines(v)).toEqual(["증권사 화면 합계와 2.3% 달라요. 시세 시각이 달라 조금 다를 수 있어요", "화면에 안 담긴 종목이 있을 수 있어요"]);
+    expect(v).toMatchObject({ state: "diff", ratePct: "2.3", names: [] });
+    expect(reconcileLines(v)).toEqual([]);
+    expect(reconcileGaCategory(v)).toBe("resync_check_diff");
   });
-  it("행 2개만 다르면 '외 N개' 없음", () => {
-    const v = reconcileTotal({ screenTotal: T(10_000_000), rows: [R("a", 5_000_000, 5_200_000), R("b", 5_000_000, 5_100_000)], flags: OK });
-    expect(reconcileLines(v)[1]).toBe("차이가 큰 종목: a, b");
+  it("차이 문장 2종은 코드에 남아 있지 않다", () => {
+    const rec = readFileSync(path.join(__dirname, "../reconcile.ts"), "utf8");
+    const dlg = readFileSync(path.join(__dirname, "../../../../app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx"), "utf8");
+    for (const src of [rec, dlg]) for (const w of ["% 달라요", "차이가 큰 종목", "화면에 안 담긴 종목이", "조금 다를 수 있어요"]) expect(src).not.toContain(w);
   });
   it("문장에 금액 숫자·금지 어휘가 없다", () => {
     const all = [reconcileLines({ state: "match" }), reconcileLines({ state: "diff", ratePct: "2.4", names: ["a"], more: 0 })].flat().join(" ");
+    expect(all).toBe("증권사 화면 합계와 맞아요");
     for (const w of ["정확", "보장", "서버", "원"]) expect(all).not.toContain(w);
   });
 });
