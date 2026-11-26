@@ -346,7 +346,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                       ticks={yTicks}
                       domain={[0, yTicks[yTicks.length - 1]]}
                       tickFormatter={(v) => formatAxisWon(v)}
-                      width={55}
+                      width={62}
                     />
                     <ChartTooltip
                       content={({ active, payload }) => {

@@ -122,7 +122,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
             <span className="text-sm font-semibold text-muted-foreground">{label}</span>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
+          <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] max-[359px]:grid-cols-[minmax(3.5rem,1fr)_3rem_3rem_3.25rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b">
             <span>종목명</span>
             <span className="text-right">배당월</span>
             <span className="text-right">주당</span>
@@ -140,7 +140,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
               return (
                 <div
                   key={stock.id}
-                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center"
+                  className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] max-[359px]:grid-cols-[minmax(3.5rem,1fr)_3rem_3rem_3.25rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2.5 items-center"
                   data-testid="dividend-stock-row"
                 >
                   <div className="min-w-0">
@@ -160,8 +160,8 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                       </div>
                     )}
                     {stock.purchaseDate && (
-                      <p data-testid="dividend-stock-purchase" className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
-                        매수 <span className="md:hidden">{shortDate(stock.purchaseDate)}</span><span className="hidden md:inline">{stock.purchaseDate}</span>
+                      <p data-testid="dividend-stock-purchase" className="text-xs text-muted-foreground mt-1 whitespace-nowrap tabular-nums overflow-hidden text-ellipsis">
+                        <span className="max-[359px]:hidden">매수 </span><span className="md:hidden">{shortDate(stock.purchaseDate)}</span><span className="hidden md:inline">{stock.purchaseDate}</span>
                       </p>
                     )}
                   </div>
