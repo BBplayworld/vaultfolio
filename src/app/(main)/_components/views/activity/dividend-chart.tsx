@@ -14,7 +14,7 @@ import { ChartContainer, ChartTooltip, ChartConfig } from "@/components/ui/chart
 import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { isDividendUnknown, DIVIDEND_FETCH_FAILED_MESSAGE, jpyDividendNotice } from "@/lib/finance/dividend-client";
 import { computeDividendYield } from "@/lib/finance/dividend-yield";
-import { monthSums, nextDividendMonth, type DividendCalcResult } from "@/lib/finance/dividend-calc";
+import { monthSums, nextDividendMonth, roundedAnnual, type DividendCalcResult } from "@/lib/finance/dividend-calc";
 import { MonthlyDividendStocks } from "./monthly-dividend-stocks";
 import { useDividendData } from "./use-dividend-data";
 import { InfoHint } from "../../layout/ui/info-hint";
@@ -58,10 +58,18 @@ function makeTotalLabel(values: number[]) {
     const { x = 0, y = 0, width = 0, index = 0 } = props;
     const w = Number(width);
     if (!labels[index]) return null;
-    const visible = pickVisibleLabels(values, labels, w / 0.8);
+    const slot = w / 0.8;
+    const visible = pickVisibleLabels(values, labels, slot);
     if (!visible.has(index)) return null;
+    // 라벨 x를 plot 영역 [8, 폭−8] 안으로 clamp(320에서 1월·12월 라벨 잘림 방지, 5.162).
+    // plot 좌우 끝은 막대 칸 기하(칸 폭 = w/0.8, 막대 앞 여백 10%)에서 역산한다.
+    const center = Number(x) + w / 2;
+    const plotLeft = center - (index + 0.5) * slot;
+    const plotWidth = values.length * slot;
+    const half = labels[index].length * 4;
+    const labelX = Math.min(Math.max(center, plotLeft + 8 + half), plotLeft + plotWidth - 8 - half);
     return (
-      <text x={Number(x) + w / 2} y={Number(y) - 8} textAnchor="middle" fontSize={12} fontWeight={600} fill="var(--foreground)">
+      <text x={labelX} y={Number(y) - 8} textAnchor="middle" fontSize={12} fontWeight={600} fill="var(--foreground)">
         {labels[index]}
       </text>
     );
@@ -88,7 +96,7 @@ interface MonthlyTotal extends ActualEstimatedFields {
 
 // 공용 계산(computeDividends) 결과를 차트 행으로 — 막대 칸은 카테고리별 표시 반올림, 합계(total·totalActual·totalEstimated)는
 // 반올림 전 월 합을 1회 반올림한 값이라 툴팁 합계 = 월 선택 Hero 금액(#313)
-function buildMonthlyTotals(calc: DividendCalcResult): MonthlyTotal[] {
+export function buildMonthlyTotals(calc: DividendCalcResult): MonthlyTotal[] {
   const sums = monthSums(calc);
   return calc.months.map(({ month, byCategory }, i) => {
     const row = { month: `${month}월` } as MonthlyTotal;
@@ -101,7 +109,8 @@ function buildMonthlyTotals(calc: DividendCalcResult): MonthlyTotal[] {
     }
     row.totalActual = Math.round(sums[i].paid);
     row.totalEstimated = Math.round(sums[i].expected);
-    row.total = Math.round(sums[i].paid + sums[i].expected);
+    // 합 = 지급 + 예상(roundedAnnual과 같은 규칙, 5.162)
+    row.total = row.totalActual + row.totalEstimated;
     return row;
   });
 }
@@ -120,8 +129,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const yTicks = niceAxisTicks(maxBar);
   const TotalLabel = makeTotalLabel(monthlyTotals.map((m) => m.total));
   // 연 합계는 공용 계산의 반올림 전 합을 1회 반올림 — 허브 카드·성적표 입력과 같은 값
-  const annualActual = Math.round(calc.annual.paid);
-  const annualTotal = Math.round(calc.annual.total);
+  const { paid: annualActual, expected: annualExpected, total: annualTotal } = roundedAnnual(calc);
 
   // 월 선택 시: 그 달의 지급 합·예상 합 데이터로 라벨·금액 결정(날짜 기준 판정, #313).
   // 지급·예상이 섞인 달(주로 이번 달)은 `{m}월 배당` + 합계 + `일부 예상`. 둘 다 0인 달만 월 번호로 지급/예상 라벨을 고른다.
@@ -152,7 +160,6 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
   const jpyOnly = jpyCount > 0 && groups.length === 0;
   // 결론 줄(#317) — 지급·예상은 Hero 합계를 나눈 값(줄 합 = Hero), 다음 지급 달·종목 수는 계산 결과에서 고르기만 한다
   const next = annualTotal > 0 ? nextDividendMonth(calc, kstTodayString()) : null;
-  const annualExpected = annualTotal - annualActual;
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -162,13 +169,13 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             <div className="flex items-center gap-2">
               <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
               <InfoHint summary="지급일이 안 된 배당은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
-                <p className="break-keep">거래 기록이 있으면 지급일에 갖고 있던 수량으로 계산해요. 판 종목은 빠져요.</p>
+                <p className="break-keep">거래 기록이 있으면 지급일에 갖고 있던 수량, 없으면 지금 수량으로 계산해요. 판 종목은 빠져요. 액면분할한 종목은 분할 전 배당이 실제와 다를 수 있어요.</p>
                 <p className="break-keep">투입 대비 배당은 올해 배당 ÷ 보유 주식 매입금액이에요. 예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 평단이 없거나 엔화인 종목은 뺀 값이에요.</p>
               </InfoHint>
             </div>
             {/* 월 선택 배지와 설명이 같은 칸을 공유 — 선택·해제해도 헤더 높이가 변하지 않아 차트가 밀리지 않는다 */}
             <div className="grid min-h-6 items-center [&>*]:[grid-area:1/1]" data-testid="dividend-sub-slot">
-              <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>지금 보유 종목 기준 · 세전 추정</CardDescription>
+              <CardDescription className={selectedMonth !== undefined ? "invisible" : undefined}>지급일에 보유한 수량 기준 · 세전 추정</CardDescription>
               {selectedMonth !== undefined && (
                 <Badge asChild variant="outline">
                   <button
@@ -311,7 +318,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
               <div className="text-center">
                 <p className="text-muted-foreground text-sm">올해 배당이 아직 없어요</p>
                 <p data-testid={jpyOnly ? "dividend-jpy-notice" : undefined} className="text-muted-foreground text-sm mt-1 text-pretty break-keep">
-                  {jpyOnly ? jpyDividendNotice(jpyCount) : "지금 보유 종목 기준으로 올해 받을 배당이 없어요"}
+                  {jpyOnly ? jpyDividendNotice(jpyCount) : "보유 종목에서 올해 받을 배당이 없어요"}
                 </p>
               </div>
             </div>
@@ -339,7 +346,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                       ticks={yTicks}
                       domain={[0, yTicks[yTicks.length - 1]]}
                       tickFormatter={(v) => formatAxisWon(v)}
-                      width={55}
+                      width={62}
                     />
                     <ChartTooltip
                       content={({ active, payload }) => {

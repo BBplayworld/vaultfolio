@@ -159,7 +159,7 @@ _components/
 - **탭:** 전체/국내/해외/IRP/ISA/연금/비상장 (7탭)
 - `lookupState`: `"idle"|"success"|"failed"` — idle 시 종목명·현재가 숨김
 
-### BrokerTotalsBlock (`views/detail/tabs/broker-totals-block.tsx`, #5.160 #319)
+### BrokerTotalsBlock (`views/detail/tabs/broker-totals-block.tsx`, #5.160 #319; 5.162 메타 줄 `N종목`·`· 비중` 조각별 nowrap)
 - 상세·주식 selector 아래 접기형 `증권사별 · N곳`(기본 접힘, `useState`만, 패널 항상 마운트 grid-rows+inert). props `stocks`(지금 탭 행)·`exchangeRates`·`displayCurrency`. 묶음 2개 미만이면 `null`. 행 testId `broker-row`(`-name`·`-share`·`-count`·`-value`·`-profit`·`-resync`), `broker-totals(-toggle|-panel|-note)`. 행 `맞추기` = `dispatchAddStock("screenshot", broker)`(미지정 행은 broker 없음). 인증카드 미렌더. export `formatBrokerUnits(units, scale)`·`formatShareTenths`.
 
 ### stock-tab.tsx export 목록 (share-card·welcome-guide에서 재사용)

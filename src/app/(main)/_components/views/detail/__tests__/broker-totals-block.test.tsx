@@ -82,4 +82,14 @@ describe("dispatchAddStock broker 전달(#319)", () => {
     globalThis.window = orig;
     expect(events.map((e) => e.detail)).toEqual([{ mode: "screenshot", broker: "키움증권" }, { mode: "screenshot" }]);
   });
+
+  it("5.162 메타 줄: 종목 수·'· 비중' 두 조각 모두 nowrap(320 꺾임은 조각 사이에서만, C152)", () => {
+    const long = [
+      st({ id: "l1", broker: "한국투자증권 종합계좌 아주긴이름", quantity: 7 }),
+      st({ id: "l2", broker: "미래에셋증권", ticker: "000660", quantity: 3 }),
+    ];
+    const html = renderToStaticMarkup(<BrokerTotalsBlock stocks={long} exchangeRates={RATES} displayCurrency="KRW" />);
+    expect(html).toMatch(/data-testid="broker-row-count" class="whitespace-nowrap"/);
+    expect(html).toMatch(/data-testid="broker-row-share" class="whitespace-nowrap">· /);
+  });
 });
