@@ -30,17 +30,18 @@ function BrokerRow({ row, scale, onResync }: { row: BrokerTotalRow; scale: 1 | 1
   const sign = row.profitUnits > 0 ? "+" : "";
   const rate = row.profitRate === null ? "—" : `(${zero ? "" : sign}${(zero ? 0 : row.profitRate).toFixed(1)}%)`;
   return (
-    <div data-testid="broker-row" data-broker={row.name} data-unassigned={row.unassigned} className="flex min-h-14 items-center gap-2 py-2">
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex items-baseline gap-1.5">
-          <span data-testid="broker-row-name" className={`${ASSET_THEME.cardInfoName} min-w-0`}>{row.name}</span>
-          <span data-testid="broker-row-share" className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">{formatShareTenths(row.shareTenths)}</span>
-        </div>
-        <span data-testid="broker-row-count" className="text-sm text-muted-foreground">{row.count}종목</span>
+    <div data-testid="broker-row" data-broker={row.name} data-unassigned={row.unassigned} className="flex min-h-14 flex-wrap items-center gap-x-2 py-2 min-[360px]:flex-nowrap">
+      <div className="flex min-w-16 flex-1 flex-col gap-0.5">
+        <span data-testid="broker-row-name" className={`${ASSET_THEME.cardInfoName} break-keep`}>{row.name}</span>
+        <span className="text-sm text-muted-foreground tabular-nums">
+          <span data-testid="broker-row-count">{row.count}종목</span>
+          {" · "}
+          <span data-testid="broker-row-share" className="whitespace-nowrap">{formatShareTenths(row.shareTenths)}</span>
+        </span>
       </div>
-      <div className="max-w-[55%] shrink-0 text-right max-[359px]:max-w-[45%]">
+      <div className="shrink-0 text-right">
         <p data-testid="broker-row-value" className={`${ASSET_THEME.cardAmountMain} whitespace-nowrap ${ASSET_THEME.text.default}`}>{formatBrokerUnits(row.valueUnits, scale)}</p>
-        <div data-testid="broker-row-profit" className={`${ASSET_THEME.cardAmountProfitRow} justify-end max-sm:flex-wrap`}>
+        <div data-testid="broker-row-profit" className={`${ASSET_THEME.cardAmountProfitRow} justify-end`}>
           <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{sign}{formatBrokerUnits(row.profitUnits, scale)}</span>
           <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{rate}</span>
         </div>
@@ -51,7 +52,7 @@ function BrokerRow({ row, scale, onResync }: { row: BrokerTotalRow; scale: 1 | 1
         data-testid="broker-row-resync"
         aria-label={`${row.name} 맞추기`}
         onClick={() => onResync(row.unassigned ? undefined : row.name)}
-        className="h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96]"
+        className="h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96] max-[359px]:ml-auto max-[359px]:basis-full max-[359px]:justify-end"
       >
         맞추기
       </Button>
@@ -83,11 +84,11 @@ export function BrokerTotalsBlock({ stocks, exchangeRates, displayCurrency }: { 
         aria-expanded={open}
         aria-controls={panelId}
         onClick={toggle}
-        className="flex min-h-10 w-full items-center gap-1.5 px-4 py-2.5 text-left transition-transform duration-150 active:scale-[0.99]"
+        className="flex min-h-10 w-full items-center gap-1.5 px-4 py-2.5 text-left motion-safe:transition-transform duration-150 active:scale-[0.99]"
       >
         <span className="text-sm font-semibold">증권사별</span>
         <span className="text-sm text-muted-foreground">· {rows.length}곳</span>
-        <ChevronDown aria-hidden className={`ml-auto size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown aria-hidden className={`ml-auto size-4 shrink-0 text-muted-foreground motion-safe:transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       <div
         id={panelId}
