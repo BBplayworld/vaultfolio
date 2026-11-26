@@ -1,0 +1,51 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:oklch(0.16 0.010 265);--fg:oklch(0.965 0.004 265);--card:oklch(0.225 0.012 265);--muted:oklch(0.31 0.014 265);--mfg:oklch(0.74 0.016 265);--border:oklch(1 0 0 / 10%);--primary:oklch(0.704 0.040 256.788);--pfg:#fff}
+html.light{--bg:oklch(0.96 0.004 250);--fg:oklch(13.604% 0.00969 18.328);--card:#fff;--muted:oklch(0.88 0 0);--mfg:oklch(0.45 0 0);--border:oklch(0.91 0 0);--primary:oklch(0.585 0.233 277.117)}
+*{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI","Malgun Gothic",Roboto,system-ui,sans-serif;background:var(--card);color:var(--fg);padding:12px;font-size:16px;line-height:1.5}
+.tbl{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.ttl{display:flex;align-items:center;gap:8px;padding:6px 12px;background:color-mix(in oklab,var(--muted) 30%,transparent);border-bottom:1px solid var(--border);font-size:14px;line-height:20px;font-weight:600;color:var(--mfg)}
+.dot{width:8px;height:8px;border-radius:99px;background:#d6b72e}
+.g{display:grid;grid-template-columns:minmax(0,1fr) 5rem 5.5rem;column-gap:8px;padding-left:8px;padding-right:8px}
+.head{padding-top:8px;padding-bottom:8px;background:color-mix(in oklab,var(--muted) 50%,transparent);font-size:12px;line-height:16px;white-space:nowrap;color:var(--mfg);border-bottom:1px solid var(--border)}
+.head>*{text-align:right}.head .c1{grid-column:1;grid-row:1}.head .l{text-align:left}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.row{padding-top:10px;padding-bottom:10px;row-gap:8px;align-items:start}
+.row+.row{border-top:1px solid var(--border)}
+.namecell{grid-column:span 3;min-width:0;display:flex;flex-wrap:wrap;align-items:center;column-gap:6px}
+.namewrap{min-width:0;flex-basis:100%}
+.name{font-size:14px;line-height:20px;font-weight:600;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere}
+.freq{flex-shrink:0;margin-top:2px;display:inline-flex;align-items:center;height:16px;padding:0 4px;border:1px solid transparent;border-radius:4px;background:color-mix(in oklab,var(--primary) 10%,transparent);color:var(--primary);font-size:12px;font-weight:600;white-space:nowrap}
+.date{margin-top:2px;flex-shrink:0;font-size:12px;line-height:16px;color:var(--mfg);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chips{grid-column:span 3;display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-start}
+.chip{display:inline-flex;align-items:center;justify-content:center;height:24px;padding:2px 8px;border-radius:99px;border:1px solid var(--border);font-size:12px;line-height:16px;white-space:nowrap;font-weight:600;flex-shrink:0}
+.chip.a{background:#5b6fbf22;color:#5b6fbf;border-color:#5b6fbf66}
+.chip.e{font-weight:500;border-style:dashed;color:var(--mfg);padding:2px 3px;font-size:11px;letter-spacing:-0.05em}
+.chip.b{font-weight:500;opacity:.25}
+.chip.sel{background:var(--primary);color:var(--pfg);border-color:transparent}
+.v{text-align:right;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v p{white-space:nowrap}.teal{color:#00BCD4}.m{color:var(--mfg)}.b{font-weight:700}
+</style></head><body>
+<div class="tbl" role="table"><div class="ttl"><span class="dot"></span>국내주식</div>
+<div class="g head"><span class="c1 l">종목명</span><span class="sr">배당월</span><span class="c1">주당</span><span>지급금액</span><span>합계</span></div>
+<div class="g row" data-row><div class="namecell"><div class="namewrap"><p class="name">삼성전자</p></div><span class="freq">분기</span><p class="date">매수 2025-03-12</p></div>
+ <div class="chips"><span class="chip a">1월</span><span class="chip a">4월</span><span class="chip a">7월</span><span class="chip e">12월 예정</span></div>
+ <div class="v c"><p class="teal">361원</p><p class="m">보유 65주</p></div><div class="v c"><p class="b">70,395원</p></div><div class="v c"><p class="b">144,456원</p></div></div>
+<div class="g row" data-row><div class="namecell"><div class="namewrap"><p class="name">TIGER 미국S&amp;P500</p></div><span class="freq">월배당</span><p class="date">매수 2024-09-03</p></div>
+ <div class="chips"><span class="chip a">1월</span><span class="chip a">2월</span><span class="chip a">3월</span><span class="chip a">4월</span><span class="chip a">5월</span><span class="chip a">6월</span><span class="chip a">7월</span><span class="chip a">8월</span><span class="chip a">9월</span><span class="chip a">10월</span><span class="chip a">11월</span><span class="chip e">12월 예정</span></div>
+ <div class="v c"><p class="teal">99,999원</p><p class="m">보유 99999주</p></div><div class="v c"><p class="b">9,999,999원</p></div><div class="v c"><p class="b">99,999,999원</p></div></div>
+<div class="g row" data-row><div class="namecell"><div class="namewrap"><p class="name">TIGER 미국배당다우존스타겟커버드콜2호</p></div><span class="freq">월배당</span><p class="date">매수 2026-11-02</p></div>
+ <div class="chips"><span class="chip b">1월</span><span class="chip b">2월</span><span class="chip b">3월</span><span class="chip b">4월</span><span class="chip b">5월</span><span class="chip b">6월</span><span class="chip b">7월</span><span class="chip b">8월</span><span class="chip b">9월</span><span class="chip b">10월</span><span class="chip b">11월</span><span class="chip e">12월 예정</span></div>
+ <div class="v c"><p class="teal">105원</p><p class="m">보유 300주</p></div><div class="v c"><p class="b m">-</p></div><div class="v c"><p class="b">31,500원</p></div></div>
+</div>
+<div class="tbl"><div class="ttl"><span class="dot" style="background:#2a9db5"></span>해외주식</div>
+<div class="g head"><span class="c1 l">종목명</span><span class="sr">배당월</span><span class="c1">주당</span><span>12월 지급</span><span>12월 합계</span></div>
+<div class="g row" data-row><div class="namecell"><div class="namewrap"><p class="name">Apple</p></div><span class="freq">분기</span><p class="date">매수 2026-05-05</p></div>
+ <div class="chips"><span class="chip b">2월</span><span class="chip a">5월</span><span class="chip a">8월</span><span class="chip sel">12월 예정</span></div>
+ <div class="v c"><p class="teal">$0.2600</p><p class="m">382원</p><p class="m">보유 12주</p></div><div class="v c"><p class="m">&nbsp;</p><p class="b m">-</p></div><div class="v c"><p class="m">$3.12</p><p class="b">4,587원</p></div></div>
+<div class="g row" data-row><div class="namecell"><div class="namewrap"><p class="name">Realty Income Corporation</p></div><span class="freq">월배당</span><p class="date">매수 2026-06-18</p></div>
+ <div class="chips"><span class="chip e">1월 예정</span><span class="chip e">2월 예정</span><span class="chip e">3월 예정</span><span class="chip e">4월 예정</span><span class="chip e">5월 예정</span><span class="chip e">6월 예정</span><span class="chip e">7월 예정</span><span class="chip e">8월 예정</span><span class="chip e">9월 예정</span><span class="chip e">10월 예정</span><span class="chip e">11월 예정</span><span class="chip sel" style="font-weight:500">12월 예정</span></div>
+ <div class="v c"><p class="teal">$99.9999</p><p class="m">99,999원</p><p class="m">보유 9999주</p></div><div class="v c"><p class="m">$6999.99</p><p class="b">9,999,999원</p></div><div class="v c"><p class="m">$69999.99</p><p class="b">99,999,999원</p></div></div>
+</div>
+</body></html>
