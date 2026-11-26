@@ -16,6 +16,13 @@ export function formatHeroDelta(delta: number): string {
   return `${delta >= 0 ? "▲ " : "▼ "}${formatSignedShort(delta)}`;
 }
 
+/** Hero 퍼센트 글자(#309) — 부호는 반올림한 표시값 기준: `+1.2%` / `−1.2%`(U+2212) / `0.0%`(부호 없음, `−0.0%` 금지) */
+export function formatHeroPct(pct: number): string {
+  const t = Math.abs(pct).toFixed(1);
+  if (Number(t) === 0) return `${t}%`;
+  return `${pct < 0 ? "\u2212" : "+"}${t}%`;
+}
+
 /** Hero 정본 만원 정수(0 방향 버림) */
 export function heroManwon(delta: number): number {
   return Math.sign(delta) * Math.floor(Math.abs(delta) / MANWON);
