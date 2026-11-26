@@ -294,7 +294,7 @@ pickNewSpot(order, today, lastVisited): NewSpot | null   // 한 화면 1개 — 
 
 ### 4.85 추가 유틸
 
-- `lib/finance/dividend-client.ts` — `fetchDividend(ticker,type,excd="NAS")`(배당 공용 fetch: `!res.ok`·`X-KIS-Unavailable` → throw라 react-query가 캐시 안 함, 헤더 없는 200 빈 배열은 `[]`)·`countFailedDividends(queries)`(isError 수)·`isDividendReady(loading,failedCount)`(로딩·실패면 false, 성적표 잠정·기록 생략 판정)·`DIVIDEND_FETCH_FAILED_MESSAGE`. 배당 탭 2곳·성과 허브·자산 성적표(`useDividendAnnualTotals().failedCount`)가 사용. queryKey `["dividend","v11",ticker,type]` 공유.
+- `lib/finance/dividend-client.ts` — `fetchDividend(ticker,type,excd="NAS")`(배당 공용 fetch: `!res.ok`·`X-KIS-Unavailable` → throw라 react-query가 캐시 안 함, 헤더 없는 200 빈 배열은 `[]`)·`countFailedDividends(queries)`(isError 수)·`isDividendReady(loading,failedCount)`(로딩·실패면 false, 성적표 잠정·기록 생략 판정)·`DIVIDEND_FETCH_FAILED_MESSAGE`·`jpyDividendNotice(n)`(엔화 종목 안내 1줄, #313). 배당 탭 2곳·성과 허브·자산 성적표(`useDividendAnnualTotals().failedCount`)가 사용. queryKey `["dividend","v11",ticker,type]` 공유.
 - `lib/finance/dividend-axis.ts` — `niceAxisTicks(max, targetCount=4)`(1·2·5×10^n 등간격, 마지막 눈금 ≥ max)·`formatAxisWon(v)`(만원 이상 소수 1자리 `1.5만원`, 반올림 오차 0)·`pickVisibleLabels(values, labels, slotWidth)`(막대 값 라벨 가로 겹침이면 큰 값 우선). 배당 차트(`dividend-chart.tsx`)가 사용.
 - `lib/number-utils.ts` `formatPriceByCurrency(value, currency)` — USD `$`·JPY `¥`·그 외 원. 기존 `formatPrice` 3벌(`stock-trades-view`·`stock-target-picker`·`delete-rollback-dialog`) 삭제·통합.
 - `lib/finance/profit-utils.ts` `fetchProfitRef` — 배치가 429·5xx면 불완전(캐시 저장·`onComplete` 생략, 남은 배치 중단), `Retry-After`(1~5초, 10초 초과면 재시도 안 함)로 **실행당 1회**만 재시도(요청 상한 = 배치 수 + 1). `profitRetryDelayMs`. 점검(`X-KIS-Unavailable`)은 기존 경로.
@@ -1013,8 +1013,14 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 ### sitemap·정본 호스트·UTM (#4.45 #77)
 - `APP_CONFIG.siteUrl` 기본값은 www. 정본 URL(canonical·og·sitemap)은 모두 이 값에서 파생하고 표시용 도메인 문자열은 리터럴로 분리. `sitemap.ts`는 `new Date()` 금지(문서별 고정 lastModified). `allowedUtmQuery`는 `/ratio`·`/guide/<slug>`만 UTM 3키 허용. `WEB_APPLICATION_JSON_LD`(`config/app.ts`)는 루트 layout head에 1개
 
+### 배당 공용 계산 (`src/lib/finance/dividend-calc.ts`, #313 5.157) — 배당 금액 계산의 단일 출처
+- `computeDividends(rows, txs, usdRate, todayKst)` → `{ months[12]{month, byCategory{paid,expected}}, byStock: Map<key, {paid,expected,paidForeign,expectedForeign,perMonth{paid,expected,paidForeign,expectedForeign}[12],monthState[12],firstPayout,qtyUsed,heldQty}>, annual{paid,expected,total} }`(전부 반올림 전 — 소비처가 마지막 합산 뒤 1회 `Math.round`). 입력 `rows`는 **계좌별 원본 행**(`mergeStockGroup` 결과 금지 — id가 바뀌어 거래 매칭이 끊긴다). 엔화 행·카테고리 밖 행은 제외
+- `heldQtyAt(stock, txs, payoutDate)` → `{qty, qtyUsed:'derived'|'current'}`: `지급일 <= purchaseDate`면 0, 반영 거래(`stockId===stock.id && reflected`) 0건·역산 음수·NaN·`positionSource==="manual"`이고 `positionEffectiveDate`(없으면 매수일)가 지급일 뒤면 지금 수량, 그 밖은 `지금 수량 − Σ매수 + Σ매도`(지급일 당일 이후 거래 되돌림, `reverseTransaction` 수량 규칙, 소수 8자리 정리). 수량 0은 0원(폴백 아님)
+- `isDividendPaid(p, todayKst)` = `payoutDate <= 오늘 && !isEstimated`(연-월 판정 금지) · `monthSums(calc)`(월별 지급·예상 합, 툴팁 합계 = 월 선택 Hero) · `dividendStockKey(stock)`(= `groupStocksByTickerCategory` 키) · `isDividendExcludedCurrency`(JPY) · `DIVIDEND_CATEGORY_KEYS`
+- 훅 `useDividendData({enabled?})`(`views/activity/use-dividend-data.ts`) → `{groups(병합 표시 행+원본 items+payouts), calc, isLoading, loadedCount, failedCount, totalCount, jpyCount}`. 조회는 ticker·카테고리당 1회(쿼리 키 불변), 엔화는 쿼리 0. 순수 `buildDividendGroups(stocks)`. 배당 차트·종목 표(props)·`useDividendAnnualTotals`가 사용 — 새 배당 표시는 이 훅·함수를 재사용하고 컴포넌트에서 재계산하지 않는다. 불리기 `annualAtHeldQty`(지금 수량 × 올해 전체 지급)는 다른 정의라 공용 계산 밖
+
 ### 배당 투입 대비 배당 계산 (`src/lib/finance/dividend-yield.ts`, #4.46 #80)
-- `computeDividendYield(items, usdRate, mode, currentYM?)` → `{pct, text, excluded}|null`. 포함 종목=평단>0이고 KRW/USD, 분모 Σ평단×수량×(USD면 현재 환율), 분자는 Hero와 같은 규칙(매수일 이전 지급 제외, 지급월≤이번 달 KST면 지급, `actual` 모드는 지급만). 0<값<0.05는 "0.1% 미만". `currentYearMonthKst()` 제공
+- `computeDividendYield(items, usdRate, mode, calc)` → `{pct, text, excluded}|null`. `items` = 표시 단위(병합) 종목, 포함 종목=평단>0이고 KRW/USD, 분모 Σ평단×지금 수량×(USD면 현재 환율), 분자 = `calc.byStock`의 그 종목 값(#313, `actual` 모드는 지급만). 0<값<0.05는 "0.1% 미만"
 
 ### 도넛 라벨 글자색 (`config/theme.ts` `pickDonutLabelColor`, #4.46 #82)
 - 조각색 위에서 흰/검정 중 WCAG 대비가 큰 쪽(알파 없음). `pickOnColor`(휘도 0.45 컷)와 별개 — MAIN_PALETTE 12색 모두 4.5:1 이상이 테스트로 고정

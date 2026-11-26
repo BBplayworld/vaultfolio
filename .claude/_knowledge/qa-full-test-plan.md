@@ -271,7 +271,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ **자산 타입별 그룹 박스 + 항목별 "일부 예측" 배지 + 부동산 안분 제외(2026-08)** — `groupAttributionItems`가 `getAttributionItems` 결과를 주식·코인·부동산·현금(`income`+`cash`)·대출(`debt`) 그룹으로 묶어 박스 하나에 여러 줄로 렌더(`fx`·`deposit`·통합 `price`는 그룹 없이 단독 박스). 그룹 나열 순서는 그룹 내 금액 순합의 절대값 큰 순서. `mergeAttributions`가 하이브리드 구간의 통합 `price`를 mid 시점 breakdown의 **주식·코인 비중에만** 안분해 실측 `price:stock`/`price:crypto`와 한 줄로 합치고 `estimated:true`로 표시(부동산은 안분 대상에서 제외 — `real-estate-input.tsx`는 시장가 자동 갱신이 없어 사용자가 안 건드린 부동산에 "시세 하락"이 뜨는 오귀속 방지). 안분된 줄에는 개별 "일부 예측" 배지(구간 전체가 `attribution.estimated`면 상단 배지로 충분하므로 중복 생략)
 - ⚙ **현금 입출금 기록 날짜 기본값 KST 통일(2026-08)** — `cash-tx-input.tsx`의 날짜 필드 기본값·최대값(`todayStr`)이 `new Date().toISOString()`(UTC 자정 기준)이면 한국시간 00~09시에 입력한 거래가 하루 전 날짜로 저장돼 원인분해 `income` 집계에서 누락(→ `cash` 잔차로 오분류)될 뿐 아니라, **날짜 입력 `max` 제약이 KST 기준 "오늘"을 미래로 오판해 그 시간대엔 오늘 날짜를 아예 선택할 수 없었다**. 스냅샷 등 다른 "오늘" 계산과 동일하게 `Date.now() + 9시간` 기준으로 통일. 동일 UTC 패턴이 `trade-input.tsx`(주식 매매)·`loan-tx-input.tsx`(대출 거래)에도 남아 있음(이번 수정 범위 밖, 후속 검토 대상)
 - 자동: `src/lib/report/__tests__/asset-report.test.ts` — 항등식(정밀·예측·표시항목), 미반영 현금기록 제외, buy/sell 분리(정밀·예측 양쪽), 체결 환율 환산, 외화 원가 fx-중립화, **토요일 실시간 끝점의 주식 시세 노출**·**"그 외" 라벨 부재**·**동일 날짜 daily 우선**, 자산군별 시세·매수 분해, 직접 수정분 방향 합산, 카테고리 순서, **income↔cash 실제 반응**·**deposit 분리**·**잔차 흡수 부호 일치**·**computePeriodAttribution 하이브리드 합성(4기간 공통·mid 부재 회귀·폴백)**, **토요일 stale 스냅샷의 price:stock 임계값 재현/교정(일요일 오표시 회귀)**, **기록된 입금의 cashRoundTrip 오탐 방지(income 반영 후 이탈폭 재계산)**, **하이브리드 price 안분(mid 구성비로 price:stock 병합·estimated 표시, 부동산 제외 확인 2건)**, **groupAttributionItems(자산군·대출 그룹핑, 순변동 절대값 정렬)**, **income 라벨/문장 통일**. `src/lib/__tests__/stock-cache-slot.test.ts` — 휴장일 slot 고정(F-SYNC 연계)
-- 엣지: 전년 데이터 없음, 조회 중 상태, 배당 매수일 이전 payout 제외
+- 엣지: 전년 데이터 없음, 조회 중 상태, 배당 매수일(당일 포함) 이전 payout 제외·거래 기록 있으면 지급일 시점 수량(F-DIVIDEND-CALC)
 - 회귀: 2단 캐시(REF_DATE_MAP/REF_PRICES) 휴장일 영구 hit, daily 캐시 키, 일별 표시값(국내 휴장 시 직전 영업일 종가) 불변
 
 - ~~연 탭 자산 구성 변화 카드(#4.43)~~ — #4.44에서 제거됨(`composition-card` DOM 없음). 외화 노출 줄(성적표 분산·비중)은 유지.
@@ -772,6 +772,11 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 평단 0·JPY는 분자·분모 제외 + 제외 수, 지급만은 예상분 제외(지급 0이면 null), USD만 보유 시 환율 변경에도 % 동일, 운영 형태 픽스처(추정 평단·올해 매수·무배당 종목) 값 존재, 0.1% 미만 표기
 - 👤 성과 › 배당: Hero 아래 "투입 대비 배당 N%"·캡션, 월 막대 선택 시 보이지 않음(막대 위치 불변), 조회 중·배당 0이면 줄 없음, 허브 배당 카드·월별 종목 표·성적표 텍스트 main과 동일
 - 테스트: `src/lib/__tests__/dividend-yield.test.ts`
+
+### F-DIVIDEND-CALC. 배당 공용 계산 ([dividend-calc.ts](../../src/lib/finance/dividend-calc.ts)) — #313 5.157
+- ⚙ 계좌별 원본 행으로 먼저 계산 후 합산(병합 × 지금 수량 금지), 반영 거래가 있으면 지급일 시점 수량 역산(당일 매수 제외·당일 매도 포함·매수일 = 지급일 0원), 폴백(거래 0건·음수·NaN·manual 덮어쓰기가 지급일 뒤) = 지금 수량, 수량 0 = 0원. 지급 = `payoutDate <= 오늘 KST && !isEstimated`(연-월 판정 0). 엔화 종목 쿼리 0·합계 제외. 차트 월 합 = 표 종목 합 = 허브·성적표 `annualTotal`(반올림 1회). 서버 캐시 히트가 `isEstimated:true` 보존(응답 형식·캐시 키 v12·쿼리 키 v11 불변)
+- 👤 성과 › 배당: 설명 `지금 보유 종목 기준 · 세전 추정`(허브·표·Hero 반복 0), 섞인 달(주로 이번 달) 막대 선택 → `{m}월 배당` + `일부 예상`, 금액 = 툴팁 합계, 엔화 종목 있으면 `엔화 종목 N개는 배당 조회 안 됨 · 합계에서 빠져 있어요`, 빈 화면 `올해 배당이 아직 없어요`/`지금 보유 종목 기준으로 올해 받을 배당이 없어요`, 화면 'KIS' 0. 320·390 겹침·한 글자 줄바꿈 0. 성적표 과거 등급 재계산 0(배당 입력 감소로 신규 기록 등급 변동은 정상 — 판독 경계 = 머지일)
+- 테스트: `src/lib/finance/__tests__/dividend-calc.test.ts`, `views/activity/__tests__/use-dividend-data.test.ts`, `api/finance/dividend/__tests__/route-cache-estimated.test.ts`
 
 ### F-MORE-SETTINGS. 더보기·설정 ([tool-menu.tsx](../../src/app/(main)/_components/header-menu/tool-menu.tsx)) — #4.46 #81
 - 👤 더보기 섹션 순서 프로필 · 공유 · 백업 · 지원 + 설정 행(4.89에서 '도구' 섹션·세금 관리 행 제거), 공유·백업 안 순서 공유·동기화 → 백업 → 가져오기 → 저장 현황, 자산 0에서도 가져오기 동작(숨은 input 항상 렌더), 설정에 가져오기·저장 현황 없음·순서 보안→화면→표시→데이터→버전·삭제 행 맨 아래, 다크 모드 ON/OFF 배지(`aria-pressed`), 백업·가져오기·캐시·삭제 문구 변경 0

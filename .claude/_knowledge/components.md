@@ -528,7 +528,7 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 - Card 모바일 padding: `px-4 sm:px-6` (CardHeader/CardContent/CardFooter)
 
 ### 배당 투입 대비 배당 줄 · 메뉴 행 상수 · 홈 도넛 (#4.46)
-- `DividendCard`(`views/activity/dividend-chart.tsx`): Hero 금액 아래 `data-testid="dividend-yield"` 블록(값 줄 "투입 대비 배당 N%" + 캡션). 계산은 `computeDividendYield(items, usdRate, mode)` 순수 함수(`lib/finance/dividend-yield.ts`). 조회 중·배당 0·계산 불가면 미렌더, 월 선택 시 언마운트 대신 `opacity-0 aria-hidden`
+- `DividendCard`(`views/activity/dividend-chart.tsx`): Hero 금액 아래 `data-testid="dividend-yield"` 블록(값 줄 "투입 대비 배당 N%" + 캡션). 계산은 `computeDividendYield(items, usdRate, mode, calc)` 순수 함수(`lib/finance/dividend-yield.ts`). **#313(5.157)**: 금액은 `useDividendData().calc`(공용 `computeDividends`) 1곳 — 월 선택 Hero는 그 달 지급·예상 합으로 판정(섞인 달 `{m}월 배당` + `일부 예상` 테두리 배지 `dividend-hero-mixed`), 엔화 안내 `dividend-jpy-notice`(실패 안내 자리, 엔화만 있으면 빈 화면 둘째 줄), 설명 `지금 보유 종목 기준 · 세전 추정`. `MonthlyDividendStocks({selectedMonth, groups, calc})`는 자체 조회·계산 없이 `calc.byStock`만 표시(배지 `N월`/`N월 예정`/흐린 `N월` = `monthState`). 조회 중·배당 0·계산 불가면 미렌더, 월 선택 시 언마운트 대신 `opacity-0 aria-hidden`
 - `menu-styles.ts`(`header-menu/`): 더보기·설정 공용 `MENU_COLUMN`(max-w-2xl 좌정렬)·`MENU_ROW`·`MENU_ROW_DESTRUCTIVE`·`MENU_SECTION_LABEL`(muted)·`MENU_ICON`(단색)·`MENU_LABEL`·`MENU_DESC`·`menuBadge(on)`(앱 잠금·다크 모드 ON/OFF 배지)
 - `AssetDonutChart`/`DonutLabel`(`views/home/dashboard.tsx`): 홈은 이름+% 2줄·`DONUT_LABEL_MIN_PCT(name)` 미만이면 라벨 없음·`pickDonutLabelColor(color)` 글자색·조각 stroke `var(--background)`·범례 열 정렬. `screenshotMode`(웰컴)는 `legacy` 경로로 3줄 라벨·`var(--card)`·기존 범례 유지(스냅샷 `__tests__/donut-welcome-snapshot.test.tsx`)
 
