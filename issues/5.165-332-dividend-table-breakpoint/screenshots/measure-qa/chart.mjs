@@ -1,0 +1,14 @@
+import { launch, enterDemo, DIV_STOCKS } from "./lib.mjs";
+const b = await launch();
+const c = await b.newContext({ viewport: { width: 390, height: 1000 }, deviceScaleFactor: 1, reducedMotion: "reduce", colorScheme: "dark" });
+const q = await c.newPage(); await enterDemo(q, { stocks: DIV_STOCKS });
+await q.getByRole("radio", { name: "성과" }).first().click(); await q.waitForTimeout(800);
+await q.getByText("배당", { exact: true }).first().click(); await q.waitForTimeout(4000);
+const bars = () => q.evaluate(() => { const r = [...document.querySelectorAll(".recharts-bar-rectangle path, .recharts-bar-rectangle rect")].map((e) => e.getBoundingClientRect()); return { n: r.length, nonZero: r.filter((x) => x.height > 0.5).length, maxH: Math.max(0, ...r.map((x) => Math.round(x.height))) }; });
+console.log("대기 후", JSON.stringify(await bars()));
+await q.locator(".recharts-wrapper").first().screenshot({ path: `${process.env.SHOTS}/${process.env.TAG}-chart-viewport-390.png` });
+const pr = q.screenshot({ path: `${process.env.SHOTS}/${process.env.TAG}-chart-fullpage-390.png`, fullPage: true });
+await pr; console.log("전체 페이지 캡처 직후", JSON.stringify(await bars()));
+await q.waitForTimeout(2500); console.log("2.5초 뒤", JSON.stringify(await bars()));
+await q.locator(".recharts-wrapper").first().screenshot({ path: `${process.env.SHOTS}/${process.env.TAG}-chart-after-390.png` });
+await b.close();

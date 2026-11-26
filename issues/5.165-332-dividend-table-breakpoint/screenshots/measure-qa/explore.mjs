@@ -1,0 +1,5 @@
+import { launch, enter, sig } from "./h.mjs";
+const b = await launch(); const { p, errs } = await enter(b, "http://localhost:4651", 359);
+const dump = async (t) => { await p.waitForTimeout(1200); console.log("\n##", t, await p.evaluate(() => location.hash)); console.log((await p.evaluate(() => [...document.querySelectorAll("*")].filter((e) => e.getClientRects().length && (e.matches("button,[role=radio],[role=tab],a,[role=button]") || getComputedStyle(e).cursor === "pointer") && !(e.parentElement && getComputedStyle(e.parentElement).cursor === "pointer" && !e.matches("button,a,[role=radio],[role=tab]"))).map((e) => (e.getAttribute("data-testid") ? "[" + e.getAttribute("data-testid") + "]" : "") + (e.innerText || e.getAttribute("aria-label") || "").replace(/\s+/g, " ").slice(0, 26)).join(" ¦ "))).slice(0, 1800)); const s = await sig(p); console.log("SIG", s.n, [...new Set(s.items.map((x) => x.split(" => ")[0]))].join(" ## ")); };
+for (const h of process.argv.slice(2)) { await p.evaluate((h) => { location.hash = h; }, h); await dump(h); }
+console.log(errs.length); await b.close();
