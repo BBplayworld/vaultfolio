@@ -19,3 +19,9 @@ export function shouldAskPastDate(opts: { date: string; today: string; isNewSele
   if (opts.isNewSelected || !opts.date) return false;
   return opts.date < opts.today;
 }
+
+/** '현재가 넣기' 값 — 체결 단가 칸 자릿수와 같게 반올림(USD 3·JPY 4·KRW 0) */
+export function roundTradePrice(value: number, currency: "KRW" | "USD" | "JPY" | undefined): number {
+  const d = currency === "USD" ? 3 : currency === "JPY" ? 4 : 0;
+  return Math.round(value * 10 ** d) / 10 ** d;
+}

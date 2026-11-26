@@ -35,7 +35,7 @@ import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
-import { resolveTradeRate, shouldAskPastDate } from "@/lib/trade/trade-form";
+import { resolveTradeRate, roundTradePrice, shouldAskPastDate } from "@/lib/trade/trade-form";
 import { PastDateQuestion } from "../common/past-date-question";
 import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effective-target";
 import { LinkAccountRow } from "./link-account-row";
@@ -207,6 +207,10 @@ export function TradeInput() {
   // 외화 거래의 체결 환율 단일 값 — 칸 값(>0), 비었으면 현재 환율. 미리보기·연결 금액·원화 입력 환산·저장이 모두 이 값(#119·#311)
   const currentRate = selectedStock?.currency === "USD" ? exchangeRates.USD : selectedStock?.currency === "JPY" ? exchangeRates.JPY : 0;
   const linkRate = resolveTradeRate({ input: watchedExRate, currentRate, isForeign });
+  // '현재가 넣기' — 보유 항목이 정해졌을 때만(신규·미선택·검색 신규 제외), 현재가 0·USD 원화 입력이면 숨김(#311)
+  const fillPrice = selectedStock && selectedStock.id !== NEW_STOCK_ID && !pickedNew && selectedStock.currentPrice > 0 && !(isUsd && priceInKrw)
+    ? roundTradePrice(selectedStock.currentPrice, selectedStock.currency)
+    : null;
 
   // 반영 후 예상 포지션 인라인 미리보기 (팝업 대체)
   const reflectionPreview = useMemo(() => {
@@ -856,6 +860,20 @@ export function TradeInput() {
                         quickButtons={[]}
                       />
                     </FormControl>
+                    {fillPrice !== null && (
+                      <p className="text-sm text-muted-foreground">
+                        {/* 시각 높이는 줄 그대로, 눌림 영역만 40px(-my-2). 포커스는 단가 칸으로 옮기지 않는다(모바일 키보드 방지) */}
+                        <button
+                          type="button"
+                          data-testid="fill-current-price"
+                          aria-label="현재가를 단가에 넣기"
+                          className="-mx-1 -my-2 inline-flex min-h-10 items-center px-1 text-primary underline motion-safe:transition-transform active:scale-[0.96]"
+                          onClick={() => field.onChange(fillPrice)}
+                        >
+                          현재가 넣기
+                        </button>
+                      </p>
+                    )}
                     {isUsd && (
                       <p className="text-sm text-muted-foreground">
                         {priceInKrw

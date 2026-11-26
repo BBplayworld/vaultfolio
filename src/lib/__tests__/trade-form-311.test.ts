@@ -1,6 +1,6 @@
 // #311(5.158) 기록 입력 정확도 — 체결 환율 단일 값(0 저장 금지), 0 거래 백업 왕복 불변
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveTradeRate, shouldAskPastDate } from "../trade/trade-form";
+import { resolveTradeRate, roundTradePrice, shouldAskPastDate } from "../trade/trade-form";
 import { applyImportedPayload, getAssetData, saveAssetData } from "../asset/asset-storage";
 import { computeForeignRealizedGain, todayKst } from "../tax-utils";
 import { emptyData, g, memoryStorage } from "./physical-fixtures";
@@ -83,5 +83,14 @@ describe("과거 날짜 질문 표시 조건(KST)", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-26T14:59:00Z")); // KST 11-26 23:59
     expect(shouldAskPastDate({ date: "2026-11-26", today: todayKst() })).toBe(false);
+  });
+});
+
+describe("현재가 넣기 반올림 — 단가 칸 자릿수", () => {
+  it("USD 3자리·JPY 4자리·KRW 0자리", () => {
+    expect(roundTradePrice(187.23456, "USD")).toBe(187.235);
+    expect(roundTradePrice(1234.567891, "JPY")).toBe(1234.5679);
+    expect(roundTradePrice(71_850.6, "KRW")).toBe(71_851);
+    expect(roundTradePrice(71_850.4, undefined)).toBe(71_850);
   });
 });
