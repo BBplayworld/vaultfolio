@@ -177,10 +177,20 @@ Body: FormData { image: File(JPEG/PNG/WEBP/HEIC, 최대 10MB), assetType: "stock
 - cash: id, name, type, balance, currency, institution
 - loan: id, name, type, balance, interestRate, institution, startDate, startDateMissing
 
-**서버 한도:** 하루 1500회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP 없는 시간당 전역 150(`rl:gemini:global:{KST 시}`) + L1 분당 5 + 기기당 30(클라이언트 `use-gemini-usage`) — `reserveGeminiCalls` 원자 예약, 초과 시 429. /ratio 입구 풀 일 60(IP 한도 없음)
+**서버 한도:** 하루 1500회 (`GEMINI_SERVER_DAILY_LIMIT`) + IP 없는 시간당 전역 150(`rl:gemini:global:{KST 시}`) + L1 분당 5 + 기기당 30(클라이언트 `use-gemini-usage`) — `reserveGeminiCalls` 원자 예약, 초과 시 429. /ratio 입구 풀 일 60(IP 한도 없음), 화면 합계 전용 풀 일 60(5.164, 아래)
 **에러:** 400(이미지 오류) / 422(파싱 실패) / 429(한도) / 500(키 미설정/AI 오류)
 
-**Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`
+**Gemini 설정:** `gemini-2.5-flash-lite`, `temperature:0`, `maxOutputTokens:2048`, `thinkingBudget:0`, `responseMimeType:"application/json"`. 주식 행 호출의 프롬프트·스키마·설정은 SHA-256 고정(`__tests__/stock-row-frozen-5164.test.ts`) — 바꾸려면 C154 실호출 비교가 먼저다.
+
+**화면 합계 전용 호출(5.164, `assetType: "stock-total"`):** 주식 맞추기 결과 대조 1줄용. 행 인식과 분리된 분기(`screen-total.ts` `respondScreenTotal`, route.ts는 형식 검사 뒤 한 줄 위임).
+```
+Body: FormData { image: File, assetType: "stock-total" }   // 그 밖의 필드 0(앱 합계·보유 목록·증권사 미전송)
+→ 200 { screenTotal: { value: number(>0), label: string(≤30자), currency: "KRW"|"USD" } | null }
+→ 429 풀·시간당·일 전역 한도 초과 / 500 { screenTotal: null, error } 호출 실패
+```
+- 프롬프트: 합계 라벨이 화면에 글자로 있을 때만 읽고 행을 더해 만들지 않는다. 금액은 모델에게 숫자가 아니라 **화면 글자 그대로**(`screenTotalText`, 예 `"5,500,000원"`)로 받고 서버 `parseScreenAmount`가 변환한다(쉼표 세 자리 묶음 검증·`억`/`만` 단위·소수점 유지, 부호·%·`천`/`백` 등 규칙 밖 표기와 통화 불일치는 null — qa D-1 자릿수 오독 대응). 라벨에 줄바꿈이 있거나 표 머리글 낱말(`현재가`·`매입`·`단가`·`수익`)이 들면 null(qa D-2: 합계 없는 표에서 머리글 + 첫 행 평가금액을 합계로 읽음). 검증(`readScreenTotalFields`·`sanitizeScreenTotal`)에 하나라도 어긋나면·읽을 수 없는 응답·잘림·작은 이미지(호출·차감 0)는 `null`. `maxOutputTokens:256`.
+- 한도: 전용 풀 `STOCK_TOTAL_POOL`(`rl:gemini-stock-total:{KST 날짜}`, 일 60) + 시간당 전역 150 + 일 전역 1,500 안의 몫(전역 인상 0). 풀이 마감돼도 행 인식 몫은 줄지 않는다.
+- 저장·캐시 0, 로그는 호출 오류 메시지 1건(읽은 값·응답 본문 미출력). 기기는 한 장당 1회만 보내고 8초에 끊으며 기기 30회를 차감하지 않는다(`lib/asset/resync/screen-total-call.ts`).
 
 ### POST /api/xray-classify
 X-Ray 종목 분류(NDJSON 스트리밍). **파일:** `src/app/api/xray-classify/route.ts`

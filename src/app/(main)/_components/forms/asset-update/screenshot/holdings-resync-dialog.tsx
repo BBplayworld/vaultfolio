@@ -26,10 +26,19 @@ import { ASSET_THEME } from "@/config/theme";
 import { track, trackParse } from "@/lib/analytics/ga";
 import { getAssetData } from "@/lib/asset/asset-storage";
 import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
+import { startScreenTotalCall, type ScreenTotalCall } from "@/lib/asset/resync/screen-total-call";
 import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
 import {
   applyResync,
   buildCryptoResyncUndoEntries,
+  collectReconcileRows,
+  reconcileGaCategory,
+  reconcileLines,
+  reconcileTotal,
+  screenTotalTarget,
+  settledScreenTotal,
+  type ReconcileView,
+  type ScreenTotalFetch,
   buildResyncUndoEntries,
   cryptoToStock,
   matchExchangeHint,
@@ -97,6 +106,12 @@ interface Shot {
   items: RawScreenItem[];
 }
 
+/** 화면 합계 전용 호출 1건(5.164) — 기기 메모리에만 있고 대화상자를 닫으면 취소·폐기한다 */
+interface TotalCall {
+  shotId: number;
+  call: ScreenTotalCall;
+}
+
 type Step = "upload" | "preview" | "result";
 
 interface Props {
@@ -137,7 +152,7 @@ interface ResyncUndo {
 }
 
 export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initialBroker }: Props) {
-  const { assetData, saveData, exchangeRates, syncTodayExchangeRate } = useAssetData();
+  const { assetData, saveData, exchangeRates, exchangeRateDate, syncTodayExchangeRate } = useAssetData();
   const geminiUsage = useGeminiUsage();
   const usdRate = exchangeRates.USD || 1380;
   const isCrypto = kind === "crypto";
@@ -166,12 +181,17 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   const [applying, setApplying] = useState(false);
   const [transferOn, setTransferOn] = useState<Set<string>>(new Set()); // 이관 카드 '옮김' 체크(#310, 기본 해제)
   const [applied, setApplied] = useState<ResyncCounts | null>(null);
+  const [reconcile, setReconcile] = useState<ReconcileView>({ state: "hidden" }); // 결과 화면 대조 1줄(메모리만, 5.164)
   const [appliedMoved, setAppliedMoved] = useState<{ moved: number; movedTx: number } | null>(null);
   const [undoInfo, setUndoInfo] = useState<{ skipped: number } | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  // 화면 합계 전용 호출(5.164): 진행·결과는 ref에만 둔다 — 대기 표시가 없고 응답이 와도 화면을 다시 그리지 않는다
+  const totalRef = useRef<TotalCall | null>(null);
+  const totalAskedRef = useRef<Set<number>>(new Set()); // 합계 호출을 보낸 장 id(한 장당 1회)
+  const liveRef = useRef<{ shots: Shot[]; failedRemoved: boolean }>({ shots: [], failedRemoved: false }); // 인식이 끝난 시점의 최신 장 목록
   const nextIdRef = useRef(0);
   const startedRef = useRef(false);
   const undoRef = useRef<ResyncUndo | null>(null);
@@ -191,9 +211,14 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   }, [open, step]);
 
   useEffect(() => {
+    liveRef.current = { shots, failedRemoved };
+  }, [shots, failedRemoved]);
+
+  useEffect(() => {
     const urls = urlsRef.current;
     return () => {
       abortRef.current?.abort();
+      totalRef.current?.call.cancel();
       urls.forEach((u) => URL.revokeObjectURL(u));
     };
   }, []);
@@ -233,6 +258,10 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   // ── 닫기·초기화 ─────────────────────────────────────────────────────
   const resetAll = () => {
     abortRef.current?.abort();
+    // 닫거나 초기화하면 합계 호출도 함께 취소한다 — 닫힌 뒤에는 보내지도 받지도 않는다
+    totalRef.current?.call.cancel();
+    totalRef.current = null;
+    totalAskedRef.current = new Set();
     urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
     urlsRef.current.clear();
     setStep("upload");
@@ -252,6 +281,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     setApplying(false);
     setApplied(null);
     setAppliedMoved(null);
+    setReconcile({ state: "hidden" });
     setUndoInfo(null);
     setUndoing(false);
     startedRef.current = false;
@@ -278,7 +308,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   // ── 인식 ────────────────────────────────────────────────────────────
   const update = (id: number, patch: Partial<Shot>) => setShots((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
 
-  const recognizeOne = async (shot: Shot, signal: AbortSignal): Promise<"ok" | "limit-all" | "aborted"> => {
+  // "parsed" = 행 인식 성공(장 상태 ok). "ok" = 응답은 받았으나 빈 결과·실패·잘림
+  const recognizeOne = async (shot: Shot, signal: AbortSignal): Promise<"parsed" | "ok" | "limit-all" | "aborted"> => {
     update(shot.id, { status: "parsing" });
     try {
       const form = new FormData();
@@ -298,6 +329,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       if (res.ok && parsed && parsed.length > 0) {
         trackParse(kind, "success");
         update(shot.id, { status: "ok", items: parsed });
+        return "parsed";
       } else if (res.status === 422 && data.code === "truncated") {
         trackParse(kind, "fail");
         update(shot.id, { status: "truncated" });
@@ -320,6 +352,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     let limitHit = false;
+    const parsedIds = new Set<number>();
     for (const shot of targets) {
       if (ctrl.signal.aborted) break;
       if (limitHit || geminiUsage.remaining() <= 0) {
@@ -330,8 +363,28 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       const r = await recognizeOne(shot, ctrl.signal);
       if (r === "aborted") break;
       if (r === "limit-all") limitHit = true;
+      if (r === "parsed") parsedIds.add(shot.id);
     }
-    if (!ctrl.signal.aborted) setRunning(false);
+    if (ctrl.signal.aborted) return;
+    setRunning(false);
+    // 같은 인식 동작 안에서 화면 합계 전용 호출 1회(5.164) — 주식·올린 장 1장·그 장 ok일 때만. 기다리지 않는다
+    const live = liveRef.current;
+    const targetId = screenTotalTarget({
+      kind,
+      shots: live.shots.map((s) => ({ id: s.id, status: parsedIds.has(s.id) ? "ok" : s.status })),
+      failedRemoved: live.failedRemoved,
+      asked: totalAskedRef.current,
+    });
+    const target = targetId === null ? undefined : targets.find((s) => s.id === targetId);
+    if (target) requestScreenTotal(target);
+  };
+
+  // 화면 합계 전용 호출 — 요청은 방금 올린 이미지 + 모드 값뿐(앱 값 0). 장 상태·남은 횟수·기기 30회·인식 GA를 건드리지 않는다.
+  // 실패해도 다시 보내지 않고, 8초에 끊으며, 결과는 '맞추기'를 누른 순간에만 읽는다
+  const requestScreenTotal = (shot: Shot) => {
+    totalAskedRef.current.add(shot.id);
+    totalRef.current?.call.cancel();
+    totalRef.current = { shotId: shot.id, call: startScreenTotalCall(shot.file) };
   };
 
   const addFiles = (list: FileList | File[]) => {
@@ -397,10 +450,46 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
     undoRef.current = { entries: isCrypto ? buildCryptoResyncUndoEntries(fresh, next) : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
     track("feature_use", { category: "resync_apply" });
+    if (!isCrypto) {
+      // 결과 대조 1줄(주식만, 기기 메모리 비교) — 판정은 '맞추기'를 누른 지금 1번. 아직 안 온 합계는 버리고 뒤늦게 끼워 넣지 않는다.
+      // 적용 1회당 GA 구간 1개만 보낸다(금액·%·이름 미전송)
+      const sent = totalRef.current;
+      const live = sent && shots.some((s) => s.id === sent.shotId) ? sent : null;
+      const totalFetch: ScreenTotalFetch = live ? live.call.state() : { status: "none" };
+      sent?.call.cancel();
+      const view = computeReconcile(fresh, d, result, live ? live.shotId : null, totalFetch);
+      setReconcile(view);
+      track("feature_use", { category: reconcileGaCategory(view, totalFetch.status) });
+    }
     setApplied(result.counts);
     setAppliedMoved(plan && plan.moved > 0 ? { moved: plan.moved, movedTx: plan.movedTx } : null);
     setApplying(false);
     setStep("result");
+  };
+
+  // 맞춘 직후 화면 합계 대조(순수 계산은 lib/asset/resync/reconcile.ts). 숨김 조건 판정에 필요한 상태만 모은다
+  const computeReconcile = (
+    fresh: ReturnType<typeof getAssetData>,
+    d: DiffResult,
+    result: ReturnType<typeof applyResync>,
+    totalShotId: number | null,
+    totalFetch: ScreenTotalFetch,
+  ): ReconcileView => {
+    const okShots = shots.filter((s) => s.status === "ok");
+    const collected = collectReconcileRows({ diff: d, sel, result, existing: fresh.stocks, rates: exchangeRates });
+    return reconcileTotal({
+      // 합계는 그 합계를 읽은 장이 지금 유일한 성공 장일 때만 쓴다
+      screenTotal: okShots.length === 1 && okShots[0].id === totalShotId ? settledScreenTotal(totalFetch) : null,
+      rows: collected.rows,
+      flags: {
+        okShots: okShots.length,
+        shotProblem: failedRemoved || shots.some((s) => s.status === "failed" || s.status === "truncated" || s.status === "limit"),
+        unapplied: collected.unapplied,
+        stalePrice: collected.stalePrice,
+        foreignRateUnsynced: collected.hasForeign && !exchangeRateDate,
+        undone: false,
+      },
+    });
   };
 
   // ── 되돌리기(결과 화면 버튼·닫은 직후 토스트 두 곳뿐) ─────────────────
@@ -504,6 +593,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
           {step === "result" && applied && (
             <div data-screenshot-hide data-testid="resync-result" className="space-y-2 rounded-xl bg-muted/40 p-4" aria-live="polite">
               <p className="text-sm text-foreground tabular-nums">{summaryParts({ ...applied, same: 0, needs: 0 })}</p>
+              {!undoInfo && <ReconcileLines view={reconcile} />}
               {appliedMoved && (
                 <p data-testid="resync-result-transfer" className="text-sm text-foreground tabular-nums">
                   <span className="whitespace-nowrap">증권사를 옮긴 종목 <span className="font-semibold">{appliedMoved.moved}</span>개</span>
@@ -1082,6 +1172,19 @@ export function ResyncTxNotice({ clearing, transferring }: { clearing: boolean; 
         </p>
       )}
     </>
+  );
+}
+
+/** 맞춘 결과 대조 1~2줄(5.164). 합계를 못 받았거나 숨김 조건이면 DOM 0 */
+export function ReconcileLines({ view }: { view: ReconcileView }) {
+  const lines = reconcileLines(view);
+  if (lines.length === 0) return null;
+  return (
+    <div data-testid="resync-reconcile" className="space-y-1">
+      {lines.map((l, i) => (
+        <p key={i} className="text-sm text-foreground tabular-nums text-pretty break-keep">{l}</p>
+      ))}
+    </div>
   );
 }
 

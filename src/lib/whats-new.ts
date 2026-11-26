@@ -4,6 +4,7 @@
 import { WHATS_NEW, type WhatsNewEntry } from "@/config/whats-new";
 import { readNoticeSeen, markNoticeSeen, type NoticeSeenRecord } from "./local-storage";
 import { todayKst } from "./tax-utils";
+import { isTrialMode } from "./trial/trial-mode";
 
 export const WHATS_NEW_GAP_MS = 7 * 24 * 60 * 60 * 1000; // 팁 노출 간격(7일)
 export const WHATS_NEW_UNSEEN_DAYS = 30; // 안 본 항목 대상 기간
@@ -52,6 +53,11 @@ export function ageDays(entry: WhatsNewEntry, today: string): number {
 export function readSeen(): NoticeSeenRecord | null {
   const r = readNoticeSeen();
   return r && parseEntryId(r.id) ? r : null;
+}
+
+/** 지금 환경에서 보여 줄 목록 — 체험 중에는 조작 없이 볼 수 없는 항목(trialHidden)을 뺀다(C126). 시트 목록·`새` 개수·홈 팁이 같은 목록을 쓴다 */
+export function visibleWhatsNew(entries: WhatsNewEntry[] = WHATS_NEW, trial: boolean = isTrialMode()): WhatsNewEntry[] {
+  return trial ? entries.filter((e) => !e.trialHidden) : entries;
 }
 
 /** 안 본 항목: id > 기록 id이고 게시일이 오늘(KST) 기준 30일 이내. 기록 없으면 최근 30일 전부 */

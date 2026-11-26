@@ -287,8 +287,11 @@ function secondsUntilKstMidnight(now = Date.now()): number {
 /** 비중 미리보기(/ratio) 입구 전용 풀 한도 — 앱 사용자 몫(전역 1500 중 1440)을 보호 */
 export const RATIO_POOL = { name: "ratio", dailyLimit: 60 } as const;
 
+/** 맞추기 결과 대조용 화면 합계 전용 호출(assetType=stock-total) 풀 — 전역 1500 안의 몫이며 행 인식 몫을 깎지 않게 따로 센다(5.164) */
+export const STOCK_TOTAL_POOL = { name: "stock-total", dailyLimit: 60 } as const;
+
 export interface GeminiPool {
-  name: "ratio";
+  name: "ratio" | "stock-total";
   dailyLimit: number;
 }
 

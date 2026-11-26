@@ -1,0 +1,295 @@
+// 5.164 #328 맞추기 결과 대조 1줄 — 경계·문장·숨김 조건(C138) + 합계 전용 호출 조건·응답 해석·GA 구간
+import { describe, expect, it } from "vitest";
+import {
+  applyResync, collectReconcileRows, computeDiff, mergeScreens, reconcileGaCategory, reconcileLines, reconcileTotal, reconcileTolerance, resolveScreens,
+  isImplausibleScreenTotal, isStockTotalLabel, parseScreenTotalResponse, screenTotalTarget, settledScreenTotal, SCREEN_TOTAL_MODE, SCREEN_TOTAL_TIMEOUT_MS,
+  type ReconcileFlags, type ReconcileRow, type ScreenTotalFetch, type ScreenTotalInfo,
+} from "..";
+import { emptySel, row, screen, st, TODAY } from "./fixtures";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+const T = (value: number, label = "총 평가금액", currency: ScreenTotalInfo["currency"] = "KRW"): ScreenTotalInfo => ({ value, label, currency });
+const OK: ReconcileFlags = { okShots: 1, shotProblem: false, unapplied: false, stalePrice: false, foreignRateUnsynced: false, undone: false };
+const R = (name: string, screenValue: number, appValue: number): ReconcileRow => ({ name, screenValue, appValue });
+const rows = (app: number) => [R("삼성전자", app, app)];
+
+describe("허용 오차 경계", () => {
+  it("총액 10만 원 → 1,000원, 1,000만 원 → 5만 원, 정확히 같으면 일치·1원 넘으면 차이", () => {
+    expect(reconcileTolerance(100_000)).toBe(1000);
+    expect(reconcileTolerance(10_000_000)).toBe(50_000);
+    expect(reconcileTotal({ screenTotal: T(100_000), rows: rows(101_000), flags: OK }).state).toBe("match");
+    expect(reconcileTotal({ screenTotal: T(100_000), rows: rows(101_001), flags: OK }).state).toBe("diff");
+    expect(reconcileTotal({ screenTotal: T(10_000_000), rows: rows(10_050_000), flags: OK }).state).toBe("match");
+    expect(reconcileTotal({ screenTotal: T(10_000_000), rows: rows(9_949_999), flags: OK }).state).toBe("diff");
+  });
+});
+
+describe("문장 — 일치일 때만 1줄(축소: 차이는 줄 없음, GA 집계는 유지)", () => {
+  it("일치: 증권사 화면 합계와 맞아요 / GA match", () => {
+    const v = reconcileTotal({ screenTotal: T(10_000_000), rows: rows(10_040_000), flags: OK });
+    expect(reconcileLines(v)).toEqual(["증권사 화면 합계와 맞아요"]);
+    expect(reconcileGaCategory(v)).toBe("resync_check_match");
+  });
+  it("차이 + 다른 행 3개: 판정은 diff(2.4% · 큰 순서 2개 + 외 1개) 그대로, 줄은 없음, GA diff", () => {
+    const rs = [R("삼성전자", 5_000_000, 5_130_000), R("TIGER 미국S&P500", 3_000_000, 3_100_000), R("SK하이닉스", 1_000_000, 1_010_000), R("KODEX 200", 1_000_000, 1_000_000)];
+    // 화면 합 10,000,000 vs 앱 합 10,240,000 → 2.4%
+    const v = reconcileTotal({ screenTotal: T(10_000_000), rows: rs, flags: OK });
+    expect(v).toEqual({ state: "diff", ratePct: "2.4", names: ["삼성전자", "TIGER 미국S&P500"], more: 1 });
+    expect(reconcileLines(v)).toEqual([]);
+    expect(reconcileGaCategory(v)).toBe("resync_check_diff");
+    expect(reconcileGaCategory(v, "done")).toBe("resync_check_diff");
+  });
+  it("차이 + 다른 행 없음: 줄 없음, GA diff", () => {
+    const rs = [R("a", 5_000_000, 5_000_000), R("b", 5_000_000, 5_000_000)];
+    const v = reconcileTotal({ screenTotal: T(10_240_000), rows: rs, flags: OK });
+    expect(v).toMatchObject({ state: "diff", ratePct: "2.3", names: [] });
+    expect(reconcileLines(v)).toEqual([]);
+    expect(reconcileGaCategory(v)).toBe("resync_check_diff");
+  });
+  it("차이 문장 2종은 코드에 남아 있지 않다", () => {
+    const rec = readFileSync(path.join(__dirname, "../reconcile.ts"), "utf8");
+    const dlg = readFileSync(path.join(__dirname, "../../../../app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx"), "utf8");
+    for (const src of [rec, dlg]) for (const w of ["% 달라요", "차이가 큰 종목", "화면에 안 담긴 종목이", "조금 다를 수 있어요"]) expect(src).not.toContain(w);
+  });
+  it("문장에 금액 숫자·금지 어휘가 없다", () => {
+    const all = [reconcileLines({ state: "match" }), reconcileLines({ state: "diff", ratePct: "2.4", names: ["a"], more: 0 })].flat().join(" ");
+    expect(all).toBe("증권사 화면 합계와 맞아요");
+    for (const w of ["정확", "보장", "서버", "원"]) expect(all).not.toContain(w);
+  });
+});
+
+describe("숨김 조건 1~6 → 줄 없음 · GA none", () => {
+  const good = { screenTotal: T(1_000_000), rows: rows(1_000_000), flags: OK };
+  const hidden = (o: { screenTotal?: ScreenTotalInfo | null; rows?: ReconcileRow[]; flags?: Partial<ReconcileFlags> }) => {
+    const v = reconcileTotal({ ...good, ...o, flags: { ...OK, ...o.flags } });
+    expect(v.state).toBe("hidden");
+    expect(reconcileLines(v)).toEqual([]);
+    expect(reconcileGaCategory(v)).toBe("resync_check_none");
+  };
+  it("기준: 숨김 사유가 없으면 보인다", () => expect(reconcileTotal(good).state).toBe("match"));
+  it("1 총액 없음·0·음수·NaN·통화 KRW 아님", () => {
+    hidden({ screenTotal: null });
+    hidden({ screenTotal: undefined });
+    hidden({ screenTotal: T(0) });
+    hidden({ screenTotal: T(-5) });
+    hidden({ screenTotal: T(NaN) });
+    hidden({ screenTotal: T(1_000_000, "총 평가금액", "USD") });
+  });
+  it("2 라벨: 평가 없음·자산·예수금·예탁·추정·순·손익", () => {
+    for (const l of ["총자산", "추정자산", "예수금", "총 예탁자산", "순자산", "합계", "총평가금액 (예수금 포함)", "추정 평가금액", "순 평가금액", "총 평가손익", "평가손익", "총평가 손익", ""]) hidden({ screenTotal: T(1_000_000, l) });
+    for (const l of ["총 평가금액", "총평가금액", "평가금액", "총 평가"]) expect(isStockTotalLabel(l)).toBe(true);
+  });
+  it("3 장 2장 이상·0장·실패·잘림·한도·실패 장 삭제", () => {
+    hidden({ flags: { okShots: 2 } });
+    hidden({ flags: { okShots: 0 } });
+    hidden({ flags: { shotProblem: true } });
+  });
+  it("3-1 해외 종목 + 환율 미동기화", () => hidden({ flags: { foreignRateUnsynced: true } }));
+  it("4 확인 필요·적용하지 않은 행", () => hidden({ flags: { unapplied: true } }));
+  it("5 현재가 0·시세 실패", () => hidden({ flags: { stalePrice: true } }));
+  it("6 되돌린 뒤", () => hidden({ flags: { undone: true } }));
+  it("대응 행이 0개", () => hidden({ rows: [] }));
+});
+
+describe("collectReconcileRows — 실제 맞추기 결과와 이어붙이기", () => {
+  const toss = { brokerHint: "토스증권" };
+  const sam = st("s1", "005930", "domestic", "토스증권", 10, 70_000, { currentPrice: 70_000 });
+  const k = st("s2", "000660", "domestic", "토스증권", 1, 100_000, { currentPrice: 100_000 });
+  const other = st("s3", "035720", "domestic", "미래에셋증권", 3, 50_000);
+  function run(existing: typeof sam[], items: ReturnType<typeof row>[]) {
+    const resolved = resolveScreens([screen(0, items)], existing, { usdRate: 1400 });
+    const diff = computeDiff(existing, mergeScreens(resolved), resolved);
+    const sel = emptySel();
+    const result = applyResync(existing, diff, sel, { today: TODAY, usdRate: 1400, now: 7 });
+    return { diff, sel, result, c: collectReconcileRows({ diff, sel, result, existing, rates: { USD: 1400, JPY: 900 } }) };
+  }
+  it("변경 행은 맞춘 뒤 수량 × 앱 현재가, 화면에 없는 다른 증권사 종목은 합계에 안 들어간다", () => {
+    const { c } = run([sam, k, other], [row("005930", 12, 70_000, toss), row("000660", 1, 100_000, toss)]);
+    expect(c.unapplied).toBe(false);
+    expect(c.rows.map((r) => r.appValue)).toEqual([840_000, 100_000]);
+    expect(c.rows.map((r) => r.screenValue)).toEqual([840_000, 100_000]);
+    expect(reconcileTotal({ screenTotal: T(940_000), rows: c.rows, flags: OK }).state).toBe("match");
+  });
+  it("신규 추가 행도 앱 값에 들어간다(화면 현재가)", () => {
+    const { c } = run([sam], [row("005930", 10, 70_000, toss), row("000660", 2, 100_000, toss)]);
+    expect(c.rows.map((r) => r.appValue)).toEqual([700_000, 200_000]);
+  });
+  it("앱 현재가가 화면과 다르면 행별 차이로 잡힌다", () => {
+    const stale = { ...sam, currentPrice: 60_000 };
+    const { c } = run([stale, k], [row("005930", 10, 70_000, { ...toss, currentPrice: 70_000 }), row("000660", 1, 100_000, toss)]);
+    const v = reconcileTotal({ screenTotal: T(800_000), rows: c.rows, flags: OK });
+    expect(v).toMatchObject({ state: "diff", names: ["이름005930"] });
+  });
+  it("현재가 0 종목이 있으면 stalePrice", () => {
+    const zero = { ...sam, currentPrice: 0 };
+    const { c } = run([zero], [row("005930", 10, 0, toss)]);
+    expect(c.stalePrice).toBe(true);
+  });
+  it("확인 필요(수량 미인식) 행이 있으면 unapplied", () => {
+    const { c } = run([sam], [row("005930", 1, 70_000, { ...toss, quantityMissing: true })]);
+    expect(c.unapplied).toBe(true);
+  });
+});
+
+describe("qa D-2 회귀 — 합계 없는 표(B)에서 첫 행 평가금액을 합계로 읽은 응답", () => {
+  // preview 응답 원문(screenshots/responses-inc/tot1-B.json)과 같은 B 화면의 행 인식 결과(수량 × 현재가)
+  const B_RESPONSE = { screenTotal: { value: 4550000, label: "현재가\n평가금액", currency: "KRW" } };
+  const B_ROWS = [R("삼성전자", 65 * 70_000, 65 * 70_000), R("TIGER 미국S&P500", 105 * 21_000, 105 * 21_000), R("NAVER", 3 * 289_000, 3 * 289_000), R("카카오", 10 * 42_100, 10 * 42_100)];
+  it("응답 원문 그대로: 라벨(줄바꿈·현재가)에서 걸려 줄 숨김 · GA none", () => {
+    const total = parseScreenTotalResponse(B_RESPONSE);
+    expect(total?.value).toBe(4_550_000);
+    expect(isStockTotalLabel(total!.label)).toBe(false);
+    const v = reconcileTotal({ screenTotal: total, rows: B_ROWS, flags: OK });
+    expect(v.state).toBe("hidden");
+    expect(reconcileLines(v)).toEqual([]);
+    expect(reconcileGaCategory(v, "done")).toBe("resync_check_none");
+  });
+  it("라벨이 멀쩡해 보여도(`평가금액`) 값이 한 행의 평가액과 같고 행 합보다 작으면 숨김", () => {
+    expect(isStockTotalLabel("평가금액")).toBe(true);
+    expect(isImplausibleScreenTotal(4_550_000, B_ROWS)).toBe(true);
+    expect(reconcileTotal({ screenTotal: T(4_550_000, "평가금액"), rows: B_ROWS, flags: OK }).state).toBe("hidden");
+    // ±0.5% 안이면 같은 행으로 본다
+    expect(reconcileTotal({ screenTotal: T(4_550_000 * 1.004, "평가금액"), rows: B_ROWS, flags: OK }).state).toBe("hidden");
+    // 다른 행(카카오 421,000)을 읽은 경우는 50% 미만에서도 걸린다
+    expect(reconcileTotal({ screenTotal: T(421_000, "평가금액"), rows: B_ROWS, flags: OK }).state).toBe("hidden");
+  });
+  it("표 머리글 라벨은 전부 합계가 아니다", () => {
+    for (const l of ["현재가\n평가금액", "평가금액\n매입금액", "평가금액\r\n수익률", "현재가 평가금액", "평가금액 매입금액", "평가금액/평균단가", "평가수익", "평가금액 수익률"]) expect(isStockTotalLabel(l)).toBe(false);
+    for (const l of ["총 평가금액", " 총평가금액 ", "주식 평가금액", "평가금액 합계", "평가금액"]) expect(isStockTotalLabel(l)).toBe(true);
+  });
+  it("상식 범위 검사는 원 spec 판정을 바꾸지 않는다: 합계 ≥ 행 합(안 담긴 종목)·허용 오차 경계·작은 종목이 섞인 화면", () => {
+    const sum = B_ROWS.reduce((s, r) => s + r.screenValue, 0); // 8,043,000
+    expect(isImplausibleScreenTotal(sum, B_ROWS)).toBe(false);
+    expect(isImplausibleScreenTotal(sum * 3, B_ROWS)).toBe(false); // 화면에 안 담긴 종목이 많은 경우
+    expect(isImplausibleScreenTotal(sum * 0.9, B_ROWS)).toBe(false); // 어느 행과도 같지 않고 50% 이상 → 종전대로 차이 문장
+    expect(reconcileTotal({ screenTotal: T(sum * 0.9), rows: B_ROWS, flags: OK }).state).toBe("diff");
+    expect(isImplausibleScreenTotal(sum / 2, B_ROWS)).toBe(false); // 경계: 정확히 50%는 통과
+    expect(isImplausibleScreenTotal(sum / 2 - 1, B_ROWS)).toBe(true);
+    // 큰 종목 1 + 아주 작은 종목 1: 합계가 큰 종목 값과 0.5% 안이지만 행 합과도 허용 오차 안 → 정상
+    const tiny = [R("a", 10_000_000, 10_000_000), R("b", 30_000, 30_000)];
+    expect(isImplausibleScreenTotal(10_030_000, tiny)).toBe(false);
+    expect(reconcileTotal({ screenTotal: T(10_030_000), rows: tiny, flags: OK }).state).toBe("match");
+    // 행 1개뿐이면 '한 행과 같다'로 숨기지 않는다. 화면 값이 없는 행(수량 미인식)은 검사에서 뺀다
+    expect(isImplausibleScreenTotal(700_000, [R("a", 700_000, 800_000)])).toBe(false);
+    expect(reconcileTotal({ screenTotal: T(700_000), rows: [R("a", 700_000, 800_000)], flags: OK }).state).toBe("diff");
+    expect(isImplausibleScreenTotal(700_000, [R("a", 0, 1), R("b", 0, 1)])).toBe(false);
+    // 일치 판정이 먼저다: 앱 합계와 허용 오차 안에서 맞으면 검사와 무관하게 일치
+    expect(reconcileTotal({ screenTotal: T(1_000_000), rows: [R("a", 1_000_000, 500_000), R("b", 1_500_000, 500_000)], flags: OK }).state).toBe("match");
+  });
+});
+
+describe("합계 전용 호출 — 보낼 조건(§3-2)", () => {
+  const none = new Set<number>();
+  const ask = (o: Partial<Parameters<typeof screenTotalTarget>[0]>) => screenTotalTarget({ kind: "stock", shots: [{ id: 3, status: "ok" }], failedRemoved: false, asked: none, ...o });
+  it("주식·올린 장 1장·그 장 ok·실패 장 삭제 없음·처음이면 그 장 id", () => expect(ask({})).toBe(3));
+  it("코인은 0회", () => expect(ask({ kind: "crypto" })).toBeNull());
+  it("올린 장이 0장·2장 이상이면 0회(둘 다 ok여도)", () => {
+    expect(ask({ shots: [] })).toBeNull();
+    expect(ask({ shots: [{ id: 3, status: "ok" }, { id: 4, status: "ok" }] })).toBeNull();
+    expect(ask({ shots: [{ id: 3, status: "ok" }, { id: 4, status: "pending" }] })).toBeNull();
+  });
+  it("행 인식이 실패·잘림·한도·대기·진행 중이면 0회", () => {
+    for (const status of ["failed", "truncated", "limit", "pending", "parsing"]) expect(ask({ shots: [{ id: 3, status }] })).toBeNull();
+  });
+  it("실패 장을 지운 상태면 0회", () => expect(ask({ failedRemoved: true })).toBeNull());
+  it("한 장당 1회: 이미 보낸 장은 다시 보내지 않는다(실패했어도). 다른 장은 보낸다", () => {
+    expect(ask({ asked: new Set([3]) })).toBeNull();
+    expect(ask({ asked: new Set([2]) })).toBe(3);
+  });
+  it("모드 값·제한 시간", () => {
+    expect(SCREEN_TOTAL_MODE).toBe("stock-total");
+    expect(SCREEN_TOTAL_TIMEOUT_MS).toBe(8000);
+  });
+});
+
+describe("합계 전용 호출 — 응답 해석·판정 시점·GA 구간", () => {
+  const ok = { value: 801_000, label: "총 평가금액", currency: "KRW" };
+  it("{ screenTotal: {value,label,currency} }만 값으로 받는다", () => {
+    expect(parseScreenTotalResponse({ screenTotal: ok })).toEqual(ok);
+    expect(parseScreenTotalResponse({ screenTotal: { ...ok, currency: "USD" } })?.currency).toBe("USD");
+  });
+  it("null·키 없음·모양 어긋남·구버전 서버 응답({stocks})은 총액 없음", () => {
+    for (const d of [null, undefined, {}, "x", 3, [], { screenTotal: null }, { screenTotal: 801_000 }, { stocks: [{ name: "a" }] },
+      { screenTotal: { ...ok, value: "801000" } }, { screenTotal: { ...ok, value: 0 } }, { screenTotal: { ...ok, value: NaN } },
+      { screenTotal: { ...ok, label: " " } }, { screenTotal: { ...ok, label: 5 } }, { screenTotal: { ...ok, currency: "JPY" } }, { screenTotal: { value: 5 } }]) {
+      expect(parseScreenTotalResponse(d)).toBeNull();
+    }
+  });
+  it("'맞추기'를 누른 순간 받아 둔 값만 쓴다 — 미전송·미도착·실패는 null", () => {
+    expect(settledScreenTotal({ status: "none" })).toBeNull();
+    expect(settledScreenTotal({ status: "pending" })).toBeNull();
+    expect(settledScreenTotal({ status: "failed" })).toBeNull();
+    expect(settledScreenTotal({ status: "done", total: null })).toBeNull();
+    expect(settledScreenTotal({ status: "done", total: T(5) })).toEqual(T(5));
+  });
+  it("GA 넷 중 1개: 보냈으나 못 받음(미도착·실패·429·시간 초과) = skip, 안 보냄·받았지만 숨김 = none", () => {
+    const hiddenView = reconcileTotal({ screenTotal: null, rows: rows(1), flags: OK });
+    const cat = (f: ScreenTotalFetch) => reconcileGaCategory(reconcileTotal({ screenTotal: settledScreenTotal(f), rows: rows(1_000_000), flags: OK }), f.status);
+    expect(cat({ status: "pending" })).toBe("resync_check_skip");
+    expect(cat({ status: "failed" })).toBe("resync_check_skip");
+    expect(cat({ status: "none" })).toBe("resync_check_none");
+    expect(cat({ status: "done", total: null })).toBe("resync_check_none");
+    expect(cat({ status: "done", total: T(1_000_000, "총자산") })).toBe("resync_check_none");
+    expect(cat({ status: "done", total: T(1_000_000) })).toBe("resync_check_match");
+    expect(cat({ status: "done", total: T(2_000_000) })).toBe("resync_check_diff");
+    expect(reconcileGaCategory(hiddenView)).toBe("resync_check_none");
+    // 못 받은 경우 줄은 항상 숨김
+    for (const f of [{ status: "pending" }, { status: "failed" }, { status: "none" }] as ScreenTotalFetch[]) {
+      expect(reconcileLines(reconcileTotal({ screenTotal: settledScreenTotal(f), rows: rows(1_000_000), flags: OK }))).toEqual([]);
+    }
+  });
+});
+
+describe("저장 0·전송 0·차감 0 (소스 grep)", () => {
+  const base = path.join(__dirname, "..");
+  const dlg = readFileSync(path.join(base, "../../../app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx"), "utf8");
+  const callSrc = readFileSync(path.join(base, "screen-total-call.ts"), "utf8");
+  // 합계 호출 함수 본문(다음 최상위 const 선언 앞까지)
+  const fn = dlg.slice(dlg.indexOf("const requestScreenTotal = "), dlg.indexOf("const addFiles = "));
+  it("reconcile.ts는 저장·네트워크 호출이 없고, 대화상자 GA는 category만 보낸다", () => {
+    const rec = readFileSync(path.join(base, "reconcile.ts"), "utf8");
+    expect(rec).not.toMatch(/localStorage|fetch\(|saveData|track\(/);
+    expect(dlg).toContain('track("feature_use", { category: reconcileGaCategory(view, totalFetch.status) });');
+    expect(dlg).not.toMatch(/AssetData[^\n]*screenTotal|saveData\([^)]*reconcile/);
+  });
+  it("합계 호출은 기기 30회 차감·장 상태 변경·인식 GA·화면 갱신·저장이 없다(대화상자 함수·호출 모듈 둘 다)", () => {
+    expect(fn.length).toBeGreaterThan(100);
+    for (const src of [fn, callSrc.replace(/^\/\/.*$/gm, "")]) {
+      expect(src).not.toMatch(/geminiUsage|gemini-usage|setRemaining|update\(|trackParse|track\(|\bset(?!Timeout\()[A-Z]\w*\(|toast|localStorage|sessionStorage|indexedDB/);
+    }
+    expect(callSrc.match(/form\.append\(/g)).toHaveLength(2);
+  });
+  it("대화상자에서 합계를 부르는 곳은 인식 실행 끝 1곳뿐이고, 직접 보내는 요청은 행 인식 1곳 그대로다", () => {
+    expect(dlg.match(/requestScreenTotal\(/g)).toHaveLength(1);
+    expect(dlg.match(/startScreenTotalCall\(/g)).toHaveLength(1);
+    expect(dlg.match(/\/api\/parse-screenshot/g)).toHaveLength(1);
+    expect(dlg.indexOf("if (target) requestScreenTotal(target);")).toBeGreaterThan(dlg.indexOf("setRunning(false);\n    // 같은 인식 동작 안에서"));
+  });
+  it("닫기·초기화·언마운트에서 합계 호출을 취소하고, 판정 뒤 늦은 응답도 끊는다", () => {
+    expect(dlg.match(/totalRef\.current\?\.call\.cancel\(\)/g)).toHaveLength(3); // 언마운트·resetAll·새 호출 전
+    expect(dlg).toContain("sent?.call.cancel();");
+    expect(dlg).toContain("totalAskedRef.current = new Set();");
+  });
+  it("다른 화면(종목 등록·온보딩·/ratio·코인)에는 합계 모드 호출이 없다", () => {
+    const root = path.join(base, "../../..");
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (e.name !== "__tests__" && e.name !== "node_modules") walk(p);
+        } else if (/\.(ts|tsx)$/.test(e.name) && /stock-total|SCREEN_TOTAL_MODE|STOCK_TOTAL_MODE|startScreenTotalCall/.test(readFileSync(p, "utf8"))) hits.push(path.relative(root, p).replaceAll("\\", "/"));
+      }
+    };
+    walk(root);
+    expect(hits.sort()).toEqual([
+      "app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx",
+      "app/api/parse-screenshot/route.ts",
+      "app/api/parse-screenshot/screen-total.ts",
+      "lib/asset/resync/reconcile.ts",
+      "lib/asset/resync/screen-total-call.ts",
+      "server/api-guard.ts",
+    ]);
+  });
+});

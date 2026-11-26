@@ -6,7 +6,7 @@ import { shouldShowBackupNudge, daysSinceBackup } from "./asset/backup-status";
 import { shouldShowRefreshNudge, getStaleCategories, heldRefreshCategories, type RefreshCategory } from "./asset/asset-refresh-status";
 import { isTaxNoticeDismissed, getAssetDrivenHighlights, isImminentTaxMatch, todayKst, type TaxEventMatch } from "./tax-utils";
 import { pickRecommendedFeature } from "./feature-usage";
-import { readSeen, whatsNewTip } from "./whats-new";
+import { readSeen, visibleWhatsNew, whatsNewTip } from "./whats-new";
 import { readDailySnapshots, readMonthlySnapshots } from "./asset/snapshot-storage";
 import { pickFirstRecordStart, pickSettlementCard, type SettlementWindow } from "./report/settlement";
 import type { AppFeature } from "@/config/app-features";
@@ -62,7 +62,7 @@ export function pickHomeTip({ assetData, hasAssets, syncArmed, today = todayKst(
 
   // 새 소식(#159): 결산 아래·relink 위 — 자산이 있고, 안 본 항목이 있으며 마지막으로 읽은 지 7일 이상(또는 기록 없음)일 때
   if (whatsNewOk && hasAssets) {
-    const wn = whatsNewTip(readSeen(), { today });
+    const wn = whatsNewTip(readSeen(), { today, entries: visibleWhatsNew() });
     if (wn) return { kind: "whats_new", ...wn };
   }
 
