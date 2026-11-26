@@ -188,7 +188,7 @@ Body: FormData { image: File, assetType: "stock-total" }   // 그 밖의 필드 
 → 200 { screenTotal: { value: number(>0), label: string(≤30자), currency: "KRW"|"USD" } | null }
 → 429 풀·시간당·일 전역 한도 초과 / 500 { screenTotal: null, error } 호출 실패
 ```
-- 프롬프트: 합계 라벨이 화면에 글자로 있을 때만 읽고 행을 더해 만들지 않는다. 금액은 모델에게 숫자가 아니라 **화면 글자 그대로**(`screenTotalText`, 예 `"5,500,000원"`)로 받고 서버 `parseScreenAmount`가 변환한다(쉼표 세 자리 묶음 검증·`억`/`만` 단위·소수점 유지, 부호·%·`천`/`백` 등 규칙 밖 표기와 통화 불일치는 null — qa D-1 자릿수 오독 대응). 검증(`readScreenTotalFields`·`sanitizeScreenTotal`)에 하나라도 어긋나면·읽을 수 없는 응답·잘림·작은 이미지(호출·차감 0)는 `null`. `maxOutputTokens:256`.
+- 프롬프트: 합계 라벨이 화면에 글자로 있을 때만 읽고 행을 더해 만들지 않는다. 금액은 모델에게 숫자가 아니라 **화면 글자 그대로**(`screenTotalText`, 예 `"5,500,000원"`)로 받고 서버 `parseScreenAmount`가 변환한다(쉼표 세 자리 묶음 검증·`억`/`만` 단위·소수점 유지, 부호·%·`천`/`백` 등 규칙 밖 표기와 통화 불일치는 null — qa D-1 자릿수 오독 대응). 라벨에 줄바꿈이 있거나 표 머리글 낱말(`현재가`·`매입`·`단가`·`수익`)이 들면 null(qa D-2: 합계 없는 표에서 머리글 + 첫 행 평가금액을 합계로 읽음). 검증(`readScreenTotalFields`·`sanitizeScreenTotal`)에 하나라도 어긋나면·읽을 수 없는 응답·잘림·작은 이미지(호출·차감 0)는 `null`. `maxOutputTokens:256`.
 - 한도: 전용 풀 `STOCK_TOTAL_POOL`(`rl:gemini-stock-total:{KST 날짜}`, 일 60) + 시간당 전역 150 + 일 전역 1,500 안의 몫(전역 인상 0). 풀이 마감돼도 행 인식 몫은 줄지 않는다.
 - 저장·캐시 0, 로그는 호출 오류 메시지 1건(읽은 값·응답 본문 미출력). 기기는 한 장당 1회만 보내고 8초에 끊으며 기기 30회를 차감하지 않는다(`lib/asset/resync/screen-total-call.ts`).
 

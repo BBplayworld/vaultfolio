@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyResync, collectReconcileRows, computeDiff, mergeScreens, reconcileGaCategory, reconcileLines, reconcileTotal, reconcileTolerance, resolveScreens,
-  isStockTotalLabel, parseScreenTotalResponse, screenTotalTarget, settledScreenTotal, SCREEN_TOTAL_MODE, SCREEN_TOTAL_TIMEOUT_MS,
+  isImplausibleScreenTotal, isStockTotalLabel, parseScreenTotalResponse, screenTotalTarget, settledScreenTotal, SCREEN_TOTAL_MODE, SCREEN_TOTAL_TIMEOUT_MS,
   type ReconcileFlags, type ReconcileRow, type ScreenTotalFetch, type ScreenTotalInfo,
 } from "..";
 import { emptySel, row, screen, st, TODAY } from "./fixtures";
@@ -126,6 +126,53 @@ describe("collectReconcileRows — 실제 맞추기 결과와 이어붙이기", 
   it("확인 필요(수량 미인식) 행이 있으면 unapplied", () => {
     const { c } = run([sam], [row("005930", 1, 70_000, { ...toss, quantityMissing: true })]);
     expect(c.unapplied).toBe(true);
+  });
+});
+
+describe("qa D-2 회귀 — 합계 없는 표(B)에서 첫 행 평가금액을 합계로 읽은 응답", () => {
+  // preview 응답 원문(screenshots/responses-inc/tot1-B.json)과 같은 B 화면의 행 인식 결과(수량 × 현재가)
+  const B_RESPONSE = { screenTotal: { value: 4550000, label: "현재가\n평가금액", currency: "KRW" } };
+  const B_ROWS = [R("삼성전자", 65 * 70_000, 65 * 70_000), R("TIGER 미국S&P500", 105 * 21_000, 105 * 21_000), R("NAVER", 3 * 289_000, 3 * 289_000), R("카카오", 10 * 42_100, 10 * 42_100)];
+  it("응답 원문 그대로: 라벨(줄바꿈·현재가)에서 걸려 줄 숨김 · GA none", () => {
+    const total = parseScreenTotalResponse(B_RESPONSE);
+    expect(total?.value).toBe(4_550_000);
+    expect(isStockTotalLabel(total!.label)).toBe(false);
+    const v = reconcileTotal({ screenTotal: total, rows: B_ROWS, flags: OK });
+    expect(v.state).toBe("hidden");
+    expect(reconcileLines(v)).toEqual([]);
+    expect(reconcileGaCategory(v, "done")).toBe("resync_check_none");
+  });
+  it("라벨이 멀쩡해 보여도(`평가금액`) 값이 한 행의 평가액과 같고 행 합보다 작으면 숨김", () => {
+    expect(isStockTotalLabel("평가금액")).toBe(true);
+    expect(isImplausibleScreenTotal(4_550_000, B_ROWS)).toBe(true);
+    expect(reconcileTotal({ screenTotal: T(4_550_000, "평가금액"), rows: B_ROWS, flags: OK }).state).toBe("hidden");
+    // ±0.5% 안이면 같은 행으로 본다
+    expect(reconcileTotal({ screenTotal: T(4_550_000 * 1.004, "평가금액"), rows: B_ROWS, flags: OK }).state).toBe("hidden");
+    // 다른 행(카카오 421,000)을 읽은 경우는 50% 미만에서도 걸린다
+    expect(reconcileTotal({ screenTotal: T(421_000, "평가금액"), rows: B_ROWS, flags: OK }).state).toBe("hidden");
+  });
+  it("표 머리글 라벨은 전부 합계가 아니다", () => {
+    for (const l of ["현재가\n평가금액", "평가금액\n매입금액", "평가금액\r\n수익률", "현재가 평가금액", "평가금액 매입금액", "평가금액/평균단가", "평가수익", "평가금액 수익률"]) expect(isStockTotalLabel(l)).toBe(false);
+    for (const l of ["총 평가금액", " 총평가금액 ", "주식 평가금액", "평가금액 합계", "평가금액"]) expect(isStockTotalLabel(l)).toBe(true);
+  });
+  it("상식 범위 검사는 원 spec 판정을 바꾸지 않는다: 합계 ≥ 행 합(안 담긴 종목)·허용 오차 경계·작은 종목이 섞인 화면", () => {
+    const sum = B_ROWS.reduce((s, r) => s + r.screenValue, 0); // 8,043,000
+    expect(isImplausibleScreenTotal(sum, B_ROWS)).toBe(false);
+    expect(isImplausibleScreenTotal(sum * 3, B_ROWS)).toBe(false); // 화면에 안 담긴 종목이 많은 경우
+    expect(isImplausibleScreenTotal(sum * 0.9, B_ROWS)).toBe(false); // 어느 행과도 같지 않고 50% 이상 → 종전대로 차이 문장
+    expect(reconcileTotal({ screenTotal: T(sum * 0.9), rows: B_ROWS, flags: OK }).state).toBe("diff");
+    expect(isImplausibleScreenTotal(sum / 2, B_ROWS)).toBe(false); // 경계: 정확히 50%는 통과
+    expect(isImplausibleScreenTotal(sum / 2 - 1, B_ROWS)).toBe(true);
+    // 큰 종목 1 + 아주 작은 종목 1: 합계가 큰 종목 값과 0.5% 안이지만 행 합과도 허용 오차 안 → 정상
+    const tiny = [R("a", 10_000_000, 10_000_000), R("b", 30_000, 30_000)];
+    expect(isImplausibleScreenTotal(10_030_000, tiny)).toBe(false);
+    expect(reconcileTotal({ screenTotal: T(10_030_000), rows: tiny, flags: OK }).state).toBe("match");
+    // 행 1개뿐이면 '한 행과 같다'로 숨기지 않는다. 화면 값이 없는 행(수량 미인식)은 검사에서 뺀다
+    expect(isImplausibleScreenTotal(700_000, [R("a", 700_000, 800_000)])).toBe(false);
+    expect(reconcileTotal({ screenTotal: T(700_000), rows: [R("a", 700_000, 800_000)], flags: OK }).state).toBe("diff");
+    expect(isImplausibleScreenTotal(700_000, [R("a", 0, 1), R("b", 0, 1)])).toBe(false);
+    // 일치 판정이 먼저다: 앱 합계와 허용 오차 안에서 맞으면 검사와 무관하게 일치
+    expect(reconcileTotal({ screenTotal: T(1_000_000), rows: [R("a", 1_000_000, 500_000), R("b", 1_500_000, 500_000)], flags: OK }).state).toBe("match");
   });
 });
 

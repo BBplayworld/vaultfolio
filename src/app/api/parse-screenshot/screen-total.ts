@@ -17,12 +17,17 @@ export interface ScreenTotal {
 
 const CURRENCIES = ["KRW", "USD"] as const;
 const MAX_LABEL = 30;
+/** 표 머리글·행 칸에서 온 글자 — 이런 낱말이 든 라벨은 합계 라벨이 아니다(qa D-2: `현재가\n평가금액` + 첫 행 평가금액을 합계로 읽음) */
+const COLUMN_WORDS = ["현재가", "매입", "단가", "수익"];
 
-/** 모델이 준 합계 필드를 검증한다. 숫자 아님·0 이하·라벨 없음·통화 불명이면 null(= 총액 없음) */
+/** 모델이 준 합계 필드를 검증한다. 숫자 아님·0 이하·라벨 없음·라벨이 표 머리글(줄바꿈·현재가·매입·단가·수익)·통화 불명이면 null(= 총액 없음) */
 export function sanitizeScreenTotal(value: unknown, label: unknown, currency: unknown): ScreenTotal | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
   if (typeof label !== "string") return null;
-  const trimmed = label.trim().slice(0, MAX_LABEL);
+  const whole = label.trim();
+  // 합계 라벨은 한 줄이다 — 줄바꿈이 있으면 2줄 표 머리글을 옮긴 것으로 본다
+  if (/[\r\n]/.test(whole) || COLUMN_WORDS.some((w) => whole.replace(/\s/g, "").includes(w))) return null;
+  const trimmed = whole.slice(0, MAX_LABEL);
   if (!trimmed) return null;
   if (!(CURRENCIES as readonly string[]).includes(currency as string)) return null;
   return { value, label: trimmed, currency: currency as ScreenTotal["currency"] };
@@ -87,19 +92,20 @@ export const SCREEN_TOTAL_SCHEMA = {
 
 export const buildScreenTotalPrompt = () => `증권 앱 보유종목 화면에서 "보유 주식 평가금액 합계" 한 가지만 읽어라. 종목 행은 읽지 않는다.
 
-읽는 조건: 화면에 합계 라벨(예 "총 평가금액"·"총평가금액"·"평가금액 합계"·"주식 평가금액")로 명시된 금액이 숫자로 보일 때만 읽는다. 없거나 불확실하면 읽지 않는다.
+읽는 조건: 합계를 뜻하는 라벨(예: "총 평가금액"·"총평가금액"·"평가금액 합계"·"주식 평가금액")이 화면에 글자로 적혀 있고, 그 라벨 옆이나 바로 아래에 금액이 숫자로 적혀 있을 때만 읽는다.
 
 필드:
 screenTotalText=그 라벨에 딸린 금액을 화면에 적힌 글자 그대로 옮긴 문자열(쉼표·소수점·단위 포함. 예: 화면에 "5,500,000원"이면 "5,500,000원", "1억 2,345만원"이면 "1억 2,345만원", "$12,345.67"이면 "$12,345.67"). 숫자를 계산·환산·반올림하지 말고, 자릿수와 쉼표 위치를 바꾸지 말고, 0을 더하거나 빼지 말 것.
-screenTotalLabel=그 금액 바로 옆·위의 라벨 글자 그대로(고쳐 쓰거나 줄이지 말 것)
+screenTotalLabel=화면에 적힌 라벨 글자 그대로(고쳐 쓰거나 줄이지 말 것)
 screenTotalCurrency=그 금액의 통화(원이면 KRW·달러면 USD)
 
 합계 라벨이 화면에 없으면 screenTotalText="", screenTotalLabel="", screenTotalCurrency="KRW"로 답한다.
 
 금지:
-- 종목 값을 더해 계산하지 말 것. 화면에 보이는 글자만 옮긴다.
+- 종목 행의 금액을 더하거나 계산해서 합계를 만들지 말 것. 화면에 적힌 글자만 옮긴다.
 - "총 평가손익"·"평가손익"·"수익률"·"매입금액"·"총 매입금액"·"예수금"·"주문가능금액"은 합계가 아니다. 이런 라벨만 보이면 screenTotalText="".
-- 종목 한 줄의 평가금액을 합계로 답하지 말 것.`;
+- 종목 한 줄의 평가금액을 합계로 답하지 말 것.
+- 표 머리글(열 이름. 예: "현재가"·"평가금액"·"매입가"·"평균단가"·"수익률")은 합계 라벨이 아니다. 종목 표 위·아래에 따로 적힌 합계 라벨이 없으면 screenTotalText="".`;
 
 const noTotal = () => NextResponse.json({ screenTotal: null });
 

@@ -49,11 +49,29 @@ export const settledScreenTotal = (f: ScreenTotalFetch): ScreenTotalInfo | null 
 /** 허용 오차 = max(총액 × 0.5%, 1,000원). 0.5%는 /200으로 계산해 경계(정확히 같음)가 부동소수로 어긋나지 않게 한다 */
 export const reconcileTolerance = (base: number): number => Math.max(base / 200, 1000);
 
-/** 라벨 판정: '평가'가 있고 자산·예수금·예탁·추정·순·손익이 없어야 예수금이 빠진 평가 합계로 본다(`총 평가손익`은 합계가 아니다). 공백은 무시 */
+/**
+ * 라벨 판정: '평가'가 있고 자산·예수금·예탁·추정·순·손익이 없어야 예수금이 빠진 평가 합계로 본다(`총 평가손익`은 합계가 아니다). 공백은 무시.
+ * 줄바꿈이 있거나 표 머리글 낱말(현재가·매입·단가·수익)이 든 라벨은 합계 라벨이 아니다(qa D-2: `현재가\n평가금액`).
+ */
 export function isStockTotalLabel(label: string): boolean {
+  if (/[\r\n]/.test(label.trim())) return false;
   const l = label.replace(/\s/g, "");
   if (!l.includes("평가")) return false;
-  return !["자산", "예수금", "예탁", "추정", "순", "손익"].some((w) => l.includes(w));
+  return !["자산", "예수금", "예탁", "추정", "순", "손익", "현재가", "매입", "단가", "수익"].some((w) => l.includes(w));
+}
+
+/**
+ * 상식 범위 검사(qa D-2) — 화면 합계라면 같은 화면에서 읽은 행들의 평가액 합보다 뚜렷이 작을 수 없다.
+ * ① 행이 2개 이상인데 합계가 어느 한 행의 평가액(±0.5%)과 같고 행 합보다 허용 오차 넘게 작다 → 종목 한 줄을 합계로 읽은 것
+ * ② 합계가 행 평가액 합의 50% 미만
+ * 둘 중 하나면 믿지 않는다(줄 숨김). 합계가 행 합 이상이거나 앱 합계와 허용 오차 안에서 맞는 경우는 건드리지 않는다.
+ */
+export function isImplausibleScreenTotal(total: number, rows: Pick<ReconcileRow, "screenValue">[]): boolean {
+  const values = rows.map((r) => r.screenValue).filter((v) => v > 0);
+  if (values.length === 0) return false;
+  const sum = values.reduce((s, v) => s + v, 0);
+  if (total < sum / 2) return true;
+  return values.length >= 2 && total < sum - reconcileTolerance(sum) && values.some((v) => Math.abs(total - v) <= v / 200);
 }
 
 export interface ReconcileRow {
@@ -93,6 +111,8 @@ export function reconcileTotal(input: { screenTotal: ScreenTotalInfo | null | un
   const appTotal = rows.reduce((s, r) => s + r.appValue, 0);
   const delta = Math.abs(appTotal - t.value);
   if (delta <= reconcileTolerance(t.value)) return { state: "match" };
+  // 일치가 아닐 때만: 합계 값 자체가 상식 범위를 벗어나면(종목 한 줄을 합계로 읽음 등) 틀린 '달라요'를 내지 않고 숨긴다
+  if (isImplausibleScreenTotal(t.value, rows)) return { state: "hidden" };
   const off = rows
     .filter((r) => r.screenValue > 0 && Math.abs(r.appValue - r.screenValue) > reconcileTolerance(r.screenValue))
     .sort((a, b) => Math.abs(b.appValue - b.screenValue) - Math.abs(a.appValue - a.screenValue));

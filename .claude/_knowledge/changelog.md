@@ -7,7 +7,7 @@
 ## 2026-11-27
 ### 맞추기 결과 대조 1줄 — 화면 합계 전용 별도 호출 (issue-5.164, #328, risk:medium)
 - 주식을 화면 1장으로 맞춘 뒤 숫자가 증권사 화면과 같은지 확인할 방법이 없던 문제(5.161에서 합계를 행 인식 호출에 함께 넣었다가 행이 회귀해 뺐다). 이번에는 **행 인식 호출을 한 글자도 바꾸지 않고**(프롬프트·스키마·생성 설정 SHA-256 고정 테스트 `stock-row-frozen-5164.test.ts`) 합계만 읽는 전용 호출을 따로 둔다: `assetType=stock-total` → `screen-total.ts` `respondScreenTotal`(전용 프롬프트·스키마·`maxOutputTokens` 256, 금액은 화면 글자 그대로 받아 서버 `parseScreenAmount`가 숫자로 변환 — 모델이 숫자를 직접 쓰면 자릿수가 틀어지던 qa D-1 대응) → `{ screenTotal: {value,label,currency} | null }`. 전용 풀 `STOCK_TOTAL_POOL`(일 60, 전역 1,500 안의 몫·전역 인상 0, 초과 429). 서버 저장·캐시 0, 로그는 호출 오류 메시지 1건뿐(값 미출력).
-- 기기: 행 인식이 끝난 그 인식 동작 안에서 **주식·올린 장 1장·그 장 ok**일 때만 1회(`screenTotalTarget` → `startScreenTotalCall`, 본문 = 이미지 + 모드 값, 8초, 재전송 0, 기기 30회 차감 0, 대기 표시 0). `맞추기`를 누른 순간 받아 둔 값으로만 판정하고 늦은 응답은 버린다. 결과 화면 `ReconcileLines`(일치 1줄 / 차이 2줄, 허용 오차 max(0.5%, 1,000원), 라벨 제외어에 `손익` 추가). GA `resync_check_match|diff|none|skip`(skip = 보냈으나 못 받음, category만). 새 소식 `20261127-02`(바로 가기 없음, 체험은 인식이 막혀 있어 `trialHidden`으로 체험 목록·팁·`새` 개수에서 제외 — `visibleWhatsNew`). 저장 키·스키마·마이그레이션·동기화·공유 토큰 변경 0.
+- 기기: 행 인식이 끝난 그 인식 동작 안에서 **주식·올린 장 1장·그 장 ok**일 때만 1회(`screenTotalTarget` → `startScreenTotalCall`, 본문 = 이미지 + 모드 값, 8초, 재전송 0, 기기 30회 차감 0, 대기 표시 0). `맞추기`를 누른 순간 받아 둔 값으로만 판정하고 늦은 응답은 버린다. 결과 화면 `ReconcileLines`(일치 1줄 / 차이 2줄, 허용 오차 max(0.5%, 1,000원), 라벨 제외어에 `손익`·표 머리글 낱말·줄바꿈 추가, 합계가 한 행 평가액과 같거나 행 합의 50% 미만이면 숨김 — qa D-2). GA `resync_check_match|diff|none|skip`(skip = 보냈으나 못 받음, category만). 새 소식 `20261127-02`(바로 가기 없음, 체험은 인식이 막혀 있어 `trialHidden`으로 체험 목록·팁·`새` 개수에서 제외 — `visibleWhatsNew`). 저장 키·스키마·마이그레이션·동기화·공유 토큰 변경 0.
 
 ## 2026-11-26
 ### 320 배당 종목 표 행 2단 (issue-5.163, #326, risk:low)

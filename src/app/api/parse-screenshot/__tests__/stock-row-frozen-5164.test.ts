@@ -271,6 +271,30 @@ describe("화면 금액 글자 → 숫자(qa D-1: 모델이 숫자를 직접 쓰
   });
 });
 
+describe("qa D-2 회귀 — 합계 없는 표(B)에서 표 머리글 + 첫 행 평가금액을 합계로 읽은 모델 출력", () => {
+  // preview 응답 원문(screenshots/responses-inc/tot1-B.json): {"screenTotal":{"value":4550000,"label":"현재가\n평가금액","currency":"KRW"}}
+  it("라벨에 줄바꿈·표 머리글 낱말이 있으면 서버가 null로 낸다", async () => {
+    for (const text of ["4,550,000", "4,550,000원", "4550000"]) {
+      reply({ screenTotalText: text, screenTotalLabel: "현재가\n평가금액", screenTotalCurrency: "KRW" });
+      expect(await call("stock-total")).toEqual({ status: 200, body: { screenTotal: null } });
+    }
+  });
+  it.each(["현재가\n평가금액", "평가금액\n매입금액", "평가금액\r\n수익률", "현재가 평가금액", "평가금액 / 매입금액", "평균단가", "평가 수익", "총 수익률", "매입가"])("표 머리글 라벨 %j → null", (label) => {
+    expect(sanitizeScreenTotal(4_550_000, label, "KRW")).toBeNull();
+    expect(readScreenTotalFields("4,550,000원", label, "KRW")).toBeNull();
+  });
+  it.each(["총 평가금액", "총평가금액", "주식 평가금액", "평가금액 합계", " 총 평가금액\n"])("합계 라벨 %j는 그대로 통과(앞뒤 공백·줄바꿈은 다듬는다)", (label) => {
+    expect(sanitizeScreenTotal(5_500_000, label, "KRW")).toEqual({ value: 5_500_000, label: label.trim(), currency: "KRW" });
+  });
+  it("프롬프트: 라벨 옆·바로 아래 금액만, 종목 한 줄 금지, 표 머리글은 합계 라벨이 아님", () => {
+    const p = buildScreenTotalPrompt();
+    expect(p).toContain("화면에 글자로 적혀 있고, 그 라벨 옆이나 바로 아래에 금액이 숫자로 적혀 있을 때만 읽는다");
+    expect(p).toContain("종목 한 줄의 평가금액을 합계로 답하지 말 것");
+    expect(p).toContain("표 머리글");
+    expect(p).toContain('합계 라벨이 화면에 없으면 screenTotalText=""');
+  });
+});
+
 describe("서버 저장·캐시·로그 0 (소스 grep)", () => {
   const route = readFileSync(path.join(__dirname, "../route.ts"), "utf8");
   const total = readFileSync(path.join(__dirname, "../screen-total.ts"), "utf8");
@@ -291,9 +315,8 @@ describe("서버 저장·캐시·로그 0 (소스 grep)", () => {
   });
   it("프롬프트: 라벨이 글자로 있을 때만 읽고, 행을 더해 만들지 않으며, 손익·예수금은 합계가 아니다", () => {
     const p = buildScreenTotalPrompt();
-    expect(p).toContain("합계 라벨(예");
-    expect(p).toContain("없거나 불확실하면 읽지 않는다");
-    expect(p).toContain("종목 값을 더해 계산하지 말 것");
+    expect(p).toContain("화면에 글자로 적혀 있고");
+    expect(p).toContain("더하거나 계산해서 합계를 만들지 말 것");
     expect(p).toContain("총 평가손익");
     expect(p).toContain("예수금");
   });
