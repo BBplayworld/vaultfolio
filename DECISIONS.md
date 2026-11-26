@@ -777,3 +777,4 @@
 - 2026-11-26 #323 축소 판정(오케스트레이터): 320 배당 표는 열 5개를 한 줄에 넣는 구조라 열 폭 재배분이 3회 연속 다른 열 회귀(날짜↔이름↔주당↔칩)를 만듦 → monthly-dividend-stocks.tsx 변경을 main 상태로 되돌리고(날짜 3줄은 기존 현상 유지) 5.162는 문구·roundedAnnual·차트 Y축·라벨 clamp·증권사 메타만 머지. 320 배당 표는 ui-designer ui.md(행 2단 구성) 선행 후 별도 릴리스. 회고: 고정 폭 표는 한 열 수정 전 전 열 최장값 표부터(C155 보강).
 - 2026-11-26 **v5.160 머지**(PR #324, squash 9c13292, 22:50 KST) = issue-5.162 = #323 배당 문구·숫자 마감(risk:low, CEO 승인). 320 배당 표 변경은 축소로 제외(후속: 행 2단 ui.md 선행). 허브 배당 카드 #288 R1 판독 경계 = 머지 시각. 회고 C155.
 - 2026-11-26 22:55 KST **대표 지시**: 지금부터 11/27 09:00 KST까지 모든 에이전트는 Fable 모델 사용, 쉼 없이 작업 진행. (오케스트레이터: Agent 호출 시 model=fable)
+- 2026-11-26 #325 tech-review 판정(오케스트레이터): 코인 거래소별 합계는 읽기 전용(맞추기 버튼 없음 — 코인 resync가 거래소 기본값 미지원), computeExchangeTotals 얇은 래퍼 + BrokerRow 재사용, 소계 정본 getAssetSummary().cryptoValue(수량>0 전체). GA crypto_exchange_open 1개 포함(stock_broker_open과 판독 대칭).
