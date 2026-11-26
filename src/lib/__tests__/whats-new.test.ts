@@ -58,13 +58,13 @@ describe("whatsNewTip — 7일 간격", () => {
     expect(whatsNewTip({ id: "20261111-07", seenAt: now - WHATS_NEW_GAP_MS }, opts)).toEqual({ count: shown.filter((x) => compareIds(x.id, "20261111-07") > 0).length, title: WHATS_NEW[0].title });
   });
   it("최신까지 읽었거나 목록이 비면 없음", () => {
-    expect(whatsNewTip({ id: "20261126-04", seenAt: now - 40 * DAY }, opts)).toBeNull();
+    expect(whatsNewTip({ id: "20261126-05", seenAt: now - 40 * DAY }, opts)).toBeNull();
     expect(whatsNewTip(null, { ...opts, entries: [] })).toBeNull();
   });
   it("4.82 시드: 팁 N과 시트 '새' 개수가 같고, 읽은 뒤 재열기는 0", () => {
     expect([...newBadgeIds(WHATS_NEW, null, today)]).toEqual(shown.map((x) => x.id));
     expect(newBadgeIds(WHATS_NEW, null, today).size).toBe(whatsNewTip(null, { now, today })!.count);
-    expect(newBadgeIds(WHATS_NEW, { id: "20261126-04", seenAt: now }, today).size).toBe(0);
+    expect(newBadgeIds(WHATS_NEW, { id: "20261126-05", seenAt: now }, today).size).toBe(0);
   });
   it("5.125 qa D-1: 실제 목록에서 팁 N = 시트 '새' 개수 ≤ 시트 행 수(20개 상한 초과 시)", () => {
     const t = "2026-11-17";
@@ -131,7 +131,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
   });
 
   it("latestEntryId는 같은 날 NN 최대값(D1) — 정렬 순서와 무관", () => {
-    expect(latestEntryId(WHATS_NEW)).toBe("20261126-04");
+    expect(latestEntryId(WHATS_NEW)).toBe("20261126-05");
     expect(latestEntryId([e("20261111-01"), e("20261111-10"), e("20261111-09"), e("20261110-99")])).toBe("20261111-10");
     expect(latestEntryId([])).toBeNull();
   });
@@ -142,7 +142,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
     expect(runSilentFirstRun({ isDataLoaded: false, hasAssets: false, eligible: true })).toBe(false); // 로드 전
     expect(store.get(KEY)).toBeUndefined();
     expect(runSilentFirstRun({ isDataLoaded: true, hasAssets: false, eligible: true })).toBe(true);
-    expect(JSON.parse(store.get(KEY)!).id).toBe("20261126-04");
+    expect(JSON.parse(store.get(KEY)!).id).toBe("20261126-05");
     expect(whatsNewTip(readSeen(), { today: "2026-11-12" })).toBeNull(); // 자산 등록 뒤 Dashboard 첫 마운트 시점
     vi.setSystemTime(new Date("2026-11-30T00:00:00Z"));
     expect(whatsNewTip(readSeen(), { today: "2026-11-30" })).toBeNull();

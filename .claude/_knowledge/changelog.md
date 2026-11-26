@@ -5,6 +5,8 @@
 ---
 
 ## 2026-11-26
+### 상세·주식 증권사별 합계 (issue-5.160, #319, risk:low)
+- 증권사 2곳 이상·ISA·연금을 함께 쓰면 증권사별 합을 종목 카드마다 펼쳐 더해야 하던 문제. 상세·주식 카테고리 selector 아래·목록 위에 접기형 `BrokerTotalsBlock`(`증권사별 · N곳`, 기본 접힘·`useState`만): 증권사마다 평가금·손익·수익률·`N종목`·비중. 순수 함수 `computeBrokerTotals`(`lib/asset/broker-totals.ts`) — 지금 탭·달러 보기 기준, 묶음마다 `computeStockTotals` 재사용, 행 단위 `sameBroker` 묶음, 미지정 `증권사 미지정` 맨 아래, 상장폐지·수량 0 제외, 원(달러 보기 센트) 최대 잔여로 문자열 합 = 헤더(C150), 비중 `largestRemainderTenths`. 행 `맞추기` = 기존 `trigger-add-stock`에 `broker` 전달 → `HoldingsResyncDialog initialBroker`(확정 못 한 장의 선택 칸 기본값만, `resolveScreensWithDefaultBroker`). 묶음 1개·주식 0건 DOM 0, 인증카드 미렌더. GA `stock_broker_open`(`상세·주식·증권사별 열기`, 페이지 수명 1회). 새 소식 `20261126-05`. 저장 키·스키마·동기화·서버 전송 변경 0(C151 N/A). '마지막 맞춘 날' 제외.
 ### 상세에서 보는 배당 — 종목 한 장 배당 줄·성과 › 배당 압축 (issue-5.159, #317, risk:low)
 - 종목 한 장 차트 카드 맨 아래 `거래내역` 아래에 `StockPageDividendRow`(`올해 배당 지급 P · 예상 E` / `다음 지급 m월 · 세전 추정`, 누르면 성과 › 배당, GA title `상세·주식·종목·배당`=`stock_dividend`). 조회 중·무배당·대상 아님 줄 0, 실패·엔화 안내 한 줄. 성과 › 배당: `예상 포함/지급만` 토글 삭제, Hero `올해 배당`, Hero 아래 결론 줄(`지급 · 예상 · 다음 지급 m월 k종목`), 표 5열 `합계`/`{m}월 합계`, 범례 `예상 (옅음)`은 연간 예상 > 0일 때만, 도움말 2줄 삭제. 공용: `nextDividendMonth(calc, todayKst, keys?)`(`dividend-calc.ts`, 고르기만)·`useDividendData({stocks?})`. 새 소식 `20261126-04`. 저장 키·스키마·서버 전송 변경 0.
 ### 기록 입력 정확도 — 과거 날짜 질문·체결 환율 한 값·현재가 넣기·긴 메모 (issue-5.158, #311, risk:medium)
