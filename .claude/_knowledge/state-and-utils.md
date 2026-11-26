@@ -469,6 +469,19 @@ sortCausesByDate(items): AttributionDisplayItem[]    // 시세·환율 → 날�
   - 테스트: `__tests__/stock-labels-5125-compat.test.ts`(5.125 원문 사본 `fixtures/stock-labels-5125.ts` + 복원 7행) · `grow-pick.test.ts` · `views/activity/__tests__/grow-expand-block.test.tsx`
 - 테스트: `__tests__/stock-labels-merge.test.ts` · `stock-labels-storage.test.ts` · `stock-labels-sync.test.ts` · `trial-boot.test.ts` · `hooks/__tests__/use-stock-labels.test.ts` · `report/__tests__/asset-grade-copy.test.ts`
 
+### asset/cash-tx-tags.ts · hooks/use-cash-tx-tags.ts · finance/received-dividend.ts (#5.166, 이슈 #329) — 현금 거래 분류 표시(받은 배당 기록)
+
+- **저장 키** `STORAGE_KEYS.cashTxTags` = `secretasset.cash_tx_tags`(점 구분 — `clearAssetData`에 안 걸림, 롤백해도 남음). 값 `{ v:1, [현금 거래 id]: { kind:"dividend", ticker?, stockName? } }`. **금액·날짜·수량 금지**(정본은 현금 거래 레코드). 전역 `localStorage`만, 모듈 캐시 0(체험 격리). 마이그레이션 없음(키 없음 = 빈 맵)
+- `cash-tx-tags.ts`: `parseCashTxTags`(관대 — 항목 단위 건너뛰기, id는 `ctx_` 접두만, 모르는 필드·모르는 kind 보존) · `readCashTxTagsState()` → `none | ok | corrupt`(모르는 `v` = corrupt) · `joinCashTxTags(tags, live)` · `readDividendTags(live)`(화면용, 조인 뒤 배당 표시만) · `readCashTxTagsForExport(live)`(조인 뒤 값, 없으면 undefined) · `mergeCashTxTags`(id 합집합, 같은 id가 다르면 직렬화가 무거운 쪽) · `putDividendTag(txId, stock?)`(실패 시 throw, 금액·날짜 인자 없음) · `removeCashTxTags(ids)`(손상 원문은 쓰기 0) · `clearCashTxTags()` · `applyIncomingCashTxTags(field, {merge, live})` → `{repush}`
+- **규칙**: payload 최상위 `cashTxTags`(`buildExportPayload`, push·백업 공용). 수신은 `applyImportedPayload`가 `saveAssetData` **뒤에** 호출. 필드 없음 = 로컬 유지(pull이고 살아 있는 로컬 표시가 있으면 `cashTxTagsRepush` → `pullAsset`의 `mergedAdditions`에 OR). 못 읽는 수신(`v:2`)·손상 로컬은 덮지 않는다. 재-push 비교는 조인 뒤 값(고아 차이로 반복 0)
+- **지우는 곳 전수**: 항목 제거 = `deleteCashTransaction`·`deleteCashTransactionWithBalance`·`deleteCash`(저장 성공 뒤) / 키 clear = `settings-page`(모든 데이터 삭제)·`preview-gate`(`?demo=empty`)·`applySharedData`(공유 링크 반영)·`demo-inject`(주입 전). pull·백업 복원·3년 정리·원격 삭제에서는 **지우지 않고 조인으로 무시**(덮임 되돌리기 #84 뒤 표시 복귀)
+- **저장 순서**(`asset-data-context.saveTaggedCashTx`): 표시 먼저 → `saveData`. 표시 쓰기 실패 = 저장 중단(false), 거래 저장 실패 = 표시 회수. `addCashTransaction(tx, tag?)`·`addCashTransactionWithBalance(tx, cashId, patch, tag?)`의 `tag: CashTxDividendInput = { stock?: { ticker?, name? } }`
+- `use-cash-tx-tags.ts`: `useDividendTags()` → `Record<거래 id, DividendTag>`(읽기 전용, 마운트·`assetData` 변경 때 다시 읽음). 쓰기는 컨텍스트 저장 함수만
+- `received-dividend.ts`: `sumReceivedDividend(cashTransactions, tagged, year, mul)` → `{ months[12], annual, count }`. 입금만·반영+기록만 모두·입금일의 연·월·외화는 지금 환율(`getMultiplier`). **달별 원 단위 반올림 후 합 = 연 합계**(C150). 세전 계산값(`dividend-calc`)과 섞지 않는다
+- `asset-dispatch.dispatchAddCashTx(cashId?, { dividend? })`: `dividend: true`면 입금 폼이 입금·배당 체크로 열린다(UI 상태, 저장 0)
+- GA `feature_use` category `cash_dividend`(title `현금·배당 입금 기록`) — 배당 입금 저장 1회, 금액·종목·계좌 미전송
+- 테스트: `__tests__/data-safety-5166.test.ts`(T1~T11 + 합계) · 구버전 재현 `__tests__/fixtures/frozen-schema-5160/`(main 9c13292 스키마 사본 + `frozenDevice`, 살아 있는 스키마 import 0)
+
 ### report/composition.ts (#4.43 #72 · #4.51 #83) — 월 탭 자산 구성 변화·외화 노출 순수 함수
 
 - `COMPOSITION_KEYS/LABELS`, `COMPOSITION_FORBIDDEN_WORDS`(문구 금지어 테스트, 4.45 재사용). 연 탭 `CompositionCard`·보정 스케일은 #4.44에서 제거됨.

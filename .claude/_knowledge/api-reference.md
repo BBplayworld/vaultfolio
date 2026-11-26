@@ -234,6 +234,8 @@ GET /api/sync?meta=1
 
 ### 자동 push 트리거 (`src/lib/cloud-sync/cloud-sync-provider.tsx`)
 
+**payload 최상위 `cashTxTags`(#329, 5.166)**: 현금 거래 분류 표시(받은 배당 기록)는 `assetData` 밖 최상위 필드로 실린다 — `{ v:1, [현금 거래 id]: { kind, ticker?, stockName? } }`, 살아 있는 현금 거래와 조인한 값만, 실을 것이 없으면 필드 없음. 암호문 안에만 있고 서버 요청 평문 body 키(`iv·ciphertext·baseVersion·pubKey`)는 그대로다. pull: 필드 없음(구버전 기기 push) = 로컬 유지 + 재-push, 있으면 id 합집합. 구버전 기기는 이 필드를 읽지 않는다(금액·잔액·건수 동일, 일반 입금으로 표시). 상세 `state-and-utils.md` `asset/cash-tx-tags.ts`.
+
 **사용자 편집 신호만** push를 트리거한다(2026-10 — 파생값 제외 payload 비교 `getComparablePayloadString`·`lastPushedRef`·`skipNextChangeRef` 제거).
 
 - 신호: `ASSET_USER_EDIT_EVENT`(`asset-data-context.tsx` — `saveData` 자산 CRUD·`addStockRaw`, 우회 저장 경로는 `notifyAssetUserEdit()`: 무티커 스크린샷 등록·파일 가져오기·공유 링크 반영) + `NICKNAME_EVENT` → `userEditRef=true`·`changeTick++` → 2.5s 디바운스 push. push 성공·pull 성공 시 해제.
