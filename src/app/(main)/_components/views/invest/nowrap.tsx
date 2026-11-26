@@ -38,7 +38,7 @@ export function ReadoutChips({ ro, hideYear = false }: { ro: Readout; hideYear?:
 function RetItem({ label, ret, first, trail = false }: { label: string; ret: number; first: boolean; trail?: boolean }) {
   return (
     <span className="whitespace-nowrap" aria-label={`${label} ${fmtPct(ret, 1)}`}>
-      <span aria-hidden className="text-muted-foreground">{first ? "" : "· "}<span className="max-[359px]:hidden">{label}</span><span className="hidden max-[359px]:inline">{label.replace(/ ?100$| 500$/, "")}</span></span>{" "}
+      <span aria-hidden className="text-muted-foreground">{first ? "" : "· "}<span className="max-[360px]:hidden">{label}</span><span className="hidden max-[360px]:inline">{label.replace(/ ?100$| 500$/, "")}</span></span>{" "}
       <span aria-hidden className="text-foreground">{fmtPct(ret, 1)}</span>
       {trail && <span aria-hidden className="text-muted-foreground"> ·</span>}
     </span>

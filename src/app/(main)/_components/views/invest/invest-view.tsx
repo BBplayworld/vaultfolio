@@ -124,7 +124,7 @@ function RecoveryLine({ view, className = "" }: { view: ReturnType<typeof buildI
   // 구분점은 뒤 어구에 붙여 한 덩어리로 묶는다 — 좁은 폭에서 줄 끝에 `·`이 매달리지 않는다(D-11 규칙)
   const dot = <span aria-hidden>· </span>;
   return (
-    <p data-testid="invest-drop-recovery" className={`text-xs leading-snug text-muted-foreground text-pretty break-keep max-[359px]:hidden ${className}`}>
+    <p data-testid="invest-drop-recovery" className={`text-xs leading-snug text-muted-foreground text-pretty break-keep max-[360px]:hidden ${className}`}>
       {r.merged && r.long ? (
         <>가장 깊고 고점에서 전고점까지 가장 길었던 때 <span className="whitespace-nowrap"><B>{r.deep.name}</B> <B>{fmtPct(r.deep.dd)}</B></span> <span className="whitespace-nowrap">{dot}<B>{r.long.n}년</B></span></>
       ) : (
@@ -295,7 +295,7 @@ export function InvestView({ variant = "app", defaultIndex = "spx", asof, ratioL
         {wide && <p data-testid="invest-base" className="mt-2 text-xs leading-snug text-muted-foreground text-pretty break-keep">{head.l3}</p>}
       </div>
       {/* 읽기 줄 예약 영역: 첫 행 = 해 스테퍼(라벨이 해 고르기 안내를 겸함), 둘째 행 = 읽기 줄. 해를 골라도 높이가 변하지 않는다(5.138 N-2) */}
-      <div data-testid="invest-readout" className="mt-2 flex min-h-[60px] flex-wrap content-start items-center gap-x-2 gap-y-0.5 max-[389px]:min-h-[76px] max-[359px]:min-h-[84px]">
+      <div data-testid="invest-readout" className="mt-2 flex min-h-[60px] flex-wrap content-start items-center gap-x-2 gap-y-0.5 max-[389px]:min-h-[76px] max-[360px]:min-h-[84px]">
         {showLevels && (
           <div
             ref={stepRef} role="group" aria-label="해 이동" data-testid="year-stepper" className="flex h-10 shrink-0 items-center gap-1"

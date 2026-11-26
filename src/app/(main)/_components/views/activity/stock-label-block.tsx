@@ -115,7 +115,7 @@ export function AxisPanel({ axis, groups, total, scale, filterKey, onGroup }: {
   const [moreGroups, setMoreGroups] = useState(false);
   const visible = moreGroups || groups.length <= VISIBLE_GROUPS + 1 ? groups : groups.slice(0, VISIBLE_GROUPS);
   const hidden = groups.length - visible.length;
-  const cols = "grid grid-cols-[6.25rem_minmax(0,1fr)_4.25rem] gap-x-2 max-[359px]:grid-cols-[5.5rem_minmax(0,1fr)_4rem]";
+  const cols = "grid grid-cols-[6.25rem_minmax(0,1fr)_4.25rem] gap-x-2 max-[360px]:grid-cols-[5.5rem_minmax(0,1fr)_4rem]";
   return (
     <div data-testid="grow-groups" data-axis={axis} className="border-t border-border pt-1 dark:border-border/40">
       <div data-testid="grow-group-total" data-rate={pctText(total.rate)} data-profit={Math.round(total.profit)} className={`${cols} min-h-13 items-center py-1.5`}>
@@ -456,7 +456,7 @@ function BoardRowItem({ row, scale, open, onToggle, children }: {
         aria-controls={sheetId}
         aria-label={`${row.name}, 보유 ${row.holdText}, ${own ? "매입가 대비" : "평단 대비 수익률"} ${row.rate === null ? "없음" : pctText(row.rate)}${row.due ? ", 점검 차례" : ""}`}
         onClick={onToggle}
-        className={`-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_4.5rem_minmax(3.625rem,auto)_0.875rem] items-center gap-x-2 gap-y-0.5 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150 max-[359px]:grid-cols-[minmax(0,1fr)_3rem_minmax(3.625rem,auto)_0.875rem] ${open ? "rounded-t-lg bg-foreground/6" : "rounded-lg hover:bg-muted/40"}`}
+        className={`-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_4.5rem_minmax(3.625rem,auto)_0.875rem] items-center gap-x-2 gap-y-0.5 px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-safe:transition-[background-color] motion-safe:duration-150 max-[360px]:grid-cols-[minmax(0,1fr)_3rem_minmax(3.625rem,auto)_0.875rem] ${open ? "rounded-t-lg bg-foreground/6" : "rounded-lg hover:bg-muted/40"}`}
       >
         <span className={`min-w-0 text-sm font-semibold text-foreground text-pretty break-keep ${own ? "col-span-2" : ""}`}>{row.name}</span>
         {own ? null : row.rate === null ? <span /> : <ZeroBar value={row.rate} scale={scale} className="h-2" />}
@@ -764,7 +764,7 @@ function GrowViewPanel({ view, rows, store, now, onPickOpen }: {
                   aria-expanded={openAxis === a.value}
                   aria-label={filtered ? `${activeFilter.label} 거르기 해제` : `${a.label}별로 보기`}
                   onClick={() => onAxis(a.value)}
-                  className={`relative inline-flex min-h-9 min-w-0 items-center justify-center gap-0.5 rounded-md px-1 text-sm outline-none after:absolute after:inset-x-0 after:-inset-y-0.5 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96] motion-safe:transition-[transform,background-color] motion-safe:duration-150 max-[359px]:text-xs ${
+                  className={`relative inline-flex min-h-9 min-w-0 items-center justify-center gap-0.5 rounded-md px-1 text-sm outline-none after:absolute after:inset-x-0 after:-inset-y-0.5 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96] motion-safe:transition-[transform,background-color] motion-safe:duration-150 max-[360px]:text-xs ${
                     filtered ? "bg-foreground font-bold text-card" : openAxis === a.value ? "bg-foreground/15 font-semibold text-foreground" : "text-muted-foreground"
                   }`}
                 >

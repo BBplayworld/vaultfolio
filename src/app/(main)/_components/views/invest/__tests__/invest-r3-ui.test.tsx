@@ -20,7 +20,7 @@ describe("#272 A4·용어", () => {
   it("A4 1줄: 정본 문장(S&P 500) + <360 숨김 클래스", () => {
     const h = app({ defaultIndex: "spx" });
     expect(h).toContain('data-testid="invest-drop-recovery"');
-    expect(h).toContain("max-[359px]:hidden");
+    expect(h).toContain("max-[360px]:hidden");
     expect(text(h)).toContain("가장 깊었던 때 1973~74년 하락 −41.9% · 고점에서 전고점까지 가장 길었던 때 닷컴 버블 붕괴 14년");
   });
   it("A4 같은 하락이면 합친 문장(나스닥100), 괄호 0", () => {
@@ -161,7 +161,7 @@ describe("5.141 qa D1·D2 회귀", () => {
     for (const f of ["app/(main)/_components/views/invest/invest-view.tsx", "app/(main)/_components/views/invest/three-view.tsx"]) {
       const src = read(f);
       expect(src).toContain('max-[360px]:sr-only');
-      expect(src).not.toContain('max-[359px]:sr-only');
+      expect(src).not.toMatch(/max-\[359px\]:/);
       expect(src).toContain('min-[360px]:hidden');
     }
   });
