@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { APP_VERSION } from "@/config/app-version";
 import { APP_FEATURES } from "@/config/app-features";
-import { WHATS_NEW, type WhatsNewEntry } from "@/config/whats-new";
-import { sheetEntries, newBadgeIds, markWhatsNewSeen, parseEntryId, restoreFocusAfterSheetClose, runSilentFirstRun } from "@/lib/whats-new";
+import { type WhatsNewEntry } from "@/config/whats-new";
+import { sheetEntries, newBadgeIds, markWhatsNewSeen, parseEntryId, restoreFocusAfterSheetClose, runSilentFirstRun, visibleWhatsNew } from "@/lib/whats-new";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { isTrialMode } from "@/lib/trial/trial-mode";
 import { isPwaLocked } from "@/lib/pwa/app-lock";
@@ -50,8 +50,9 @@ export function WhatsNewHost() {
       closingRef.current = false;
       goneRef.current = false;
       const source = (e as CustomEvent<{ source?: "home_tip" | "more" }>).detail?.source === "more" ? "more" : "home_tip";
-      setBadgeIds(newBadgeIds()); // 읽음 기록 전에 계산
-      setList(sheetEntries(WHATS_NEW));
+      const entries = visibleWhatsNew(); // 체험 중에는 볼 수 없는 항목을 뺀 목록(C126) — 목록과 `새` 개수가 같은 목록을 쓴다
+      setBadgeIds(newBadgeIds(entries)); // 읽음 기록 전에 계산
+      setList(sheetEntries(entries));
       markWhatsNewSeen();
       track("feature_use", { category: "whats_new", method: "view", source });
       setOpen(true);

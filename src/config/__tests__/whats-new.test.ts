@@ -47,6 +47,14 @@ describe("WHATS_NEW 데이터 형식", () => {
     expect(e.body).toContain("상세 암호화폐");
   });
 
+  it("5.164 맞추기 합계 대조: 도착 화면 1곳이 없어 바로 가기 없음, 체험은 인식이 막혀 있어 체험 목록에서 숨김(C87·C126)", () => {
+    const e = WHATS_NEW.find((x) => x.id === "20261127-02")!;
+    expect(e.title).toBe("주식을 맞출 때 화면에 합계가 보이면 맞는지 알려 줘요");
+    expect(e.featureId).toBeUndefined();
+    expect(e.trialHidden).toBe(true);
+    expect(WHATS_NEW.filter((x) => x.trialHidden)).toHaveLength(1);
+  });
+
   it("길이: title 2~32자, body 48자 이하", () => {
     for (const e of WHATS_NEW) {
       expect(e.title.length, e.id).toBeGreaterThanOrEqual(2);

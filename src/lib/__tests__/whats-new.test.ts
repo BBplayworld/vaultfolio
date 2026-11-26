@@ -2,8 +2,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   compareIds, parseEntryId, unseenEntries, sheetEntries, whatsNewTip, shouldSilentFirstRun, readSeen, markWhatsNewSeen, newBadgeIds,
-  WHATS_NEW_GAP_MS, latestEntryId, runSilentFirstRun,
+  WHATS_NEW_GAP_MS, latestEntryId, runSilentFirstRun, visibleWhatsNew,
 } from "../whats-new";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { WHATS_NEW, type WhatsNewEntry } from "@/config/whats-new";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -58,13 +60,13 @@ describe("whatsNewTip — 7일 간격", () => {
     expect(whatsNewTip({ id: "20261111-07", seenAt: now - WHATS_NEW_GAP_MS }, opts)).toEqual({ count: shown.filter((x) => compareIds(x.id, "20261111-07") > 0).length, title: WHATS_NEW[0].title });
   });
   it("최신까지 읽었거나 목록이 비면 없음", () => {
-    expect(whatsNewTip({ id: "20261127-01", seenAt: now - 40 * DAY }, opts)).toBeNull();
+    expect(whatsNewTip({ id: "20261127-02", seenAt: now - 40 * DAY }, opts)).toBeNull();
     expect(whatsNewTip(null, { ...opts, entries: [] })).toBeNull();
   });
   it("4.82 시드: 팁 N과 시트 '새' 개수가 같고, 읽은 뒤 재열기는 0", () => {
     expect([...newBadgeIds(WHATS_NEW, null, today)]).toEqual(shown.map((x) => x.id));
     expect(newBadgeIds(WHATS_NEW, null, today).size).toBe(whatsNewTip(null, { now, today })!.count);
-    expect(newBadgeIds(WHATS_NEW, { id: "20261127-01", seenAt: now }, today).size).toBe(0);
+    expect(newBadgeIds(WHATS_NEW, { id: "20261127-02", seenAt: now }, today).size).toBe(0);
   });
   it("5.125 qa D-1: 실제 목록에서 팁 N = 시트 '새' 개수 ≤ 시트 행 수(20개 상한 초과 시)", () => {
     const t = "2026-11-17";
@@ -73,6 +75,42 @@ describe("whatsNewTip — 7일 간격", () => {
     expect(tip.count).toBe(badges.size);
     expect(tip.count).toBeLessThanOrEqual(sheetEntries(WHATS_NEW, t).length);
     expect([...badges].every((id) => sheetEntries(WHATS_NEW, t).some((x) => x.id === id))).toBe(true);
+  });
+});
+
+describe("visibleWhatsNew — 체험에서 볼 수 없는 항목 숨김(C126, 5.164)", () => {
+  const today = "2026-11-28";
+  const now = Date.parse("2026-11-28T00:00:00Z");
+  it("체험이 아니면 목록 그대로, 체험이면 trialHidden 항목만 빠진다", () => {
+    expect(visibleWhatsNew(WHATS_NEW, false)).toBe(WHATS_NEW);
+    const hidden = WHATS_NEW.filter((x) => x.trialHidden).map((x) => x.id);
+    expect(hidden).toEqual(["20261127-02"]);
+    const trial = visibleWhatsNew(WHATS_NEW, true);
+    expect(trial).toHaveLength(WHATS_NEW.length - 1);
+    expect(trial.some((x) => x.id === "20261127-02")).toBe(false);
+  });
+  it("체험: 홈 팁 N = 시트 '새' 개수이고 숨긴 항목은 시트 목록·제목에도 없다(실제 목록, C127)", () => {
+    const trial = visibleWhatsNew(WHATS_NEW, true);
+    const tip = whatsNewTip(null, { now, today, entries: trial })!;
+    const badges = newBadgeIds(trial, null, today);
+    expect(tip.count).toBe(badges.size);
+    expect(badges.has("20261127-02")).toBe(false);
+    expect(sheetEntries(trial, today).some((x) => x.id === "20261127-02")).toBe(false);
+    expect(tip.title).not.toContain("합계가 보이면");
+  });
+  it("일반: 새 항목이 시트 목록·'새' 개수에 들어가고 팁 N과 같다", () => {
+    const all = visibleWhatsNew(WHATS_NEW, false);
+    expect(sheetEntries(all, today).some((x) => x.id === "20261127-02")).toBe(true);
+    expect(newBadgeIds(all, null, today).has("20261127-02")).toBe(true);
+    expect(whatsNewTip(null, { now, today, entries: all })!.count).toBe(newBadgeIds(all, null, today).size);
+  });
+  it("진입점(시트·홈 팁)이 같은 목록 함수를 쓴다(소스)", () => {
+    const sheet = readFileSync(path.join(__dirname, "../../app/(main)/_components/views/home/whats-new-sheet.tsx"), "utf8");
+    const tip = readFileSync(path.join(__dirname, "../home-tip.ts"), "utf8");
+    expect(sheet).toContain("const entries = visibleWhatsNew();");
+    expect(sheet).toContain("newBadgeIds(entries)");
+    expect(sheet).toContain("sheetEntries(entries)");
+    expect(tip).toContain("whatsNewTip(readSeen(), { today, entries: visibleWhatsNew() })");
   });
 });
 
@@ -131,7 +169,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
   });
 
   it("latestEntryId는 같은 날 NN 최대값(D1) — 정렬 순서와 무관", () => {
-    expect(latestEntryId(WHATS_NEW)).toBe("20261127-01");
+    expect(latestEntryId(WHATS_NEW)).toBe("20261127-02");
     expect(latestEntryId([e("20261111-01"), e("20261111-10"), e("20261111-09"), e("20261110-99")])).toBe("20261111-10");
     expect(latestEntryId([])).toBeNull();
   });
@@ -142,7 +180,7 @@ describe("읽음 기록 키 — 이전 값 → 새 로직(복원)", () => {
     expect(runSilentFirstRun({ isDataLoaded: false, hasAssets: false, eligible: true })).toBe(false); // 로드 전
     expect(store.get(KEY)).toBeUndefined();
     expect(runSilentFirstRun({ isDataLoaded: true, hasAssets: false, eligible: true })).toBe(true);
-    expect(JSON.parse(store.get(KEY)!).id).toBe("20261127-01");
+    expect(JSON.parse(store.get(KEY)!).id).toBe("20261127-02");
     expect(whatsNewTip(readSeen(), { today: "2026-11-12" })).toBeNull(); // 자산 등록 뒤 Dashboard 첫 마운트 시점
     vi.setSystemTime(new Date("2026-11-30T00:00:00Z"));
     expect(whatsNewTip(readSeen(), { today: "2026-11-30" })).toBeNull();

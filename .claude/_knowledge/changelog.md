@@ -4,6 +4,11 @@
 
 ---
 
+## 2026-11-27
+### 맞추기 결과 대조 1줄 — 화면 합계 전용 별도 호출 (issue-5.164, #328, risk:medium)
+- 주식을 화면 1장으로 맞춘 뒤 숫자가 증권사 화면과 같은지 확인할 방법이 없던 문제(5.161에서 합계를 행 인식 호출에 함께 넣었다가 행이 회귀해 뺐다). 이번에는 **행 인식 호출을 한 글자도 바꾸지 않고**(프롬프트·스키마·생성 설정 SHA-256 고정 테스트 `stock-row-frozen-5164.test.ts`) 합계만 읽는 전용 호출을 따로 둔다: `assetType=stock-total` → `screen-total.ts` `respondScreenTotal`(전용 프롬프트·스키마·`maxOutputTokens` 128) → `{ screenTotal: {value,label,currency} | null }`. 전용 풀 `STOCK_TOTAL_POOL`(일 60, 전역 1,500 안의 몫·전역 인상 0, 초과 429). 서버 저장·캐시 0, 로그는 호출 오류 메시지 1건뿐(값 미출력).
+- 기기: 행 인식이 끝난 그 인식 동작 안에서 **주식·올린 장 1장·그 장 ok**일 때만 1회(`screenTotalTarget` → `startScreenTotalCall`, 본문 = 이미지 + 모드 값, 8초, 재전송 0, 기기 30회 차감 0, 대기 표시 0). `맞추기`를 누른 순간 받아 둔 값으로만 판정하고 늦은 응답은 버린다. 결과 화면 `ReconcileLines`(일치 1줄 / 차이 2줄, 허용 오차 max(0.5%, 1,000원), 라벨 제외어에 `손익` 추가). GA `resync_check_match|diff|none|skip`(skip = 보냈으나 못 받음, category만). 새 소식 `20261127-02`(바로 가기 없음, 체험은 인식이 막혀 있어 `trialHidden`으로 체험 목록·팁·`새` 개수에서 제외 — `visibleWhatsNew`). 저장 키·스키마·마이그레이션·동기화·공유 토큰 변경 0.
+
 ## 2026-11-26
 ### 320 배당 종목 표 행 2단 (issue-5.163, #326, risk:low)
 - 320 한 줄 5열을 열 폭 재배분으로 맞추다 3회 연속 다른 열이 회귀(5.162)한 문제: 359px 이하에서만 `monthly-dividend-stocks.tsx` 행을 2단으로 — 1단 이름 전폭(2줄까지)·주기 배지+`매수 YYYY-MM-DD` 메타 1줄·배당월 칩 좌측 정렬, 2단 주당·보유 | 지급 | 합계 3열 `minmax(0,1fr) 5rem 5.5rem`. 머리글도 같은 3열(`종목명`·`주당`은 1열에 겹침, `배당월`은 `sr-only`). DOM 한 벌 + `max-[360px]:` 클래스만(Tailwind 4의 `max-[N]`은 `width < N` — `max-[359px]:`는 359px 뷰포트에 걸리지 않아 ui.md 표기 대신 `max-[360px]:` 사용, `min-[360px]:`와 맞물림). 360 이상 계산 스타일·픽셀 불변, 정보 삭제 0. ARIA 표 역할(`role=table/rowgroup/row/columnheader/cell`)·testId 8개 추가. USD 행 외화 지급 0이면 자리 채움 1줄(`aria-hidden`, 360 이상 숨김)로 `-`를 합계 원화 줄 높이에 맞춤. 계산·문구·저장 변경 0.

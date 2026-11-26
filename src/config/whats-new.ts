@@ -10,6 +10,7 @@ export interface WhatsNewEntry {
   title: string; // 2~32자
   body?: string; // 48자 이하
   featureId?: string; // APP_FEATURES id — 있으면 시트에 `바로 가기 ›`
+  trialHidden?: boolean; // 체험(`?trial=1`)에서 조작 없이 볼 수 없는 기능 — 체험 중에는 목록·팁·`새` 개수에서 뺀다(C126)
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
@@ -21,6 +22,15 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     id: "20261127-01",
     title: "암호화폐를 거래소별로 모아 볼\u00a0수 있어요",
     body: "거래소가 2곳\u00a0이상이면 상세 암호화폐에 거래소마다 평가금·손익·비중이 보여요",
+  },
+  {
+    // 5.164 #328 — 주식 맞추기 결과 화면 대조 1줄(증권사 화면 합계와 비교). 도착 화면 1곳이 없어 featureId 없음(C87). 금액·권유·'정확' 어휘 0.
+    // 체험은 스크린샷 인식이 막혀 있어 조작 없이 볼 수 없다 → 체험 목록에서 숨김(trialHidden, C126). id는 머지일(KST)로 맞춘다(-01은 5.163).
+    // `한 줄로`는 U+00A0으로 묶어 320에서 한 글자가 홀로 남지 않게(C25)
+    id: "20261127-02",
+    title: "주식을 맞출 때 화면에 합계가 보이면 맞는지 알려 줘요",
+    body: "증권사 화면의 총 평가금액과 맞춘 결과를 한\u00a0줄로 비교해 줘요",
+    trialHidden: true,
   },
   {
     // 5.155 #309 — 홈 순자산 카드·주식 요약 '언제 시세' 줄 + 화면 복귀 시 칸이 바뀐 때만 조용히 재조회. 도착 화면 특정 요소 없음 → featureId 없음(C87)
