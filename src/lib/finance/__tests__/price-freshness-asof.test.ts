@@ -122,3 +122,12 @@ describe("priceAsOfLine", () => {
     expect(priceAsOf(undefined, "domestic")).toBeNull();
   });
 });
+
+describe("priceAsOf 형식 방어", () => {
+  it("시 칸 형식 위반은 null", () => {
+    expect(priceAsOf("2026-11-24-H1", "domestic")).toBeNull();
+    expect(priceAsOf("2026-11-24-H14-H15", "domestic")).toBeNull();
+    expect(priceAsOf("2026-11-24-X14", "domestic")).toBeNull();
+    expect(priceAsOf("2026-11-24-H14", "domestic")?.hour).toBe(14);
+  });
+});

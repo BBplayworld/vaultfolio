@@ -107,7 +107,16 @@ export interface PriceAsOf {
   at: number;
 }
 
-const SLOT_RE = /^(\d{4})-(\d{2})-(\d{2})(?:-H(\d{2}))?$/;
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const HOUR_RE = /^\d{2}$/;
+
+/** "YYYY-MM-DD" 또는 "YYYY-MM-DD-Hhh" → [y, m, d, 날짜 문자열, 시(없으면 undefined)] */
+function parseSlot(baseDate: string): [number, number, number, string, string | undefined] | null {
+  const [datePart, hourPart, ...rest] = baseDate.split("-H");
+  const m = DATE_RE.exec(datePart);
+  if (!m || rest.length > 0 || (hourPart !== undefined && !HOUR_RE.test(hourPart))) return null;
+  return [Number(m[1]), Number(m[2]), Number(m[3]), datePart, hourPart];
+}
 
 const kstMs = (y: number, m: number, d: number, h: number, min = 0) => Date.UTC(y, m - 1, d, h, min) - KST_MS;
 const ymd = (ms: number) => new Date(ms + KST_MS).toISOString().split("T")[0];
@@ -118,22 +127,20 @@ const ymd = (ms: number) => new Date(ms + KST_MS).toISOString().split("T")[0];
  * 국내 날짜 칸 D = D 15:30 마감, 해외 날짜 칸 D = 미국 D 16:00 ET 마감(KST 다음 날 05시 DST / 06시 표준).
  */
 export function priceAsOf(baseDate: string | undefined, market: PriceMarket): PriceAsOf | null {
-  const m = baseDate ? SLOT_RE.exec(baseDate) : null;
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  if (m[4] !== undefined) {
-    const hour = Number(m[4]);
+  const parsed = baseDate ? parseSlot(baseDate) : null;
+  if (!parsed) return null;
+  const [y, mo, d, dateStr, hourPart] = parsed;
+  if (hourPart !== undefined) {
+    const hour = Number(hourPart);
     const nextDay = market === "domestic" ? hour < 16 : hour < 7;
     const at = kstMs(y, mo, d + (nextDay ? 1 : 0), hour);
     return { market, kind: "intraday", date: ymd(at), hour, at };
   }
   if (market === "domestic") {
-    return { market, kind: "close", date: `${m[1]}-${m[2]}-${m[3]}`, hour: null, at: kstMs(y, mo, d, 15, 30) };
+    return { market, kind: "close", date: dateStr, hour: null, at: kstMs(y, mo, d, 15, 30) };
   }
   const dst = isUsEasternDST(new Date(Date.UTC(y, mo - 1, d, 17)));
-  return { market, kind: "close", date: `${m[1]}-${m[2]}-${m[3]}`, hour: null, at: kstMs(y, mo, d + 1, dst ? 5 : 6) };
+  return { market, kind: "close", date: dateStr, hour: null, at: kstMs(y, mo, d + 1, dst ? 5 : 6) };
 }
 
 const md = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
