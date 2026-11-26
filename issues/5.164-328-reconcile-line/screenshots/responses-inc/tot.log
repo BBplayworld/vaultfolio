@@ -1,0 +1,18 @@
+page 200 - 2026-11-26T16:36:42.086Z
+A 1 200 - 3564ms {"screenTotal":{"value":5500000,"label":"총 평가금액","currency":"KRW"}}
+B 1 200 - 2555ms {"screenTotal":{"value":4550000,"label":"현재가\n평가금액","currency":"KRW"}}
+C 1 200 - 3536ms {"screenTotal":{"value":7845000,"label":"총 평가금액","currency":"KRW"}}
+D 1 200 - 2232ms {"screenTotal":null}
+E 1 200 - 2379ms {"screenTotal":null}
+F 1 200 - 2317ms {"screenTotal":{"value":123450000,"label":"총 평가금액","currency":"KRW"}}
+G 1 200 - 2460ms {"screenTotal":{"value":8530000,"label":"주식 평가금액","currency":"KRW"}}
+H 1 200 - 2451ms {"screenTotal":{"value":12345.67,"label":"총 평가금액","currency":"USD"}}
+A 2 200 - 2467ms {"screenTotal":{"value":5500000,"label":"총 평가금액","currency":"KRW"}}
+B 2 200 - 2667ms {"screenTotal":{"value":4550000,"label":"현재가\n평가금액","currency":"KRW"}}
+C 2 200 - 2498ms {"screenTotal":{"value":7845000,"label":"총 평가금액","currency":"KRW"}}
+D 2 200 - 2205ms {"screenTotal":null}
+E 2 200 - 2707ms {"screenTotal":null}
+F 2 200 - 2593ms {"screenTotal":{"value":123450000,"label":"총 평가금액","currency":"KRW"}}
+G 2 200 - 2754ms {"screenTotal":{"value":8530000,"label":"주식 평가금액","currency":"KRW"}}
+H 2 200 - 2843ms {"screenTotal":{"value":12345.67,"label":"총 평가금액","currency":"USD"}}
+api calls 16
