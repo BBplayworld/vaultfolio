@@ -118,9 +118,9 @@ export function StockPageDividendRow({ stocks }: { stocks: readonly Stock[] }) {
     if (jpyCount === 0) return null;
     return (
       <div data-testid="stock-page-dividend" data-state="jpy" className="border-t border-border/40 -mx-4 px-4">
-        <p data-testid="stock-page-dividend-jpy" className="flex min-h-12 items-center text-sm text-muted-foreground">
-          <span className="whitespace-nowrap">배당 조회 안 됨</span>
-          <span className="whitespace-nowrap"><span aria-hidden>{" · "}</span>엔화 종목</span>
+        <p data-testid="stock-page-dividend-jpy" className="flex min-h-12 flex-wrap items-center text-sm text-muted-foreground">
+          <span className="whitespace-nowrap">{"배당 조회 안 됨 "}</span>
+          <span className="whitespace-nowrap"><span aria-hidden>·</span>{" 엔화 종목"}</span>
         </p>
       </div>
     );
@@ -133,10 +133,19 @@ export function StockPageDividendRow({ stocks }: { stocks: readonly Stock[] }) {
       </div>
     );
   }
-  const paid = Math.round(calc.annual.paid);
-  const expected = Math.round(calc.annual.total) - paid;
+  // 배당 표 행(키)별 반올림의 합 — 표 행 합계(Math.round(paid+expected))를 더한 값과 같게(D1)
+  const keys = groups.map((g) => g.key);
+  let paid = 0;
+  let total = 0;
+  for (const k of keys) {
+    const r = calc.byStock.get(k);
+    if (!r) continue;
+    paid += Math.round(r.paid);
+    total += Math.round(r.paid + r.expected);
+  }
+  const expected = total - paid;
   if (paid + expected <= 0) return null;
-  const next = nextDividendMonth(calc, kstTodayString(), groups.map((g) => g.key));
+  const next = nextDividendMonth(calc, kstTodayString(), keys);
   const open = () => {
     if (!isPreviewEnv()) track("feature_use", { category: "stock_dividend" });
     navigate({ type: "activity", tab: "dividend" });

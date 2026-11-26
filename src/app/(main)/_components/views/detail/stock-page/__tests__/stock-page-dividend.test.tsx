@@ -50,8 +50,17 @@ describe("종목 한 장 배당 줄", () => {
     const a = stock({ id: "A" });
     const b = stock({ id: "B", category: "isa", quantity: 30 });
     const { calc, html } = setup([a, b], PAYOUTS);
-    const sum = Array.from(calc.byStock.values()).reduce((n, r) => n + r.paid + r.expected, 0);
-    expect(val(html, "stock-page-dividend-paid") + val(html, "stock-page-dividend-expected")).toBe(Math.round(sum));
+    const sum = Array.from(calc.byStock.values()).reduce((n, r) => n + Math.round(r.paid + r.expected), 0);
+    expect(val(html, "stock-page-dividend-paid") + val(html, "stock-page-dividend-expected")).toBe(sum);
+  });
+  it("재현 시드 — 국내 3주 + ISA 3주 주당 100.5원: 화면 = 표 행 합계의 합(행별 반올림, 1원 어긋남 0)", () => {
+    const a = stock({ id: "A", ticker: "069500", name: "KODEX 200", quantity: 3 });
+    const b = stock({ id: "B", ticker: "069500", name: "KODEX 200", quantity: 3, category: "isa" });
+    const { calc, html } = setup([a, b], [pay(`${YEAR}-01-15`, 100.5), pay(`${YEAR}-12-31`, 100.5, true)]);
+    const rows = Array.from(calc.byStock.values());
+    expect(rows).toHaveLength(2);
+    expect(val(html, "stock-page-dividend-paid")).toBe(rows.reduce((n, r) => n + Math.round(r.paid), 0));
+    expect(val(html, "stock-page-dividend-paid") + val(html, "stock-page-dividend-expected")).toBe(rows.reduce((n, r) => n + Math.round(r.paid + r.expected), 0));
   });
   it("지급만이면 예상 조각 없음, 예상만이면 '올해 배당 예상'", () => {
     const paidOnly = setup([stock({})], [pay(`${YEAR}-01-15`, 100)]).html;
