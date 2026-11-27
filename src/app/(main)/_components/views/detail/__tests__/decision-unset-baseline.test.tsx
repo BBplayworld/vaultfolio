@@ -226,7 +226,9 @@ describe("AC-1·2·7 상세·주식 행 표시", () => {
   });
   it("메타 줄 글자 — `65주 · 장기 보유` 꼴이고 줄 머리·줄 끝에 가운뎃점이 없다. 가운뎃점은 뒤 조각의 머리에 있다(줄이 바뀌면 잘린 자리로 들어간다)", () => {
     const meta = /<div class="flex items-center gap-1 mt-0\.5 flex-wrap[^"]*">(.*?)<\/div><\/div>/.exec(rowOf("삼성전자"))![1];
-    const t = text(meta.replace(/<span class="text-sm text-muted-foreground max-sm:hidden">·<\/span><span class="text-sm font-semibold text-primary max-sm:hidden">[^<]*<\/span>/, "")).trim();
+    // 5.171: 비중은 모든 폭에서 dot-wrap 조각(`65주 · N% · 장기 보유`) — 비중 조각을 빼면 `65주 · 장기 보유`
+    expect(text(meta)).toMatch(/^65주 · \d+\.\d% · 장기 보유$/);
+    const t = text(meta.replace(/<span data-testid="stock-row-share"[^>]*><span aria-hidden="true"[^>]*> · <\/span>[\d.]+%<\/span>/, "")).trim();
     expect(t).toBe("65주 · 장기 보유");
     expect(rowOf("삼성전자")).toContain("-ml-2 [clip-path:inset(-2px_-100vw_-2px_0.5rem)]");
     expect(/<span[^>]*data-testid="stock-row-decision"[^>]*><span aria-hidden="true"[^>]*> · <\/span>장기 보유<\/span>/.test(rowOf("삼성전자"))).toBe(true);
