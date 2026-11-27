@@ -1,4 +1,4 @@
-// 4.83 상세·주식 입구 — 도구 타일(시장·X-Ray·세금)·펼침 이름 줄(종목 한 장 입구). C76 기본 경로(국내+미국·분류 완료·11/11~12/31·1년 성공)와 경계·폴백을 구간마다 단언.
+// 4.83 상세·주식 입구 — 도구 타일(X-Ray·내 자산 점검, 5.170에서 시장·세금 타일 제거)·펼침 이름 줄(종목 한 장 입구). C76 기본 경로(국내+미국·분류 완료·11/11~12/31·1년 성공)와 경계·폴백을 구간마다 단언.
 // C83: 방문 기록은 실제 쓰기 함수 결과로, 요청 횟수는 실제 react-query 옵션으로 판정한다.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
@@ -91,21 +91,35 @@ describe("도구 타일 묶음 — 구조", () => {
     expect(html).not.toContain("stock-market-entry-wrap");
     expect(text(html)).not.toContain("X-RAY 인사이트");
     expect(text(html)).not.toContain("양도소득은 1년 단위로");
-    expect(html.match(/min-h-16/g)!.length).toBe(3); // 타일 높이 ≥ 64
+    expect(html.match(/min-h-16/g)!.length).toBe(1); // 타일 높이 ≥ 64(점검 값 없음 → X-Ray 1개)
   });
-  it("3개면 세금이 아래 전폭, 2개(시즌 밖)는 한 줄, 시장 없음(비교 종목 0)이면 X-Ray만 전폭, lg는 개수만큼 칸", () => {
-    const three = tiles();
-    expect(three).toContain("lg:grid-cols-3");
-    expect(three.match(/data-testid="stock-tool-tax"[^>]*class="[^"]*col-span-2/)).not.toBeNull();
-    vi.setSystemTime(kst("2026-10-31"));
-    const two = tiles();
-    expect(two).toContain("lg:grid-cols-2");
-    expect(two).not.toContain("col-span-2 lg:col-span-1");
-    h.stocks = [stock({ ticker: undefined, category: "unlisted" })];
+  it("X-Ray만이면 전체 폭 1칸, 내 자산 점검이 있으면 한 줄 2칸(320 포함 세로 쌓기 0)", () => {
     const one = tiles();
-    expect(one).toContain("lg:grid-cols-1");
-    expect(one).not.toContain("stock-market-entry");
-    expect(one).toContain("stock-tool-xray");
+    expect(one).toContain("grid-cols-1");
+    expect(one).not.toContain("col-span-2");
+    const two = renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Stock[]} exchangeRates={RATES} grow="pending" />);
+    expect(two).toContain("grid-cols-2");
+    expect(two).not.toContain("col-span-2");
+    expect(two).not.toMatch(/lg:grid-cols-[1-4]/);
+    const order = ["stock-tool-xray", "stock-tool-grow"].map((id) => two.indexOf(`data-testid="${id}"`));
+    expect(order[0]).toBeGreaterThan(-1);
+    expect(order[1]).toBeGreaterThan(order[0]);
+    expect(two.match(/min-h-16/g)!.length).toBe(2);
+  });
+  it("320 반 칸 — 점검 값 조각은 한 줄로 묶되 360 미만에서만 조각 안 어절에서 꺾인다(넘침 0, C152 조각 단위 유지)", () => {
+    const html = renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Stock[]} exchangeRates={RATES} grow={{ kind: "labeled", keep: 2, check: 1, due: 0, count: 3, parts: ["주식 장기 보유 2", "점검 대상 1"] }} />);
+    const pieces = html.match(/<span class="whitespace-nowrap max-\[360px\]:whitespace-normal[^"]*">/g) ?? [];
+    expect(pieces).toHaveLength(2);
+    expect(html).toContain("max-[360px]:text-pretty");
+  });
+  it("320 둘째 조각 inset — 조각 ml-2 + 가운뎃점 -ml-3(접힌 줄이 clip 가장자리에서 시작), labeled·미판정 모두", () => {
+    for (const grow of [
+      { kind: "labeled", keep: 2, check: 1, due: 0, count: 3, parts: ["주식 장기 보유 2", "점검 대상 1"] },
+      { kind: "first", keep: 0, check: 0, due: 0, count: 3, parts: ["장기 보유", "점검 대상 정하기 전"] },
+    ] as const) {
+      const html = renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Stock[]} exchangeRates={RATES} grow={{ ...grow, parts: [...grow.parts] }} />);
+      expect(html).toMatch(/<span class="whitespace-nowrap [^"]* ml-2"><span aria-hidden="true" class="-ml-3 /);
+    }
   });
   it("주식 0건이면 렌더 없음 + 분류 훅은 []로 호출(no-op)", () => {
     h.stocks = [];
@@ -114,36 +128,42 @@ describe("도구 타일 묶음 — 구조", () => {
   });
 });
 
-describe("시장 타일 = 시장과 비교 페이지 1주 지수 문자열 (C76 보유 시장 구간)", () => {
-  const kr = () => formatCompareRate(computeIndexSpan("kr", "weekly", IDX).rate!);
-  const us = () => formatCompareRate(computeIndexSpan("us", "weekly", IDX).rate!);
-  it("기본 국내+미국: 1주 코스피 … · S&P 500 …", () => {
-    expect(valueOf(tiles(), "stock-tool-market-value")).toBe(`1주 코스피 ${kr()} · S&P 500 ${us()}`);
+// 5.170 #341: 시장과 비교·해외주식 세금 타일 제거 — 옛 '시장 타일 1주 값'·'세금 타일 KST 경계' 단언은 타일이 없어져 삭제하고,
+// 시장(국내+미국·시즌 안)·세금(11/1~12/31·해외 보유) 표시 조건을 모두 만족해도 DOM 0임을 단언한다. 목적지 화면·다른 입구는 아래 '다른 입구 유지'에서 확인.
+describe("제거된 타일 — 시장과 비교·해외주식 세금 DOM 0(표시 조건을 모두 만족해도)", () => {
+  it.each(["2026-10-31", "2026-11-01", "2026-11-27", "2026-12-31", "2027-01-01"])("%s 국내+미국(세금 대상) 보유: 시장·세금 타일 0, 새 칩 0", (d) => {
+    vi.setSystemTime(kst(d));
+    for (const grow of [undefined, "pending"] as const) {
+      const html = renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Stock[]} exchangeRates={RATES} grow={grow} />);
+      for (const id of ["stock-market-entry", "stock-tool-market-value", "stock-tool-tax", "stock-tool-tax-value", "new-chip"]) expect(html).not.toContain(id);
+      expect(text(html)).not.toContain("시장과 비교");
+      expect(text(html)).not.toContain("해외주식 세금");
+    }
   });
-  it("미국만: S&P 500만 / 국내만: 코스피만", () => {
-    h.peer = new Set();
-    expect(valueOf(tiles(), "stock-tool-market-value")).toMatch(new RegExp(`^1주 S&P 500 ${us().replace("+", "\\+")}`));
+  it("비대상(국내만)도 같은 구성 — X-Ray(+점검)만", () => {
     h.stocks = [KR()];
-    h.peer = new Set(["005930"]);
-    expect(valueOf(tiles(), "stock-tool-market-value")).toBe(`1주 코스피 ${kr()}`);
+    const html = renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Stock[]} exchangeRates={RATES} grow="pending" />);
+    expect(html.match(/<button/g)).toHaveLength(2);
   });
-  it("좁은 폭: 첫 시장 외는 max-sm:hidden, 이름 `시장과 비교`, testid stock-market-entry 승계", () => {
-    const html = tiles();
-    expect(html).toContain('data-testid="stock-market-entry"');
-    expect(html).toContain("max-sm:hidden");
-    expect(text(html)).toContain("시장과 비교");
+});
+
+describe("다른 입구 유지 — 제거된 타일의 목적지는 그대로 도달 가능", () => {
+  const src = (f: string) => readFileSync(join(__dirname, "..", "..", f), "utf8");
+  it("시장과 비교: 홈 지수 줄·자산 변화 시장 타일이 change-market으로 간다", () => {
+    expect(src("home/dashboard.tsx")).toContain('navigate({ type: "activity", tab: "change-market", init: { period: "day" } })');
+    expect(src("activity/asset-change-view.tsx")).toContain('navigate({ type: "activity", tab: "change-market" })');
   });
-  it("폴백: 지수 실패 `지수와 나란히 보기` / 판별 전 스켈레톤(숫자 0) / 비교 종목 0이면 타일 없음", () => {
-    h.idx = { daily: { KOSPI: null, SPX: null }, weekly: { KOSPI: null, SPX: null } };
-    expect(valueOf(tiles(), "stock-tool-market-value")).toBe("지수와 나란히 보기");
-    h.idx = IDX;
-    h.peer = null;
-    const loading = tiles();
-    expect(loading).toContain("animate-pulse");
-    expect(valueOf(loading, "stock-tool-market-value")).not.toMatch(/%/);
-    h.peer = new Set(["005930"]);
-    h.stocks = [stock({ ticker: "360750", category: "pension" })]; // 해외형 ETF만 → 비교 종목 0
-    expect(tiles()).not.toContain("stock-market-entry");
+  it("세금: 상세 허브 '세금 관리' 행·홈 세금 팁이 세금 화면으로 간다(허브 행 동작 불변 — 시뮬 직행 없음)", () => {
+    const hub = src("detail/detail-hub.tsx");
+    expect(hub).toMatch(/data-testid="detail-hub-tax-row"[\s\S]{0,80}onClick=\{\(\) => navigate\(\{ type: "tax" \}\)\}/);
+    expect(hub).not.toContain("setInitialTab");
+    expect(src("home/home-tip-box.tsx")).toContain('navigate({ type: "tax" })');
+  });
+  it("도구 타일 소스에 시장·세금 목적지 이동 0", () => {
+    const tools = src("detail/stock-tools.tsx");
+    expect(tools).not.toContain("change-market");
+    expect(tools).not.toContain('type: "tax"');
+    expect(tools).not.toContain("useNewSpot");
   });
 });
 
@@ -195,20 +215,6 @@ describe("D4 320 타일 제목 줄 — chevron이 타일 안에 머문다", () =
     expect(html).toMatch(/<span class="min-w-0 whitespace-nowrap text-sm font-semibold/);
     expect(html).toContain("max-[360px]:hidden");
     expect(html).toMatch(/lucide-chevron-right[^>]*ml-auto size-4 shrink-0|ml-auto size-4 shrink-0[^>]*lucide-chevron-right/);
-  });
-});
-
-describe("세금 타일 — KST 날짜 경계(C76 날짜 구간)", () => {
-  it.each([["2026-10-31", 0], ["2026-11-01", 1], ["2026-11-11", 1], ["2026-12-31", 1], ["2027-01-01", 0]])("%s → 타일 %i개", (d, n) => {
-    vi.setSystemTime(kst(d));
-    expect((tiles().match(/data-testid="stock-tool-tax"/g) ?? []).length).toBe(n);
-  });
-  it("문구에 숫자·금액·D- 없음 / 해외 보유 없으면 시즌이어도 없음", () => {
-    expect(valueOf(tiles(), "stock-tool-tax-value")).toBe("1년 합산 · 기본공제 적용");
-    // 고정 문구의 `1년`만 숫자 — 금액·날짜·D-day 숫자는 0
-    expect(valueOf(tiles(), "stock-tool-tax-value").replace("1년", "")).not.toMatch(/\d|D-|원/);
-    h.stocks = [KR()];
-    expect(tiles()).not.toContain("stock-tool-tax");
   });
 });
 

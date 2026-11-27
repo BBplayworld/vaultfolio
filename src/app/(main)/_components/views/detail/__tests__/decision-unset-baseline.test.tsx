@@ -174,9 +174,10 @@ describe("AC-6 미정 기기 — 이름표를 읽은 뒤에도 타일 1개 외 d
     expect(pending).toContain('data-kind="pending"');
     expect(text(cutByTestId(first, "stock-tool-grow-value"))).toBe("장기 보유 · 점검 대상 정하기 전");
     expect(first).toContain('data-kind="first"');
-    // 타일 자리 — 시장과 비교 → X-Ray → 내 자산 점검 → 해외주식 세금(11월)
+    // 타일 자리 — X-Ray → 내 자산 점검(5.170: 시장과 비교·해외주식 세금 타일 제거, 11월에도 2개)
     const tools = cutByTestId(before, "stock-tools");
-    const order = ["stock-market-entry", "stock-tool-xray", "stock-tool-grow", "stock-tool-tax"].map((id) => tools.indexOf(`data-testid="${id}"`));
+    const order = ["stock-tool-xray", "stock-tool-grow"].map((id) => tools.indexOf(`data-testid="${id}"`));
+    expect(tools.match(/<button/g)).toHaveLength(2);
     expect(order.every((v) => v >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
@@ -361,11 +362,11 @@ describe("AC-14 `내 자산 점검` 타일", () => {
     const n = Number(/data-testid="stock-tool-grow-value" data-kind="due" data-due="(\d+)"/.exec(html)![1]);
     expect(n).toBe(html.match(/data-testid="stock-row-decision" data-kind="due"/g)!.length);
   });
-  it("격자 — 4개는 모바일·PC 모두 2×2(360 미만은 아래 두 타일 한 줄씩), 줄 끝 가운뎃점 숨김", () => {
+  // 5.170: 4개(2×2·360 미만 세로 쌓기) → 2개 한 줄. 세금 타일 제거로 tax 단언 삭제, 점검 타일은 320에서도 반 칸(값은 가운뎃점 자리에서만 꺾임)
+  it("격자 — X-Ray·내 자산 점검 2개는 모바일·PC 모두 한 줄 2칸(360 미만도 세로 쌓기 0), 줄 끝 가운뎃점 숨김", () => {
     const tools = cutByTestId(tab(MIXED), "stock-tools");
-    expect(tools).toContain("grid grid-cols-2 gap-2 lg:grid-cols-2");
-    expect(/^<button[^>]*>/.exec(cutByTestId(tools, "stock-tool-grow"))![0]).toContain("max-[360px]:col-span-2");
-    expect(/^<button[^>]*>/.exec(cutByTestId(tools, "stock-tool-tax"))![0]).toContain("max-[360px]:col-span-2");
+    expect(tools).toContain("grid grid-cols-2 gap-2");
+    expect(tools).not.toMatch(/lg:grid-cols-|col-span-2/);
     expect(line(mk())).toContain("-ml-2 [clip-path:inset(-2px_-100vw_-2px_0.5rem)]");
   });
   it("주식 보기에 행이 없으면(전부 상장폐지·수량 0) 타일이 없다", () => {
