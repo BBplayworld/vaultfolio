@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-28 00:39 KST** · 운영 최신 **v5.172** (스모크 PASS 00:38) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
+> **마지막 갱신: 2026-11-28 02:21 KST** · 운영 최신 **v5.172** (스모크 PASS 00:38) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -24,6 +24,7 @@
 ## 🔄 진행 중
 | 릴리스 | 내용 | 상태 | 다음 |
 |---|---|---|---|
+| **5.175** [#354](https://github.com/BBplayworld/vaultfolio/issues/354)·#355·#356 | 전량 매도 삭제 평단 0 버그·다 판 코인 내역 접근·죽은 함수 정리 | planning · risk:medium · 위임 머지 | qa 재현 → 개발 |
 | **5.174** [#352](https://github.com/BBplayworld/vaultfolio/issues/352) | 인증카드 레이어 UI·색상 정돈(대표 요청) · [PR #353](https://github.com/BBplayworld/vaultfolio/pull/353) | **v5.172 머지 11-28 00:22** · 운영 스모크 PASS 00:38 | — |
 | **5.173** [#347](https://github.com/BBplayworld/vaultfolio/issues/347)·#348·#349·#350 | 해외 종목 숫자 신뢰(절세 엔화 100배·환율 섞인 합산 손익·매수 시 환율 희석)+새 소식 문구 | **v5.171 머지 11/27 22:29** · 운영 스모크 PASS 22:43 | — |
 | **5.172** [#345](https://github.com/BBplayworld/vaultfolio/issues/345) | 웰컴 320 줄 나눔 정돈(G 펼침 칸 제거는 CEO 기각) | **v5.170 머지 11/27 21:06** · 운영 스모크 PASS 21:19 | — |
