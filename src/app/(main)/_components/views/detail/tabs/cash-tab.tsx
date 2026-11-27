@@ -14,24 +14,16 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { formatShortCurrency, formatPriceByMode } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { cashTypes } from "@/config/asset-options";
-import { getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
+import { assignColors, getMultiplier, formatCurrencyDisplay } from "../asset-detail-tabs";
 import { DetailSummaryHeader } from "../detail-summary-header";
 import { computeFxExposure } from "@/lib/report/asset-report";
 import { Cash, Loan } from "@/types/asset";
-import { displayShareWidths } from "@/lib/report/min-share";
+import { ShareBarLegend } from "../share-bar-legend";
 
 const CASH_CATEGORY_TABS = [
   { value: "all", label: "전체" },
   ...cashTypes.map(({ value, shortLabel }) => ({ value, label: shortLabel })),
 ] as const;
-
-export const CASH_TYPE_COLORS: Record<string, string> = {
-  deposit: MAIN_PALETTE[0],
-  savings: MAIN_PALETTE[4],
-  bank: MAIN_PALETTE[5],
-  cma: MAIN_PALETTE[6],
-  cash: MAIN_PALETTE[3],
-};
 
 function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }: {
   item: Cash; value: number; pct: number; color: string; typeLabel: string;
@@ -58,7 +50,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
                   <span className={ASSET_THEME.cardInfoName} title={item.name.length > 10 ? item.name : undefined}>{item.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span data-testid="row-share" className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -176,6 +168,9 @@ export function CashTab() {
     ? totalValue
     : filteredSorted.reduce((sum, d) => sum + d.value, 0);
 
+  // 항목 색 = 지금 탭 목록의 순위색(주식과 같은 assignColors) — 종류 고정색이면 같은 종류 계좌가 같은 색이 된다(#360)
+  const colorById = new Map(assignColors(filteredSorted).map((c, i) => [filteredSorted[i].item.id, c]));
+
   // 현금성 자산의 통화별 노출 — 성적표와 동일한 computeFxExposure 재사용(현금만 넘겨 비중 기준을 현금 총액으로)
   const fxCash = useMemo(
     () => computeFxExposure({ ...assetData, stocks: [] }, exchangeRates, totalValue),
@@ -186,9 +181,9 @@ export function CashTab() {
     if (confirm("정말 삭제하시겠습니까?")) { deleteCash(id); toast.success("삭제되었습니다."); }
   };
 
-  const renderCard = ({ item, value }: { item: Cash; value: number }, idx: number) => {
+  const renderCard = ({ item, value }: { item: Cash; value: number }) => {
     const pct = displayValue > 0 ? (value / displayValue) * 100 : 0;
-    const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
+    const color = colorById.get(item.id) ?? MAIN_PALETTE[0];
     const typeLabel = cashTypes.find((t) => t.value === item.type)?.label ?? item.type;
     const linkedLoans = assetData.loans.filter((l) => l.linkedCashId === item.id);
     return (
@@ -242,32 +237,12 @@ export function CashTab() {
         </div>
 
         <div className="space-y-3">
-          {allSorted.length > 0 && totalValue > 0 && (
-            <div className="space-y-2">
-              <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                {allSorted.map(({ item, value: v }, idx) => {
-                  const pct = (v / totalValue) * 100;
-                  const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
-                  return (
-                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(allSorted.map((b) => b.value), { total: totalValue })[idx]}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-                {allSorted.map(({ item, value: v }, idx) => {
-                  const pct = (v / totalValue) * 100;
-                  const color = CASH_TYPE_COLORS[item.type] ?? MAIN_PALETTE[idx % 5];
-                  return (
-                    <div key={item.id} className="flex items-center gap-1">
-                      <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-sm text-foreground">{item.name}</span>
-                      <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* 비중 바·범례 — 지금 탭 목록·합계 기준(카드 %와 같은 분모, #360) */}
+          <ShareBarLegend
+            scope="cash"
+            total={displayValue}
+            items={filteredSorted.map(({ item, value }) => ({ id: item.id, name: item.name, value, color: colorById.get(item.id) ?? MAIN_PALETTE[0] }))}
+          />
 
           {filteredSorted.length === 0 ? (
             <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">

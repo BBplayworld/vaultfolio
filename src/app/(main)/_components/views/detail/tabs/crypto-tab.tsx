@@ -16,7 +16,7 @@ import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { assignColors, groupCryptoBySymbol, mergeCryptoGroup } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { Crypto } from "@/types/asset";
-import { displayShareWidths } from "@/lib/report/min-share";
+import { ShareBarLegend } from "../share-bar-legend";
 import { ExchangeTotalsBlock } from "./exchange-totals-block";
 
 function computeCryptoMetrics(coin: Crypto) {
@@ -131,7 +131,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
                 <div className={`${ASSET_THEME.cardInfoMeta} max-[360px]:flex-wrap max-[360px]:gap-x-1.5`}>
                   <span className="text-sm text-foreground dark:min-[360px]:whitespace-nowrap">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
                   <span className="text-sm text-muted-foreground max-[360px]:hidden">·</span>
-                  <span className="text-sm font-semibold text-primary dark:min-[360px]:whitespace-nowrap">{pct.toFixed(1)}%</span>
+                  <span data-testid="row-share" className="text-sm font-semibold text-primary dark:min-[360px]:whitespace-nowrap">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={`${ASSET_THEME.cardInfoRight} max-[360px]:max-w-[45%]`}>
@@ -247,7 +247,6 @@ export function CryptoTab() {
   const totalCost = summary.cryptoCost;
 
   const cryptoColors = assignColors(sorted.map((d) => ({ value: d.value })));
-  const barItems = sorted.map(({ coin, value }, idx) => ({ coin, value, color: cryptoColors[idx] }));
 
   return (
     <Card className={ASSET_THEME.contentCard}>
@@ -275,30 +274,12 @@ export function CryptoTab() {
         {/* 거래소별 합계(#325) — 묶음 2개 이상·총 평가금>0일 때만, 접힘 기본·읽기 전용. 인증카드 DOM 0 */}
         <ExchangeTotalsBlock crypto={assetData.crypto} />
 
-        {barItems.length > 0 && totalValue > 0 && (
-          <div className="space-y-2">
-            <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-              {barItems.map(({ coin, value: v, color }, idx) => {
-                const pct = (v / totalValue) * 100;
-                return (
-                  <div key={coin.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(barItems.map((b) => b.value), { total: totalValue })[idx]}%`, backgroundColor: color }} title={`${coin.name}: ${pct.toFixed(1)}%`} />
-                );
-              })}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-              {barItems.map(({ coin, value: v, color }) => {
-                const pct = (v / totalValue) * 100;
-                return (
-                  <div key={coin.id} className="flex items-center gap-1">
-                    <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-sm text-foreground">{coin.name}</span>
-                    <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* 비중 바·범례 — 분류가 '전체' 하나라 지금 탭 = 전체(#360 공용 범례) */}
+        <ShareBarLegend
+          scope="crypto"
+          total={totalValue}
+          items={sorted.map(({ coin, value }, idx) => ({ id: coin.id, name: coin.name, value, color: cryptoColors[idx] ?? MAIN_PALETTE[0] }))}
+        />
 
         {sorted.length === 0 ? (
           <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">

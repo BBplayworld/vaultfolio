@@ -17,17 +17,8 @@ import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
 import { loanTypes } from "@/config/asset-options";
 import { DetailSummaryHeader } from "../detail-summary-header";
 import { Loan, RealEstate, Stock, Cash } from "@/types/asset";
-import { displayShareWidths } from "@/lib/report/min-share";
-
-export const LOAN_TYPE_COLORS: Record<string, string> = {
-  "credit": MAIN_PALETTE[1],
-  "minus": MAIN_PALETTE[2],
-  "mortgage-home": MAIN_PALETTE[0],
-  "mortgage-stock": MAIN_PALETTE[9],
-  "mortgage-insurance": MAIN_PALETTE[3],
-  "mortgage-deposit": MAIN_PALETTE[4],
-  "mortgage-other": MAIN_PALETTE[8],
-};
+import { assignColors } from "../asset-detail-tabs";
+import { ShareBarLegend } from "../share-bar-legend";
 
 function formatDaysToYMD(days: number): string {
   const years = Math.floor(days / 365);
@@ -66,7 +57,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
                   <span className={ASSET_THEME.cardInfoName} title={loan.name.length > 10 ? loan.name : undefined}>{loan.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span data-testid="row-share" className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -251,11 +242,9 @@ export function LoanTab() {
   // 연간 이자 추정 = Σ 잔액 × 금리 (성적표 buildAssetReport와 동일 수식)
   const filteredAnnualInterest = filteredLoans.reduce((s, l) => s + l.balance * (l.interestRate / 100), 0);
 
-  const loanBarItems = filteredLoans.map((l) => ({
-    loan: l,
-    value: l.balance,
-    color: LOAN_TYPE_COLORS[l.type] ?? MAIN_PALETTE[8],
-  }));
+  // 항목 색 = 지금 탭 목록의 순위색(assignColors) — 종류 고정색이면 같은 종류 대출이 같은 색이 된다(#360)
+  const loanColors = assignColors(filteredLoans.map((l) => ({ value: l.balance })));
+  const colorById = new Map(filteredLoans.map((l, i) => [l.id, loanColors[i]]));
 
   const handleDelete = (id: string) => {
     if (confirm("정말 삭제하시겠습니까?")) { deleteLoan(id); toast.success("삭제되었습니다."); }
@@ -263,7 +252,7 @@ export function LoanTab() {
 
   const renderLoanCard = (loan: Loan) => {
     const pct = filteredTotal > 0 ? (loan.balance / filteredTotal) * 100 : 0;
-    const color = LOAN_TYPE_COLORS[loan.type] ?? "var(--accent-teal)";
+    const color = colorById.get(loan.id) ?? MAIN_PALETTE[0];
     const typeLabel = loanTypes.find((t) => t.value === loan.type)?.label ?? loan.type;
     const daysElapsed = calculateHoldingDays(loan.startDate);
     // 만기 D-day — 지난 만기는 음수로 구분 (calculateHoldingDays는 절대값이라 과거·미래 구분 불가)
@@ -312,31 +301,12 @@ export function LoanTab() {
         </div>
 
         <div className="space-y-3">
-          {/* 비중 바 */}
-          {loanBarItems.length > 0 && filteredTotal > 0 && (
-            <div className="space-y-2">
-              <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                {loanBarItems.map(({ loan, value: v, color }, idx) => {
-                  const pct = (v / filteredTotal) * 100;
-                  return (
-                    <div key={loan.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(loanBarItems.map((b) => b.value), { total: filteredTotal })[idx]}%`, backgroundColor: color }} title={`${loan.name}: ${pct.toFixed(1)}%`} />
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-                {loanBarItems.map(({ loan, value: v, color }) => {
-                  const pct = (v / filteredTotal) * 100;
-                  return (
-                    <div key={loan.id} className="flex items-center gap-1">
-                      <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-sm text-foreground">{loan.name}</span>
-                      <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* 비중 바·범례 — 지금 탭 목록·합계 기준(카드 %와 같은 분모) */}
+          <ShareBarLegend
+            scope="loan"
+            total={filteredTotal}
+            items={filteredLoans.map((l) => ({ id: l.id, name: l.name, value: l.balance, color: colorById.get(l.id) ?? MAIN_PALETTE[0] }))}
+          />
 
           {/* 대출 리스트 */}
           {filteredLoans.length === 0 ? (
