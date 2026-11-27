@@ -64,6 +64,29 @@ export function isDividendPaid(p: Pick<DividendPayoutResult, "payoutDate" | "isE
   return p.payoutDate <= todayKst && !p.isEstimated;
 }
 
+/**
+ * 현금 입금 폼 `M/D 지급일로` 버튼의 후보(#339, 5.169) — 확정 지급(isDividendPaid, 추정·미래 제외) 중
+ * payoutDate가 minDate(폼 3년 보관 하한) 이상인 가장 늦은 1건. 없으면 null. 순수 함수.
+ */
+export function latestPaidPayout<T extends Pick<DividendPayoutResult, "payoutDate" | "isEstimated">>(
+  payouts: readonly T[],
+  todayKst: string,
+  minDate: string,
+): T | null {
+  let best: T | null = null;
+  for (const p of payouts) {
+    if (!p.payoutDate || !isDividendPaid(p, todayKst) || p.payoutDate < minDate) continue;
+    if (!best || p.payoutDate > best.payoutDate) best = p;
+  }
+  return best;
+}
+
+/** "YYYY-MM-DD" → [월, 일](앞자리 0 없음). Date 객체를 쓰지 않는다(시간대 밀림 방지) */
+export function payoutMonthDay(date: string): [number, number] {
+  const [, m, d] = date.split("-");
+  return [Number(m), Number(d)];
+}
+
 // 부동소수 누적 오차(0.3 − 0.1 − 0.2 ≠ 0)로 음수 폴백이 잘못 걸리지 않게 소수 8자리로 맞춘다
 const roundQty = (q: number) => Math.round(q * 1e8) / 1e8 + 0; // +0: -0 → 0
 
