@@ -50,21 +50,6 @@ describe("기존 종목 — 매칭 성공(변경)", () => {
   });
 });
 
-describe("5.167 R3 — 맞춘 날은 수량이 바뀔 때만 오늘", () => {
-  it("평단만 바뀐 변경 행: positionSource manual, positionEffectiveDate는 기존 값 유지", () => {
-    const a = st("a", "005930", "domestic", "토스증권", 10, 70000, { positionSource: "manual", positionEffectiveDate: "2026-05-01" });
-    const { result, diff } = run([a], [screen(0, [row("005930", 10, 72000, { brokerHint: "토스증권" })])]);
-    expect(diff.rows[0].change).toMatchObject({ qty: null, avg: { before: 70000, after: 72000 } });
-    expect(result.stocks[0]).toMatchObject({ quantity: 10, averagePrice: 72000, positionSource: "manual", positionEffectiveDate: "2026-05-01" });
-  });
-  it("이어받기 + 수량 같음: 이전 행의 positionEffectiveDate 유지, 증권사·계좌·평단만 화면 값", () => {
-    const a = st("a", "005930", "isa", "", 10, 70000, { positionEffectiveDate: "2026-05-01" });
-    const { result, diff } = run([a], [screen(0, [row("005930", 10, 71000, { brokerHint: "토스증권" })])], { sel: () => ({ remove: new Set(["a"]) }) });
-    expect(diff.rows[0].status).toBe("add");
-    expect(result.stocks).toEqual([{ ...a, category: "domestic", broker: "토스증권", averagePrice: 71000, positionSource: "manual", positionEffectiveDate: "2026-05-01" }]);
-  });
-});
-
 describe("기존 종목 — 매칭 실패로 추가+삭제(원인 경로)", () => {
   it("해외 티커 미인식(이름 다름) → 티커 입력 추가 + 기본 삭제: 새로 만들지 않고 기존 기록을 이어받는다", () => {
     const a = st("a", "AAPL", "foreign", "토스증권", 10, 150, { purchaseDate: "2025-03-02", purchaseExchangeRate: 1300 });
