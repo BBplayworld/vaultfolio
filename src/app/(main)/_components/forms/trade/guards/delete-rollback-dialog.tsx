@@ -106,14 +106,13 @@ export function DeleteRollbackDialog({
             </div>
             {needsAvg && (
               <div className="space-y-2 pt-1">
-                <label htmlFor="rollback-avg-input" data-testid="rollback-avg-unknown" className="block text-sm font-medium text-foreground break-keep">
+                <label id="rollback-avg-unknown-label" htmlFor="rollback-avg-input" data-testid="rollback-avg-unknown" className="block text-sm font-medium text-foreground break-keep">
                   평단을 알 수 없어요
                 </label>
                 <NumberInput
                   id="rollback-avg-input"
                   data-testid="rollback-avg-input"
-                  aria-label="평단가"
-                  placeholder={`평단가 (${currency === "KRW" ? "원" : currency})`}
+                  placeholder={`평단가 입력 (${currency === "KRW" ? "원" : currency})`}
                   className="tabular-nums"
                   value={avgInput}
                   onChange={setAvgInput}
@@ -137,6 +136,7 @@ export function DeleteRollbackDialog({
             data-testid="rollback-delete-ok"
             variant="destructive"
             disabled={!resolved}
+            aria-describedby={needsAvg ? "rollback-avg-unknown-label" : undefined}
             onClick={() => { if (resolved) onConfirm(needsAvg ? resolved.avgPrice : undefined); }}
             className="flex-1 sm:flex-initial"
           >

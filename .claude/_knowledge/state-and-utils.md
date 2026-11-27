@@ -1083,7 +1083,7 @@ applyRollbackAvgInput(p, input): P | null                               // 입�
 // #5.175 #357 — 코인 '반영' 전량 매도 무음 실패 제거(저장 관문 strict cryptoSchema 수량>0은 불변)
 blocksCoinZeroQty({ reflected, type, quantity, holding }): boolean     // 반영·매도·결과 0개면 true(보유 초과는 기존 oversell 가드 몫이라 false) — crypto-tx-input 제출 비활성
 COIN_ZERO_QTY_NOTE                                                      // 제출 버튼 위 이유 1줄. 코인 삭제 권유 문구 금지
-TRADE_SAVE_FAIL_TOAST                                                   // 거래 저장 false 공용 토스트 — 코인 기록 폼·코인 스크린샷 가져오기, 폼은 닫지 않음
+TRADE_SAVE_FAIL_TOAST                                                   // 거래 저장 false 공용 토스트 — 코인 기록 폼·코인 스크린샷 가져오기·반영 거래 삭제(주식·코인), 창은 닫지 않음. 항상 `toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep" })`
 ```
 - `computeNewPosition`·`rollbackTransaction`(성적표·세금 replay·relink·코인 공용)은 불변 — 0 기준 환율 희석(예: 1,400 → 700)은 replay 통제군으로 그대로 남는다. 기존 저장값 일괄 보정 없음(사용자가 그 종목의 다른 거래를 삭제할 때만 재계산 결과가 바뀐다).
 

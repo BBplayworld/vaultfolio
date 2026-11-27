@@ -14,7 +14,7 @@ import { useTradeViewStore } from "@/stores/trade-view-store";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency, formatPriceByCurrency } from "@/lib/number-utils";
 import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
-import { applyRollbackAvgInput, rollbackStockTrade } from "@/lib/trade/trade-form";
+import { applyRollbackAvgInput, rollbackStockTrade, TRADE_SAVE_FAIL_TOAST } from "@/lib/trade/trade-form";
 import { RelinkEntry } from "../../../forms/asset-update/relink/relink-entry";
 import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
@@ -190,7 +190,11 @@ export function StockTradesView() {
       purchaseExchangeRate: preview.avgExchangeRate || undefined,
       positionSource: "computed",
     }, linkPlan ? { revertLink: true } : undefined);
-    if (!ok) { setDeleteTarget(null); return; }
+    if (!ok) {
+      // 저장 실패 — 창을 유지하고 알린다(무음 실패 0, #357)
+      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep" });
+      return;
+    }
     toast.success(`거래가 삭제되고 포지션이 롤백되었습니다.${linkPlan ? revertToastSuffix(linkPlan.kind) : ""}`);
     setDeleteTarget(null);
   };

@@ -233,7 +233,7 @@ export function CryptoTxInput() {
       resetAndClose();
     } else {
       // 저장 관문 거부 — 폼을 닫지 않고 알린다(무음 실패 0, #357)
-      toast.error(TRADE_SAVE_FAIL_TOAST);
+      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep" });
     }
   };
 
@@ -443,13 +443,13 @@ export function CryptoTxInput() {
               )}
 
               {zeroQtyBlocked && (
-                <p data-testid="crypto-zero-qty-note" className="text-sm text-destructive break-keep text-pretty">
+                <p id="crypto-zero-qty-note" data-testid="crypto-zero-qty-note" className="text-sm text-destructive break-keep text-pretty">
                   {COIN_ZERO_QTY_NOTE}
                 </p>
               )}
 
               <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button type="submit" variant="brand" disabled={zeroQtyBlocked}>{txType === "buy" ? "매수 기록" : "매도 기록"}</Button>
+                <Button type="submit" variant="brand" disabled={zeroQtyBlocked} aria-describedby={zeroQtyBlocked ? "crypto-zero-qty-note" : undefined}>{txType === "buy" ? "매수 기록" : "매도 기록"}</Button>
                 <Button type="button" variant="secondary" onClick={resetAndClose}>취소</Button>
               </DialogFooter>
             </form>

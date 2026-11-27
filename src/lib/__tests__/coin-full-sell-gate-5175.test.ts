@@ -74,11 +74,42 @@ describe("문구·연결(소스 고정)", () => {
     expect(COIN_ZERO_QTY_NOTE).not.toMatch(/삭제|지우/);
     expect(TRADE_SAVE_FAIL_TOAST).toBe("저장하지 못했어요. 입력값을 확인해 주세요.");
   });
-  it("거래 기록 폼: 제출 비활성 + 실패 토스트, 스크린샷 가져오기: 실패 토스트", () => {
+  const FAIL = 'toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep" })'; // 320~344 어절 중간 끊김 방지(qa D-1)
+  it("거래 기록 폼: 제출 비활성 + 안내 aria-describedby + 실패 토스트(break-keep), 스크린샷 가져오기: 실패 토스트", () => {
     const form = read("src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx");
-    expect(form).toContain("disabled={zeroQtyBlocked}");
-    expect(form).toContain("toast.error(TRADE_SAVE_FAIL_TOAST)");
+    expect(form).toContain('disabled={zeroQtyBlocked} aria-describedby={zeroQtyBlocked ? "crypto-zero-qty-note" : undefined}');
+    expect(form).toContain('id="crypto-zero-qty-note"');
+    expect(form).toContain(FAIL);
     const shot = read("src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx");
-    expect(shot).toContain("toast.error(TRADE_SAVE_FAIL_TOAST)");
+    expect(shot).toContain(FAIL);
+  });
+  it("TRADE_SAVE_FAIL_TOAST는 모든 사용처에서 break-keep", () => {
+    for (const f of [
+      "src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx",
+      "src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx",
+      "src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx",
+      "src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx",
+    ]) {
+      const src = read(f);
+      const calls = src.match(/toast\.error\(TRADE_SAVE_FAIL_TOAST[^)]*\)/g) ?? [];
+      expect(calls.length, f).toBeGreaterThan(0);
+      for (const c of calls) expect(c, f).toBe(FAIL);
+    }
+  });
+  it("반영 거래 삭제 실패(코인·주식): 창 유지 + 실패 토스트 — 성공 분기만 창을 닫는다(O-3·B1)", () => {
+    const coinView = read("src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx");
+    const coinFn = coinView.slice(coinView.indexOf("const runReflectedDelete"), coinView.indexOf("if (!target || !coin)"));
+    expect(coinFn).toMatch(/\} else \{\s*\/\/[^\n]*\n\s*toast\.error\(TRADE_SAVE_FAIL_TOAST, \{ className: "break-keep" \}\);\s*return;\s*\}\s*setDeleteTarget\(null\);/);
+    const stockView = read("src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx");
+    const stockFn = stockView.slice(stockView.indexOf("const handleConfirmDelete"), stockView.indexOf("if (!target || groupStocks.length === 0)"));
+    expect(stockFn).toMatch(/if \(!ok\) \{\s*\/\/[^\n]*\n\s*toast\.error\(TRADE_SAVE_FAIL_TOAST, \{ className: "break-keep" \}\);\s*return;\s*\}/);
+    expect(stockFn).not.toMatch(/if \(!ok\) \{ setDeleteTarget\(null\)/);
+  });
+  it("주식 삭제 확인창: label id ↔ 확인 버튼 aria-describedby(평단 미상일 때만), 입력칸 aria-label 덮어쓰기 0", () => {
+    const dlg = read("src/app/(main)/_components/forms/trade/guards/delete-rollback-dialog.tsx");
+    expect(dlg).toContain('id="rollback-avg-unknown-label" htmlFor="rollback-avg-input"');
+    expect(dlg).toContain('aria-describedby={needsAvg ? "rollback-avg-unknown-label" : undefined}');
+    expect(dlg).not.toContain('aria-label="평단가"');
+    expect(dlg).toContain("평단가 입력 (");
   });
 });
