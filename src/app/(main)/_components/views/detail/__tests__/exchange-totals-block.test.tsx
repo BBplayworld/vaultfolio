@@ -86,6 +86,8 @@ describe("ExchangeTotalsBlock", () => {
     const tab = readFileSync(join(dir, "crypto-tab.tsx"), "utf8");
     const at = tab.indexOf("<ExchangeTotalsBlock");
     expect(at).toBeGreaterThan(tab.indexOf('ariaLabel="암호화폐 카테고리"'));
-    expect(at).toBeLessThan(tab.indexOf("barItems.length > 0 && totalValue > 0"));
+    // 5.176 #360: 비중바·범례가 공용 ShareBarLegend로 바뀌어 그 위치를 기준으로 본다(존재 확인 포함)
+    expect(tab.indexOf("<ShareBarLegend")).toBeGreaterThan(-1);
+    expect(at).toBeLessThan(tab.indexOf("<ShareBarLegend"));
   });
 });

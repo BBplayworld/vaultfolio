@@ -167,6 +167,12 @@ _components/
 ### MonthlyDividendStocks 640px 미만 2단 (`views/activity/monthly-dividend-stocks.tsx`, #5.163 #326 · #5.165 #332)
 - 640px 미만(sm 미만): 행 = 1단(이름 전폭 `line-clamp-2`·배지+매수 날짜 메타 1줄·칩 좌측 정렬 `col-span-3`) + 2단 3열 `minmax(0,1fr)_5rem_5.5rem`(주당·보유 / 지급 / 합계, 우측 정렬). 머리글 같은 3열, `배당월`은 `sr-only`. **DOM 한 벌**, 배치는 `max-sm:`(= 폭 < 640)만, 외화 지급 0 자리 채움은 `sm:hidden` — 640 이상 5열 불변. 기본 클래스의 360~639 전용 5열 값(`…_3.25rem_3.5rem_3.5rem_3.5rem`·`gap-x-1`)은 어느 폭에도 쓰이지 않는다(정리 후보). `role="table"`(aria-label `{그룹} 배당 종목`)·`rowgroup`·`row`·`columnheader` 5·`cell` 5. testId: 기존 `dividend-stock-row`·`-stock-name`·`-stock-meta`·`-paid-amount`·`-est-amount`·`-col-paid`·`-col-total` + 신규 `dividend-table`(`data-category`)·`-col-months`·`-col-pershare`·`-stock-purchase`·`-stock-months`·`-stock-pershare`·`-cell-paid`·`-cell-total`.
 
+### ShareBarLegend (`views/detail/share-bar-legend.tsx`, #5.176 #360)
+- 상세 현금·암호화폐·부동산·대출 4탭 공용 비중 바 + 범례(각 탭에 따로 있던 4벌을 1벌로). props `items {id,name,value,color}[]`(내림차순 = 목록 순서) · `total`(**지금 탭 합계** — 카드 %와 같은 분모, 호출부 책임) · `max = 4` · `scope: "cash"|"crypto"|"real-estate"|"loan"`. 항목 0개·합계 0이면 `null`.
+- 규칙은 주식 `StockCategorySection` 일반 화면(5.171·5.174)과 같다: N > max면 상위 max−1 + `그 외 N개`(바도 같은 구간, 그 외 색 `SHARE_BAR_REST_COLOR` = `#9ca3af`), 목록·카드는 안 줄임. 폭 = `displayShareWidths(..., {total})`, 전환 `motion-safe:transition-[width]`(`transition-all` 0), 구간 title `이름: X.X%`. 범례 격자 640 미만 2열·이상 4열, 360 미만 열 간격 8px. 항목 = 점 + 이름(1줄 말줄임 + `title`) + % (`text-foreground font-bold tabular-nums`), 그 외는 이름 nowrap·% 모두 muted.
+- 색은 호출부가 `assignColors(지금 탭 목록)`으로 정해 카드 점·하단 막대와 같은 값을 넘긴다(종류 고정색 `CASH_TYPE_COLORS`·`LOAN_TYPE_COLORS`는 5.176에서 삭제).
+- testId `share-bar[data-scope]`·`share-bar-seg[data-pct]`·`share-legend[data-scope]`·`share-legend-item[data-pct]`·`share-legend-rest[data-count][data-pct]`(`data-pct` = 화면 문자열과 같은 `toFixed(1)`). 4탭 카드 % span은 `row-share`. 주식·인증카드는 이 컴포넌트를 쓰지 않는다(`StockCategorySection` 그대로, 통합은 후속 후보).
+
 ### ExchangeTotalsBlock (`views/detail/tabs/exchange-totals-block.tsx`, #5.163 #325)
 - 상세·암호화폐 selector 아래·비중바 위 접기형 `거래소별 · N곳`(기본 접힘, `useState`만, 패널 항상 마운트 grid-rows+inert). props `crypto`(`assetData.crypto` 전체). 묶음 2개 미만·총 평가금 0이면 `null`. **읽기 전용**: 버튼은 토글 1개뿐(`맞추기` 없음). 행 = `BrokerRow`(broker-totals-block에서 export) 재사용 — `onResync` 생략 시 버튼 DOM 0, `countText`로 `코인 N개`. testId `exchange-totals(-toggle|-panel|-note)` + 행은 `broker-row*` 그대로. 미지정 안내 `거래소를 적지 않은 코인이에요.`. 인증카드 `data-screenshot-hide`. 주식 블록을 제네릭화하지 않는다(값 계산만 다른 얇은 래퍼).
 

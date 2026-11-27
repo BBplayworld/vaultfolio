@@ -17,7 +17,7 @@ import { assignColors } from "../asset-detail-tabs";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
 import { AnnualizedReturn } from "../annualized-return";
 import { RealEstate, Loan } from "@/types/asset";
-import { displayShareWidths } from "@/lib/report/min-share";
+import { ShareBarLegend } from "../share-bar-legend";
 
 const RE_CATEGORY_TABS = [
   { value: "all", label: "전체" },
@@ -63,7 +63,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   <span className={ASSET_THEME.cardInfoName} title={item.name.length > 10 ? item.name : undefined}>{item.name}</span>
                 </div>
                 <div className={ASSET_THEME.cardInfoMeta}>
-                  <span className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
+                  <span data-testid="row-share" className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
               <div className={ASSET_THEME.cardInfoRight}>
@@ -93,7 +93,8 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                 <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>{formatPriceByMode(item.purchasePrice)}</p>
               </div>
               <div>
-                <p className={ASSET_THEME.cardDetailLabel}>실거래가</p>
+                {/* 사용자가 입력한 currentValue — 폼 라벨 4종에 공통인 낱말 '시세'. 자동 값은 아래 '실거래 추정'(#360 K3) */}
+                <p data-testid="re-value-label" className={ASSET_THEME.cardDetailLabel}>시세</p>
                 <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`} style={{ color: "var(--accent-teal)" }}>{formatPriceByMode(item.currentValue)}</p>
               </div>
               <div>
@@ -189,7 +190,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   <div>
                     <p className={ASSET_THEME.cardDetailLabel}>LTV</p>
                     <p className={`${ASSET_THEME.cardDetailValueBold} tabular-nums`}>{equity.ltv.toFixed(0)}%</p>
-                    <p className={ASSET_THEME.cardDetailMeta}>담보대출 ÷ 실거래가</p>
+                    <p data-testid="re-ltv-basis" className={ASSET_THEME.cardDetailMeta}>담보대출 ÷ 시세</p>
                   </div>
                 )}
               </div>
@@ -260,9 +261,6 @@ export function RealEstateTab() {
     }
   }, [visibleCategories, activeCategory]);
 
-  const reBarColors = assignColors(allSorted.map((item) => ({ value: item.currentValue })));
-  const barItems = allSorted.map((item, idx) => ({ item, value: item.currentValue, color: reBarColors[idx] }));
-
   const filteredItems = activeCategory === "all"
     ? allSorted
     : allSorted.filter((item) => item.type === activeCategory);
@@ -270,6 +268,10 @@ export function RealEstateTab() {
   const displayValue = activeCategory === "all"
     ? totalValue
     : filteredItems.reduce((sum, item) => sum + item.currentValue, 0);
+
+  // 항목 색 = 지금 탭 목록의 순위색(assignColors) — 바·범례·카드 점·막대가 같은 색(#360)
+  const reColors = assignColors(filteredItems.map((item) => ({ value: item.currentValue })));
+  const colorById = new Map(filteredItems.map((item, i) => [item.id, reColors[i]]));
 
   const displayCost = activeCategory === "all"
     ? summary.realEstateCost
@@ -284,11 +286,10 @@ export function RealEstateTab() {
   };
 
   const renderCard = (item: RealEstate) => {
-    const idx = allSorted.findIndex((r) => r.id === item.id);
     const profit = item.currentValue - item.purchasePrice;
     const profitRate = item.purchasePrice > 0 ? (profit / item.purchasePrice) * 100 : 0;
     const pct = displayValue > 0 ? (item.currentValue / displayValue) * 100 : 0;
-    const color = reBarColors[idx] ?? MAIN_PALETTE[0];
+    const color = colorById.get(item.id) ?? MAIN_PALETTE[0];
     const linkedLoans = assetData.loans.filter((l) => l.linkedRealEstateId === item.id);
     const typeLabel = realEstateTypes.find((t) => t.value === item.type)?.label ?? item.type;
     return (
@@ -323,30 +324,12 @@ export function RealEstateTab() {
         </div>
 
         <div className="space-y-3">
-          {barItems.length > 0 && totalValue > 0 && (
-            <div className="space-y-2">
-              <div className="flex h-6 w-full rounded-full overflow-hidden gap-px">
-                {barItems.map(({ item, value: v, color }, idx) => {
-                  const pct = (v / totalValue) * 100;
-                  return (
-                    <div key={item.id} className="overflow-hidden transition-all" style={{ width: `${displayShareWidths(barItems.map((b) => b.value), { total: totalValue })[idx]}%`, backgroundColor: color }} title={`${item.name}: ${pct.toFixed(1)}%`} />
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2">
-                {barItems.map(({ item, value: v, color }) => {
-                  const pct = (v / totalValue) * 100;
-                  return (
-                    <div key={item.id} className="flex items-center gap-1 min-w-0">
-                      <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-sm text-foreground truncate min-w-0">{item.name}</span>
-                      <span className="text-sm font-bold shrink-0" style={{ color: color }}>{pct.toFixed(1)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* 비중 바·범례 — 지금 탭 목록·합계 기준(카드 %와 같은 분모, #360) */}
+          <ShareBarLegend
+            scope="real-estate"
+            total={displayValue}
+            items={filteredItems.map((item) => ({ id: item.id, name: item.name, value: item.currentValue, color: colorById.get(item.id) ?? MAIN_PALETTE[0] }))}
+          />
 
           {filteredItems.length === 0 ? (
             <div className="flex h-36 items-center justify-center rounded-lg border border-dashed">
