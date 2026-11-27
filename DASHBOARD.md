@@ -32,7 +32,7 @@
 | **5.165** [#332](https://github.com/BBplayworld/vaultfolio/issues/332) | 배당 표 2단 640 미만·max-[359px] 정리 · [PR #333](https://github.com/BBplayworld/vaultfolio/pull/333) | **운영 반영 11/27 08:30** · 화면 스모크 PASS(09:35 v5.164 스모크와 함께) | — |
 | **v5.165** [PR #336](https://github.com/BBplayworld/vaultfolio/pull/336) | #335 증권사 현금 한 장 | **운영 반영 11/27 13:25~39** · 스모크 PASS | — |
 | **5.168** [PR #338](https://github.com/BBplayworld/vaultfolio/pull/338) | #337 R3 평단만 맞춘 종목 맞춘 날 유지(과거 배당 과대 수정) | **운영 반영 11/27 14:29~40** · 스모크 PASS | — |
-| **5.169** [#339](https://github.com/BBplayworld/vaultfolio/issues/339) | 배당 입금 지급일 버튼·증권사 현금 계좌 기본값 | 개발 중 | qa·ui-review → CEO → **머지는 G2(12/4 09:20) 뒤** |
+| **5.169** [#339](https://github.com/BBplayworld/vaultfolio/issues/339) | 배당 입금 지급일 버튼·증권사 현금 계좌 기본값 · [PR #340](https://github.com/BBplayworld/vaultfolio/pull/340) draft | qa·ui-review PASS · **머지 대기** | 12/4 09:20 G2 확인 → id 교체·문구 보강 → CEO → 머지 |
 | **5.166** [#329](https://github.com/BBplayworld/vaultfolio/issues/329) | 받은 배당 기록(분리 키, risk:high) · [PR #334](https://github.com/BBplayworld/vaultfolio/pull/334) | **운영 반영 11/27 09:20~35** · 스모크 PASS(2기기 왕복은 로컬 prod 대체) · G1 통과 | 관측 G2 ~12/4 · G3 ~12/11 |
 | **v5.160** [PR #324](https://github.com/BBplayworld/vaultfolio/pull/324) | #323 배당 문구·숫자 마감(지급일 수량 문구·예상 단일 정본·차트 320) | **운영 반영 11/26 22:50~23:04 KST** · 스모크 PASS | 320 배당 표 2단 → 별도 |
 | **v5.152** [PR #307](https://github.com/BBplayworld/vaultfolio/pull/307) | #306 데이터 안전 회귀 테스트(앱 코드 0) | **운영 반영 11/26 04:30 KST** | — |
