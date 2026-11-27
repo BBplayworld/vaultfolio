@@ -39,7 +39,8 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
                   <span className={`${ASSET_THEME.cardInfoName} min-w-0`} title={item.name.length > 10 ? item.name : undefined}>{item.name}</span>
                 </div>
                 <div className={`${ASSET_THEME.cardInfoMeta} min-w-0`}>
-                  <span className="text-sm text-muted-foreground max-[360px]:whitespace-normal min-[360px]:whitespace-nowrap">{type.shortLabel} · <span className="font-semibold text-primary tabular-nums">{pct.toFixed(1)}%</span></span>
+                  {/* 유형명과 `· %`를 각각 nowrap 조각으로 나눠 조각 사이에서만 꺾는다(C152) — 360·375 금액 열 겹침 해소 */}
+                  <span className="text-sm text-muted-foreground"><span className="whitespace-nowrap">{type.shortLabel}</span>{" "}<span className="whitespace-nowrap">· <span className="font-semibold text-primary tabular-nums">{pct.toFixed(1)}%</span></span></span>
                 </div>
               </div>
               <div className={`${ASSET_THEME.cardInfoRight} max-[360px]:max-w-[45%]`}>
