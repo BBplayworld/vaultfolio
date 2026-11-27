@@ -5,6 +5,8 @@
 ---
 
 ## 2026-11-27
+### 평단만 맞춘 종목은 출처·맞춘 날 유지 (issue-5.168, #337, risk:low)
+- 보유 현황 맞추기에서 수량이 그대로인데 평단·증권사만 맞춰도 `positionSource`=manual·`positionEffectiveDate`=오늘이 되어 앱 거래 기록 종목의 맞춘 날 이전 배당 지급 수량이 지금 수량으로 과대 계산되던 결함(R3) 수정: `resync/apply.ts` 변경 행·이어받기는 수량이 바뀔 때만 두 필드를 갱신(신규 추가 불변, 코인도 같은 경로). 스크린샷 첫 등록 이어받기(`import-inherit.ts` `inheritStock`·`inheritCrypto`)도 같은 규칙(`sameQty`). 기존에 manual로 바뀐 종목은 소급하지 않음. 저장 스키마·키·동기화·서버 전송 변경 0, 새 소식 없음.
 ### 증권사 현금 한 장 (issue-5.167, #335, risk:low)
 - 현금 금융기관 목록이 은행·2금융·보험뿐이라 CMA·예수금을 증권사 이름으로 적지 못해 증권사별 합계(5.160)를 증권사 앱 총자산과 대조할 수 없던 문제. 현금 선택 2곳(`cash-input`·`cash-screenshot-import`)만 새 `cashInstitutionGroups`(증권사 2그룹 추가, `기타` 1개)를 쓴다 — 공용 `financialInstitutions`·`securitiesFirms`·대출 목록은 그대로. 가져오기 기관 칸 `w-36` → `w-fit min-w-36 max-w-full`.
 - 상세·주식 증권사별: '전체' 탭·원화 보기에서 현금 기관이 그 증권사와 **정확히 같은** 행 아래 독립 줄 `현금 N원`(`brokerCashByRow`, 외화 원화 환산, 0원 숨김). 헤더·행 평가금·비중에 더하지 않는다. 인라인 메타 조각안은 실측 넘침·겹침으로 ui.md가 독립 줄로 바꿈.

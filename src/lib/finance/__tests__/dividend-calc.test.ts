@@ -8,6 +8,8 @@ import type { DividendPayoutResult } from "../finance-service";
 import { applyResync, computeDiff, defaultRemoveIds, mergeScreens, resolveScreens } from "@/lib/asset/resync";
 import type { RawScreenItem } from "@/lib/asset/resync/types";
 import { emptySel, row as rrow, screen, st as rst } from "@/lib/asset/resync/__tests__/fixtures";
+import { computeNewPosition } from "@/lib/trade/trade-utils";
+import { getPositionSnapshot } from "@/app/(main)/_components/forms/trade/stock-target-picker";
 
 const TODAY = "2026-11-26";
 
@@ -302,12 +304,12 @@ describe("5.162 액면분할 재현 S1~S4 (현재 값 고정 + 한계)", () => {
 });
 
 // 5.167 사업② 맞추기 이전 지급분 R1~R5 — 현재 동작을 고정한다(코드 수정 0). 맞춘 뒤 종목은 실제 applyResync로 만든다.
-// R1·R2는 알려진 폴백 한계(5.162 S2와 같은 경로), R3은 결함 후보(평단만 맞춰도 맞춘 날이 바뀌어 과거 배당이 변함) → CEO 판정 대상.
-describe("5.167 맞추기 이전 지급분 R1~R5 (현재 값 고정)", () => {
-  const resyncAt = (existing: Stock[], items: RawScreenItem[], today: string) => {
+// R1·R2는 알려진 폴백 한계(5.162 S2와 같은 경로), R3은 5.168에서 수정(수량이 그대로면 출처·맞춘 날 유지).
+describe("5.167 맞추기 이전 지급분 R1~R5 (현재 값 고정, R3은 5.168 수정)", () => {
+  const resyncAt = (existing: Stock[], items: RawScreenItem[], today: string, removeIds: string[] = []) => {
     const resolved = resolveScreens([screen(0, items)], existing, { usdRate: 1400, brokerOverrides: { 0: "키움증권" } });
     const diff = computeDiff(existing, mergeScreens(resolved), resolved);
-    const sel = { ...emptySel(), remove: defaultRemoveIds(diff) };
+    const sel = { ...emptySel(), remove: new Set([...defaultRemoveIds(diff), ...removeIds]) };
     return { diff, stocks: applyResync(existing, diff, sel, { today, usdRate: 1400, now: 1_700_000_000_000 }).stocks };
   };
   const base = (o: Partial<Stock> = {}) => rst("A", "005930", "domestic", "키움증권", 100, 50_000, { purchaseDate: "2026-01-01", ...o });
@@ -329,18 +331,95 @@ describe("5.167 맞추기 이전 지급분 R1~R5 (현재 값 고정)", () => {
     expect(heldQtyAt(after, txs, "2026-09-15")).toEqual({ qty: 150, qtyUsed: "derived" });
   });
 
-  // 결함 후보(재현됨) — 수량은 그대로인데 평단만 맞춰도 positionEffectiveDate가 오늘로 바뀌어 3월 지급이 100 → 150주로 변한다
-  it("R3 거래 01-02 100·07-01 50(지금 150) → 11-01 평단만 맞춤: 맞추기 전 3월 100 derived → 맞춘 뒤 150 current", () => {
+  // 5.168 수정 — 수량이 그대로면 평단만 맞춰도 출처·맞춘 날을 바꾸지 않는다(필드 없음 픽스처)
+  it("R3 거래 01-02 100·07-01 50(지금 150, 필드 없음) → 11-01 평단만 맞춤: 필드 없음 유지, 3월 100 derived, 연 지급 그대로", () => {
     const txs = [tx({ quantity: 100, date: "2026-01-02" }), tx({ quantity: 50, date: "2026-07-01" })];
     const before = base({ quantity: 150 });
     expect(heldQtyAt(before, txs, march)).toEqual({ qty: 100, qtyUsed: "derived" });
-    const { stocks } = resyncAt([before], [rrow("005930", 150, 52_000)], "2026-11-01");
+    const after = resyncAt([before], [rrow("005930", 150, 52_000)], "2026-11-01").stocks[0];
+    expect(after).toMatchObject({ quantity: 150, averagePrice: 52_000 });
+    expect(after.positionSource).toBeUndefined();
+    expect(after.positionEffectiveDate).toBeUndefined();
+    expect(heldQtyAt(after, txs, march)).toEqual({ qty: 100, qtyUsed: "derived" });
+    expect(total([{ stock: after, payouts: QUARTERLY }], txs).annual.paid).toBe(total([{ stock: before, payouts: QUARTERLY }], txs).annual.paid);
+  });
+
+  // 5.168 R3 — 앱 거래 기록(기본 경로)으로 만든 computed · 마지막 거래일 종목. 거래 반영은 trade-input buildReflectionPatch와 같은 계산
+  const reflect = (s: Stock, t: Transaction): Stock => {
+    const p = computeNewPosition(getPositionSnapshot(s), t);
+    return { ...s, quantity: p.quantity, averagePrice: p.avgPrice, purchaseExchangeRate: p.avgExchangeRate || undefined, positionSource: "computed", positionEffectiveDate: t.date };
+  };
+  const tradedFixture = (broker = "키움증권") => {
+    const txs = [tx({ quantity: 100, date: "2026-01-02" }), tx({ quantity: 50, date: "2026-07-01" })];
+    const empty = rst("A", "005930", "domestic", broker, 0, 0, { purchaseDate: "2026-01-02" });
+    return { txs, stock: txs.reduce(reflect, empty) };
+  };
+
+  it("R3 computed · 07-01(앱 거래 기록) → 11-01 평단만 50,000→52,000: computed · 07-01 유지, 3월 100 derived, 연 지급 35,000 불변", () => {
+    const { txs, stock: before } = tradedFixture();
+    expect(before).toMatchObject({ quantity: 150, averagePrice: 50_000, positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+    expect(total([{ stock: before, payouts: QUARTERLY }], txs).annual.paid).toBe(35_000);
+    const after = resyncAt([before], [rrow("005930", 150, 52_000)], "2026-11-01").stocks[0];
+    expect(after).toMatchObject({ quantity: 150, averagePrice: 52_000, positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+    expect(heldQtyAt(after, txs, march)).toEqual({ qty: 100, qtyUsed: "derived" });
+    expect(total([{ stock: after, payouts: QUARTERLY }], txs).annual.paid).toBe(35_000);
+  });
+
+  it("R3 이어받기(수량 같음·증권사만 변경): computed · 07-01 유지, 연 지급 35,000 불변", () => {
+    const { txs, stock: before } = tradedFixture("미래에셋증권");
+    const { diff, stocks } = resyncAt([before], [rrow("005930", 150, 50_000)], "2026-11-01", ["A"]);
+    expect(diff.rows.some((r) => r.status === "add")).toBe(true);
+    expect(stocks).toHaveLength(1);
     const after = stocks[0];
-    expect(after).toMatchObject({ quantity: 150, averagePrice: 52_000, positionSource: "manual", positionEffectiveDate: "2026-11-01" });
-    expect(heldQtyAt(after, txs, march)).toEqual({ qty: 150, qtyUsed: "current" });
-    const r0 = total([{ stock: before, payouts: QUARTERLY }], txs);
-    const r1 = total([{ stock: after, payouts: QUARTERLY }], txs);
-    expect(r1.annual.paid - r0.annual.paid).toBe((150 - 100) * 100 * 2); // 3·6월 각 50주 × 100원 과대
+    expect(after).toMatchObject({ id: "A", quantity: 150, broker: "키움증권", positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+    expect(heldQtyAt(after, txs, march)).toEqual({ qty: 100, qtyUsed: "derived" });
+    expect(total([{ stock: after, payouts: QUARTERLY }], txs).annual.paid).toBe(35_000);
+  });
+
+  it("R3 통제군 — 같은 computed 종목에서 수량이 바뀌면 manual · 11-01, 3월 current", () => {
+    const { txs, stock: before } = tradedFixture();
+    const after = resyncAt([before], [rrow("005930", 160, 52_000)], "2026-11-01").stocks[0];
+    expect(after).toMatchObject({ quantity: 160, positionSource: "manual", positionEffectiveDate: "2026-11-01" });
+    expect(heldQtyAt(after, txs, march)).toEqual({ qty: 160, qtyUsed: "current" });
+  });
+
+  it("R3 통제군 — 이어받기에서 수량이 바뀌면 manual · 11-01", () => {
+    const { stock: before } = tradedFixture("미래에셋증권");
+    const after = resyncAt([before], [rrow("005930", 160, 50_000)], "2026-11-01", ["A"]).stocks[0];
+    expect(after).toMatchObject({ id: "A", quantity: 160, broker: "키움증권", positionSource: "manual", positionEffectiveDate: "2026-11-01" });
+  });
+
+  // 5.168 R3(C162) — 직접 입력(manual) 상태. manual은 손으로 적지 않고 applyResync 수량 맞추기(08-01, 100→150)로 만든다
+  const manualFixture = (broker = "키움증권") => {
+    const txs = [tx({ quantity: 100, date: "2026-01-02" })];
+    const empty = rst("A", "005930", "domestic", broker, 0, 0, { purchaseDate: "2026-01-02" });
+    const traded = txs.reduce(reflect, empty);
+    // 08-01 수량 맞추기(같은 증권사 화면)로 manual · 08-01 생성
+    const resolved = resolveScreens([screen(0, [rrow("005930", 150, 50_000)])], [traded], { usdRate: 1400, brokerOverrides: { 0: broker } });
+    const diff = computeDiff([traded], mergeScreens(resolved), resolved);
+    const stock = applyResync([traded], diff, { ...emptySel(), remove: defaultRemoveIds(diff) }, { today: "2026-08-01", usdRate: 1400, now: 1 }).stocks[0];
+    return { txs, stock };
+  };
+
+  it("R3 manual · 08-01(수량 맞추기로 생성) → 11-01 평단만 맞춤: manual · 08-01 유지, 연 지급 불변", () => {
+    const { txs, stock: before } = manualFixture();
+    expect(before).toMatchObject({ quantity: 150, positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+    const paid0 = total([{ stock: before, payouts: QUARTERLY }], txs).annual.paid;
+    const after = resyncAt([before], [rrow("005930", 150, 52_000)], "2026-11-01").stocks[0];
+    expect(after).toMatchObject({ quantity: 150, averagePrice: 52_000, positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+    expect(heldQtyAt(after, txs, march)).toEqual(heldQtyAt(before, txs, march));
+    expect(heldQtyAt(after, txs, "2026-09-15")).toEqual({ qty: 150, qtyUsed: "derived" });
+    expect(total([{ stock: after, payouts: QUARTERLY }], txs).annual.paid).toBe(paid0);
+  });
+
+  it("R3 manual · 08-01 이어받기(증권사만 다름, 수량 같음) → manual · 08-01 유지, 연 지급 불변", () => {
+    const { txs, stock: before } = manualFixture("미래에셋증권");
+    expect(before).toMatchObject({ broker: "미래에셋증권", quantity: 150, positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+    const paid0 = total([{ stock: before, payouts: QUARTERLY }], txs).annual.paid;
+    const { stocks } = resyncAt([before], [rrow("005930", 150, 50_000)], "2026-11-01", ["A"]);
+    expect(stocks).toHaveLength(1);
+    expect(stocks[0]).toMatchObject({ id: "A", broker: "키움증권", quantity: 150, positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+    expect(total([{ stock: stocks[0], payouts: QUARTERLY }], txs).annual.paid).toBe(paid0);
   });
 
   // 통제군 — 화면 값이 같으면(same) 맞춘 날이 바뀌지 않아 과거 지급분 그대로

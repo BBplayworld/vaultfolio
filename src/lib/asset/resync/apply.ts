@@ -222,7 +222,8 @@ export function applyResync(
       if (a.change.qty) next.quantity = a.change.qty.after;
       if (a.change.avg) next.averagePrice = a.change.avg.after;
       if (a.change.brokerFill) next.broker = a.change.brokerFill.to;
-      if (a.change.qty || a.change.avg) {
+      // 수량을 덮어쓸 때만 출처·맞춘 날 갱신. 평단·증권사만 바뀌면 둘 다 그대로(R3: 과거 배당 지급 수량 보존)
+      if (a.change.qty) {
         next.positionSource = "manual";
         next.positionEffectiveDate = opts.today;
       }
@@ -258,8 +259,13 @@ export function applyResync(
     if (pred) {
       removeIds.delete(pred.id);
       const change = evaluateLink(item, pred, a.qty);
-      const next: Stock = { ...pred, category: item.category, positionSource: "manual", positionEffectiveDate: opts.today };
-      if (change.qty) next.quantity = change.qty.after;
+      const next: Stock = { ...pred, category: item.category };
+      // 수량이 바뀔 때만 출처·맞춘 날 갱신(R3). 수량 같으면 승계 값 유지
+      if (change.qty) {
+        next.quantity = change.qty.after;
+        next.positionSource = "manual";
+        next.positionEffectiveDate = opts.today;
+      }
       if (change.avg) next.averagePrice = change.avg.after;
       if (item.broker) next.broker = item.broker;
       updated.set(pred.id, next);

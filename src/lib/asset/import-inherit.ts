@@ -5,6 +5,7 @@ import type { Crypto, Stock } from "@/types/asset";
 import { keyOfCrypto, keyOfStock, resolveKept, type ConflictMode } from "./holdings-conflict";
 import { sameBroker } from "./resync/match";
 import { resyncNewPurchaseDate } from "./resync/apply";
+import { sameQty } from "./resync/merge";
 
 /** KST 오늘(YYYY-MM-DD) */
 export const kstTodayString = (now: number = Date.now()): string => new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -77,6 +78,10 @@ export const pairCryptoImport = (existing: Crypto[], incoming: Crypto[]) => pair
 /** 입력 줄·보조 줄 N = 선택 행 − 이어받는 행(C4) */
 export const freshImportCount = (incoming: unknown[], pairs: Map<number, unknown>): number => incoming.length - pairs.size;
 
+/** 수량이 바뀔 때만 출처 manual·맞춘 날 오늘(5.168 R3, apply.ts 이어받기와 같은 sameQty 판정). 같으면 기존 positionSource·positionEffectiveDate 그대로 */
+const inheritPosition = (predQty: number, nextQty: number, today: string) =>
+  !sameQty(predQty, nextQty) ? { positionSource: "manual" as const, positionEffectiveDate: today } : {};
+
 /** 이어받은 주식 = 기존 + 수량·평단·증권사·계좌만 화면 값(apply.ts 맞추기 이어받기와 같은 필드 규칙, C2). id·매수일·매입 환율·메모 유지 */
 export function inheritStock(pred: Stock, item: Stock, today: string): Stock {
   return {
@@ -85,8 +90,7 @@ export function inheritStock(pred: Stock, item: Stock, today: string): Stock {
     quantity: item.quantity,
     averagePrice: item.averagePrice,
     ...(item.broker ? { broker: item.broker } : {}),
-    positionSource: "manual",
-    positionEffectiveDate: today,
+    ...inheritPosition(pred.quantity, item.quantity, today),
   };
 }
 
@@ -96,8 +100,7 @@ export function inheritCrypto(pred: Crypto, item: Crypto, today: string): Crypto
     quantity: item.quantity,
     averagePrice: item.averagePrice,
     ...(item.exchange ? { exchange: item.exchange } : {}),
-    positionSource: "manual",
-    positionEffectiveDate: today,
+    ...inheritPosition(pred.quantity, item.quantity, today),
   };
 }
 
