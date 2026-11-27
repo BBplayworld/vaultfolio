@@ -392,8 +392,8 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
             </div>
             <div
               className={responsive
-                ? "inline-block rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand"
-                : "inline-flex items-center h-[31px] rounded-full bg-brand/10 px-3 font-semibold text-brand"}
+                ? "inline-block rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300"
+                : "inline-flex items-center h-[31px] rounded-full bg-brand/10 px-3 font-semibold text-indigo-600 dark:text-indigo-300"}
               style={responsive ? undefined : { fontSize: krPx(14) }}
             >
               {investorType.subtitle}

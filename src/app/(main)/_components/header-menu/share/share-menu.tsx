@@ -349,16 +349,16 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
         </DialogHeader>
 
         {/* 제어 바 — 1줄: 타입 토글 + 저장(폭이 모자라면 버튼 묶음이 다음 줄 오른쪽으로) / 2줄: (주식 현황 한정) 금액 표시.
-            타입 칸·버튼 모두 히트 40px(§7) */}
+            보이는 크기는 32px(행 높이 그대로), 누름 영역만 after: 확장으로 40px(§7) */}
         <div className="flex flex-col gap-2 px-3 py-2 sm:px-5 sm:py-3 border-t border-b bg-muted/20">
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
             <InlineSelector<ShareCardVariant>
               value={variant}
               onChange={setVariant}
               options={CARD_VARIANTS}
               size="sm"
               ariaLabel="인증카드 타입"
-              className="[&>button]:min-h-10"
+              className="[&>button]:min-h-7 [&>button]:relative [&>button]:after:absolute [&>button]:after:inset-x-0 [&>button]:after:-inset-y-1.5"
             />
             <div className="ml-auto flex items-center gap-2">
               {canNativeShare && (
@@ -367,7 +367,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                   variant="secondary"
                   onClick={handleSave}
                   disabled={isSaving || classifying}
-                  className="size-10"
+                  className="relative size-8 after:absolute after:-inset-1"
                   aria-label="이미지로 저장"
                 >
                   <Download className="size-3.5" />
@@ -379,7 +379,7 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                   variant="secondary"
                   onClick={handleCopyImage}
                   disabled={isSaving || classifying}
-                  className="size-10"
+                  className="relative size-8 after:absolute after:-inset-1"
                   aria-label="이미지 복사"
                 >
                   <Copy className="size-3.5" />
@@ -390,7 +390,8 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                 variant="brand"
                 onClick={canNativeShare ? handleShareClick : handleSave}
                 disabled={isSaving || sharePreparing || classifying}
-                className="h-10 px-3 text-sm gap-1.5"
+                className="relative h-8 px-3 text-sm gap-1.5 after:absolute after:inset-x-0 after:-inset-y-1"
+                aria-busy={isSaving || sharePreparing || classifying}
               >
                 {isSaving || sharePreparing || classifying ? (
                   <Loader2 className="size-3 animate-spin" />
@@ -401,21 +402,26 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
                 ) : (
                   <Download className="size-3" />
                 )}
-                {saveSuccess ? "완료!" : isSaving ? "처리 중..." : classifying ? "분석 중..." : sharePreparing ? "준비 중..." : canNativeShare ? "공유" : "저장"}
+                {/* 글자는 고정 — 상태 글자로 폭이 바뀌면 제어 바가 줄바꿈되어 카드가 출렁인다. 상태는 아이콘 + 아래 sr-only 알림 */}
+                {canNativeShare ? "공유" : "저장"}
               </Button>
+              <span className="sr-only" aria-live="polite">
+                {saveSuccess ? "완료" : isSaving ? "처리 중" : classifying ? "분석 중" : sharePreparing ? "준비 중" : ""}
+              </span>
             </div>
           </div>
 
           {variant === "stock" && (
-            <div className="flex min-h-10 items-center">
+            <div className="relative z-10 flex w-fit items-center gap-1.5">
               <Switch
                 id="show-amounts"
                 checked={showAmounts}
                 onCheckedChange={setShowAmounts}
                 className="data-[state=checked]:bg-brand"
               />
-              {/* 라벨이 행 높이 40px 전체를 누름 영역으로 잡는다(스위치 단독 18px 보완) */}
-              <Label htmlFor="show-amounts" className="min-h-10 pl-1.5 pr-3 text-xs cursor-pointer select-none">금액 표시</Label>
+              {/* 보이는 행 높이는 스위치 18px 그대로, 라벨 after가 행 전체(스위치 포함)를 40px 누름 영역으로 덮는다.
+                  위는 4px만(윗줄 타입 칸 누름 영역과 겹침 0), 나머지는 아래로 — 아래 프리뷰 위로 10px 겹쳐 z-10 */}
+              <Label htmlFor="show-amounts" className="pr-2 text-xs cursor-pointer select-none after:absolute after:inset-x-0 after:-top-1 after:-bottom-[18px]">금액 표시</Label>
             </div>
           )}
           {(variant === "portfolio" || variant === "type") && classifying && (
