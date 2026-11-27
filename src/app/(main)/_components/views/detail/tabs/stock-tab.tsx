@@ -1241,7 +1241,7 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
           priceAsOf={priceAsOf}
         />
 
-        {/* 내 주식 도구 타일(시장과 비교·X-Ray·내 자산 점검·세금, 4.83·#245 — 인증카드 제외) */}
+        {/* 내 주식 도구 타일(X-Ray·내 자산 점검, 4.83·#245·5.170 — 인증카드 제외) */}
         <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} grow={growTile} />
 
         {/* 카테고리 selector — 목록은 늘 평가금 순(#288 R1) */}
