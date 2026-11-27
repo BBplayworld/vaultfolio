@@ -184,7 +184,7 @@
 - **헤더 아이콘 진입 버튼(인증카드)** = brand 인디고 채움 `bg-brand text-white`(공용 상수 `HEADER_ENTRY_BTN_BRAND`, `MAIN_PALETTE[0]` = 하단 업데이트 버튼과 같은 색 — 대표 결정 #4.66 R8, R7 foreground 반전 폐기). hover `opacity-85`·누름 `scale-[0.96]`·40/44px 히트영역.
 - **키패드(잠금 화면)**: 테두리·배경 없는 72px 숫자(`text-2xl font-medium`), 눌림만 `active:bg-muted` 원형. 낮은 화면(`max-height:620px`) 64px.
 - **체크박스**: 기본 `Checkbox`(checked 시 자동 brand). 별도 색 금지.
-- **스위치**: 공용 `Switch` checked 색은 `primary`(공용 기본값 불변). 인증카드 `금액 표시`만 사용처 className으로 checked `bg-brand`(5.174, R8 인증카드=인디고와 같은 방향). 스위치 행은 `min-h-10` + Label 히트, `scale-*` 축소 금지(히트영역 미달).
+- **스위치**: 공용 `Switch` checked 색은 `primary`(공용 기본값 불변). 인증카드 `금액 표시`만 사용처 className으로 checked `bg-brand`(5.174, R8 인증카드=인디고와 같은 방향). 스위치 행은 보이는 높이를 그대로 두고 Label `after:` 확장으로 행 전체 40px 누름 영역, `scale-*` 축소 금지.
 - **다크 활성 칸 = `bg-foreground/15`**(5.148 #290 B6): InlineSelector 비-fullWidth 활성 칸은 라이트 `bg-background`, 다크 `dark:bg-foreground/15` + `dark:ring-1 dark:ring-inset dark:ring-foreground/50`(면 알파만으로는 트랙 대비 3:1 불가 — 테두리로 ≥3:1 확보, 활성 글자 ≥4.5 유지). 다크 대비 감사 기준 = 본문 4.5·큰 글자/조작 요소 3:1, `.dark` 변수 값은 건드리지 않고 요소 클래스만 교체(예: 손익 `dark:text-rose-400/blue-400`, 상장폐지 `text-destructive`, `새` 칩 면 `dark:bg-orange-500/5`)
 - **탭/세그먼트**: InlineSelector로 전 차수 통일(`tabList2/3` 토큰은 #4.34에 삭제, `tabList1`·`tabList3Wrap`만 legacy 잔존). 화면 폭을 채우는 1차 선택(자산 변화 범위·기간)은 `InlineSelector fullWidth` — 같은 폭 칸·채운 썸+굵은 글자(외곽선 없음)·썸 `motion-safe:transition-[transform] duration-200`·칸 `min-h-10 text-sm active:scale-[0.96]`·화살표 키 이동.
 - **카드**: 접힘행 왼쪽=핵심 식별(이름·비중%), 상세(종류·금리·매입가 등)는 펼침(Collapsible)에. 비종목 자산도 주식 카드와 동일 패턴. 토큰: `cardWrapper`/`cardHeader`/`cardInfoName`/`cardAmountMain`…
