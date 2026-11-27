@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-28 06:10 KST** · 운영 최신 **v5.174** (스모크 PASS 06:05) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
+> **마지막 갱신: 2026-11-28 08:48 KST** · 운영 최신 **v5.174** (v5.175 머지·스모크 대기) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -24,7 +24,7 @@
 ## 🔄 진행 중
 | 릴리스 | 내용 | 상태 | 다음 |
 |---|---|---|---|
-| **5.177** [#362](https://github.com/BBplayworld/vaultfolio/issues/362) | 부동산 분류 바 넘침·transition-all 정리 | design-review · risk:low | ui 사양 → 개발 |
+| **5.177** [#362](https://github.com/BBplayworld/vaultfolio/issues/362) | 부동산 분류 바 넘침·transition-all 정리 · [PR #363](https://github.com/BBplayworld/vaultfolio/pull/363) | **v5.175 머지 11-28 08:48** · 스모크 대기 | 운영 스모크 |
 | **5.176** [#360](https://github.com/BBplayworld/vaultfolio/issues/360) | 현금·부동산 비중 기준 통일·범례 정돈·부동산 라벨 · [PR #361](https://github.com/BBplayworld/vaultfolio/pull/361) | **v5.174 머지 11-28 05:47** · 운영 스모크 PASS 06:05 | — |
 | **5.175** [#354](https://github.com/BBplayworld/vaultfolio/issues/354)·#357·#356 | 주식 전량 매도 삭제 평단 0·코인 전량 매도 무음 실패 안내·죽은 함수 정리 (#355·#358 보류) | **v5.173 머지 11-28 03:49** · 운영 스모크 PASS 04:03 | — |
 | **5.174** [#352](https://github.com/BBplayworld/vaultfolio/issues/352) | 인증카드 레이어 UI·색상 정돈(대표 요청) · [PR #353](https://github.com/BBplayworld/vaultfolio/pull/353) | **v5.172 머지 11-28 00:22** · 운영 스모크 PASS 00:38 | — |
