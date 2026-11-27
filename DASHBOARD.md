@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-27 20:56 KST** · 운영 최신 **v5.169** (스모크 PASS 20:28) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
+> **마지막 갱신: 2026-11-27 21:06 KST** · 운영 최신 **v5.169** (v5.170 머지·스모크 대기) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -24,7 +24,7 @@
 ## 🔄 진행 중
 | 릴리스 | 내용 | 상태 | 다음 |
 |---|---|---|---|
-| **5.172** [#345](https://github.com/BBplayworld/vaultfolio/issues/345) | 웰컴 320 줄 나눔 정돈(G 펼침 칸 제거는 CEO 기각) | development · risk:low · 위임 머지 | developer 구현 → qa·ui-review·COO |
+| **5.172** [#345](https://github.com/BBplayworld/vaultfolio/issues/345) | 웰컴 320 줄 나눔 정돈(G 펼침 칸 제거는 CEO 기각) | **v5.170 머지 11/27 21:06** · 스모크 대기 | 운영 스모크 |
 | **v5.153** [PR #312](https://github.com/BBplayworld/vaultfolio/pull/312) | #309 시세 신선도 | **운영 반영 11/26 17:50 KST** · 스모크 PASS | — |
 | **v5.154** [PR #314](https://github.com/BBplayworld/vaultfolio/pull/314) | #310 증권사 이관 정리(risk:high, 대표 일괄 승인) | **운영 반영 11/26 17:55 KST** · 스모크 PASS | — |
 | **v5.155** [PR #315](https://github.com/BBplayworld/vaultfolio/pull/315) | #313 배당 숫자 신뢰(bug) | **운영 반영 11/26 18:29 KST** · 스모크 PASS | 판독: 배당·성적표 경계 18:29 |
