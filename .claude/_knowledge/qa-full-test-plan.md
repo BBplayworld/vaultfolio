@@ -68,6 +68,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 회귀: delisted 종목이 stockCount·stockCost·환차익에서 제외
 
 ### F-TRADE. 주식 거래내역 (매매 로그) ([trade-input.tsx](../../src/app/(main)/_components/forms/trade/trade-input.tsx) · [stock-trades-view.tsx](../../src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx))
+- 👤 **(#5.175 #354) 전량 매도 기록 삭제 시 평단 입력** — 반영 거래 삭제 확인창 결과가 수량>0·평단≤0이면 평단가 줄 `0원 → ?` + `rollback-avg-unknown` '평단을 알 수 없어요' + `rollback-avg-input`, 입력 전 `삭제 + 롤백` 비활성(눌러도 저장 0). 경우 1 직접 10@100 → 전량 매도 → 삭제 + 100 입력 = 10@100, 경우 2 직접 10@100 + 매수 10@120 → 전량 매도 20 → 삭제 + 110 입력 = 20@110. 통제: 일부 매도 삭제(6→10주·100원)·앱 기록만 종목(기준 0, 10@120)·매수 삭제로 0주 = 입력칸 0·결과 불변. 해외 종목 환율은 비워 둠(기존 `일부 미입력 (현재환율)`), 기존에 0으로 복원된 데이터 보정 0, 코인 쪽은 저장 관문이 0개 코인을 막아 도달 불가(N1(b) 이관). 저장 스키마 변경 0. 자동 `sell-delete-avg-5175.test.ts`
 - ⚙ **(#5.173 #349) 환율 없는 보유에 매수** — 기준 수량>0·기준 환율 없음/0인 해외 보유에 매수하면 저장 `purchaseExchangeRate` = 체결 환율(예: 10주 + 10주·1,400 → 1,400, 수정 전 700). 거래 기록(미리보기 평균 환율 = 저장)·사진 가져오기·거래내역 삭제 롤백 3곳. 통제: 환율 있는 보유는 가중 평균(1,300+1,400 → 1,350), 앱 거래로만 만든 종목(기준 0)·매도·국내 불변, 공용 `computeNewPosition`(replay) 불변, 기존 희석값 자동 보정 0. 자동 `trade-rate-fill-349.test.ts`
 - 👤 **(#5.158 #311) 기록 입력 정확도** — ① 체결일이 KST 어제 이전이면 반영 체크 위 `past-date-question`(신규 자산 칸·오늘이면 0개), `이미 들어 있어요`=체크 해제·`아니요, 더해 주세요`=체크 유지, 미응답이면 두 칸 선택 표시 0·연결 계좌 맞춘 잔액 경고 0·저장 결과 기존과 같음 ② 해외 종목 선택 즉시 `exrate-input` = 현재 환율(0 표시 0)+`exrate-auto-help`(고치면 사라짐, 미수신이면 빈 칸+placeholder `환율을 불러오지 못했어요`), 칸 = 미리보기 평균 환율 = 연결 금액 = `÷ N` = 저장 `exchangeRate`, 칸을 지워도 0 저장 0건(현재 환율), 국내 undefined(`trade-form-311.test.ts`) ③ 보유 종목 `fill-current-price`(단가 칸 아래, 40px, USD 3·JPY 4·KRW 0 반올림, 포커스 이동 0) — 신규·미선택·검색 신규·원화 입력·현재가 0이면 0개 ④ 토스트 `매수/매도 거래를 기록했어요`·`이미 반영된 거래예요`·`기존 거래를 그대로 뒀어요`
 - ⚙ (#5.158) 기존 `exchangeRate: 0` 해외 매도는 세금 추정에서 현재 환율+`estimated`(0원 매도 대금 아님, 판독 경계 = 머지일). 포지션 정·역 계산은 0을 그대로 써서 대칭 유지(`trade-utils.test.ts` 회귀). 0 거래 백업 왕복 불변
@@ -126,6 +127,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - ⚙ 종합 카드는 하위 항목(거래소) 존재 시 `!hasSubItems` 조건으로 기록/내역 버튼을 항상 숨김(1개 거래소만 지정된 경우도 포함) — 개별 거래소 하위 카드(`SubCryptoCard`)에서만 기록. 주식(F-STOCK)과 동일 규칙
 - ⚙ 원인분해 `buy:crypto`/`sell:crypto`가 `reflectedCryptoFlow`(반영된 실제 거래) 기반으로 정확화 — 이전엔 스냅샷 원가 델타 추정치였음. 예측 경로 `estimatePeriodInflows`는 `tradedCryptoIds`로 반영 거래 있는 코인을 매수일 추정에서 제외(이중계산 방지, `tradedStockIds` 패턴)
 - 엣지: 초과매도 반영 차단, 미반영 로그는 포지션 무변경, 미래·보존기간(3년) 밖 날짜 차단
+- 👤 **(#5.175 #357) '반영' 전량 매도 차단** — 반영 체크 + 결과 0개(전량)면 `매도 기록` 비활성 + 버튼 위 `crypto-zero-qty-note` "코인은 0개로 남길 수 없어요. '반영'을 끄면 기록만 남아요."(코인 삭제 권유 0). 반영 해제(기록만)·일부 매도·매수·보유 초과(기존 oversell)는 안내 0. 저장이 false면 폼 유지 + 토스트 "저장하지 못했어요. 입력값을 확인해 주세요."(무음 실패 0). `saveAssetData`·strict `cryptoSchema`(수량>0·평단>0)·저장 키 불변 — 0개 코인 저장 허용(N1(b))은 risk:high 별도. 자동 `coin-full-sell-gate-5175.test.ts`
 - 회귀: 공유 토큰 `parts[14]` 왕복·`crIdx` 재연결·구버전 파싱(R3), 사용자 편집 신호(`saveData`→`ASSET_USER_EDIT_EVENT`)로 push(R14)
 - 자동: `src/lib/__tests__/trade-utils.test.ts`(코인 구조적 타입 재사용 2건), `src/lib/report/__tests__/asset-report.test.ts`(정밀/예측 분기 buy:crypto 정확화·이중계산 방지 2건)
 
@@ -164,7 +166,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 스크린샷 업로드→인식→선택 등록, 다종목 일괄(`addTransactionsBatch`/코인은 `saveData`)
 - 👤 **주식: 거래마다 반영할 자산 항목 직접 선택(#4.29)** — 전역 증권사 Select·`resolveMatch`/`MatchInfo` 자동 라우팅 제거. 후보 = 티커 일치 → 정규화 종목명 일치 → (티커 미인식 시) 보유 종목명 유사 일치(`findClosestNames`, OCR 오타). 기본값: 후보 1개(정확 일치)면 자동 선택, 2개 이상·유사 일치는 미선택+안내, 미보유 매수는 "신규 자산"(인식 증권사·국내/해외 프리필). 각 행에 `StockTargetPicker` + 체결일 오름차순 누적 `PositionChangePreview`(반영 OFF+기존="거래내역에만 기록"), 보유 초과 매도는 경고+등록 차단. 신규 자산은 (종목·증권사·타입) 단위로 묶어 1개 생성(보유 후보가 있으면 메타 복제). **코인**: 미보유 매수 인식 시 자동 신규 등록(상단 거래소 select 필수), 반영 ON/OFF와 무관하게 항상 포지션 생성, `currentPrice`는 체결가로 임시 채움
 - ⚙ **종목명 OCR 오타 보정(#4.29)** — `lookupTicker`([ticker-map.ts](../../src/app/api/parse-screenshot/ticker-map.ts)) 단계: exact → prefix(잘린 이름 우선) → **국내 오타 보정**(`name-match.ts` 편집거리, 길이<6 금지·<12 ≤1·이상 ≤2, **유일 최근접만**) → 오타 후보가 2개 이상이면 suffix·substring 추정 금지("") → US. 회귀 테스트 [ticker-lookup-kr-etf.test.ts](../../src/lib/__tests__/ticker-lookup-kr-etf.test.ts)가 국내 ETF 전 종목 정확명 100%·오타 시뮬레이션 오매칭 0건을 고정(잘린 이름과 구별 불가 2건은 제외 집계)
-- 엣지: 통화 KRW/USD 분기, 중복 거래 처리, **매도인데 미보유면 계속 매칭 실패로 차단**(신규 등록은 매수만 허용 — 팔 종목이 없는 매도 신규 생성 금지), 코인 신규 등록 시 거래소 미선택이면 등록 차단
+- 엣지: 통화 KRW/USD 분기, 중복 거래 처리, **매도인데 미보유면 계속 매칭 실패로 차단**(신규 등록은 매수만 허용 — 팔 종목이 없는 매도 신규 생성 금지), 코인 신규 등록 시 거래소 미선택이면 등록 차단, 코인 저장 실패(예: 반영 전량 매도로 0개 코인 — 저장 관문 거부)는 창 유지 + 토스트 "저장하지 못했어요. 입력값을 확인해 주세요."(#5.175 #357)
 
 ### F-CRYPTO. 코인 시세 자동 갱신 (업비트) ([upbit-service.ts](../../src/lib/finance/upbit-service.ts) · [api/finance/crypto](../../src/app/api/finance/crypto/route.ts)) — 명세 [S-4.20](../specs/4.20-upbit-crypto-price.md)
 - ⚙ **1시간 슬롯**([coin-cache-slot.ts](../../src/lib/finance/coin-cache-slot.ts) `getCoinCacheSlot`): 코인은 24시간 무휴장이라 주식과 달리 장중/장외·영업일·DST 판정 없이 **항상** `{YYYY-MM-DD}-H{HH}`(KST). `c.baseDate === slot`이면 재조회 스킵(AC1·AC2)
