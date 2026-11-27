@@ -17,7 +17,7 @@ import { InlineSelector } from "../../../layout/ui/inline-selector";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatShortCurrency } from "@/lib/number-utils";
-import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
+import { ASSET_THEME, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, MAIN_PALETTE, SHARE_ETC_COLOR, getProfitLossColor, PAGE_TITLE } from "@/config/theme";
 import { stockCategories, securitiesFirms } from "@/config/asset-options";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary-header";
@@ -109,7 +109,7 @@ export function StockBarChart({ items, total }: {
         {items.map(({ stock, value: v, color }, idx) => {
           const pct = (v / total) * 100;
           return (
-            <div key={stock.id} className="flex items-center justify-center overflow-hidden transition-all" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total: total })[idx]}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
+            <div key={stock.id} className="flex items-center justify-center overflow-hidden motion-safe:transition-[width]" style={{ width: `${displayShareWidths(items.map((b) => b.value), { total: total })[idx]}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`}>
               {/* 바 내부 % 텍스트 제거 — 밝은 배경 위 흰글씨 저대비 방지. %는 아래 범례에서 크게 표기 */}
             </div>
           );
@@ -859,7 +859,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
             </CollapsibleTrigger>
           </div>
           <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
-            <div className={`h-full transition-all${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
+            <div className={`h-full motion-safe:transition-[width]${isFirstVisit ? " animate-pulse" : ""}`} style={{ width: `${pct}%`, backgroundColor: color }} />
           </div>
           {!open && (
             <div className="h-1.5 bg-muted/20 dark:hidden" />
@@ -1005,7 +1005,8 @@ export function StockCategorySection({
         const barRest = barCut ? barItems.slice(barCut) : [];
         const restValue = barRest.reduce((s, b) => s + b.value, 0);
         const restPct = (restValue / totalValue) * 100;
-        const ETC_COLOR = "#9ca3af";
+        // 인증카드(screenshotMode)는 포트폴리오와 같은 그 외 색(SHARE_ETC_COLOR), 상세 화면은 기존 회색 유지
+        const ETC_COLOR = screenshotMode ? SHARE_ETC_COLOR : "#9ca3af";
         // 표시 폭만 최소 비중 보장(그 외 구간 포함 5개 이하일 때, 숫자는 실제 값 — #148)
         const barWidths = displayShareWidths([...barShown.map((b) => b.value), ...(barRest.length > 0 && restPct > 0 ? [restValue] : [])], { total: totalValue });
         return (
@@ -1014,11 +1015,11 @@ export function StockCategorySection({
               {barShown.map(({ stock, value: v, color }, idx) => {
                 const pct = (v / totalValue) * 100;
                 return (
-                  <div key={stock.id} className="overflow-hidden transition-all" style={{ width: `${barWidths[idx]}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`} />
+                  <div key={stock.id} className="overflow-hidden motion-safe:transition-[width]" style={{ width: `${barWidths[idx]}%`, backgroundColor: color }} title={`${stock.name}: ${pct.toFixed(1)}%`} />
                 );
               })}
               {barRest.length > 0 && restPct > 0 && (
-                <div className="overflow-hidden transition-all" style={{ width: `${barWidths[barShown.length]}%`, backgroundColor: ETC_COLOR }} title={`그 외: ${restPct.toFixed(1)}%`} />
+                <div className="overflow-hidden motion-safe:transition-[width]" style={{ width: `${barWidths[barShown.length]}%`, backgroundColor: ETC_COLOR }} title={`그 외: ${restPct.toFixed(1)}%`} />
               )}
             </div>
             <div data-testid={screenshotMode ? undefined : "stock-legend"} className={screenshotMode ? ASSET_THEME_SHOT.legendGrid : "grid grid-cols-2 sm:grid-cols-4 gap-x-4 max-[360px]:gap-x-2 gap-y-2 px-2"}>
@@ -1028,7 +1029,8 @@ export function StockCategorySection({
                   <div key={stock.id} data-testid={screenshotMode ? undefined : "stock-legend-item"} className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                     <span className={`${legendTextCls} text-foreground truncate`}>{stock.name}</span>
-                    <span className={`${legendTextCls} font-bold shrink-0`} style={{ color: color }}>{pct.toFixed(1)}%</span>
+                    {/* % 글자는 foreground — 팔레트 색 글자는 라이트에서 4.5:1 미달(5.174). 색은 점·막대가 전한다 */}
+                    <span className={`${legendTextCls} text-foreground font-bold tabular-nums shrink-0`}>{pct.toFixed(1)}%</span>
                   </div>
                 );
               })}
