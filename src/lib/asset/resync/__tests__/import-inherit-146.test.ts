@@ -205,6 +205,34 @@ describe("5.168 R3 가져오기 이어받기 — 수량이 같으면 positionSou
   const tradedStock = () => txs.reduce(reflectStock, st("k", "005930", "domestic", "미래에셋증권", 0, 0, { purchaseDate: "2026-01-02" }));
   const tradedCoin = () => [buy(1, 100, "2026-01-02"), buy(1, 100, "2026-07-01")].reduce(reflectCoin, cr("c", "BTC", "빗썸", 0, { averagePrice: 0 }));
 
+  // C162 — manual은 applyResync 수량 맞추기(08-01)로 만든다
+  const resyncManual = (stocks: Stock[], ticker: string, qty: number, avg: number) => {
+    const resolved = resolveScreens([screen(0, [row(ticker, qty, avg)])], stocks, { usdRate: 1400, brokerOverrides: { 0: stocks[0].broker ?? "" } });
+    const diff = computeDiff(stocks, mergeScreens(resolved), resolved);
+    return applyResync(stocks, diff, { include: new Set(), remove: new Set(), pick: {}, qty: {}, ticker: {} }, { today: "2026-08-01", usdRate: 1400, now: 1 }).stocks[0];
+  };
+  it("주식 manual · 08-01(수량 맞추기로 생성) + 수량 같음 → manual · 08-01 유지(merge·reset)", () => {
+    const before = resyncManual([tradedStock()], "005930", 160, 50_000);
+    expect(before).toMatchObject({ id: "k", quantity: 160, positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+    for (const mode of ["merge", "reset"] as const) {
+      const plan = planStockImport([before], [imp(0, "005930", "domestic", "키움증권", 160, 52_000)], mode, JAN1, TODAY);
+      expect(plan.items).toHaveLength(1);
+      expect(plan.items[0]).toMatchObject({ id: "k", quantity: 160, averagePrice: 52_000, broker: "키움증권", positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+    }
+  });
+  it("코인 manual · 08-01(수량 맞추기로 생성) + 수량 같음 → manual · 08-01 유지", () => {
+    const coin = tradedCoin();
+    const adapted = [coin].map(cryptoToStock);
+    const raw = parsedCryptoToRaw({ name: "BTC", symbol: "BTC", quantity: 3, averagePrice: 100, currentPrice: 100, exchange: "빗썸", currency: "KRW" }, 1400);
+    const resolved = resolveScreens([{ index: 0, status: "ok", items: [raw] }], adapted, { usdRate: 1400, matchHint: matchExchangeHint });
+    const diff = computeDiff(adapted, mergeScreens(resolved), resolved);
+    const res = applyResync(adapted, diff, { include: new Set(), remove: new Set(), pick: {}, qty: {}, ticker: {} }, { today: "2026-08-01", usdRate: 1400, now: 1 });
+    const before = stocksToCrypto([coin], adapted, res.stocks)[0];
+    expect(before).toMatchObject({ id: "c", quantity: 3, positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+    const plan = planCryptoImport([before], [cr("crypto_import_1_0", "BTC", "빗썸", 3, { averagePrice: 120 })], "merge", JAN1, TODAY);
+    expect(plan.items).toHaveLength(1);
+    expect(plan.items[0]).toMatchObject({ id: "c", quantity: 3, averagePrice: 120, positionSource: "manual", positionEffectiveDate: "2026-08-01" });
+  });
   it("주식 computed · 07-01, 수량 같음(평단·증권사만 다름) → computed · 07-01 유지", () => {
     const before = tradedStock();
     expect(before).toMatchObject({ quantity: 150, averagePrice: 50_000, positionSource: "computed", positionEffectiveDate: "2026-07-01" });
