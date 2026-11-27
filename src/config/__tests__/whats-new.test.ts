@@ -53,7 +53,15 @@ describe("WHATS_NEW 데이터 형식", () => {
     expect(e.body).toBe("증권사 화면의 총 평가금액과 맞춘 결과가 같으면 한\u00a0줄로 알려 줘요");
     expect(e.featureId).toBeUndefined();
     expect(e.trialHidden).toBe(true);
-    expect(WHATS_NEW.filter((x) => x.trialHidden)).toHaveLength(1);
+    expect(WHATS_NEW.filter((x) => x.trialHidden).map((x) => x.id)).toEqual(["20261127-02", "20261127-04"]);
+  });
+
+  it("5.167 증권사 현금: 현금 줄이 조건부라 바로 가기 없음, 체험 데모 기관에 증권사가 없어 체험 목록에서 숨김(C87·C126)", () => {
+    const e = WHATS_NEW.find((x) => x.id === "20261127-04")!;
+    expect(e.title).toBe("증권사 현금도 증권사 이름으로 적을\u00a0수 있어요");
+    expect(e.body).toBe("현금 금융기관에서 증권사를 고르면 상세 주식 증권사별에 그 증권사 현금이 함께 보여요");
+    expect(e.featureId).toBeUndefined();
+    expect(e.trialHidden).toBe(true);
   });
 
   it("길이: title 2~32자, body 48자 이하", () => {

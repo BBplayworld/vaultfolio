@@ -851,8 +851,9 @@ SHOT_BIG_SCALE = 1.46 // 캡처 텍스트 배율의 **단일 출처(문서용 �
 stockCategories, realEstateTypes, cashTypes, loanTypes
 cryptoExchanges: string[]
 popularCryptos: { symbol, name }[]          // BTC/ETH/XRP 등 20개
-financialInstitutions: OptionGroup[]        // 은행/저축은행/보험사
+financialInstitutions: OptionGroup[]        // 은행/저축은행/보험사 (현금·대출 공통 — 대출 Select가 그대로 씀, 수정 금지)
 securitiesFirms: OptionGroup[]
+cashInstitutionGroups: { group, items }[]   // #5.167 현금 선택 전용 = 은행·2금융 4그룹 + `대형 증권사`·`온라인 증권사`(원본 `기타` 제외) + `기타` 1개(43항목, 값 중복 0). cash-input·cash-screenshot-import만 사용
 quickButtonPresets: { stock, realEstate, loan }
 ```
 
@@ -1145,6 +1146,7 @@ computePriceChange(points) → % | null
 
 ### broker-totals (`src/lib/asset/broker-totals.ts`, #5.160 #319)
 - `computeBrokerTotals(stocks, rates, displayCurrency)` → `{ rows, scale }`. 행 = `{ name, unassigned, count, valueUnits, profitUnits, profitRate|null, shareTenths }`(units = 원/센트). 묶음 = `sameBroker`·`isUnassignedBroker`, 평가·손익 = `computeStockTotals` 묶음별 호출 + `apportionUnits`(최대 잔여)로 합 = 헤더. 비중 = `largestRemainderTenths`.
+- `brokerCashByRow(rows, cash, rates)`(#5.167 #335) → `Map<행 이름, 원화 정수>`. 행 이름이 증권사 목록 값(`기타` 제외)이고 공백 지운 `cash.institution`이 **정확히 같은** 현금만 `Math.round(Σ balance × getMultiplier)`. `sameBroker`(부분 일치) 미사용 — `키움`·`하나`·`하나은행`·`기타`·자유 텍스트·미지정은 조인 0. 합 0원 행은 Map에 없음. 읽기 전용 참고값으로 헤더·행 평가금·비중에 더하지 않는다(C150).
 - `resolveScreensWithDefaultBroker(screens, existing, opts, defaultBroker?)`(`resync/merge.ts`) — 확정 못 한 장에만 증권사 기본값. `dispatchAddStock(mode, broker?)`·`HoldingsResyncDialog initialBroker?`(UI 상태, 저장 0).
 
 ### exchange-totals (`src/lib/asset/exchange-totals.ts`, #5.163 #325)
