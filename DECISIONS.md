@@ -821,3 +821,4 @@
 - 2026-11-27 13:2x **CEO R3 재판정**(5.167-r3-ceo-2.md): 방향 ① 채택 — 수량 불변이면 positionSource·positionEffectiveDate 모두 유지(다음 거래는 computeNewPosition 누적이라 맞춘 평단 유지, 삭제 rollback도 기준분에 흡수). ② 기각(새 필드=risk:high). risk:low, 5.168 첫 별도 커밋(C 지급일 버튼과 분리 머지 가능). 테스트: computed·마지막 거래일 픽스처(3월 100 derived·연 35,000 불변), 이어받기 수량 같음, 통제군. 후속: import-inherit.ts:88·99 같은 규칙 확인.
 - 2026-11-27 13:25 **v5.165 머지**(PR #336, squash 3e4671e) = issue-5.167 = #335 증권사 현금 한 장(risk:low, CEO 위임 머지, head b96dc17 트리 = qa PASS ff81018d). R3는 5.168 첫 커밋(방향 ①). 회고 C162.
 - 2026-11-27 13:30 #337 R3 = 5.168 단독(지급일 버튼 C는 G2 뒤 5.169로 분리 — R3를 빨리 내기 위해). spec = r3-ceo-2.md.
+- 2026-11-27 13:45 #337 판정(오케스트레이터): import-inherit.ts inheritStock·inheritCrypto(스크린샷 가져오기 이어받기)도 수량 무관 manual·오늘로 바꾸는 같은 성질 — 같은 R3 결함 계열이라 5.168에 별도 커밋으로 포함(같은 규칙: 수량 바뀔 때만).
