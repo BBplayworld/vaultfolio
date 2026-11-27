@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { AssetData, RealEstate, PhysicalAsset, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction, CryptoTransaction } from "@/types/asset";
 import { archiveDailySnapshots } from "@/lib/asset/snapshot-archive";
-import { getAssetData, hasAnyAssets, clearPhysicalAssets, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
+import { getAssetData, hasAnyAssets, clearPhysicalAssets, saveAssetData, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
 import { clearCashTxTags, putDividendTag, removeCashTxTags, type CashTxDividendInput } from "@/lib/asset/cash-tx-tags";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { pinMismatchGoesInvalid } from "@/lib/share-pin-retry";
@@ -226,7 +226,6 @@ interface AssetDataContextType {
   updatePhysicalAsset: (id: string, patch: Partial<PhysicalAsset>) => boolean;
   deletePhysicalAsset: (id: string) => boolean;
   addStock: (stock: Stock) => boolean;
-  addStockRaw: (stock: Stock) => boolean;
   updateStock: (id: string, stock: Partial<Stock>) => boolean;
   deleteStock: (id: string) => boolean;
   deleteStocks: (ids: string[]) => boolean;
@@ -247,7 +246,6 @@ interface AssetDataContextType {
   // 거래 내역
   addTransaction: (tx: Transaction) => boolean;
   deleteTransaction: (txId: string) => boolean;
-  updateTransaction: (txId: string, tx: Partial<Transaction>) => boolean;
   // 거래 + 포지션 원자적 반영 (단일 저장으로 stale-closure 덮어쓰기 방지)
   // link/revertLink: 거래 ↔ 현금·대출 연결 계좌(#103). 옵션을 안 넘기면 기존 동작 그대로
   addTransactionWithPosition: (tx: Transaction, stockId: string, patch: Partial<Stock>, link?: LinkChoice) => boolean;
@@ -1565,18 +1563,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
     [assetData, saveData]
   );
 
-  // 스크린샷 가져오기 전용: ticker 없는 종목도 허용 (superRefine 우회)
-  // 스키마 검증만 우회할 뿐 명백한 사용자 편집이므로 saveData와 동일하게 편집 신호를 발행한다
-  const addStockRaw = useCallback(
-    (stock: Stock) => {
-      const newData = { ...assetData, stocks: [...assetData.stocks, stock] };
-      const success = saveAssetDataRaw(newData);
-      if (success) notifyAssetUserEdit();
-      return success;
-    },
-    [assetData]
-  );
-
   const updateStock = useCallback(
     (id: string, stock: Partial<Stock>) => {
       const newData = {
@@ -1765,19 +1751,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         transactions: (assetData.transactions || []).filter((t) => t.id !== txId),
       };
       track("transaction_delete", { asset_type: "stock", result: "unreflected" });
-      return saveData(newData);
-    },
-    [assetData, saveData]
-  );
-
-  const updateTransaction = useCallback(
-    (txId: string, tx: Partial<Transaction>) => {
-      const newData = {
-        ...assetData,
-        transactions: (assetData.transactions || []).map((t) =>
-          t.id === txId ? { ...t, ...tx } : t
-        ),
-      };
       return saveData(newData);
     },
     [assetData, saveData]
@@ -2119,7 +2092,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         updatePhysicalAsset,
         deletePhysicalAsset,
         addStock,
-        addStockRaw,
         updateStock,
         deleteStock,
         deleteStocks,
@@ -2139,7 +2111,6 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         getAssetSummary,
         addTransaction,
         deleteTransaction,
-        updateTransaction,
         addTransactionWithPosition,
         addTransactionsBatch,
         deleteTransactionWithPosition,

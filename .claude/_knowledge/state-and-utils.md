@@ -38,8 +38,6 @@ add/update/deleteRealEstate, add/update/deleteStock, add/update/deleteCrypto
 deleteStocks(ids)/deleteCryptos(ids)  // 묶음 삭제 본체(#4.60 #109) — saveData 1회, 해당 id 거래도 삭제(삭제 시점 평가액 반올림 0원 이하 항목은 거래 보존). 단건 deleteStock/deleteCrypto는 래퍼. 순수 계획 planDeleteStocks/planDeleteCryptos(…, rates, today=todayKst()) (asset-data-context.tsx, computeNetAsset 재사용; 지난달 이전 연결 거래도 보존) — 탭에서 직접 saveData로 삭제 금지
 add/update/deleteCash, add/update/deleteLoan, add/update/deleteYearlyNetAsset
 
-addStockRaw(data: Stock): boolean  // 스크린샷 전용: ticker 빈 값 허용 (superRefine 우회)
-
 getAssetSummary(): AssetSummary
 ```
 
@@ -886,8 +884,8 @@ window.dispatchEvent(new CustomEvent("trigger-import"))
 // 닉네임 변경: persistNickname() → useNickname·cloud-sync(사용자 편집으로 취급 → push)에서 수신
 window.dispatchEvent(new CustomEvent(NICKNAME_EVENT))  // "secretasset-nickname-change"
 
-// 사용자 명시 편집: AssetDataContext의 saveData·addStockRaw 성공 시, 우회 저장 경로는 notifyAssetUserEdit()
-// (무티커 스크린샷 등록·파일 가져오기·공유 반영) → cloud-sync에서 수신
+// 사용자 명시 편집: AssetDataContext의 saveData 성공 시, 우회 저장 경로는 notifyAssetUserEdit()
+// (무티커 스크린샷 등록(saveAssetDataRaw 직접 호출)·파일 가져오기·공유 반영) → cloud-sync에서 수신
 notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-user-edit"
 // 클라우드 동기화의 **유일한** 자동 push 트리거(닉네임 제외) — api-reference.md "자동 push 트리거".
 // 시세·스냅샷 자동 갱신은 saveAssetData를 직접 호출하므로 이 이벤트가 발생하지 않는다 → 조회 기기 push 없음.

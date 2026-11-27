@@ -238,7 +238,7 @@ GET /api/sync?meta=1
 
 **사용자 편집 신호만** push를 트리거한다(2026-10 — 파생값 제외 payload 비교 `getComparablePayloadString`·`lastPushedRef`·`skipNextChangeRef` 제거).
 
-- 신호: `ASSET_USER_EDIT_EVENT`(`asset-data-context.tsx` — `saveData` 자산 CRUD·`addStockRaw`, 우회 저장 경로는 `notifyAssetUserEdit()`: 무티커 스크린샷 등록·파일 가져오기·공유 링크 반영) + `NICKNAME_EVENT` → `userEditRef=true`·`changeTick++` → 2.5s 디바운스 push. push 성공·pull 성공 시 해제.
+- 신호: `ASSET_USER_EDIT_EVENT`(`asset-data-context.tsx` — `saveData` 자산 CRUD, 우회 저장 경로는 `notifyAssetUserEdit()`: 무티커 스크린샷 등록·파일 가져오기·공유 링크 반영) + `NICKNAME_EVENT` → `userEditRef=true`·`changeTick++` → 2.5s 디바운스 push. push 성공·pull 성공 시 해제.
 - 파생 갱신(시세·코인·스냅샷·성적표 등급·부동산 실거래 추정·연도 순자산 자동값·마이그레이션)은 `saveAssetData`를 직접 호출해 신호가 없다 → push하지 않고 **다음 사용자 편집 push에 함께 실린다**(payload는 `buildExportPayload` 전체 그대로).
 - **비교 트리거를 없앤 이유**: 제외 목록 방식은 파생 필드가 늘 때마다 샜다(2026-07 `baseDate` 매시간 핑퐁, 2026-10 날짜가 바뀐 조회 기기의 daily 30일 롤링 절단·`dailyArchive` 이관 → 조회만 한 기기가 push → 편집 기기에 "다른 기기의 변경을 반영했습니다." 토스트). 재도입 금지(R14).
 - ⚠️ **성공한 pull은 `userEditRef`를 지운다**(로컬을 통째로 덮어썼으므로). 그래서 `autoPullIfNewer`가 `userEditAtRef`(마지막 편집 시각) 기준 최근이면 pull을 **보류**한다(`USER_EDIT_PULL_HOLD_MS`=10s 상한 — boolean으로 막으면 push 실패 시 타 기기 변경이 영구히 안 들어온다). 409 충돌 화해는 `force:true`로 우회.
