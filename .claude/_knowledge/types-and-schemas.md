@@ -121,3 +121,9 @@ const getMultiplier = (currency?: string) =>
 // 환차손익 (해외주식)
 const currencyGain = (currentMultiplier - purchaseMultiplier) * quantity * averagePrice;
 ```
+
+## 현금 거래 분류 표시 — 스키마 밖 분리 키 (#329, 5.166)
+
+- `cashTransactionSchema`(type `deposit | withdrawal`)는 **변경 없음**. '배당으로 받은 돈' 분류는 레코드에 필드를 더하지 않고 분리 키 `secretasset.cash_tx_tags`에 둔다 — assetData 저장·복원이 zod strip이라 구버전 기기가 모르는 레코드 필드를 지우기 때문(C151).
+- 형태 `{ v: 1, [현금 거래 id]: CashTxTag }`, `CashTxTag = { kind: string; ticker?: string; stockName?: string }`(이 버전이 쓰는 kind는 `"dividend"`). 금액·날짜·수량 금지. zod가 아니라 손으로 쓴 관대 파서(`lib/asset/cash-tx-tags.ts`)로 읽는다.
+- 구버전 재현용 스키마 사본: `src/lib/__tests__/fixtures/frozen-schema-5160/`(main 9c13292의 `asset.ts`·`transaction.ts` 원문 + 완화 스키마). 스키마를 바꾸는 릴리스는 이 사본을 고치지 말고 새 사본을 뜬다.

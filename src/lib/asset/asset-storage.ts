@@ -13,6 +13,7 @@ import { persistNickname } from "@/hooks/use-nickname";
 import { cryptoExchanges } from "@/config/asset-options";
 import { pruneMonthlySnapshots } from "@/lib/report/settlement";
 import { applyIncomingStockLabels, readStockLabelsForExport } from "@/lib/asset/stock-labels";
+import { applyIncomingCashTxTags, readCashTxTagsForExport } from "@/lib/asset/cash-tx-tags";
 
 // 구버전 스크린샷 임포트가 저장한 영문 거래소 값("upbit") → 한글 라벨("업비트") 매핑
 // (수동 입력·신규 임포트는 한글 라벨을 저장하므로, 옛 영문 값만 정규화하여 통일)
@@ -212,7 +213,9 @@ export function buildExportPayload(): Record<string, unknown> {
   const nickname = assetData.nickname || undefined;
   // 주식 이름표(#239)는 assetData 밖 최상위 필드 — 로컬 키가 없거나 읽지 못하면 필드를 넣지 않는다(받는 쪽은 필드 없음 = 로컬 유지)
   const stockLabels = readStockLabelsForExport();
-  return { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}), ...(stockLabels ? { stockLabels } : {}) };
+  // 현금 거래 분류 표시(#329)도 최상위 필드 — 살아 있는 현금 거래와 조인한 값만 싣는다(고아·다른 금고의 옛 표시가 넘어가지 않게). 실을 것이 없으면 필드 없음
+  const cashTxTags = readCashTxTagsForExport(assetData.cashTransactions ?? []);
+  return { assetData, ...(hasSnapshots ? { snapshots } : {}), profitBasis, ...(nickname ? { nickname } : {}), ...(stockLabels ? { stockLabels } : {}), ...(cashTxTags ? { cashTxTags } : {}) };
 }
 
 // 화면(React state)과 저장소(localStorage)가 갈라진 순간의 항목 건수 지문.
@@ -347,6 +350,7 @@ export function reconcileAdditiveMerge(before: AssetData, after: AssetData, sync
  *  connect(다른 금고를 새로 채택)가 이 경로다.
  * @param mergeStockLabels 클라우드 pull 한정 — 주식 이름표(#239)를 교체하지 않고 티커별 `at` 최신 우선으로 병합한다.
  *  반환 `stockLabelsRepush`가 true면 이 기기 쪽이 더 새 값이라 호출측이 다시 push해야 한다.
+ *  현금 거래 분류 표시(#329)도 같은 옵션을 따른다(pull = 병합 + `cashTxTagsRepush` 판정, 그 밖 = 합집합만).
  * @returns remoteIds 병합 **전** 원격 payload의 항목 키 — 호출측이 기준점 갱신에 쓴다. 병합으로
  *  살려둔 로컬 신규분은 아직 서버에 없으므로 기준점에 넣으면 안 된다(넣으면 다음 pull이 그걸
  *  "삭제됨"으로 오판해 방금 지켜낸 자산을 스스로 지운다).
@@ -377,7 +381,7 @@ export function mergeMonthlySnapshots(local: unknown[], incoming: unknown[], cur
 export function applyImportedPayload(
   parsed: unknown,
   { keepLocalSnapshots = false, syncedIds, mergeStockLabels = false }: { keepLocalSnapshots?: boolean; syncedIds?: Set<string> | null; mergeStockLabels?: boolean } = {},
-): { assetData: AssetData; snapshotRestored: boolean; mergedAdditions: boolean; remoteIds: string[]; physicalKept: boolean; stockLabelsRepush: boolean } {
+): { assetData: AssetData; snapshotRestored: boolean; mergedAdditions: boolean; remoteIds: string[]; physicalKept: boolean; stockLabelsRepush: boolean; cashTxTagsRepush: boolean } {
   const p = (parsed ?? {}) as Record<string, unknown>;
   // 1단계: 메모리에서 파싱·검증 완료 (실패 시 기존 데이터 유지)
   const rawAsset = (p.assetData ?? p) as unknown;
@@ -461,7 +465,15 @@ export function applyImportedPayload(
   } catch {
     // 이름표 반영 실패는 무시(자산은 이미 복원됨)
   }
-  return { assetData: validated, snapshotRestored, mergedAdditions, remoteIds, physicalKept, stockLabelsRepush };
+  // 현금 거래 분류 표시(#329) — payload 최상위 `cashTxTags`. saveAssetData 뒤라 조인 기준이 방금 저장한 거래다.
+  // 필드 없음 = 로컬 유지, 있으면 id 합집합. 동기화 pull(mergeStockLabels)에서만 재-push를 판정한다. 실패해도 자산 복원은 막지 않는다.
+  let cashTxTagsRepush = false;
+  try {
+    cashTxTagsRepush = applyIncomingCashTxTags(p.cashTxTags, { merge: mergeStockLabels, live: validated.cashTransactions ?? [] }).repush;
+  } catch {
+    // 표시 반영 실패는 무시(자산은 이미 복원됨)
+  }
+  return { assetData: validated, snapshotRestored, mergedAdditions, remoteIds, physicalKept, stockLabelsRepush, cashTxTagsRepush };
 }
 
 export function importAssetData(file: File): Promise<{ assetData: AssetData; snapshotRestored: boolean; physicalKept: boolean }> {

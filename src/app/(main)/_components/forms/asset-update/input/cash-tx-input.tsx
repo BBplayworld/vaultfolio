@@ -3,7 +3,7 @@
 import { ResyncTxWarning } from "../resync-tx-warning";
 import { lastRefreshedAt } from "@/lib/asset/asset-refresh-status";
 import { shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +24,9 @@ import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
 import { roundMoney } from "@/lib/trade/linked-record";
 import { findDuplicateCashTx, isCashWithdrawalValid, isCashWithdrawalBelowFloor } from "@/lib/trade/cash-tx-utils";
-import { formatCurrencyDisplay } from "../../../views/detail/asset-detail-tabs";
+import { formatCurrencyDisplay, groupStocksByTicker } from "../../../views/detail/asset-detail-tabs";
+import type { CashTxDividendInput } from "@/lib/asset/cash-tx-tags";
+import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { PastDateQuestion } from "../../common/past-date-question";
 import { shouldAskPastDate } from "@/lib/trade/trade-form";
 
@@ -40,14 +42,31 @@ const cashTxFormSchema = z.object({
 
 type CashTxFormValues = z.infer<typeof cashTxFormSchema>;
 
+// 종목 칸의 '선택 안 함' 값(Radix Select는 빈 문자열 값을 받지 않는다)
+const NO_STOCK = "none";
+const KIND_BOX = "flex flex-row items-center gap-2 rounded-lg bg-muted/40 dark:bg-muted/20 p-3";
+const KIND_LABEL = "flex min-h-10 min-w-0 flex-1 cursor-pointer flex-col justify-center leading-none";
+const KIND_HELP = "mt-0.5 block text-sm leading-snug text-muted-foreground break-keep text-pretty";
+// 정기 상자 도움말 2종 — 배당을 켜면 OFF 문구로 바뀐다(보이지 않는 쪽은 자리만 잡는다)
+const RECURRING_HELP_ON = <>해제 시 <span className="whitespace-nowrap">비정기(성과급 등)로</span> 기록됩니다</>;
+const RECURRING_HELP_OFF = "배당을 끄면 선택할 수 있어요";
+
 export function CashTxInput() {
   const { assetData, addCashTransaction, addCashTransactionWithBalance } = useAssetData();
   const [isOpen, setIsOpen] = useState(false);
   const [lockedCash, setLockedCash] = useState(false); // 특정 계좌 사전선택 진입
-  const [dupPending, setDupPending] = useState<{ tx: CashTransaction; cash: Cash } | null>(null);
+  const [dupPending, setDupPending] = useState<{ tx: CashTransaction; cash: Cash; tag?: CashTxDividendInput } | null>(null);
+  // 배당으로 받은 돈(#329) — 화면 상태일 뿐 현금 거래 레코드에는 들어가지 않는다(저장은 분리 키, cash-tx-tags)
+  const [dividend, setDividend] = useState(false);
+  const [dividendStock, setDividendStock] = useState(NO_STOCK);
   const [answered, setAnswered] = useState(false); // 과거 날짜 질문에 답했거나 체크박스를 직접 눌렀는지(화면 전용, 저장 0)
 
   const cashAccounts = assetData.cash;
+  // 종목 칸 — 보유 주식을 티커 단위로, groupStocksByTicker 순서 그대로(정렬 신설 없음)
+  const stockOptions = useMemo(
+    () => Array.from(groupStocksByTicker(assetData.stocks).entries()).map(([key, items]) => ({ key, ticker: items[0].ticker || undefined, name: items[0].name || items[0].ticker || "" })),
+    [assetData.stocks],
+  );
 
   const form = useForm<CashTxFormValues>({
     resolver: zodResolver(cashTxFormSchema),
@@ -62,8 +81,12 @@ export function CashTxInput() {
     },
   });
 
+  const openerRef = useRef<HTMLElement | null>(null);
+  const cashAccountsRef = useRef(cashAccounts);
+  cashAccountsRef.current = cashAccounts;
   const selectedCashId = form.watch("cashId");
   const txType = form.watch("type");
+  const recurring = form.watch("recurring");
   const reflected = form.watch("reflected");
   const watchedDate = form.watch("date");
   const askPast = shouldAskPastDate({ date: watchedDate, today: todayKst() });
@@ -83,12 +106,22 @@ export function CashTxInput() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const id = (e as CustomEvent).detail?.cashId;
+      const detail = (e as CustomEvent<{ cashId?: string; dividend?: boolean }>).detail;
+      // 배당 화면 칩에서 열림(#329): 입금·배당 체크로 시작. 현금 계좌가 1개면 그 계좌로 고정한다
+      const id = detail?.cashId ?? (detail?.dividend && cashAccountsRef.current.length === 1 ? cashAccountsRef.current[0].id : undefined);
       if (id) {
         setLockedCash(true);
         form.setValue("cashId", id);
       } else {
         setLockedCash(false);
+      }
+      // 배당 화면 칩에서 열렸으면 닫힌 뒤 그 칩으로 포커스를 돌려준다(공용 Dialog는 열릴 때 포커스를 옮기지 않아 기본 복귀가 body로 간다)
+      openerRef.current = detail?.dividend && document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      if (detail?.dividend) {
+        form.setValue("type", "deposit");
+        form.setValue("recurring", false);
+        setDividend(true);
+        setDividendStock(NO_STOCK);
       }
       setIsOpen(true);
     };
@@ -96,12 +129,20 @@ export function CashTxInput() {
     return () => window.removeEventListener("trigger-add-cash-tx", handler);
   }, [form]);
 
+  const toggleDividend = (on: boolean) => {
+    setDividend(on);
+    if (on) form.setValue("recurring", false); // 정기와 함께 켤 수 없다
+    else setDividendStock(NO_STOCK);
+  };
+
   const resetAndClose = useCallback(() => {
     form.reset();
     setIsOpen(false);
     setLockedCash(false);
     setDupPending(null);
     setAnswered(false);
+    setDividend(false);
+    setDividendStock(NO_STOCK);
   }, [form]);
 
   const buildTx = (data: CashTxFormValues): CashTransaction => {
@@ -112,7 +153,7 @@ export function CashTxInput() {
       type: data.type,
       amount: data.amount,
       currency: cash.currency || "KRW",
-      recurring: data.type === "deposit" ? data.recurring : undefined,
+      recurring: data.type === "deposit" ? (dividend ? false : data.recurring) : undefined,
       date: data.date,
       memo: data.memo,
       reflected: data.reflected,
@@ -145,23 +186,30 @@ export function CashTxInput() {
     }
 
     const tx = buildTx(data);
+    // 배당 표시(#329) — 종목은 티커 + 지금 종목명만 넘긴다(금액·날짜는 거래 레코드에만 있다). 중복 확인을 거쳐도 그대로 실린다
+    const picked = stockOptions.find((o) => o.key === dividendStock);
+    const tag: CashTxDividendInput | undefined = dividend && data.type === "deposit"
+      ? { ...(picked ? { stock: { ticker: picked.ticker, name: picked.name } } : {}) }
+      : undefined;
     const dup = findDuplicateCashTx(assetData.cashTransactions || [], {
       cashId: tx.cashId, date: tx.date, amount: tx.amount, type: tx.type,
     });
     if (dup) {
-      setDupPending({ tx, cash });
+      setDupPending({ tx, cash, tag });
       return;
     }
-    commit(tx, cash);
+    commit(tx, cash, tag);
   };
 
-  const commit = (tx: CashTransaction, cash: Cash) => {
+  const commit = (tx: CashTransaction, cash: Cash, tag?: CashTxDividendInput) => {
     const ok = tx.reflected
-      ? addCashTransactionWithBalance(tx, cash.id, balancePatch(tx, cash))
-      : addCashTransaction(tx);
+      ? addCashTransactionWithBalance(tx, cash.id, balancePatch(tx, cash), tag)
+      : addCashTransaction(tx, tag);
     if (ok) {
       track("transaction_save", { asset_type: "cash", method: "manual", result: tx.reflected ? "reflected" : "unreflected" });
-      toast.success(tx.type === "deposit" ? "입금을 기록했어요" : "출금을 기록했어요");
+      // 지표(#329): 배당 입금 기록 — category만(금액·종목·계좌 미전송)
+      if (tag) track("feature_use", { category: "cash_dividend" });
+      toast.success(tag ? "배당 입금을 기록했어요" : tx.type === "deposit" ? "입금을 기록했어요" : "출금을 기록했어요");
       resetAndClose();
     } else {
       toast.error("저장하지 못했어요. 입력값을 확인해 주세요.");
@@ -170,7 +218,16 @@ export function CashTxInput() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetAndClose(); }}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto touch-pan-y">
+      <DialogContent
+        className="sm:max-w-md max-h-[90vh] overflow-y-auto touch-pan-y"
+        onCloseAutoFocus={(e) => {
+          const opener = openerRef.current;
+          openerRef.current = null;
+          if (!opener?.isConnected) return; // 그 밖의 진입(FAB·현금 탭)은 기존 동작 그대로
+          e.preventDefault();
+          opener.focus({ preventScroll: true });
+        }}
+      >
         <DialogHeader>
           <DialogTitle>입출금 기록</DialogTitle>
         </DialogHeader>
@@ -209,7 +266,7 @@ export function CashTxInput() {
                     <FormLabel>유형</FormLabel>
                     <div className="flex gap-2">
                       <Button type="button" variant={field.value === "deposit" ? "brand" : "secondary"} className="flex-1" onClick={() => field.onChange("deposit")}>입금</Button>
-                      <Button type="button" variant={field.value === "withdrawal" ? "brand" : "secondary"} className="flex-1" onClick={() => field.onChange("withdrawal")}>출금</Button>
+                      <Button type="button" variant={field.value === "withdrawal" ? "brand" : "secondary"} className="flex-1" onClick={() => { field.onChange("withdrawal"); toggleDividend(false); }}>출금</Button>
                     </div>
                   </FormItem>
                 )}
@@ -230,23 +287,79 @@ export function CashTxInput() {
                 )}
               />
 
-              {/* 정기/비정기 (입금 시만) */}
+              {/* 입금 종류 (입금 시만) — 정기 / 배당은 함께 켤 수 없다. 배당을 켜면 정기는 해제·비활성(자리 유지, #329) */}
               {txType === "deposit" && (
-                <FormField
-                  control={form.control}
-                  name="recurring"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center gap-2 space-y-0 rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
-                      <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <div className="leading-none">
-                        <FormLabel className="text-sm font-medium cursor-pointer">매월 정기 입금 (월급·목돈)</FormLabel>
-                        <p data-testid="tx-help" className="text-sm text-muted-foreground mt-0.5 break-keep text-pretty">해제 시 <span className="whitespace-nowrap">비정기(성과급 등)로</span> 기록됩니다</p>
+                <div role="group" aria-label="입금 종류" data-testid="cash-tx-kind-group" className="space-y-2">
+                  <div className={KIND_BOX}>
+                    <Checkbox
+                      id="cash-tx-recurring"
+                      data-testid="cash-tx-recurring-check"
+                      checked={!dividend && recurring}
+                      disabled={dividend}
+                      onCheckedChange={(v) => form.setValue("recurring", v === true)}
+                      aria-describedby="cash-tx-recurring-help"
+                    />
+                    {/* label 단위로 두 상태를 겹친다(ui-review R1) — 보이는 묶음(제목 + 지금 도움말)과 자리만 잡는 묶음(제목 + 다른 상태 도움말).
+                        긴 쪽이 높이를 정해 배당을 켜고 꺼도 상자 높이·아래 칸 위치가 그대로이고, 짧은 쪽은 세로 가운데라 체크박스 중심 = 글 중심 */}
+                    <label htmlFor="cash-tx-recurring" className={`grid min-h-10 min-w-0 flex-1 items-center leading-none [&>*]:[grid-area:1/1] ${dividend ? "cursor-default" : "cursor-pointer"}`}>
+                      <span className="flex flex-col">
+                        <span className={`text-sm font-medium ${dividend ? "text-muted-foreground" : ""}`}>매월 정기 입금 (월급·목돈)</span>
+                        <span id="cash-tx-recurring-help" data-testid="tx-help" className={KIND_HELP}>
+                          {dividend ? RECURRING_HELP_OFF : RECURRING_HELP_ON}
+                        </span>
+                      </span>
+                      <span aria-hidden className="invisible flex flex-col">
+                        <span className="text-sm font-medium">매월 정기 입금 (월급·목돈)</span>
+                        <span className={KIND_HELP}>{dividend ? RECURRING_HELP_ON : RECURRING_HELP_OFF}</span>
+                      </span>
+                    </label>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 dark:bg-muted/20 p-3">
+                    <div className="flex flex-row items-center gap-2">
+                      <Checkbox
+                        id="cash-tx-dividend"
+                        data-testid="cash-tx-dividend-check"
+                        checked={dividend}
+                        onCheckedChange={(v) => toggleDividend(v === true)}
+                        aria-describedby="cash-tx-dividend-help"
+                      />
+                      <label htmlFor="cash-tx-dividend" className={KIND_LABEL}>
+                        <span className="text-sm font-medium">배당으로 받은 돈</span>
+                        <span id="cash-tx-dividend-help" data-testid="cash-tx-dividend-help" className={KIND_HELP}>
+                          <span className="whitespace-nowrap">성과 › 배당의</span> 받은 기록에 더해져요
+                        </span>
+                      </label>
+                    </div>
+                    {/* 종목 칸 — 항상 마운트하고 높이만 펼친다(design-system §6). 접힌 동안은 inert로 포커스·읽기에서 뺀다. 보유 주식 0이면 칸 없음 */}
+                    {stockOptions.length > 0 && (
+                      <div
+                        inert={!dividend}
+                        className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${dividend ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                      >
+                        <div className="min-h-0 overflow-hidden">
+                          <div className="space-y-2 pl-6 pt-3">
+                            <label htmlFor="cash-tx-dividend-stock" className="block text-sm font-medium">종목 (선택)</label>
+                            <Select value={dividendStock} onValueChange={setDividendStock}>
+                              <SelectTrigger
+                                id="cash-tx-dividend-stock"
+                                data-testid="cash-tx-dividend-stock"
+                                className="relative w-full min-w-0 after:absolute after:inset-x-0 after:-inset-y-[3px] after:content-[''] [&>span]:truncate"
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={NO_STOCK}>선택 안 함</SelectItem>
+                                {stockOptions.map((o) => (
+                                  <SelectItem key={o.key} value={o.key}>{o.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
-                    </FormItem>
-                  )}
-                />
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* 날짜 */}
@@ -332,11 +445,16 @@ export function CashTxInput() {
             <div className="rounded-lg bg-amber-500/10 dark:bg-amber-500/20 p-3 space-y-1 text-sm">
               <p className="font-medium text-amber-600 dark:text-amber-500">이미 동일한 입출금이 있습니다</p>
               <p data-testid="tx-help" className="text-muted-foreground break-keep text-pretty">계좌·날짜·금액·유형이 동일한 기록이 이미 있습니다.</p>
-              <p className="tabular-nums">{dupPending.tx.type === "deposit" ? "입금" : "출금"} · {dupPending.tx.date} · {formatCurrencyDisplay(dupPending.tx.amount, dupPending.tx.currency)}</p>
+              {/* 조각마다 nowrap, 조각 사이에서만 줄바꿈. 가운뎃점은 뒤 조각 머리에 두고 줄 머리로 내려가면 잘려 보이지 않는다(dot-wrap, C152) */}
+              <p data-testid="cash-tx-dup-summary" className={`flex flex-wrap gap-x-1 tabular-nums ${DOT_WRAP_ROW}`}>
+                <span className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>{dupPending.tag ? "배당 입금" : dupPending.tx.type === "deposit" ? "입금" : "출금"}</span>
+                <span className="whitespace-nowrap"><DotLead />{dupPending.tx.date}</span>
+                <span className="whitespace-nowrap"><DotLead />{formatCurrencyDisplay(dupPending.tx.amount, dupPending.tx.currency)}</span>
+              </p>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="brand" onClick={() => { setDupPending(null); toast.success("기존 기록을 그대로 뒀어요"); resetAndClose(); }}>기존 유지</Button>
-              <Button type="button" variant="secondary" onClick={() => { if (dupPending) commit(dupPending.tx, dupPending.cash); }}>새로 추가</Button>
+              <Button type="button" variant="secondary" onClick={() => { if (dupPending) commit(dupPending.tx, dupPending.cash, dupPending.tag); }}>새로 추가</Button>
               <Button type="button" variant="secondary" onClick={() => setDupPending(null)}>취소</Button>
             </DialogFooter>
           </div>

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, Re
 import { AssetData, RealEstate, PhysicalAsset, Stock, Crypto, Cash, Loan, YearlyNetAsset, AssetSummary, DailyAssetSnapshot, MonthlyAssetSnapshot, AssetSnapshots, SnapshotGrade, Transaction, CashTransaction, LoanTransaction, CryptoTransaction } from "@/types/asset";
 import { archiveDailySnapshots } from "@/lib/asset/snapshot-archive";
 import { getAssetData, hasAnyAssets, clearPhysicalAssets, saveAssetData, saveAssetDataRaw, STORAGE_KEYS, migrateStorageKeys, parseShareToken } from "@/lib/asset/asset-storage";
+import { clearCashTxTags, putDividendTag, removeCashTxTags, type CashTxDividendInput } from "@/lib/asset/cash-tx-tags";
 import { skipAllTutorialSteps } from "@/lib/local-storage";
 import { pinMismatchGoesInvalid } from "@/lib/share-pin-retry";
 import { tutorialStore } from "@/stores/tutorial/tutorial-store";
@@ -253,8 +254,8 @@ interface AssetDataContextType {
   addTransactionsBatch: (txs: Transaction[], patches: { stockId: string; patch: Partial<Stock> }[], newStocks?: Stock[], link?: LinkChoice) => boolean;
   deleteTransactionWithPosition: (txId: string, stockId: string, patch: Partial<Stock>, opts?: { revertLink?: boolean }) => boolean;
   // 현금 입출금 내역 (잔액 가감 단일 저장)
-  addCashTransaction: (tx: CashTransaction) => boolean;
-  addCashTransactionWithBalance: (tx: CashTransaction, cashId: string, patch: Partial<Cash>) => boolean;
+  addCashTransaction: (tx: CashTransaction, tag?: CashTxDividendInput) => boolean;
+  addCashTransactionWithBalance: (tx: CashTransaction, cashId: string, patch: Partial<Cash>, tag?: CashTxDividendInput) => boolean;
   deleteCashTransaction: (txId: string) => boolean;
   deleteCashTransactionWithBalance: (txId: string, cashId: string, patch: Partial<Cash>) => boolean;
   // 대출 상환/추가 대출 내역 (잔액 가감 단일 저장, S-4.24)
@@ -1142,6 +1143,7 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
       persistNickname(nickname);
     }
     clearPhysicalAssets(); // 공유 반영은 교체 의미 — 공유 토큰에는 실물이 없으므로 로컬 실물을 비운다(#58)
+    clearCashTxTags(); // 공유 토큰은 현금 거래 id를 새로 만든다 → 기존 분류 표시(#329)는 전부 고아라 키를 비운다
     saveAssetDataNotify(data);
     if (snapshots) {
       try {
@@ -1659,7 +1661,10 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         cashTransactions: (assetData.cashTransactions || []).filter((t) => t.cashId !== id),
       };
       track("asset_delete", { asset_type: "cash" });
-      return saveData(newData);
+      const ok = saveData(newData);
+      // 함께 지운 입출금의 분류 표시(#329)도 제거 — 저장이 끝난 뒤에만(실패하면 표시를 남긴다)
+      if (ok) removeCashTxTags((assetData.cashTransactions || []).filter((t) => t.cashId === id).map((t) => t.id));
+      return ok;
     },
     [assetData, saveData]
   );
@@ -1844,28 +1849,45 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
 
   // ─── [현금 입출금 내역] ───────────────────────────────────────────────────────
   // 미반영 기록만 추가(잔액 무변경 — 과거 소급 로그)
+  // tag(#329 받은 배당 기록) — 분류 표시는 분리 키(cash-tx-tags)에 **먼저** 쓰고 거래를 저장한다(같은 push payload에 함께 실린다).
+  // 표시 쓰기 실패 = 저장 중단(false), 거래 저장 실패 = 방금 쓴 표시 회수. 거래 레코드에는 아무 필드도 더하지 않는다
+  const saveTaggedCashTx = useCallback(
+    (tx: CashTransaction, newData: AssetData, tag?: CashTxDividendInput) => {
+      if (!tag) return saveData(newData);
+      try {
+        putDividendTag(tx.id, tag.stock);
+      } catch {
+        return false;
+      }
+      const ok = saveData(newData);
+      if (!ok) removeCashTxTags([tx.id]);
+      return ok;
+    },
+    [saveData]
+  );
+
   const addCashTransaction = useCallback(
-    (tx: CashTransaction) => {
+    (tx: CashTransaction, tag?: CashTxDividendInput) => {
       const newData = {
         ...assetData,
         cashTransactions: pruneCashTransactions([...(assetData.cashTransactions || []), tx]),
       };
-      return saveData(newData);
+      return saveTaggedCashTx(tx, newData, tag);
     },
-    [assetData, saveData]
+    [assetData, saveTaggedCashTx]
   );
 
   // 입출금 기록 + 현금 잔액 가감을 단일 저장으로 (두 번 saveData 시 stale-closure 방지, 주식 대칭)
   const addCashTransactionWithBalance = useCallback(
-    (tx: CashTransaction, cashId: string, patch: Partial<Cash>) => {
+    (tx: CashTransaction, cashId: string, patch: Partial<Cash>, tag?: CashTxDividendInput) => {
       const newData = {
         ...assetData,
         cashTransactions: pruneCashTransactions([...(assetData.cashTransactions || []), tx]),
         cash: assetData.cash.map((c) => (c.id === cashId ? { ...c, ...patch } : c)),
       };
-      return saveData(newData);
+      return saveTaggedCashTx(tx, newData, tag);
     },
-    [assetData, saveData]
+    [assetData, saveTaggedCashTx]
   );
 
   // 입출금 삭제 + 잔액 역가감 단일 저장
@@ -1877,7 +1899,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         cash: assetData.cash.map((c) => (c.id === cashId ? { ...c, ...patch } : c)),
       };
       track("transaction_delete", { asset_type: "cash", result: "rollback" });
-      return saveData(newData);
+      const ok = saveData(newData);
+      if (ok) removeCashTxTags([txId]); // 분류 표시(#329)도 함께 제거
+      return ok;
     },
     [assetData, saveData]
   );
@@ -1890,7 +1914,9 @@ export function AssetDataProvider({ children }: { children: ReactNode }) {
         cashTransactions: (assetData.cashTransactions || []).filter((t) => t.id !== txId),
       };
       track("transaction_delete", { asset_type: "cash", result: "unreflected" });
-      return saveData(newData);
+      const ok = saveData(newData);
+      if (ok) removeCashTxTags([txId]); // 분류 표시(#329)도 함께 제거
+      return ok;
     },
     [assetData, saveData]
   );
