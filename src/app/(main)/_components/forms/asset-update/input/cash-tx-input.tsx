@@ -6,6 +6,8 @@ import { shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
+import { Check } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -29,6 +31,9 @@ import type { CashTxDividendInput } from "@/lib/asset/cash-tx-tags";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { PastDateQuestion } from "../../common/past-date-question";
 import { shouldAskPastDate } from "@/lib/trade/trade-form";
+import { dividendQueryOptions } from "@/lib/finance/dividend-client";
+import { latestPaidPayout, payoutMonthDay } from "@/lib/finance/dividend-calc";
+import { dividendDateQueryArgs } from "../../../views/activity/use-dividend-data";
 
 const cashTxFormSchema = z.object({
   cashId: z.string().min(1, "계좌를 선택해주세요"),
@@ -60,12 +65,14 @@ export function CashTxInput() {
   const [dividend, setDividend] = useState(false);
   const [dividendStock, setDividendStock] = useState(NO_STOCK);
   const [answered, setAnswered] = useState(false); // 과거 날짜 질문에 답했거나 체크박스를 직접 눌렀는지(화면 전용, 저장 0)
+  const [dateStatus, setDateStatus] = useState(""); // 지급일 버튼을 누른 뒤 스크린리더 알림(화면 전용, #339)
 
   const cashAccounts = assetData.cash;
   // 종목 칸 — 보유 주식을 티커 단위로, groupStocksByTicker 순서 그대로(정렬 신설 없음)
+  const stockGroups = useMemo(() => groupStocksByTicker(assetData.stocks), [assetData.stocks]);
   const stockOptions = useMemo(
-    () => Array.from(groupStocksByTicker(assetData.stocks).entries()).map(([key, items]) => ({ key, ticker: items[0].ticker || undefined, name: items[0].name || items[0].ticker || "" })),
-    [assetData.stocks],
+    () => Array.from(stockGroups.entries()).map(([key, items]) => ({ key, ticker: items[0].ticker || undefined, name: items[0].name || items[0].ticker || "" })),
+    [stockGroups],
   );
 
   const form = useForm<CashTxFormValues>({
@@ -103,6 +110,22 @@ export function CashTxInput() {
     d.setFullYear(d.getFullYear() - TRANSACTION_RETENTION_YEARS);
     return d.toISOString().split("T")[0];
   })();
+
+  // `M/D 지급일로` 버튼(#339) — 고른 종목의 배당 조회(배당 화면과 같은 쿼리 키·요청 형식)에서 확정·오늘 이전 최신 지급일.
+  // 국내형 종목만 조회한다(해외 조회 날짜는 현지 기준일). 조회 중·실패·후보 없음이면 버튼 없음. 누를 때만 날짜를 바꾼다
+  const pickedItems = dividend && dividendStock !== NO_STOCK ? stockGroups.get(dividendStock) : undefined;
+  const dateArgs = txType === "deposit" && pickedItems ? dividendDateQueryArgs(pickedItems) : null;
+  const dateQuery = useQuery({ ...dividendQueryOptions(dateArgs?.ticker ?? "", "domestic", "NAS"), enabled: !!dateArgs });
+  const latestPaid = dateArgs && dateQuery.isSuccess ? latestPaidPayout(dateQuery.data, todayStr, minDate) : null;
+  const [payM, payD] = latestPaid ? payoutMonthDay(latestPaid.payoutDate) : [0, 0];
+  const dateApplied = !!latestPaid && watchedDate === latestPaid.payoutDate;
+  const applyPayoutDate = () => {
+    if (!latestPaid || dateApplied) return; // 적용됨 상태는 no-op(aria-disabled, GA 0)
+    form.setValue("date", latestPaid.payoutDate, { shouldValidate: true });
+    // 지표(#339): 버튼 누름 — category만(금액·종목·날짜 미전송)
+    track("feature_use", { category: "cash_dividend_date" });
+    setDateStatus(`날짜를 ${payM}월 ${payD}일로 바꿨어요`);
+  };
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -143,6 +166,7 @@ export function CashTxInput() {
     setAnswered(false);
     setDividend(false);
     setDividendStock(NO_STOCK);
+    setDateStatus("");
   }, [form]);
 
   const buildTx = (data: CashTxFormValues): CashTransaction => {
@@ -339,7 +363,7 @@ export function CashTxInput() {
                         <div className="min-h-0 overflow-hidden">
                           <div className="space-y-2 pl-6 pt-3">
                             <label htmlFor="cash-tx-dividend-stock" className="block text-sm font-medium">종목 (선택)</label>
-                            <Select value={dividendStock} onValueChange={setDividendStock}>
+                            <Select value={dividendStock} onValueChange={(v) => { setDividendStock(v); setDateStatus(""); }}>
                               <SelectTrigger
                                 id="cash-tx-dividend-stock"
                                 data-testid="cash-tx-dividend-stock"
@@ -368,8 +392,29 @@ export function CashTxInput() {
                 name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>날짜</FormLabel>
+                    {/* 라벨 줄 오른쪽 `M/D 지급일로`(#339, ui.md 2장) — 24px 알약 + 음수 마진으로 라벨 줄 높이 유지, after로 히트 40px. 같은 요소에서 글자만 바뀐다(key 없음) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <FormLabel>날짜</FormLabel>
+                      {latestPaid && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          static={dateApplied}
+                          data-testid="cash-tx-dividend-date-btn"
+                          data-state={dateApplied ? "applied" : "ready"}
+                          data-date={latestPaid.payoutDate}
+                          aria-label={`${payM}/${payD} 지급일로 날짜 바꾸기`}
+                          aria-disabled={dateApplied || undefined}
+                          onClick={applyPayoutDate}
+                          className={`relative -my-[5px] h-6 gap-1 rounded-full py-0 text-sm font-medium tabular-nums motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150 after:absolute after:inset-x-0 after:-top-[13px] after:-bottom-[3px] after:content-[''] ${dateApplied ? "bg-transparent px-1.5 text-muted-foreground hover:bg-transparent has-[>svg]:px-1.5" : "px-2.5"}`}
+                        >
+                          {dateApplied && <Check aria-hidden className="size-3.5" />}
+                          {payM}/{payD} 지급일로
+                        </Button>
+                      )}
+                    </div>
                     <FormControl><Input type="date" min={minDate} max={todayStr} {...field} /></FormControl>
+                    <span role="status" data-testid="cash-tx-dividend-date-status" className="sr-only">{dateApplied ? dateStatus : ""}</span>
                     <FormMessage />
                   </FormItem>
                 )}
