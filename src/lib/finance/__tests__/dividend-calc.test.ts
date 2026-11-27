@@ -29,7 +29,7 @@ const total = (rows: { stock: Stock; payouts: DividendPayoutResult[] }[], txs: T
 
 // 수정 전(5.156까지) 계산 — 병합 행 × 지금 수량, 지급은 연-월 비교. 실패 재현용으로만 둔다
 function legacyAnnual(stocks: Stock[], payouts: DividendPayoutResult[], today: string): { paid: number; total: number } {
-  const merged = Array.from(groupStocksByTickerCategory(stocks).values()).map(mergeStockGroup);
+  const merged = Array.from(groupStocksByTickerCategory(stocks).values()).map((g) => mergeStockGroup(g));
   let paid = 0;
   let sum = 0;
   for (const s of merged) for (const p of payouts) {

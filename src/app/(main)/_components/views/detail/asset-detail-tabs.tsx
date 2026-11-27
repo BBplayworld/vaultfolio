@@ -86,8 +86,22 @@ export function groupStocksByTicker(stocks: Stock[]): Map<string, Stock[]> {
   return map;
 }
 
+const hasPurchaseRate = (it: Stock): boolean => !!it.purchaseExchangeRate && it.purchaseExchangeRate > 0;
+
+/** 해외(USD·JPY) 그룹에 매입환율 있음·없음(0 포함)이 섞였는가 — 펼침 '일부 미입력' 표시와 합친 환율 계산의 공용 판정(#348) */
+// 0주 항목은 원가에 영향이 없어 판정에서 뺀다(전부 0주면 false)
+export function hasMixedPurchaseRate(items: Stock[]): boolean {
+  if (items.length < 2) return false;
+  const cur = items[0].currency;
+  if (cur !== "USD" && cur !== "JPY") return false;
+  const held = items.filter((it) => it.quantity > 0);
+  return held.some(hasPurchaseRate) && !held.every(hasPurchaseRate);
+}
+
 // 그룹의 합산 대표 Stock 생성 (가상 객체, 저장 안 함)
-export function mergeStockGroup(items: Stock[]): Stock {
+// rates를 넘기면 매입환율 있음·없음이 섞인 해외 그룹에서 합친 매입환율 = 항목 원가 합 ÷ 원통화 원가 합(미입력 항목은 지금 환율)
+// → 합친 원가·환차가 증권사별 항목 합(헤더 computeStockTotals)과 같아진다(#348). rates가 없거나 섞이지 않으면 기존 값 그대로
+export function mergeStockGroup(items: Stock[], rates?: { USD: number; JPY: number }): Stock {
   if (items.length === 1) return items[0];
   const totalQty = items.reduce((s, it) => s + it.quantity, 0);
   const weightedAvg = totalQty > 0
@@ -101,15 +115,26 @@ export function mergeStockGroup(items: Stock[]): Stock {
   const purchaseExchangeRate = rateWeight > 0
     ? rateItems.reduce((s, it) => s + it.purchaseExchangeRate! * it.averagePrice * it.quantity, 0) / rateWeight
     : items[0].purchaseExchangeRate;
+  const mixedRate = rates ? mixedPurchaseRate(items, rates) : undefined;
   return {
     ...items[0],
     id: `__merged__${items[0].ticker}:${items[0].category}`,
     quantity: totalQty,
     averagePrice: weightedAvg,
     purchaseDate: earliestDate,
-    purchaseExchangeRate,
+    purchaseExchangeRate: mixedRate ?? purchaseExchangeRate,
     broker: undefined,
   };
+}
+
+/** 섞인 해외 그룹의 합친 매입환율(저장 단위 — 엔화 100엔당). 섞이지 않았거나 원통화 원가 합이 0이면 undefined */
+function mixedPurchaseRate(items: Stock[], rates: { USD: number; JPY: number }): number | undefined {
+  if (!hasMixedPurchaseRate(items)) return undefined;
+  const current = items[0].currency === "JPY" ? rates.JPY : rates.USD;
+  if (!(current > 0)) return undefined;
+  const weight = items.reduce((s, it) => s + it.averagePrice * it.quantity, 0);
+  if (!(weight > 0)) return undefined; // 합계 0주 — 기존 값 유지
+  return items.reduce((s, it) => s + (hasPurchaseRate(it) ? it.purchaseExchangeRate! : current) * it.averagePrice * it.quantity, 0) / weight;
 }
 
 // symbol 기준으로 Crypto[] 그룹핑. symbol 없으면 id 단독 키.

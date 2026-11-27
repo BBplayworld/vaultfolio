@@ -190,7 +190,10 @@ export function isTaxSimCandidate(s: Stock): boolean {
  * `mergeStockGroup`(상세 > 주식 탭 "전체" 카테고리 병합)과 동일한 방식이나, lib 계층이
  * 컴포넌트 파일을 참조하지 않도록 이 파일 안에 동형 로직을 둔다.
  */
-function groupForeignStocksByTicker(assetData: AssetData): Stock[] {
+function groupForeignStocksByTicker(
+  assetData: AssetData,
+  rates: { USD: number; JPY: number },
+): { stock: Stock; partialRate: boolean }[] {
   const groups = new Map<string, Stock[]>();
   for (const s of assetData.stocks) {
     if (!isTaxSimCandidate(s)) continue;
@@ -200,18 +203,27 @@ function groupForeignStocksByTicker(assetData: AssetData): Stock[] {
     else groups.set(key, [s]);
   }
   return Array.from(groups.entries()).map(([key, items]) => {
-    if (items.length === 1) return items[0];
+    if (items.length === 1) return { stock: items[0], partialRate: false };
     const totalQty = items.reduce((sum, it) => sum + it.quantity, 0);
     const averagePrice = totalQty > 0
       ? items.reduce((sum, it) => sum + it.averagePrice * it.quantity, 0) / totalQty
       : items[0].averagePrice;
     // 매입환율: 매입원금(수량×평단) 가중 평균, 유효 환율(>0)만 대상 — mergeStockGroup과 동일 규칙
-    const rateItems = items.filter((it) => it.purchaseExchangeRate && it.purchaseExchangeRate > 0);
+    const hasRate = (it: Stock) => !!it.purchaseExchangeRate && it.purchaseExchangeRate > 0;
+    const rateItems = items.filter(hasRate);
     const rateWeight = rateItems.reduce((sum, it) => sum + it.averagePrice * it.quantity, 0);
-    const purchaseExchangeRate = rateWeight > 0
+    let purchaseExchangeRate = rateWeight > 0
       ? rateItems.reduce((sum, it) => sum + it.purchaseExchangeRate! * it.averagePrice * it.quantity, 0) / rateWeight
       : items[0].purchaseExchangeRate;
-    return { ...items[0], id: key, quantity: totalQty, averagePrice, purchaseExchangeRate, broker: undefined };
+    // 있음·없음이 섞인 USD·JPY 그룹: 미입력 항목은 지금 환율(저장 단위)로 — 항목 원가 합 ÷ 원통화 원가 합(mergeStockGroup rates 분기와 같음, #348)
+    const cur = items[0].currency;
+    const current = cur === "JPY" ? rates.JPY : cur === "USD" ? rates.USD : 0;
+    const partialRate = current > 0 && rateItems.length > 0 && rateItems.length < items.length;
+    const weight = items.reduce((sum, it) => sum + it.averagePrice * it.quantity, 0);
+    if (partialRate && weight > 0) {
+      purchaseExchangeRate = items.reduce((sum, it) => sum + (hasRate(it) ? it.purchaseExchangeRate! : current) * it.averagePrice * it.quantity, 0) / weight;
+    }
+    return { stock: { ...items[0], id: key, quantity: totalQty, averagePrice, purchaseExchangeRate, broker: undefined }, partialRate };
   });
 }
 
@@ -276,9 +288,10 @@ export function getYearEndTaxSimulation(
   // 클램프 없이 그대로 뺀다 — baseline이 순손실(음수)이면 한도가 250만원보다 커지는 게 맞다
   const remainingDeductionKrw = Math.max(FOREIGN_CAPITAL_GAIN_DEDUCTION - baselineGainKrw, 0);
 
-  const candidates: TaxSimCandidate[] = groupForeignStocksByTicker(assetData)
-    .map((s) => {
-      const { gainKrw, estimated } = computeStockUnrealizedGainKrw(s, rates);
+  const candidates: TaxSimCandidate[] = groupForeignStocksByTicker(assetData, rates)
+    .map(({ stock: s, partialRate }) => {
+      const { gainKrw, estimated: rateEstimated } = computeStockUnrealizedGainKrw(s, rates);
+      const estimated = rateEstimated || partialRate; // 일부가 지금 환율이면 추정
       const gainPerShareKrw = gainKrw / s.quantity;
       // 선택 없음(체크박스 0개) 기준 초기값 — 실제 UI는 다른 선택 종목을 반영해 매 선택마다 다시 계산한다
       const rebuyQuantity = computeRebuyQuantity(gainPerShareKrw, s.quantity, baselineGainKrw);
@@ -319,13 +332,14 @@ export function simulateSelectedForeignSale(
   const baselineGainKrw = realized?.gainKrw ?? 0;
   let estimated = realized?.estimated ?? false;
 
-  const stockById = new Map(groupForeignStocksByTicker(assetData).map((s) => [s.id, s]));
+  const groups = new Map(groupForeignStocksByTicker(assetData, rates).map((g) => [g.stock.id, g]));
   let selectedGainKrw = 0;
   for (const sel of selections) {
-    const stock = stockById.get(sel.stockId);
-    if (!stock || sel.quantity <= 0) continue;
+    const group = groups.get(sel.stockId);
+    if (!group || sel.quantity <= 0) continue;
+    const stock = group.stock;
     const { gainKrw, estimated: stockEstimated } = computeStockUnrealizedGainKrw(stock, rates);
-    if (stockEstimated) estimated = true;
+    if (stockEstimated || group.partialRate) estimated = true;
     selectedGainKrw += (gainKrw / stock.quantity) * sel.quantity;
   }
 

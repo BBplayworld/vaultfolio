@@ -25,7 +25,7 @@ import { AnnualizedReturn } from "../annualized-return";
 import { StockToolTiles } from "../stock-tools";
 import { StockPageEntry } from "../stock-row-flow";
 import { Stock, Loan } from "@/types/asset";
-import { assignColors, getMultiplier, formatCurrencyDisplay, computeStockMetrics, computeStockTotals, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
+import { assignColors, getMultiplier, formatCurrencyDisplay, computeStockMetrics, computeStockTotals, groupStocksByTickerCategory, groupStocksByTicker, mergeStockGroup, hasMixedPurchaseRate, formatByDisplayCurrency, StockDisplayCurrency } from "../asset-detail-tabs";
 import { fetchProfitRef } from "@/lib/finance/profit-utils";
 import { computeTodayChip, todayChipLabel } from "@/lib/finance/today-chip";
 import { cancelThenRefetchProfit } from "@/lib/finance/profit-fetch-gate";
@@ -238,7 +238,7 @@ export function useFilteredStockData(activeCategory: string, displayCurrency: St
       const key = groupKeyOf(s);
       if (seen.has(key)) continue;
       seen.add(key);
-      reps.push(mergeStockGroup(groupedStocks.get(key) ?? [s]));
+      reps.push(mergeStockGroup(groupedStocks.get(key) ?? [s], exchangeRates));
     }
     return reps.sort(
       (a, b) =>
@@ -635,9 +635,10 @@ function SplitStockDialog({ stock, groupItems, open, onClose }: { stock: Stock; 
   );
 }
 
-function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainRate, displayCurrency = "KRW", usdRate = 1 }: {
+function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainRate, displayCurrency = "KRW", usdRate = 1, partialRate = false }: {
   stock: Stock; isForeign: boolean; krwMul: number; currencyGain: number; currencyGainRate: number;
   displayCurrency?: StockDisplayCurrency; usdRate?: number;
+  partialRate?: boolean; // 합친 행에 매입환율 있음·없음이 섞임 — 지금 환율이 섞인 숫자를 입력값처럼 보이지 않게(#348)
 }) {
   // 종목 원통화(primary)와 선택 화폐가 다를 때만 환산 보조줄 노출 (중복 정보 방지)
   const showSecondary = displayCurrency !== stock.currency;
@@ -684,7 +685,9 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
           <div>
             <p className={ASSET_THEME.cardDetailLabel}>매입환율</p>
             <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>
-              {stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
+              {partialRate
+                ? "일부 미입력 (현재환율)"
+                : stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
                 ? stock.currency === "JPY" ? `¥100=₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1=₩${stock.purchaseExchangeRate.toLocaleString()}`
                 : "미입력 (현재환율)"}
             </p>
@@ -882,7 +885,7 @@ export function StockCard({ stock, color, pct, currentVal, profit, profitRate, i
                 onOpen={openStockPage}
               />
               <div>
-                <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} displayCurrency={displayCurrency} usdRate={usdRate} />
+                <StockDetailGrid stock={stock} isForeign={isForeign} krwMul={krwMul} currencyGain={currencyGain} currencyGainRate={currencyGainRate} displayCurrency={displayCurrency} usdRate={usdRate} partialRate={hasMixedPurchaseRate(effectiveGroupItems)} />
               </div>
               {/* 비분할 종목: 라벨형 거래입력·거래내역. 분할 종목은 각 증권사 항목에 노출 */}
               {!hasSubItems && <TradeActionRow stock={stock} onViewTrades={openTrades} />}
