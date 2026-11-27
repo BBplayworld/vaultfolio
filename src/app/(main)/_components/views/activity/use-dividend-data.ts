@@ -14,6 +14,23 @@ import { groupStocksByTickerCategory, mergeStockGroup } from "../detail/asset-de
 
 const DOMESTIC_CATEGORIES = new Set(["domestic", "irp", "isa", "pension"]);
 
+/** 배당 쿼리 인자 — 배당 화면과 현금 입금 폼(#339)이 같은 쿼리 키(dividendQueryOptions)를 내도록 한 곳에서 만든다 */
+export function dividendQueryArgs(stock: Pick<Stock, "ticker" | "category">): { ticker: string; type: "domestic" | "foreign" } {
+  return { ticker: normalizeTicker(stock), type: DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign" };
+}
+
+/**
+ * 현금 입금 폼 지급일 버튼의 조회 인자(#339, 5.169) — 종목 칸 묶음(groupStocksByTicker) 1개를 받는다.
+ * 조회 대상 행(티커·비상장 아님·상장폐지 아님·엔화 아님)이 국내형(domestic·irp·isa·pension)뿐일 때만 인자를 내고,
+ * 해외 행이 섞이거나 대상 행이 없으면 null(해외 조회 날짜는 현지 기준일이라 입금일과 다르다).
+ */
+export function dividendDateQueryArgs(items: readonly Stock[]): { ticker: string; type: "domestic" } | null {
+  const target = items.filter((s) => s.ticker && s.category !== "unlisted" && s.inactiveStatus !== "delisted" && !isDividendExcludedCurrency(s));
+  if (target.length === 0 || target.some((s) => !DOMESTIC_CATEGORIES.has(s.category))) return null;
+  const { ticker } = dividendQueryArgs(target[0]);
+  return ticker ? { ticker, type: "domestic" } : null;
+}
+
 export interface DividendGroup {
   key: string;
   /** 표시용 병합 행(mergeStockGroup) — 계산 입력으로 쓰지 않는다 */
@@ -55,8 +72,7 @@ export function useDividendData({ enabled = true, stocks }: { enabled?: boolean;
 
   const queries = useQueries({
     queries: grouped.map(({ stock }) => {
-      const ticker = normalizeTicker(stock);
-      const type = DOMESTIC_CATEGORIES.has(stock.category) ? "domestic" : "foreign";
+      const { ticker, type } = dividendQueryArgs(stock);
       return { ...dividendQueryOptions(ticker, type, "NAS"), enabled };
     }),
   });

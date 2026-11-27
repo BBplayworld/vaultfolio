@@ -135,3 +135,46 @@ export function brokerCashByRow(rows: BrokerTotalRow[], cash: Cash[], exchangeRa
   }
   return out;
 }
+
+/**
+ * 배당 입금 폼 계좌 기본값(#339, 5.169) — 고른 종목 묶음(티커 단위 원본 행)의 증권사 현금 계좌 id, 없으면 null.
+ * 증권사: 행 broker를 matchBrokerHint(raw) ?? raw로 맞춘 뒤(증권사별 행 이름과 같은 규칙) 미지정·목록 밖·'기타'를 빼고
+ * 서로 다른 증권사가 정확히 1곳일 때만. 계좌: 공백을 지운 cash.institution이 그 이름과 정확히 같은 것만(5.167과 같은 규칙,
+ * sameBroker 부분 일치 금지). 1개면 그 계좌, 2개 이상이면 종목 통화와 같은 통화 계좌가 1개일 때만. 잔액 0 계좌도 대상.
+ */
+export function brokerCashDefault(items: readonly Stock[], cash: readonly Cash[]): string | null {
+  const firms = new Set<string>();
+  for (const s of items) {
+    if (isUnassignedBroker(s.broker)) continue;
+    const raw = (s.broker ?? "").trim();
+    const name = noSpace(matchBrokerHint(raw) ?? raw);
+    if (FIRM_NAMES.has(name)) firms.add(name);
+  }
+  if (firms.size !== 1 || items.length === 0) return null;
+  const [firm] = firms;
+  const hits = cash.filter((c) => noSpace(c.institution ?? "") === firm);
+  if (hits.length === 1) return hits[0].id;
+  const currency = items[0].currency || "KRW";
+  const same = hits.filter((c) => (c.currency || "KRW") === currency);
+  return same.length === 1 ? same[0].id : null;
+}
+
+/**
+ * 종목을 고를 때 계좌 칸을 어떻게 할지(#339) — 바꿀 게 없으면 null.
+ * current가 비어 있거나 직전에 규칙이 채운 값(auto)일 때만 candidate로 바꾼다(없으면 빈칸으로 되돌림).
+ * 통화 가드: 금액 > 0이고 바뀐 뒤 표시 통화(빈칸=원)가 지금과 다르면 손대지 않는다(₩ 금액이 $로 읽히는 오입력 방지).
+ */
+export function nextAutoCash(p: {
+  current: string;
+  auto: string | null;
+  candidate: string | null;
+  amount: number;
+  cash: readonly Cash[];
+}): { cashId: string; auto: string | null } | null {
+  if (p.current !== "" && p.current !== p.auto) return null; // 사용자가 고른 계좌
+  const target = p.candidate ?? "";
+  if (target === p.current) return null;
+  const currencyOf = (id: string) => (id ? p.cash.find((c) => c.id === id)?.currency || "KRW" : "KRW");
+  if (p.amount > 0 && currencyOf(target) !== currencyOf(p.current)) return null;
+  return { cashId: target, auto: p.candidate };
+}
