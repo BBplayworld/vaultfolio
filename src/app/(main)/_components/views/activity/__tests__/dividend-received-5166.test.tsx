@@ -83,6 +83,22 @@ describe("결론 줄 셋째 자리 — 언제나 1개", () => {
     expect(none).not.toContain("dividend-received");
   });
 
+  it("O-1: 계산 0 · 기록 있음이면 빈 상태 첫 줄 `올해 배당이 아직 없어요`를 그리지 않는다(둘째 줄·상자는 그대로). 기록 없음은 현행 두 줄", () => {
+    const withRecord = render({ payouts: [], txs: TXS, tagged: ["ctx_1"] });
+    expect(withRecord).toContain("올해 받은 기록");
+    expect(withRecord).not.toContain("올해 배당이 아직 없어요");
+    expect(withRecord).toContain("보유 종목에서 올해 받을 배당이 없어요");
+    expect(withRecord).toContain("flex h-48 items-center justify-center rounded-lg border border-dashed");
+    const noRecord = render({ payouts: [], txs: TXS, tagged: [] });
+    expect(noRecord).toContain("올해 배당이 아직 없어요");
+    expect(noRecord).toContain("보유 종목에서 올해 받을 배당이 없어요");
+    expect(noRecord).toContain("flex h-48 items-center justify-center rounded-lg border border-dashed");
+    // 엔화만 있는 사용자: 둘째 줄은 엔화 안내 그대로
+    const jpy = render({ stocks: [stock({ currency: "JPY", ticker: "7203", category: "foreign" })], payouts: [], txs: TXS, tagged: ["ctx_1"] });
+    expect(jpy).not.toContain("올해 배당이 아직 없어요");
+    expect(jpy).toContain("엔화 종목 1개는 배당 조회 안 됨");
+  });
+
   it("칩은 중립 면만 쓴다(주황·손익색·brand 면 0) — 줄 높이와 같은 높이, 히트영역 확장", () => {
     const c = chip(render({ txs: TXS, tagged: ["ctx_1"] }))!;
     expect(c).toContain("bg-secondary");

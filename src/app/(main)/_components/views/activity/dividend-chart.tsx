@@ -384,8 +384,9 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
             isDividendUnknown(failedCount, annualTotal) ? null : (
             <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
               <div className="text-center">
-                <p className="text-muted-foreground text-sm">올해 배당이 아직 없어요</p>
-                <p data-testid={jpyOnly ? "dividend-jpy-notice" : undefined} className="text-muted-foreground text-sm mt-1 text-pretty break-keep">
+                {/* 받은 기록이 있으면 첫 줄을 그리지 않는다 — 바로 위 `올해 받은 기록 N` 칩과 어긋난다(#329 O-1). 둘째 줄·상자 높이는 그대로 */}
+                {received.annual === 0 && <p data-testid="dividend-empty-title" className="text-muted-foreground text-sm">올해 배당이 아직 없어요</p>}
+                <p data-testid={jpyOnly ? "dividend-jpy-notice" : undefined} className={`text-muted-foreground text-sm text-pretty break-keep ${received.annual === 0 ? "mt-1" : ""}`}>
                   {jpyOnly ? jpyDividendNotice(jpyCount) : "보유 종목에서 올해 받을 배당이 없어요"}
                 </p>
               </div>
