@@ -245,7 +245,9 @@ describe("S4 평단 규칙 (averagePriceEstimated)", () => {
   it("화면 실값이 다르면 변경하고 positionSource manual", () => {
     const { diff, result } = run(e(), [screen(0, [row("005930", 10, 72000, { brokerHint: "토스증권" })])]);
     expect(diff.rows[0].change?.avg).toEqual({ before: 70000, after: 72000 });
-    expect(result.stocks[0]).toMatchObject({ averagePrice: 72000, positionSource: "manual", positionEffectiveDate: TODAY });
+    expect(result.stocks[0]).toMatchObject({ averagePrice: 72000, positionSource: "manual" });
+    // 5.167 R3: 평단만 바뀌면 맞춘 날(수량 덮어쓴 날)을 오늘로 바꾸지 않는다 — 기존 값(없음) 유지
+    expect(result.stocks[0].positionEffectiveDate).toBeUndefined();
   });
   it("역산값이면 기존 평단 유지(1% 넘게 달라도), 그대로 + 표시 플래그", () => {
     const { diff, result } = run(e(), [screen(0, [row("005930", 10, 80000, { brokerHint: "토스증권", averagePriceEstimated: true })])]);

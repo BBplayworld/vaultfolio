@@ -224,7 +224,8 @@ export function applyResync(
       if (a.change.brokerFill) next.broker = a.change.brokerFill.to;
       if (a.change.qty || a.change.avg) {
         next.positionSource = "manual";
-        next.positionEffectiveDate = opts.today;
+        // 맞춘 날 = 수량을 덮어쓴 날(배당 지급일 수량 폴백 기준). 평단만 바뀌면 기존 값 유지(5.167 R3)
+        if (a.change.qty) next.positionEffectiveDate = opts.today;
       }
       updated.set(a.stock.id, next);
     } else if (a.type === "add") {
@@ -258,8 +259,12 @@ export function applyResync(
     if (pred) {
       removeIds.delete(pred.id);
       const change = evaluateLink(item, pred, a.qty);
-      const next: Stock = { ...pred, category: item.category, positionSource: "manual", positionEffectiveDate: opts.today };
-      if (change.qty) next.quantity = change.qty.after;
+      // 맞춘 날은 수량이 바뀔 때만 오늘로 — 같으면 이전 행의 값 유지(5.167 R3)
+      const next: Stock = { ...pred, category: item.category, positionSource: "manual" };
+      if (change.qty) {
+        next.quantity = change.qty.after;
+        next.positionEffectiveDate = opts.today;
+      }
       if (change.avg) next.averagePrice = change.avg.after;
       if (item.broker) next.broker = item.broker;
       updated.set(pred.id, next);

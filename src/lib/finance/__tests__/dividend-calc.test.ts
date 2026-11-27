@@ -301,8 +301,8 @@ describe("5.162 액면분할 재현 S1~S4 (현재 값 고정 + 한계)", () => {
   });
 });
 
-// 5.167 사업② 맞추기 이전 지급분 R1~R5 — 현재 동작을 고정한다(코드 수정 0). 맞춘 뒤 종목은 실제 applyResync로 만든다.
-// R1·R2는 알려진 폴백 한계(5.162 S2와 같은 경로), R3은 결함 후보(평단만 맞춰도 맞춘 날이 바뀌어 과거 배당이 변함) → CEO 판정 대상.
+// 5.167 사업② 맞추기 이전 지급분 R1~R5 — 맞춘 뒤 종목은 실제 applyResync로 만든다.
+// R1·R2는 알려진 폴백 한계(5.162 S2와 같은 경로, 현재 값 고정). R3은 수정됨(CEO 판정 — 평단만 맞추면 맞춘 날 유지, 과거 지급분 불변).
 describe("5.167 맞추기 이전 지급분 R1~R5 (현재 값 고정)", () => {
   const resyncAt = (existing: Stock[], items: RawScreenItem[], today: string) => {
     const resolved = resolveScreens([screen(0, items)], existing, { usdRate: 1400, brokerOverrides: { 0: "키움증권" } });
@@ -329,18 +329,19 @@ describe("5.167 맞추기 이전 지급분 R1~R5 (현재 값 고정)", () => {
     expect(heldQtyAt(after, txs, "2026-09-15")).toEqual({ qty: 150, qtyUsed: "derived" });
   });
 
-  // 결함 후보(재현됨) — 수량은 그대로인데 평단만 맞춰도 positionEffectiveDate가 오늘로 바뀌어 3월 지급이 100 → 150주로 변한다
-  it("R3 거래 01-02 100·07-01 50(지금 150) → 11-01 평단만 맞춤: 맞추기 전 3월 100 derived → 맞춘 뒤 150 current", () => {
+  // 수정됨(5.167) — 평단만 맞추면 positionEffectiveDate를 바꾸지 않아 3월 지급이 거래 기록 기준 100주 그대로
+  it("R3 거래 01-02 100·07-01 50(지금 150) → 11-01 평단만 맞춤: 맞춘 뒤에도 3월 100 derived, 연 지급 불변", () => {
     const txs = [tx({ quantity: 100, date: "2026-01-02" }), tx({ quantity: 50, date: "2026-07-01" })];
     const before = base({ quantity: 150 });
     expect(heldQtyAt(before, txs, march)).toEqual({ qty: 100, qtyUsed: "derived" });
     const { stocks } = resyncAt([before], [rrow("005930", 150, 52_000)], "2026-11-01");
     const after = stocks[0];
-    expect(after).toMatchObject({ quantity: 150, averagePrice: 52_000, positionSource: "manual", positionEffectiveDate: "2026-11-01" });
-    expect(heldQtyAt(after, txs, march)).toEqual({ qty: 150, qtyUsed: "current" });
+    expect(after).toMatchObject({ quantity: 150, averagePrice: 52_000, positionSource: "manual" });
+    expect(after.positionEffectiveDate).toBeUndefined();
+    expect(heldQtyAt(after, txs, march)).toEqual({ qty: 100, qtyUsed: "derived" });
     const r0 = total([{ stock: before, payouts: QUARTERLY }], txs);
     const r1 = total([{ stock: after, payouts: QUARTERLY }], txs);
-    expect(r1.annual.paid - r0.annual.paid).toBe((150 - 100) * 100 * 2); // 3·6월 각 50주 × 100원 과대
+    expect(r1.annual.paid).toBe(r0.annual.paid); // 수정 전에는 3·6월 각 50주 × 100원 과대(+10,000)
   });
 
   // 통제군 — 화면 값이 같으면(same) 맞춘 날이 바뀌지 않아 과거 지급분 그대로
