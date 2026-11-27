@@ -13,7 +13,7 @@ import {
 } from "@/app/(main)/_components/views/detail/tabs/stock-tab";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { stockCategories } from "@/config/asset-options";
-import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, SHOT_BIG_SCALE, pickOnColor } from "@/config/theme";
+import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, PORTFOLIO_PALETTE, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, SHOT_BIG_SCALE, pickDonutLabelColor } from "@/config/theme";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { getEtfBrand } from "@/lib/finance/logo-source";
 import { resolveInvestorType, type AccountKey, type RegionKey, type KrUsBalance } from "@/lib/xray/investor-type";
@@ -44,7 +44,7 @@ const segFill = (i: number) => SHARE_SAFE_PALETTE[i % SHARE_SAFE_PALETTE.length]
 // (캡처 PNG가 리렌더마다 달라지면 안 됨).
 const TAG_ROTATE = [-6, 5, -4, 7, -5, 4, -3];
 const TAG_OFFSET_Y = [2, -3, 4, -2, 3, -4, 2];
-const TAG_PIN_COLOR = "#FF5A5A"; // PORTFOLIO_PALETTE 코랄레드 — 실제 압정과 같은 채도 높은 빨강
+const TAG_PIN_COLOR = PORTFOLIO_PALETTE[9]; // 코랄레드 — 실제 압정과 같은 채도 높은 빨강(사본 대신 팔레트 참조)
 
 // investorType.description 안에서 highlightTerms와 정확히 일치하는 부분만 강조.
 // 특수문자 이스케이프 + 긴 용어부터 매칭(짧은 용어가 긴 용어 일부를 잘못 가로채지 않게).
@@ -392,8 +392,8 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
             </div>
             <div
               className={responsive
-                ? "inline-block rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
-                : "inline-flex items-center h-[31px] rounded-full bg-primary/10 px-3 font-semibold text-primary"}
+                ? "inline-block rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand"
+                : "inline-flex items-center h-[31px] rounded-full bg-brand/10 px-3 font-semibold text-brand"}
               style={responsive ? undefined : { fontSize: krPx(14) }}
             >
               {investorType.subtitle}
@@ -422,7 +422,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
             {/* 대자보에 핀으로 꽂은 공고 쪽지 느낌 — 태그마다 회전각·세로 위치를 고정 배열에서
                 순환 픽업해, 같은 tags 배열이면 항상 같은 배치가 나오도록 결정적으로 처리
                 (Math.random 금지 — 캡처 PNG가 리렌더마다 달라지면 안 됨). 배경은 팔레트
-                (segFill) 순환으로 채도 높게, 텍스트는 pickOnColor로 배경 대비 자동 보정.
+                (segFill) 순환으로 채도 높게, 텍스트는 pickDonutLabelColor(흰/검정 중 대비 큰 쪽)로 4.5:1 확보.
                 설명↔쪽지 실제 간격 = 부모 gap-2.5(10px, 프리뷰·캡처 공통) + 설명 마지막 줄
                 leading-[1.85]의 하단 half-leading(폰트 비례 — 캡처 17px≈7px, 프리뷰 14px≈6px,
                 항상 존재 — 단 캡처는 설명 줄을 31px 고정 높이 블록으로 감싸 폰트 조합에 따른 줄 박스
@@ -455,7 +455,7 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                     style={{
                       ...(responsive ? {} : { fontSize: krPx(14) }),
                       backgroundColor: bg,
-                      color: pickOnColor(bg),
+                      color: pickDonutLabelColor(bg),
                       transform: `rotate(${TAG_ROTATE[i % TAG_ROTATE.length]}deg) translateY(${TAG_OFFSET_Y[i % TAG_OFFSET_Y.length]}px)`,
                     }}
                   >

@@ -14,7 +14,7 @@ export interface RingSegment {
   ticker: string;
   isForeign: boolean;
   truePct: number; // 실제 비중(%) — 라벨에 항상 이 값 표기
-  color: string; // 조각 fill — 링 밖 % 텍스트에도 같은 색을 쓴다
+  color: string; // 조각 fill — 링 밖 % 글자는 foreground(팔레트 색 글자는 라이트 대비 미달, 5.174)
   etfBrand?: string | null; // 국내 ETF면 브랜드명 — 로고 대신 텍스트 배지
   subLogos?: SubLogo[]; // "그 외" 조각에 담을 상위 종목들(최대 3) — 있으면 미니 칩 여러 개
 }
@@ -570,8 +570,8 @@ export function PortfolioRingCard({ segments, responsive }: { segments: RingSegm
                   ))}
                 </span>
                 <span
-                  className="font-bold tabular-nums whitespace-nowrap"
-                  style={{ color: seg.color, ...(rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : {}) }}
+                  className="text-foreground font-bold tabular-nums whitespace-nowrap"
+                  style={rLabelFont ? { fontSize: rLabelFont, lineHeight: 1.15 } : undefined}
                 >
                   {seg.truePct.toFixed(1)}%
                 </span>

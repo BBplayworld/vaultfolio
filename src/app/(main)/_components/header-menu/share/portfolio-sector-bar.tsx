@@ -12,7 +12,7 @@ export interface SectorBarItem {
   key: string;
   label: string; // 분야 메인 제목만 (개별 종목 서브 항목 없음)
   pct: number;
-  color: string; // 막대 구간 fill — 범례 % 텍스트에도 같은 색을 쓴다
+  color: string; // 막대 구간·범례 점 fill — % 글자는 foreground(팔레트 색 글자는 라이트 대비 미달, 5.174)
 }
 
 export function PortfolioSectorBar({ title, items, big = false }: { title: string; items: SectorBarItem[]; big?: boolean }) {
@@ -39,7 +39,7 @@ export function PortfolioSectorBar({ title, items, big = false }: { title: strin
           <div key={it.key} className="flex items-center gap-1 min-w-0">
             <span className={`${dot} rounded-full shrink-0`} style={{ backgroundColor: it.color }} />
             <span className={`min-w-0 truncate ${txt} text-foreground`}>{it.label}</span>
-            <span className={`shrink-0 ${txt} font-bold tabular-nums`} style={{ color: it.color }}>
+            <span className={`shrink-0 ${txt} text-foreground font-bold tabular-nums`}>
               {it.pct.toFixed(1)}%
             </span>
           </div>
