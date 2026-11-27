@@ -41,7 +41,7 @@ import { displayShareWidths } from "@/lib/report/min-share";
 import { useStockLabelsRead } from "@/hooks/use-stock-labels";
 import { isStockLabelKey, type StockLabels } from "@/lib/asset/stock-labels";
 import { buildBoardRows } from "@/lib/asset/grow-board";
-import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, growTileValueOf, type DecisionKind } from "@/lib/asset/grow-decision";
+import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, type DecisionKind } from "@/lib/asset/grow-decision";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { DUE_TEXT, GrowDueEntry } from "../../activity/grow-due-entry";
@@ -1175,14 +1175,13 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
-  // 내 결정(#245) — 점검 칸 주식 보기와 같은 행을 1번 만들어(buildBoardRows) 행 표시·차례 진입·타일 값이 함께 읽는다. 새 판정 0.
+  // 내 결정(#245) — 점검 칸 주식 보기와 같은 행을 1번 만들어(buildBoardRows) 행 표시·차례 진입이 함께 읽는다. 새 판정 0.
   // 차례·%는 티커 전체·원화 기준이다(카테고리 탭·달러 보기의 부분 묶음과 다를 수 있다 — 정본은 점검 칸)
   const boardRows = useMemo(
     () => buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? []),
     [assetData.stocks, assetData.transactions, exchangeRates, labels, growNow],
   );
   const decisions = useMemo(() => (labelsReady ? decisionRowsOf(boardRows) : null), [labelsReady, boardRows]);
-  const growTile = boardRows.length === 0 ? undefined : labelsReady ? growTileValueOf(boardRows) ?? undefined : "pending";
   const decisionOf = (stock: Stock) => {
     if (!decisions || !stock.ticker || stock.inactiveStatus === "delisted" || !(stock.quantity > 0)) return undefined;
     const key = normalizeTicker(stock);
@@ -1241,8 +1240,8 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
           priceAsOf={priceAsOf}
         />
 
-        {/* 내 주식 도구 타일(X-Ray·내 자산 점검, 4.83·#245·5.170 — 인증카드 제외) */}
-        <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} grow={growTile} />
+        {/* 내 주식 도구 타일(X-Ray 1개, 4.83·5.170·5.171 — 인증카드 제외) */}
+        <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} />
 
         {/* 카테고리 selector — 목록은 늘 평가금 순(#288 R1) */}
         <div data-testid="stock-category-row" className="flex items-center gap-2">

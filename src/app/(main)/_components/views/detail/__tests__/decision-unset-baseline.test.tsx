@@ -55,10 +55,8 @@ import { StockCard, StockRowHeader, StockTab } from "../tabs/stock-tab";
 // #317 종목 한 장 배당 줄은 별도 테스트(stock-page-dividend.test.tsx) — 여기서는 배당 조회 없음으로 둔다
 vi.mock("../../activity/use-dividend-data", () => ({ useDividendData: () => ({ groups: [], calc: { byStock: new Map(), annual: { paid: 0, expected: 0, total: 0 }, months: [] }, isLoading: false, loadedCount: 0, failedCount: 0, totalCount: 0, jpyCount: 0 }) }));
 import { StockPageBody } from "../stock-page/stock-page-view";
-import { GrowTileValueLine } from "../stock-tools";
 import { computeStockMetrics } from "../asset-detail-tabs";
 import { buildBoardRows } from "@/lib/asset/grow-board";
-import { growTileValueOf } from "@/lib/asset/grow-decision";
 import type { StockLabels } from "@/lib/asset/stock-labels";
 
 /** data-testid가 id인 첫 요소의 마크업(여는 태그~짝이 맞는 닫는 태그). 없으면 "" */
@@ -167,19 +165,12 @@ describe("AC-6 미정 기기 — 이름표를 읽은 뒤에도 타일 1개 외 d
     const only = UNSET_STOCKS.filter((s) => !s.ticker);
     expect(withoutTools(tab(mk({ x: keep(1, 1) }), only))).toBe(withoutTools(tab(null, only)));
   });
-  it("타일 — 읽기 전에는 값 줄만 비고(높이 유지), 읽은 뒤 `장기 보유 · 점검 대상 정하기 전`", () => {
-    const pending = cutByTestId(before, "stock-tool-grow");
-    const first = cutByTestId(tab(mk()), "stock-tool-grow");
-    expect(text(cutByTestId(pending, "stock-tool-grow-value"))).toBe("\u00a0");
-    expect(pending).toContain('data-kind="pending"');
-    expect(text(cutByTestId(first, "stock-tool-grow-value"))).toBe("장기 보유 · 점검 대상 정하기 전");
-    expect(first).toContain('data-kind="first"');
-    // 타일 자리 — X-Ray → 내 자산 점검(5.170: 시장과 비교·해외주식 세금 타일 제거, 11월에도 2개)
+  it("5.171 타일 — X-Ray 1개뿐이라 이름표를 읽기 전·후 타일 묶음도 같다(내 자산 점검 타일 DOM 0)", () => {
     const tools = cutByTestId(before, "stock-tools");
-    const order = ["stock-tool-xray", "stock-tool-grow"].map((id) => tools.indexOf(`data-testid="${id}"`));
-    expect(tools.match(/<button/g)).toHaveLength(2);
-    expect(order.every((v) => v >= 0)).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(tools.match(/<button/g)).toHaveLength(1);
+    expect(tools).toContain('data-testid="stock-tool-xray"');
+    expect(before).not.toContain("stock-tool-grow");
+    expect(cutByTestId(tab(mk()), "stock-tools")).toBe(tools);
   });
   it("종목 한 장 머리 — 이름표를 읽은 뒤에도 미정 종목은 읽기 전과 같다", () => {
     const s = UNSET_STOCKS[0];
@@ -345,32 +336,17 @@ describe("AC-3 종목 한 장 머리", () => {
   });
 });
 
-describe("AC-14 `내 자산 점검` 타일", () => {
-  const rowsOf = (labels: StockLabels) => buildBoardRows(UNSET_STOCKS, RATES, labels, NOW.getTime());
-  const line = (labels: StockLabels) => renderToStaticMarkup(<GrowTileValueLine value={growTileValueOf(rowsOf(labels))!} />);
-  it("3상태 값 줄 — 화면 글자 = 순수 함수 조각", () => {
-    const due = line(MIXED);
-    expect(text(due)).toBe("주식 점검 차례 1종목");
-    expect(due).toContain('<span class="font-semibold text-indigo-600 dark:text-indigo-200">1종목</span>');
-    const labeled = line(mk({ "005930": keep(30, 76000), AAPL: check(30, 160) }));
-    expect(text(labeled)).toBe("주식 장기 보유 1 · 점검 대상 1");
-    expect(text(line(mk()))).toBe("장기 보유 · 점검 대상 정하기 전");
-    for (const l of [MIXED, mk({ "005930": keep(30, 76000) }), mk()]) expect(text(line(l))).toBe(growTileValueOf(rowsOf(l))!.parts.join(" · "));
+describe("AC-14 `내 자산 점검` 타일 — 5.171 제거", () => {
+  it("이름표 상태(차례·정함·미정·행 없음)와 무관하게 상세·주식에 점검 타일·값 줄 DOM 0, 도구는 전체 폭 1칸", () => {
+    for (const html of [tab(MIXED), tab(mk({ "005930": keep(30, 76000), AAPL: check(30, 160) })), tab(mk()), tab(null), tab(mk(), [UNSET_STOCKS[6]])]) {
+      expect(html).not.toContain("stock-tool-grow");
+      expect(html).not.toContain("stock-tool-grow-value");
+    }
+    expect(cutByTestId(tab(MIXED), "stock-tools")).toContain("grid grid-cols-1 gap-2");
   });
-  it("타일 차례 수 = 같은 화면 목록의 `점검 차례` 표시 수", () => {
+  it("차례 표시는 행에 그대로 — 목록 `점검 차례` 행 수 = 점검 칸 주식 보기 차례 수", () => {
     const html = tab(MIXED);
-    const n = Number(/data-testid="stock-tool-grow-value" data-kind="due" data-due="(\d+)"/.exec(html)![1]);
-    expect(n).toBe(html.match(/data-testid="stock-row-decision" data-kind="due"/g)!.length);
-  });
-  // 5.170: 4개(2×2·360 미만 세로 쌓기) → 2개 한 줄. 세금 타일 제거로 tax 단언 삭제, 점검 타일은 320에서도 반 칸(값은 가운뎃점 자리에서만 꺾임)
-  it("격자 — X-Ray·내 자산 점검 2개는 모바일·PC 모두 한 줄 2칸(360 미만도 세로 쌓기 0), 줄 끝 가운뎃점 숨김", () => {
-    const tools = cutByTestId(tab(MIXED), "stock-tools");
-    expect(tools).toContain("grid grid-cols-2 gap-2");
-    expect(tools).not.toMatch(/lg:grid-cols-|col-span-2/);
-    expect(line(mk())).toContain("-ml-2 [clip-path:inset(-2px_-100vw_-2px_0.5rem)]");
-  });
-  it("주식 보기에 행이 없으면(전부 상장폐지·수량 0) 타일이 없다", () => {
-    const gone = [UNSET_STOCKS[6]];
-    expect(tab(mk(), gone)).not.toContain("stock-tool-grow");
+    const due = buildBoardRows(UNSET_STOCKS, RATES, MIXED, NOW.getTime()).filter((r) => r.due).length;
+    expect(html.match(/data-testid="stock-row-decision" data-kind="due"/g)!.length).toBe(due);
   });
 });
