@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Badge } from "@/components/ui/badge";
 import { Cash, AssetData } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { cashTypes, financialInstitutions } from "@/config/asset-options";
+import { cashTypes, cashInstitutionGroups } from "@/config/asset-options";
 import { formatCurrency } from "@/lib/number-utils";
 import { useGeminiUsage } from "@/hooks/use-gemini-usage";
 import { keyOfCash, countConflicts, resolveKept, type ConflictMode } from "@/lib/asset/holdings-conflict";
@@ -410,11 +410,11 @@ export function CashScreenshotImport({ open: externalOpen, onOpenChange, onSaved
                             value={item.institution || "__none__"}
                             onValueChange={(v) => updateInstitution(item.id, v === "__none__" ? "" : v)}
                           >
-                            <SelectTrigger className={`h-7 w-36 text-sm ${!item.institution.trim() ? "border-destructive focus-visible:ring-destructive" : ""}`}>
+                            <SelectTrigger className={`h-7 w-fit min-w-36 max-w-full text-sm ${!item.institution.trim() ? "border-destructive focus-visible:ring-destructive" : ""}`}>
                               <SelectValue placeholder="금융기관 *" />
                             </SelectTrigger>
                             <SelectContent>
-                              {financialInstitutions.map((group) => (
+                              {cashInstitutionGroups.map((group) => (
                                 <SelectGroup key={group.group}>
                                   <SelectLabel className="text-sm">{group.group}</SelectLabel>
                                   {group.items.map((name) => (
