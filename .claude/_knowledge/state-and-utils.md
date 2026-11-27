@@ -38,8 +38,6 @@ add/update/deleteRealEstate, add/update/deleteStock, add/update/deleteCrypto
 deleteStocks(ids)/deleteCryptos(ids)  // 묶음 삭제 본체(#4.60 #109) — saveData 1회, 해당 id 거래도 삭제(삭제 시점 평가액 반올림 0원 이하 항목은 거래 보존). 단건 deleteStock/deleteCrypto는 래퍼. 순수 계획 planDeleteStocks/planDeleteCryptos(…, rates, today=todayKst()) (asset-data-context.tsx, computeNetAsset 재사용; 지난달 이전 연결 거래도 보존) — 탭에서 직접 saveData로 삭제 금지
 add/update/deleteCash, add/update/deleteLoan, add/update/deleteYearlyNetAsset
 
-addStockRaw(data: Stock): boolean  // 스크린샷 전용: ticker 빈 값 허용 (superRefine 우회)
-
 getAssetSummary(): AssetSummary
 ```
 
@@ -886,8 +884,8 @@ window.dispatchEvent(new CustomEvent("trigger-import"))
 // 닉네임 변경: persistNickname() → useNickname·cloud-sync(사용자 편집으로 취급 → push)에서 수신
 window.dispatchEvent(new CustomEvent(NICKNAME_EVENT))  // "secretasset-nickname-change"
 
-// 사용자 명시 편집: AssetDataContext의 saveData·addStockRaw 성공 시, 우회 저장 경로는 notifyAssetUserEdit()
-// (무티커 스크린샷 등록·파일 가져오기·공유 반영) → cloud-sync에서 수신
+// 사용자 명시 편집: AssetDataContext의 saveData 성공 시, 우회 저장 경로는 notifyAssetUserEdit()
+// (무티커 스크린샷 등록(saveAssetDataRaw 직접 호출)·파일 가져오기·공유 반영) → cloud-sync에서 수신
 notifyAssetUserEdit()  // = dispatch ASSET_USER_EDIT_EVENT "secretasset-asset-user-edit"
 // 클라우드 동기화의 **유일한** 자동 push 트리거(닉네임 제외) — api-reference.md "자동 push 트리거".
 // 시세·스냅샷 자동 갱신은 saveAssetData를 직접 호출하므로 이 이벤트가 발생하지 않는다 → 조회 기기 push 없음.
@@ -1079,6 +1077,16 @@ roundTradePrice(value, currency): number                                // '현�
 fillBaseRateForBuy(pos, tx): pos                                        // 기준 수량>0·기준 환율≤0·매수·체결 환율>0이면 기준 환율 = 체결 환율, 아니면 pos 그대로(같은 객체)
 applyStockTrade(pos, tx): PositionPreview                               // computeNewPosition(fillBaseRateForBuy(pos, tx), tx) — trade-input 미리보기·저장, trade-screenshot-import 시뮬레이션
 rollbackStockTrade(currentPosition, allTx, removeTxId): P               // rollbackTransaction + 역산 기준분 환율≤0이면 남은 첫 매수(재계산 순) 체결 환율로 채움 — stock-trades-view 삭제 롤백
+// #5.175 #354 — 전량 매도 기록 삭제 시 평단 0 복원 방지(삭제 확인창 전용)
+needsRollbackAvgInput({ quantity, avgPrice }): boolean                  // 롤백 결과 수량>0·평단≤0(NaN 포함)이면 true — 확인창 평단 입력칸 표시
+applyRollbackAvgInput(p, input): P | null                               // 입력 불필요면 p 그대로(입력 무시), 필요하면 input>0일 때만 평단 교체, 아니면 null(확인 비활성·저장 0)
+// #5.175 #357 — 코인 '반영' 전량 매도 무음 실패 제거(저장 관문 strict cryptoSchema 수량>0은 불변)
+blocksCoinZeroQty({ reflected, type, quantity, holding }): boolean     // 반영·매도·결과 0개면 true(보유 초과는 기존 oversell 가드 몫이라 false) — crypto-tx-input 제출 비활성
+COIN_ZERO_QTY_NOTE                                                      // 제출 버튼 위 이유 1줄. 코인 삭제 권유 문구 금지
+TRADE_SAVE_FAIL_TOAST                                                   // 입력 폼 저장 실패 토스트 "저장하지 못했어요. 입력값을 확인해 주세요." — 코인 기록 폼·코인 스크린샷 가져오기 전용(삭제 경로 금지), 폼은 닫지 않음
+TRADE_DELETE_FAIL_TOAST                                                 // 반영 거래 삭제 저장 실패 "삭제하지 못했어요. 기록과 보유 수량은 그대로예요." — 주식·코인 거래내역, 확인창 유지
+COIN_DELETE_ZERO_FAIL_TOAST                                             // 코인 삭제 결과 0개(preview.quantity <= 0) 실패 "삭제하지 못했어요. 코인은 0개로 남길 수 없어요."
+// 토스트 규약: 거래 저장·삭제 실패 토스트는 모두 toast.error(<상수>, { className: "break-keep text-balance" }) — 320~344 어절 중간 끊김·끝 조각 홀로 남김 0
 ```
 - `computeNewPosition`·`rollbackTransaction`(성적표·세금 replay·relink·코인 공용)은 불변 — 0 기준 환율 희석(예: 1,400 → 700)은 replay 통제군으로 그대로 남는다. 기존 저장값 일괄 보정 없음(사용자가 그 종목의 다른 거래를 삭제할 때만 재계산 결과가 바뀐다).
 

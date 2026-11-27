@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowLeftRight, Trash2, TrendingUp, TrendingDown, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { COIN_DELETE_ZERO_FAIL_TOAST, TRADE_DELETE_FAIL_TOAST } from "@/lib/trade/trade-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,10 @@ export function CryptoTxView() {
       positionSource: "computed",
     }, linkPlan ? { revertLink: true } : undefined)) {
       toast.success(`삭제하고 포지션을 되돌렸습니다.${linkPlan ? revertToastSuffix(linkPlan.kind) : ""}`);
+    } else {
+      // 저장 관문 거부 — 창을 유지하고 알린다(무음 실패 0, #357). 결과 0개면 그 이유를 말한다
+      toast.error(preview.quantity <= 0 ? COIN_DELETE_ZERO_FAIL_TOAST : TRADE_DELETE_FAIL_TOAST, { className: "break-keep text-balance" });
+      return;
     }
     setDeleteTarget(null);
   };

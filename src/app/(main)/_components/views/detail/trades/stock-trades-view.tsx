@@ -14,7 +14,7 @@ import { useTradeViewStore } from "@/stores/trade-view-store";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency, formatPriceByCurrency } from "@/lib/number-utils";
 import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
-import { rollbackStockTrade } from "@/lib/trade/trade-form";
+import { applyRollbackAvgInput, rollbackStockTrade, TRADE_DELETE_FAIL_TOAST } from "@/lib/trade/trade-form";
 import { RelinkEntry } from "../../../forms/asset-update/relink/relink-entry";
 import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
@@ -176,9 +176,12 @@ export function StockTradesView() {
     });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = (avgPriceInput?: number) => {
     if (!deleteTarget) return;
-    const { tx, stock, preview } = deleteTarget;
+    const { tx, stock } = deleteTarget;
+    // 결과 평단 미상(전량 매도 삭제)이면 확인창에서 입력한 평단으로 저장, 입력 없으면 저장하지 않는다(#354)
+    const preview = applyRollbackAvgInput(deleteTarget.preview, avgPriceInput);
+    if (!preview) return;
     // 연결 계좌: 짝 기록이 실제로 있고 계좌도 있을 때만 함께 되돌린다(다이얼로그 안내와 같은 계산)
     const linkPlan = planRemoveLink(assetData, tx.id);
     const ok = deleteTransactionWithPosition(tx.id, stock.id, {
@@ -187,7 +190,11 @@ export function StockTradesView() {
       purchaseExchangeRate: preview.avgExchangeRate || undefined,
       positionSource: "computed",
     }, linkPlan ? { revertLink: true } : undefined);
-    if (!ok) { setDeleteTarget(null); return; }
+    if (!ok) {
+      // 저장 실패 — 창을 유지하고 알린다(무음 실패 0, #357)
+      toast.error(TRADE_DELETE_FAIL_TOAST, { className: "break-keep text-balance" });
+      return;
+    }
     toast.success(`거래가 삭제되고 포지션이 롤백되었습니다.${linkPlan ? revertToastSuffix(linkPlan.kind) : ""}`);
     setDeleteTarget(null);
   };

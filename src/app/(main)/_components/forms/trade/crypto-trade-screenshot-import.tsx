@@ -21,6 +21,7 @@ import type { Crypto, AssetData } from "@/types/asset";
 import type { CryptoTransaction } from "@/types/transaction";
 import { computeNewPosition, findDuplicateTransaction, type PositionLike } from "@/lib/trade/trade-utils";
 import { markCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
+import { TRADE_SAVE_FAIL_TOAST } from "@/lib/trade/trade-form";
 
 interface ImportCryptoTrade {
   id: string;
@@ -270,7 +271,8 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
       onSaved?.(ordered.length);
       handleClose();
     } else {
-      toast.error("등록에 실패했습니다.");
+      // 저장 관문 거부(예: 반영 전량 매도로 0개 코인) — 창을 닫지 않고 거래 기록과 같은 문구로 알린다(#357)
+      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep text-balance" });
     }
   };
 

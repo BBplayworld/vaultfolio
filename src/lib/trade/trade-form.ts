@@ -68,3 +68,51 @@ export function rollbackStockTrade<P extends PositionLike, T extends TxLike & { 
   const base = deriveBaseSnapshot(currentPosition, allTransactions);
   return recomputeFromLog(firstBuy ? fillBaseRateForBuy(base, firstBuy) : base, remaining);
 }
+
+// ─────────────────────────────────────────────
+// 반영 거래 삭제 롤백 결과 평단 미상 가드(5.175 #354)
+// 전량 매도는 평단을 0으로 지우므로(computeNewPosition) 그 매도를 지우면 기준 보유분 평단을 되살릴 수 없다.
+// 결과가 수량 > 0 · 평단 ≤ 0이면 확인창에서 평단을 입력받아 그 값으로 저장한다. 저장 스키마·계산 함수는 그대로.
+// ─────────────────────────────────────────────
+
+type AvgPosition = { quantity: number; avgPrice: number };
+
+/** 롤백 결과에 평단 입력이 필요한가 — 수량 > 0 · 평단 ≤ 0(또는 NaN) */
+export function needsRollbackAvgInput(p: AvgPosition): boolean {
+  return p.quantity > 0 && !(p.avgPrice > 0);
+}
+
+/**
+ * 확인창에서 저장할 롤백 결과. 입력이 필요 없으면 p 그대로(입력값 무시),
+ * 필요하면 입력값 > 0일 때만 평단을 바꾼 결과, 아니면 null(저장 차단).
+ */
+export function applyRollbackAvgInput<P extends AvgPosition>(p: P, input: number | undefined): P | null {
+  if (!needsRollbackAvgInput(p)) return p;
+  if (!(input !== undefined && input > 0)) return null;
+  return { ...p, avgPrice: input };
+}
+
+// ─────────────────────────────────────────────
+// 코인 전량 매도 반영 무음 실패 제거(5.175 #357 N1(a))
+// 저장 관문(saveAssetData, strict cryptoSchema 수량>0)이 0개 코인을 거부한다. 스키마는 바꾸지 않고
+// 폼에서 미리 막고(이유 1줄), 그래도 저장이 false면 오류 토스트를 띄운다.
+// ─────────────────────────────────────────────
+
+/** 코인 '반영' 매도 결과가 0개인지 — 보유 초과(oversell)는 기존 가드가 따로 막으므로 제외 */
+export function blocksCoinZeroQty(opts: { reflected: boolean; type: "buy" | "sell"; quantity: number; holding: number }): boolean {
+  if (!opts.reflected || opts.type !== "sell" || !(opts.quantity > 0)) return false;
+  if (opts.quantity > opts.holding) return false;
+  return !(opts.holding - opts.quantity > 0);
+}
+
+/** 코인 0개 반영 차단 이유(제출 버튼 위 1줄) — 코인 삭제를 권하지 않는다 */
+export const COIN_ZERO_QTY_NOTE = "코인은 0개로 남길 수 없어요. '반영'을 끄면 기록만 남아요.";
+
+/** 거래 입력 저장 실패(saveAssetData false) 공용 토스트 — 코인 기록 폼·코인 스크린샷 가져오기 전용, 폼은 닫지 않는다 */
+export const TRADE_SAVE_FAIL_TOAST = "저장하지 못했어요. 입력값을 확인해 주세요.";
+
+/** 반영 거래 삭제 저장 실패 토스트(주식·코인 거래내역) — 확인창은 닫지 않는다. 입력값 문구는 삭제 경로에 맞지 않아 분리 */
+export const TRADE_DELETE_FAIL_TOAST = "삭제하지 못했어요. 기록과 보유 수량은 그대로예요.";
+
+/** 코인 반영 거래 삭제 결과가 0개라 저장 관문이 거부할 때(기준 0 + 반영 매수 1건 삭제 등) */
+export const COIN_DELETE_ZERO_FAIL_TOAST = "삭제하지 못했어요. 코인은 0개로 남길 수 없어요.";

@@ -21,6 +21,7 @@ import type { Crypto, CryptoTransaction } from "@/types/asset";
 import { computeNewPosition, findDuplicateTransaction, TRANSACTION_RETENTION_YEARS, type PositionLike } from "@/lib/trade/trade-utils";
 import { validateReflection } from "@/lib/trade/validate-reflection";
 import { formatCurrency } from "@/lib/number-utils";
+import { blocksCoinZeroQty, COIN_ZERO_QTY_NOTE, TRADE_SAVE_FAIL_TOAST } from "@/lib/trade/trade-form";
 import { LinkAccountRow } from "../../trade/link-account-row";
 import { trackLinkedTrade } from "@/lib/trade/link-track";
 import { evaluateLink, LINK_NONE, linkSavedToast, type LinkEval } from "@/lib/trade/link-text";
@@ -109,6 +110,9 @@ export function CryptoTxInput() {
     return { before: pos, after: computeNewPosition(pos, tentativeTx) };
   }, [reflected, selectedCrypto, watchedQty, watchedPrice, txType]);
 
+  // '반영' 전량 매도 = 0개 코인 → 저장 관문이 거부하므로 제출 전에 막는다(#357)
+  const zeroQtyBlocked = !!selectedCrypto && blocksCoinZeroQty({ reflected, type: txType, quantity: watchedQty, holding: selectedCrypto.quantity });
+
   // KST 기준(스냅샷·다른 "오늘" 계산과 동일 이유, cash-tx-input.tsx와 동형)
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split("T")[0];
   const minDate = (() => {
@@ -180,6 +184,11 @@ export function CryptoTxInput() {
 
     const tx = buildTx(data);
 
+    if (blocksCoinZeroQty({ reflected: data.reflected, type: data.type, quantity: data.quantity, holding: coin.quantity })) {
+      track("transaction_save", { asset_type: "crypto", method: "manual", result: "blocked" });
+      return; // 이유는 제출 버튼 위에 이미 표시 중
+    }
+
     if (data.reflected) {
       const pos = getCryptoPosition(coin);
       const guard = validateReflection(tx, pos);
@@ -222,6 +231,9 @@ export function CryptoTxInput() {
       trackLinkedTrade(link);
       toast.success(link ? linkSavedToast(tx.type, link.kind) : tx.type === "buy" ? "매수 거래를 기록했어요" : "매도 거래를 기록했어요");
       resetAndClose();
+    } else {
+      // 저장 관문 거부 — 폼을 닫지 않고 알린다(무음 실패 0, #357)
+      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep text-balance" });
     }
   };
 
@@ -430,8 +442,14 @@ export function CryptoTxInput() {
                 )
               )}
 
+              {zeroQtyBlocked && (
+                <p id="crypto-zero-qty-note" data-testid="crypto-zero-qty-note" className="text-sm text-destructive break-keep text-pretty">
+                  {COIN_ZERO_QTY_NOTE}
+                </p>
+              )}
+
               <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button type="submit" variant="brand">{txType === "buy" ? "매수 기록" : "매도 기록"}</Button>
+                <Button type="submit" variant="brand" disabled={zeroQtyBlocked} aria-describedby={zeroQtyBlocked ? "crypto-zero-qty-note" : undefined}>{txType === "buy" ? "매수 기록" : "매도 기록"}</Button>
                 <Button type="button" variant="secondary" onClick={resetAndClose}>취소</Button>
               </DialogFooter>
             </form>

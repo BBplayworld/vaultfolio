@@ -20,7 +20,7 @@ _components/
 │   │   └── screenshot/     # 스크린샷 가져오기 다이얼로그
 │   │       └── stock/crypto/cash/loan-screenshot-import.tsx  # 4종 모두 upload→conflict(중복 시)→preview, 병합형(merge/reset, S-4.30) — `lib/holdings-conflict.ts` 공용
 │   └── trade/              # trade-input, trade-screenshot-import(주식), crypto-trade-screenshot-import.tsx(코인, S-4.30)
-│       └── guards/delete-rollback-dialog.tsx  # 반영 거래 삭제 롤백 확인
+│       └── guards/delete-rollback-dialog.tsx  # 반영 거래 삭제 롤백 확인 — 결과 평단 미상(수량>0·평단≤0)이면 평단 입력칸(필수), `onConfirm(avgPriceInput?)`(#5.175)
 ├── views/                 # 페이지 본문 콘텐츠
 │   ├── home/dashboard.tsx           # 도넛+필터칩(InlineSelector) — Dashboard()
 │   ├── detail/
@@ -561,7 +561,7 @@ getProfitLossColor(value)  // 빨강(이익) / 파랑(손실)
 ### LinkAccountRow (`forms/trade/link-account-row.tsx`, #4.58 #103) — 거래 입력 '연결 계좌' 행
 - #5.158: 선택 prop `hideResyncWarning`(기본 false) — 주식 폼이 과거 날짜 질문 미응답 동안 맞춘 잔액 경고를 숨길 때만 넘긴다.
 - 주식 `trade-input`·코인 `crypto-tx-input` 수동 폼 공용. 즉시 반영 박스 바로 아래 별도 박스(같은 마크업): 라벨 `연결 계좌` + `Select`(`연결 안 함`/그룹: 원화 거래 `현금 계좌`·`대출`, 외화 거래 `달러 현금`|`엔화 현금` → `원화 현금` → `대출`, #4.63 #119) 1행, 아래 `cash-link-preview`(항상 마운트, grid-rows 펼침) + 보조 1줄, 4.52 `ResyncTxWarning` 재사용, 오류 박스(`cash-link-error`·`loan-link-error`, `role="alert"`). 후보 0개·즉시 반영 해제면 행 없음(후보는 있는데 거래일이 이번 달이 아니면 muted 안내 1줄 `account-link-note` `지난달 거래는 계좌 잔액을 바꾸지 않아요`), 외화→원화 계좌 선택 시 보조 줄이 환산식(`$1,235.73 × 1,390원만큼 현금이 줄어요`, 식 부분 `whitespace-nowrap`)이고 금액 표시 통화는 선택 계좌 통화, 선택이 후보에서 사라지면 `연결 안 함`으로 복귀(effect).
-- 값·문구·평가는 `lib/trade/link-text.ts`(`evaluateLink`가 표시와 제출 차단에 같은 결과). 삭제 다이얼로그 안내는 `DeleteRollbackDialog`의 `linkedNote` prop(5.149: `recordOnly` prop = 기록만 거래 삭제 확인, 미리보기·연결 안내 없음). 4개 거래 목록의 `기록만` 배지는 `Badge variant="outline"` + `text-2xs px-1 py-0 text-muted-foreground`(testId `tx-record-only-badge`), 기록만 삭제 확인은 view 안 `recordOnlyTarget` 창(`tx-delete-confirm`)·코인 모달 `delete-linked-record-note`.
+- 값·문구·평가는 `lib/trade/link-text.ts`(`evaluateLink`가 표시와 제출 차단에 같은 결과). 삭제 다이얼로그 안내는 `DeleteRollbackDialog`의 `linkedNote` prop(5.149: `recordOnly` prop = 기록만 거래 삭제 확인, 미리보기·연결 안내 없음. 5.175: 롤백 결과 평단 미상이면 `rollback-avg-unknown` '평단을 알 수 없어요' + `rollback-avg-input` NumberInput(KRW 정수·USD 3·그 외 4자리, placeholder `평단가 입력 (통화)`, 이름 = label `rollback-avg-unknown-label`), 입력 전 `rollback-delete-ok` 비활성 + `aria-describedby` → 그 label(평단 미상일 때만), `onConfirm(avgPriceInput)`로 넘김). 4개 거래 목록의 `기록만` 배지는 `Badge variant="outline"` + `text-2xs px-1 py-0 text-muted-foreground`(testId `tx-record-only-badge`), 기록만 삭제 확인은 view 안 `recordOnlyTarget` 창(`tx-delete-confirm`)·코인 모달 `delete-linked-record-note`.
 
 - `BrandLockup`(`src/components/brand-lockup.tsx`, #4.66 logo-spec·R6·R8) — 홈 상단 왼쪽 공식 락업: `BrandSymbol` + `BrandWordmark`(기본 hidden, PWA standalone에서만 `.pwa-home-wordmark`로 노출), 색은 둘 다 `--brand-logo`. 브라우저 모드는 심볼만(32px 박스). PWA는 `.pwa-home-symbol` 18.21px(lg 21.01px, S 잉크 높이 15.25/17.6px, R8)·음수 좌측 여백 -4.46px(lg -5.14px, 박스 여백 7.1311/32 상쇄 + 기울기 광학 보정 0.4/0.46px), 워드마크 잉크 높이 13px(lg 15px), 잉크 간격 = S 잉크 높이 × 0.3124(4.76px, lg 5.49px; 워드마크 `ml-[0.7px] lg:ml-[0.81px]`), 세로 = 잉크 중심 일치 + 워드마크 `translate-y-[0.25px] lg:translate-y-[0.3px]`(무게중심 보정). 비인터랙티브, `data-testid="top-bar-brand"`. 규약은 design-system.md §14.
 - `BrandSymbol`(`src/components/brand-symbol.tsx`, #4.66 R8) — Leckerli One "S" 글리프 아웃라인 인라인 SVG(파비콘·`Logo`와 같은 서체, 폰트 파일 미포함·SIL OFL 출처 주석). viewBox 32, path 1개, 잉크 높이 26.8(y 2.6~29.4 = 세로 중심 16)·폭 17.74(x 7.13~24.87, 가로 중앙), `fill: var(--brand-logo)`. 해상도 분기 없음. `size`는 SVG 속성이라 CSS width/height로 덮어쓸 수 있음.
