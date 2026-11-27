@@ -11,6 +11,8 @@ import { resolveKept, keyOfStock } from "@/lib/asset/holdings-conflict";
 import { assetDataSchema, cryptoSchema, stockSchema } from "@/types/asset";
 import type { Crypto, Stock } from "@/types/asset";
 import { row, run, screen, st, TODAY } from "./fixtures";
+import { computeNewPosition, type PositionLike, type TxLike } from "@/lib/trade/trade-utils";
+import { getPositionSnapshot } from "@/app/(main)/_components/forms/trade/stock-target-picker";
 
 // 분자는 배당 공용 계산(#313, 5.157). 오늘 2026-11-30 = 기존 연-월 "2026-11" 기준과 같은 지급 판정(이 픽스처는 확정 지급만)
 const yieldArgs = (items: { stock: Stock; payouts: never }[], rate: number) =>
@@ -180,5 +182,56 @@ describe("배당 — 새 종목 매수일 입력이 올해 지급 예상에 반�
     const base = imp(0, "005930", "domestic", "토스증권", 1, 100);
     expect(paid(planStockImport([], [base], "merge", JAN1, "2026-11-08").items[0])).toBe(20);
     expect(paid(planStockImport([], [base], "merge", "2026-06-02", "2026-11-08").items[0])).toBe(10);
+  });
+});
+
+// 5.168 R3 — 가져오기 이어받기도 수량이 같으면 출처·맞춘 날 유지. 거래 반영 계산(trade-input·crypto-tx-input buildReflectionPatch와 같음)으로 만든 computed 픽스처
+describe("5.168 R3 가져오기 이어받기 — 수량이 같으면 positionSource·positionEffectiveDate 유지", () => {
+  const buy = (quantity: number, price: number, date: string): TxLike => ({ type: "buy", quantity, price, date, reflected: true, createdAt: `${date}T00:00:00Z` });
+  const reflectStock = (s: Stock, t: TxLike): Stock => {
+    const p = computeNewPosition(getPositionSnapshot(s), t);
+    return { ...s, quantity: p.quantity, averagePrice: p.avgPrice, purchaseExchangeRate: p.avgExchangeRate || undefined, positionSource: "computed", positionEffectiveDate: t.date };
+  };
+  const coinPos = (c: Crypto): PositionLike => ({
+    quantity: c.quantity, avgPrice: c.averagePrice, avgExchangeRate: 0,
+    source: c.positionSource ?? "manual", effectiveDate: c.positionEffectiveDate ?? c.purchaseDate,
+    lockedByManual: c.positionSource === "manual" || !c.positionSource,
+  });
+  const reflectCoin = (c: Crypto, t: TxLike): Crypto => {
+    const p = computeNewPosition(coinPos(c), t);
+    return { ...c, quantity: p.quantity, averagePrice: p.avgPrice, positionSource: "computed", positionEffectiveDate: t.date };
+  };
+  const txs = [buy(100, 50_000, "2026-01-02"), buy(50, 50_000, "2026-07-01")];
+  const tradedStock = () => txs.reduce(reflectStock, st("k", "005930", "domestic", "미래에셋증권", 0, 0, { purchaseDate: "2026-01-02" }));
+  const tradedCoin = () => [buy(1, 100, "2026-01-02"), buy(1, 100, "2026-07-01")].reduce(reflectCoin, cr("c", "BTC", "빗썸", 0, { averagePrice: 0 }));
+
+  it("주식 computed · 07-01, 수량 같음(평단·증권사만 다름) → computed · 07-01 유지", () => {
+    const before = tradedStock();
+    expect(before).toMatchObject({ quantity: 150, averagePrice: 50_000, positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+    const plan = planStockImport([before], [imp(0, "005930", "domestic", "키움증권", 150, 52_000)], "merge", JAN1, TODAY);
+    expect(plan.items[0]).toMatchObject({ id: "k", quantity: 150, averagePrice: 52_000, broker: "키움증권", positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+  });
+  it("주식 통제군 — 수량 변경 → manual · 오늘", () => {
+    const plan = planStockImport([tradedStock()], [imp(0, "005930", "domestic", "키움증권", 160, 52_000)], "merge", JAN1, TODAY);
+    expect(plan.items[0]).toMatchObject({ id: "k", quantity: 160, positionSource: "manual", positionEffectiveDate: TODAY });
+  });
+  it("주식 필드 없음 + 수량 같음 → 필드 없음 유지", () => {
+    const plan = planStockImport([st("k", "005930", "domestic", "키움증권", 5, 60_000)], [imp(0, "005930", "domestic", "키움증권", 5, 61_000)], "merge", JAN1, TODAY);
+    expect(plan.items[0]).toMatchObject({ id: "k", averagePrice: 61_000 });
+    expect(plan.items[0].positionSource).toBeUndefined();
+    expect(plan.items[0].positionEffectiveDate).toBeUndefined();
+  });
+  it("코인 computed · 07-01, 수량 같음(평단만 다름) → 유지 / 수량 변경 → manual · 오늘 / 필드 없음 → 유지", () => {
+    const before = tradedCoin();
+    expect(before).toMatchObject({ quantity: 2, positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+    const same = planCryptoImport([before], [cr("crypto_import_1_0", "BTC", "빗썸", 2, { averagePrice: 120 })], "merge", JAN1, TODAY);
+    expect(same.items).toHaveLength(1);
+    expect(same.items[0]).toMatchObject({ id: "c", quantity: 2, averagePrice: 120, exchange: "빗썸", positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+    const changed = planCryptoImport([before], [cr("crypto_import_1_0", "BTC", "빗썸", 3)], "merge", JAN1, TODAY);
+    expect(changed.items[0]).toMatchObject({ id: "c", quantity: 3, positionSource: "manual", positionEffectiveDate: TODAY });
+    const plain = planCryptoImport([cr("c", "BTC", "빗썸", 1)], [cr("crypto_import_1_0", "BTC", "빗썸", 1, { averagePrice: 120 })], "merge", JAN1, TODAY);
+    expect(plain.items[0]).toMatchObject({ id: "c", averagePrice: 120 });
+    expect(plain.items[0].positionSource).toBeUndefined();
+    expect(plain.items[0].positionEffectiveDate).toBeUndefined();
   });
 });
