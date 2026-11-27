@@ -686,7 +686,7 @@ function StockDetailGrid({ stock, isForeign, krwMul, currencyGain, currencyGainR
             <p className={ASSET_THEME.cardDetailLabel}>매입환율</p>
             <p className={`${ASSET_THEME.cardDetailValue} tabular-nums`}>
               {partialRate
-                ? "일부 미입력 (현재환율)"
+                ? <>일부 미입력 <span className="whitespace-nowrap">(현재환율)</span></>
                 : stock.purchaseExchangeRate && stock.purchaseExchangeRate > 0
                 ? stock.currency === "JPY" ? `¥100=₩${stock.purchaseExchangeRate.toLocaleString()}` : `$1=₩${stock.purchaseExchangeRate.toLocaleString()}`
                 : "미입력 (현재환율)"}

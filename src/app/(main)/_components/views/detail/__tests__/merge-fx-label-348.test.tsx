@@ -48,14 +48,14 @@ function card(items: Stock[]): string {
 describe("#348 펼침 매입환율 칸", () => {
   it("섞임(USD): '일부 미입력 (현재환율)', 합친 환율 숫자 1,350은 보이지 않음", () => {
     const html = card([stock({ id: "a", broker: "A", purchaseExchangeRate: 1300 }), stock({ id: "b", broker: "B" })]);
-    expect(html).toContain("일부 미입력 (현재환율)");
+    expect(html).toContain('일부 미입력 <span class="whitespace-nowrap">(현재환율)</span>'); // 괄호 조각 꺾임 방지
     expect(html).not.toContain("$1=₩1,350");
   });
 
   it("섞임(JPY, 0 환율): '일부 미입력 (현재환율)'", () => {
     const j = (o: Partial<Stock>) => stock({ ticker: "7203", currency: "JPY", quantity: 100, averagePrice: 2000, currentPrice: 2500, ...o });
     const html = card([j({ id: "ja", broker: "A", purchaseExchangeRate: 900 }), j({ id: "jb", broker: "B", purchaseExchangeRate: 0 })]);
-    expect(html).toContain("일부 미입력 (현재환율)");
+    expect(html).toContain('일부 미입력 <span class="whitespace-nowrap">(현재환율)</span>'); // 괄호 조각 꺾임 방지
     expect(html).not.toContain("¥100=₩925");
   });
 
