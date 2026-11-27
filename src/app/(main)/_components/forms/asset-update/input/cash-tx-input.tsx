@@ -6,6 +6,8 @@ import { shouldWarnTxAfterResync } from "@/lib/asset/balance-edits";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { track } from "@/lib/analytics/ga";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
+import { Check } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -29,6 +31,10 @@ import type { CashTxDividendInput } from "@/lib/asset/cash-tx-tags";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { PastDateQuestion } from "../../common/past-date-question";
 import { shouldAskPastDate } from "@/lib/trade/trade-form";
+import { dividendQueryOptions } from "@/lib/finance/dividend-client";
+import { latestPaidPayout, payoutMonthDay } from "@/lib/finance/dividend-calc";
+import { dividendDateQueryArgs } from "../../../views/activity/use-dividend-data";
+import { brokerCashDefault, nextAutoCash } from "@/lib/asset/broker-totals";
 
 const cashTxFormSchema = z.object({
   cashId: z.string().min(1, "계좌를 선택해주세요"),
@@ -60,12 +66,15 @@ export function CashTxInput() {
   const [dividend, setDividend] = useState(false);
   const [dividendStock, setDividendStock] = useState(NO_STOCK);
   const [answered, setAnswered] = useState(false); // 과거 날짜 질문에 답했거나 체크박스를 직접 눌렀는지(화면 전용, 저장 0)
+  const [dateStatus, setDateStatus] = useState(""); // 지급일 버튼을 누른 뒤 스크린리더 알림(화면 전용, #339)
+  const [autoCashId, setAutoCashId] = useState<string | null>(null); // 증권사 현금 규칙이 채운 계좌 id(화면 전용, #339). 사용자가 계좌를 고르면 null
 
   const cashAccounts = assetData.cash;
   // 종목 칸 — 보유 주식을 티커 단위로, groupStocksByTicker 순서 그대로(정렬 신설 없음)
+  const stockGroups = useMemo(() => groupStocksByTicker(assetData.stocks), [assetData.stocks]);
   const stockOptions = useMemo(
-    () => Array.from(groupStocksByTicker(assetData.stocks).entries()).map(([key, items]) => ({ key, ticker: items[0].ticker || undefined, name: items[0].name || items[0].ticker || "" })),
-    [assetData.stocks],
+    () => Array.from(stockGroups.entries()).map(([key, items]) => ({ key, ticker: items[0].ticker || undefined, name: items[0].name || items[0].ticker || "" })),
+    [stockGroups],
   );
 
   const form = useForm<CashTxFormValues>({
@@ -103,6 +112,41 @@ export function CashTxInput() {
     d.setFullYear(d.getFullYear() - TRANSACTION_RETENTION_YEARS);
     return d.toISOString().split("T")[0];
   })();
+
+  // `M/D 지급일로` 버튼(#339) — 고른 종목의 배당 조회(배당 화면과 같은 쿼리 키·요청 형식)에서 확정·오늘 이전 최신 지급일.
+  // 국내형 종목만 조회한다(해외 조회 날짜는 현지 기준일). 조회 중·실패·후보 없음이면 버튼 없음. 누를 때만 날짜를 바꾼다
+  const pickedItems = dividend && dividendStock !== NO_STOCK ? stockGroups.get(dividendStock) : undefined;
+  const dateArgs = txType === "deposit" && pickedItems ? dividendDateQueryArgs(pickedItems) : null;
+  const dateQuery = useQuery({ ...dividendQueryOptions(dateArgs?.ticker ?? "", "domestic", "NAS"), enabled: !!dateArgs });
+  const latestPaid = dateArgs && dateQuery.isSuccess ? latestPaidPayout(dateQuery.data, todayStr, minDate) : null;
+  const [payM, payD] = latestPaid ? payoutMonthDay(latestPaid.payoutDate) : [0, 0];
+  const dateApplied = !!latestPaid && watchedDate === latestPaid.payoutDate;
+  const applyPayoutDate = () => {
+    if (!latestPaid || dateApplied) return; // 적용됨 상태는 no-op(aria-disabled, GA 0)
+    form.setValue("date", latestPaid.payoutDate, { shouldValidate: true });
+    // 지표(#339): 버튼 누름 — category만(금액·종목·날짜 미전송)
+    track("feature_use", { category: "cash_dividend_date" });
+    setDateStatus(`날짜를 ${payM}월 ${payD}일로 바꿨어요`);
+  };
+
+  // 배당 종목 선택(#339) — 계좌 기본값은 여기서 1회 판정(effect 아님). 계좌 고정 진입·`선택 안 함`은 계좌를 건드리지 않는다.
+  // 빈칸이거나 직전에 규칙이 채운 값일 때만 그 종목 증권사의 현금 계좌로(없으면 빈칸으로 되돌림). 금액 > 0이면 표시 통화가 바뀌는 교체는 하지 않는다
+  const pickDividendStock = (v: string) => {
+    setDividendStock(v);
+    setDateStatus("");
+    const items = v === NO_STOCK ? undefined : stockGroups.get(v);
+    if (lockedCash || !items) return;
+    const next = nextAutoCash({
+      current: form.getValues("cashId"),
+      auto: autoCashId,
+      candidate: brokerCashDefault(items, cashAccounts),
+      amount: form.getValues("amount"),
+      cash: cashAccounts,
+    });
+    if (!next) return;
+    form.setValue("cashId", next.cashId);
+    setAutoCashId(next.auto);
+  };
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -143,6 +187,8 @@ export function CashTxInput() {
     setAnswered(false);
     setDividend(false);
     setDividendStock(NO_STOCK);
+    setDateStatus("");
+    setAutoCashId(null);
   }, [form]);
 
   const buildTx = (data: CashTxFormValues): CashTransaction => {
@@ -235,27 +281,39 @@ export function CashTxInput() {
         {!dupPending && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* 계좌 선택 (사전선택 진입 시 숨김) */}
-              {!lockedCash && (
-                <FormItem>
-                  <FormLabel>계좌</FormLabel>
-                  <Select value={selectedCashId} onValueChange={(v) => form.setValue("cashId", v)}>
-                    <SelectTrigger><SelectValue placeholder="계좌 선택" /></SelectTrigger>
-                    <SelectContent>
-                      {cashAccounts.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-
-              {selectedCash && (
-                <div className="flex items-center gap-2 rounded-lg bg-muted/50 dark:bg-muted/40 px-3 py-2 text-sm">
-                  <span className="font-medium truncate">{selectedCash.name}</span>
-                  <span className="ml-auto text-muted-foreground shrink-0">잔액 {formatCurrencyDisplay(selectedCash.balance, selectedCash.currency)}</span>
+              {/* 계좌 칸 + 요약 상자 한 블록(#339, ui.md 3장) — 요약 상자는 항상 마운트하고 높이만 펼친다(design-system §6).
+                  종목을 골라 계좌가 채워질 때 위쪽이 갑자기 늘어 방금 누른 칸이 튀지 않게. 간격 16px는 펼침 안쪽(빈 상태 높이 = 이전과 같음) */}
+              <div data-testid="cash-tx-account-block">
+                {/* 계좌 선택 (사전선택 진입 시 숨김) — 사용자가 고르면 규칙 값 표시를 지우고 이후 손대지 않는다 */}
+                {!lockedCash && (
+                  <FormItem>
+                    <FormLabel>계좌</FormLabel>
+                    <Select value={selectedCashId} onValueChange={(v) => { setAutoCashId(null); form.setValue("cashId", v); }}>
+                      <SelectTrigger data-testid="cash-tx-account" data-autofill={selectedCashId && selectedCashId === autoCashId ? "broker" : "none"}><SelectValue placeholder="계좌 선택" /></SelectTrigger>
+                      <SelectContent>
+                        {cashAccounts.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+                <div
+                  inert={!selectedCash}
+                  className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${selectedCash ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div className={lockedCash ? "pt-0" : "pt-4"}>
+                      {selectedCash && (
+                        <div data-testid="cash-tx-account-summary" className="flex items-center gap-2 rounded-lg bg-muted/50 dark:bg-muted/40 px-3 py-2 text-sm">
+                          <span className="font-medium truncate">{selectedCash.name}</span>
+                          <span className="ml-auto text-muted-foreground shrink-0">잔액 {formatCurrencyDisplay(selectedCash.balance, selectedCash.currency)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
               {/* 입금/출금 토글 */}
               <FormField
@@ -339,7 +397,7 @@ export function CashTxInput() {
                         <div className="min-h-0 overflow-hidden">
                           <div className="space-y-2 pl-6 pt-3">
                             <label htmlFor="cash-tx-dividend-stock" className="block text-sm font-medium">종목 (선택)</label>
-                            <Select value={dividendStock} onValueChange={setDividendStock}>
+                            <Select value={dividendStock} onValueChange={pickDividendStock}>
                               <SelectTrigger
                                 id="cash-tx-dividend-stock"
                                 data-testid="cash-tx-dividend-stock"
@@ -368,8 +426,29 @@ export function CashTxInput() {
                 name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>날짜</FormLabel>
+                    {/* 라벨 줄 오른쪽 `M/D 지급일로`(#339, ui.md 2장) — 24px 알약 + 음수 마진으로 라벨 줄 높이 유지, after로 히트 40px. 같은 요소에서 글자만 바뀐다(key 없음) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <FormLabel>날짜</FormLabel>
+                      {latestPaid && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          static={dateApplied}
+                          data-testid="cash-tx-dividend-date-btn"
+                          data-state={dateApplied ? "applied" : "ready"}
+                          data-date={latestPaid.payoutDate}
+                          aria-label={`${payM}/${payD} 지급일로 날짜 바꾸기`}
+                          aria-disabled={dateApplied || undefined}
+                          onClick={applyPayoutDate}
+                          className={`relative -my-[5px] h-6 gap-1 rounded-full py-0 text-sm font-medium tabular-nums motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150 after:absolute after:inset-x-0 after:-top-[13px] after:-bottom-[3px] after:content-[''] ${dateApplied ? "bg-transparent px-1.5 text-muted-foreground hover:bg-transparent has-[>svg]:px-1.5" : "px-2.5"}`}
+                        >
+                          {dateApplied && <Check aria-hidden className="size-3.5" />}
+                          {payM}/{payD} 지급일로
+                        </Button>
+                      )}
+                    </div>
                     <FormControl><Input type="date" min={minDate} max={todayStr} {...field} /></FormControl>
+                    <span role="status" data-testid="cash-tx-dividend-date-status" className="sr-only">{dateApplied ? dateStatus : ""}</span>
                     <FormMessage />
                   </FormItem>
                 )}
