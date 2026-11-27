@@ -23,7 +23,7 @@ export function shouldSkipHeroEnter(env: { isDataLoaded: boolean; hasAssetsAttr:
 export function WelcomeHero({ enter }: { enter: boolean }) {
   return (
     <section data-testid="welcome-hero" className={`text-center space-y-2${enter ? ` ${ENTER}` : ""}`}>
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-balance">
+      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-balance break-keep">
         나만의 비밀 자산 금고
       </h1>
       <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed text-pretty break-keep">

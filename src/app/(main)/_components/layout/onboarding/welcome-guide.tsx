@@ -204,7 +204,7 @@ export function WelcomeGuide({ allowTrial = false, skipHeroEnter = false }: { al
             screenshotMode={true}
           />
         </div>
-        <p className={`text-2xs text-center break-keep ${ASSET_THEME.distributionCard.muted}`}>
+        <p className={`text-2xs text-center text-pretty break-keep ${ASSET_THEME.distributionCard.muted}`}>
           실제 자산을 입력하면 이 화면이 내 포트폴리오로 채워집니다.
         </p>
       </div>
@@ -431,7 +431,7 @@ export function WelcomeAssetCta({ standalone, focusOnMount = false, pick = null 
     <>
     <div className={`space-y-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200 ${focusOnMount ? "motion-safe:slide-in-from-bottom-1" : ""}`}>
       <div className="text-center space-y-1">
-        <h2 className="text-lg font-semibold text-balance">
+        <h2 className="text-lg font-semibold text-balance break-keep">
           {copy ? copy.title : standalone ? "자산을 등록해보세요" : "첫 번째 자산을 추가해보세요"}
         </h2>
         <p className="text-sm text-muted-foreground text-pretty break-keep">
