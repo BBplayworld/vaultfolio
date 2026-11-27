@@ -119,7 +119,12 @@ describe("AC-18 — 저장 뒤 push하면 다른 기기 pull에서 같은 값", 
     await push("A");
     expect(putBodies).toHaveLength(1);
     expect(Object.keys(JSON.parse(putBodies[0])).sort()).toEqual(["baseVersion", "ciphertext", "iv", "pubKey"]); // main과 같은 필드(추가 0)
-    for (const word of ["AAPL", "stockLabels", "check", "labeledAt", "qty", "weight", "price", "\"base\"", "futureTop"]) expect(putBodies[0]).not.toContain(word);
+    // 5.167 견고화: 무작위 암호문(base64)에 'qty' 같은 짧은 낱말이 우연히 들어가 간헐 실패하던 것을 없앤다.
+    // ① 암호문·iv·pubKey 값은 base64 글자만(평문이 섞이면 실패) ② 낱말 검사는 세 값을 뺀 나머지 본문(키 이름·baseVersion)에 한다.
+    const body = JSON.parse(putBodies[0]) as Record<string, unknown>;
+    for (const k of ["ciphertext", "iv", "pubKey"] as const) expect(body[k]).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    const rest = JSON.stringify({ ...body, ciphertext: "", iv: "", pubKey: "" });
+    for (const word of ["AAPL", "stockLabels", "check", "labeledAt", "qty", "weight", "price", "\"base\"", "futureTop"]) expect(rest).not.toContain(word);
     expect((await serverPayload()).stockLabels).toEqual(labelsOf("A")); // 복호화하면 최상위 필드
   });
   it("이름표가 없는 기기의 push에는 필드가 없고, 받는 기기의 이름표를 지우지 않는다", async () => {

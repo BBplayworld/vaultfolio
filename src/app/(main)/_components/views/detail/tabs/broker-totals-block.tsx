@@ -6,8 +6,9 @@ import { useId, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
-import { computeBrokerTotals, type BrokerTotalRow } from "@/lib/asset/broker-totals";
-import type { Stock } from "@/types/asset";
+import { brokerCashByRow, computeBrokerTotals, type BrokerTotalRow } from "@/lib/asset/broker-totals";
+import { formatPriceByMode } from "@/lib/number-utils";
+import type { Cash, Stock } from "@/types/asset";
 import type { StockDisplayCurrency } from "../asset-detail-tabs";
 import { dispatchAddStock } from "../../../layout/navigation/asset-dispatch";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
@@ -24,50 +25,73 @@ export function formatBrokerUnits(units: number, scale: 1 | 100): string {
 
 export const formatShareTenths = (t: number) => `${(t / 10).toFixed(1)}%`;
 
-/** 합계 행 — 주식 증권사별·코인 거래소별(#325) 공용. onResync가 없으면 `맞추기` 버튼을 그리지 않는다(DOM 0). countText 기본 `N종목` */
-export function BrokerRow({ row, scale, onResync, countText }: { row: BrokerTotalRow; scale: 1 | 100; onResync?: (broker?: string) => void; countText?: string }) {
+/** 합계 행 — 주식 증권사별·코인 거래소별(#325) 공용. onResync가 없으면 `맞추기` 버튼을 그리지 않는다(DOM 0). countText 기본 `N종목`.
+ * cashText(#335, 주식 블록만)가 있을 때만 grid로 그리고 행 아래 독립 줄 `현금 N원`을 둔다. 없으면 기존 flex 마크업 그대로(코인 행 DOM 불변). */
+export function BrokerRow({ row, scale, onResync, countText, cashText }: { row: BrokerTotalRow; scale: 1 | 100; onResync?: (broker?: string) => void; countText?: string; cashText?: string }) {
   const zero = row.profitUnits === 0;
   const color = zero ? "text-muted-foreground" : getProfitLossColor(row.profitUnits);
   const sign = row.profitUnits > 0 ? "+" : "";
   const rate = row.profitRate === null ? "—" : `(${zero ? "" : sign}${(zero ? 0 : row.profitRate).toFixed(1)}%)`;
+  const grid = cashText !== undefined;
+  const left = (
+    <div className={grid ? "col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5" : "flex min-w-16 flex-1 flex-col gap-0.5"}>
+      <span data-testid="broker-row-name" className={`${ASSET_THEME.cardInfoName} break-keep`}>{row.name}</span>
+      <span className="text-sm text-muted-foreground tabular-nums">
+        <span data-testid="broker-row-count" className="whitespace-nowrap">{countText ?? `${row.count}종목`}</span>
+        {" "}
+        <span data-testid="broker-row-share" className="whitespace-nowrap">· {formatShareTenths(row.shareTenths)}</span>
+      </span>
+    </div>
+  );
+  // 금액 열은 shrink-0을 두지 않는다(E1) — 360 경계에서 손익 줄 `(율)`이 아래 줄로 내려가며 행 넘침이 0이 된다(평가금 nowrap 폭 아래로는 줄지 않음)
+  // 맞추기 버튼이 없는 행(코인 거래소별)은 359px 이하에서 금액이 다음 줄로 내려가도 오른쪽 끝에 붙인다
+  const right = (
+    <div className={grid ? "col-start-2 row-start-1 justify-self-end text-right" : `text-right${onResync ? "" : " ml-auto"}`}>
+      <p data-testid="broker-row-value" className={`${ASSET_THEME.cardAmountMain} whitespace-nowrap ${ASSET_THEME.text.default}`}>{formatBrokerUnits(row.valueUnits, scale)}</p>
+      <div data-testid="broker-row-profit" className={`${ASSET_THEME.cardAmountProfitRow} flex-wrap justify-end`}>
+        <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{sign}{formatBrokerUnits(row.profitUnits, scale)}</span>
+        <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{rate}</span>
+      </div>
+    </div>
+  );
+  const resync = onResync && (
+    <Button
+      type="button"
+      variant="ghost"
+      data-testid="broker-row-resync"
+      aria-label={`${row.name} 맞추기`}
+      onClick={() => onResync(row.unassigned ? undefined : row.name)}
+      className={`h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96] ${grid ? "col-start-3 row-start-1 max-[360px]:col-span-full max-[360px]:row-start-3 max-[360px]:justify-self-end" : "max-[360px]:ml-auto max-[360px]:basis-full max-[360px]:justify-end"}`}
+    >
+      맞추기
+    </Button>
+  );
+  if (grid) {
+    // DOM 순서: 좌 → 우 → 현금 → 맞추기(스크린리더가 금액 다음에 현금을 읽는다)
+    return (
+      <div data-testid="broker-row" data-broker={row.name} data-unassigned={row.unassigned} className="grid min-h-14 grid-cols-[minmax(4rem,1fr)_auto_auto] items-center gap-x-2 py-2 max-[360px]:grid-cols-[minmax(4rem,1fr)_auto]">
+        {left}
+        {right}
+        <p data-testid="broker-row-cash" className="col-span-full row-start-2 mt-0.5 text-sm text-muted-foreground tabular-nums whitespace-nowrap">현금 {cashText}</p>
+        {resync}
+      </div>
+    );
+  }
   return (
     <div data-testid="broker-row" data-broker={row.name} data-unassigned={row.unassigned} className="flex min-h-14 flex-wrap items-center gap-x-2 py-2 min-[360px]:flex-nowrap">
-      <div className="flex min-w-16 flex-1 flex-col gap-0.5">
-        <span data-testid="broker-row-name" className={`${ASSET_THEME.cardInfoName} break-keep`}>{row.name}</span>
-        <span className="text-sm text-muted-foreground tabular-nums">
-          <span data-testid="broker-row-count" className="whitespace-nowrap">{countText ?? `${row.count}종목`}</span>
-          {" "}
-          <span data-testid="broker-row-share" className="whitespace-nowrap">· {formatShareTenths(row.shareTenths)}</span>
-        </span>
-      </div>
-      {/* 맞추기 버튼이 없는 행(코인 거래소별)은 359px 이하에서 금액이 다음 줄로 내려가도 오른쪽 끝에 붙인다 */}
-      <div className={`shrink-0 text-right${onResync ? "" : " ml-auto"}`}>
-        <p data-testid="broker-row-value" className={`${ASSET_THEME.cardAmountMain} whitespace-nowrap ${ASSET_THEME.text.default}`}>{formatBrokerUnits(row.valueUnits, scale)}</p>
-        <div data-testid="broker-row-profit" className={`${ASSET_THEME.cardAmountProfitRow} justify-end`}>
-          <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{sign}{formatBrokerUnits(row.profitUnits, scale)}</span>
-          <span className={`whitespace-nowrap text-sm font-bold tabular-nums ${color}`}>{rate}</span>
-        </div>
-      </div>
-      {onResync && (
-        <Button
-          type="button"
-          variant="ghost"
-          data-testid="broker-row-resync"
-          aria-label={`${row.name} 맞추기`}
-          onClick={() => onResync(row.unassigned ? undefined : row.name)}
-          className="h-10 min-w-10 shrink-0 px-2 text-sm text-muted-foreground active:scale-[0.96] max-[360px]:ml-auto max-[360px]:basis-full max-[360px]:justify-end"
-        >
-          맞추기
-        </Button>
-      )}
+      {left}
+      {right}
+      {resync}
     </div>
   );
 }
 
-export function BrokerTotalsBlock({ stocks, exchangeRates, displayCurrency }: { stocks: Stock[]; exchangeRates: { USD: number; JPY: number }; displayCurrency: StockDisplayCurrency }) {
+/** cash(#335): 부르는 쪽이 '전체' 탭에서만 넘긴다. 달러 보기(scale 100)에서는 현금 줄을 그리지 않는다($·원 혼재 방지) */
+export function BrokerTotalsBlock({ stocks, exchangeRates, displayCurrency, cash }: { stocks: Stock[]; exchangeRates: { USD: number; JPY: number }; displayCurrency: StockDisplayCurrency; cash?: Cash[] }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const { rows, scale } = useMemo(() => computeBrokerTotals(stocks, exchangeRates, displayCurrency), [stocks, exchangeRates, displayCurrency]);
+  const cashByRow = useMemo(() => (cash && scale === 1 ? brokerCashByRow(rows, cash, exchangeRates) : null), [cash, scale, rows, exchangeRates]);
   if (rows.length < 2) return null;
 
   const toggle = () => {
@@ -106,7 +130,13 @@ export function BrokerTotalsBlock({ stocks, exchangeRates, displayCurrency }: { 
         <div className="min-h-0 overflow-hidden">
           <div className="divide-y divide-border px-4 pb-2 dark:divide-border/30">
             {rows.map((r) => (
-              <BrokerRow key={r.unassigned ? "__unassigned" : r.name} row={r} scale={scale} onResync={(b) => dispatchAddStock("screenshot", b)} />
+              <BrokerRow
+                key={r.unassigned ? "__unassigned" : r.name}
+                row={r}
+                scale={scale}
+                onResync={(b) => dispatchAddStock("screenshot", b)}
+                cashText={cashByRow?.has(r.name) ? formatPriceByMode(cashByRow.get(r.name)!) : undefined}
+              />
             ))}
           </div>
           {hasUnassigned && (

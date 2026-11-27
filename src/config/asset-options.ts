@@ -49,6 +49,16 @@ export const financialInstitutions = [
   },
 ] as const;
 
+// 현금 금융기관 선택 목록(#335) — 은행·2금융 4그룹 + 증권사 2그룹 + 기타 1개.
+// 공용 financialInstitutions(대출 공통)·securitiesFirms는 그대로 두고 현금 선택 2곳만 이 목록을 쓴다.
+// 증권사 값은 주식 broker와 같은 목록 문자열이다. '기타'는 두 원본에 다 있어 증권사 그룹에서 뺀다(Select value 중복 방지).
+export const cashInstitutionGroups: ReadonlyArray<{ group: string; items: readonly string[] }> = [
+  ...financialInstitutions.filter((g) => g.group !== "기타"),
+  { group: "대형 증권사", items: securitiesFirms[0].items },
+  { group: "온라인 증권사", items: securitiesFirms[1].items.filter((f) => f !== "기타") },
+  { group: "기타", items: ["기타"] },
+];
+
 // 현금성 자산 유형
 export const cashTypes = [
   { value: "deposit", label: "예금", shortLabel: "예금" },

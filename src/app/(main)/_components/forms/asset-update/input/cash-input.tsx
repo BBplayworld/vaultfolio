@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Textarea } from "@/components/ui/textarea";
 import { Cash, cashSchema } from "@/types/asset";
 import { useAssetData } from "@/contexts/asset-data-context";
-import { cashTypes, financialInstitutions } from "@/config/asset-options";
+import { cashTypes, cashInstitutionGroups } from "@/config/asset-options";
 import { CashScreenshotImport } from "../screenshot/cash-screenshot-import";
 import { MAIN_PALETTE } from "@/config/theme";
 import { BalanceResyncDialog } from "../balance-resync-dialog";
@@ -202,7 +202,7 @@ function CashForm({ editData, onClose }: CashFormProps) {
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {financialInstitutions.map((group) => (
+                                    {cashInstitutionGroups.map((group) => (
                                         <SelectGroup key={group.group}>
                                             <SelectLabel>{group.group}</SelectLabel>
                                             {group.items.map((item) => (
