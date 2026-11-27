@@ -108,5 +108,11 @@ export function blocksCoinZeroQty(opts: { reflected: boolean; type: "buy" | "sel
 /** 코인 0개 반영 차단 이유(제출 버튼 위 1줄) — 코인 삭제를 권하지 않는다 */
 export const COIN_ZERO_QTY_NOTE = "코인은 0개로 남길 수 없어요. '반영'을 끄면 기록만 남아요.";
 
-/** 거래 저장 실패(saveAssetData false) 공용 토스트 — 폼은 닫지 않는다 */
+/** 거래 입력 저장 실패(saveAssetData false) 공용 토스트 — 코인 기록 폼·코인 스크린샷 가져오기 전용, 폼은 닫지 않는다 */
 export const TRADE_SAVE_FAIL_TOAST = "저장하지 못했어요. 입력값을 확인해 주세요.";
+
+/** 반영 거래 삭제 저장 실패 토스트(주식·코인 거래내역) — 확인창은 닫지 않는다. 입력값 문구는 삭제 경로에 맞지 않아 분리 */
+export const TRADE_DELETE_FAIL_TOAST = "삭제하지 못했어요. 기록과 보유 수량은 그대로예요.";
+
+/** 코인 반영 거래 삭제 결과가 0개라 저장 관문이 거부할 때(기준 0 + 반영 매수 1건 삭제 등) */
+export const COIN_DELETE_ZERO_FAIL_TOAST = "삭제하지 못했어요. 코인은 0개로 남길 수 없어요.";

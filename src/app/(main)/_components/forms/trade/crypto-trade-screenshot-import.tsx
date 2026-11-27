@@ -272,7 +272,7 @@ export function CryptoTradeScreenshotImport({ open, onOpenChange, onSaved }: Cry
       handleClose();
     } else {
       // 저장 관문 거부(예: 반영 전량 매도로 0개 코인) — 창을 닫지 않고 거래 기록과 같은 문구로 알린다(#357)
-      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep" });
+      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep text-balance" });
     }
   };
 

@@ -5,7 +5,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import { saveAssetData } from "@/lib/asset/asset-storage";
 import { computeNewPosition } from "@/lib/trade/trade-utils";
-import { blocksCoinZeroQty, COIN_ZERO_QTY_NOTE, TRADE_SAVE_FAIL_TOAST } from "@/lib/trade/trade-form";
+import { blocksCoinZeroQty, COIN_DELETE_ZERO_FAIL_TOAST, COIN_ZERO_QTY_NOTE, TRADE_DELETE_FAIL_TOAST, TRADE_SAVE_FAIL_TOAST } from "@/lib/trade/trade-form";
 import type { AssetData, Crypto, Stock } from "@/types/asset";
 import type { CryptoTransaction } from "@/types/transaction";
 
@@ -74,35 +74,46 @@ describe("문구·연결(소스 고정)", () => {
     expect(COIN_ZERO_QTY_NOTE).not.toMatch(/삭제|지우/);
     expect(TRADE_SAVE_FAIL_TOAST).toBe("저장하지 못했어요. 입력값을 확인해 주세요.");
   });
-  const FAIL = 'toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep" })'; // 320~344 어절 중간 끊김 방지(qa D-1)
-  it("거래 기록 폼: 제출 비활성 + 안내 aria-describedby + 실패 토스트(break-keep), 스크린샷 가져오기: 실패 토스트", () => {
-    const form = read("src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx");
+  const CLS = '{ className: "break-keep text-balance" }'; // 320~344 어절 중간 끊김·끝 조각 홀로 남김 방지(qa D-1, ui C2)
+  const FAIL = `toast.error(TRADE_SAVE_FAIL_TOAST, ${CLS})`;
+  const INPUT_FILES = [
+    "src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx",
+    "src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx",
+  ];
+  const DELETE_FILES = [
+    "src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx",
+    "src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx",
+  ];
+  it("삭제 실패 문구(C1·D-2): 입력값 문구 대신 결과를 말한다", () => {
+    expect(TRADE_DELETE_FAIL_TOAST).toBe("삭제하지 못했어요. 기록과 보유 수량은 그대로예요.");
+    expect(COIN_DELETE_ZERO_FAIL_TOAST).toBe("삭제하지 못했어요. 코인은 0개로 남길 수 없어요.");
+  });
+  it("거래 기록 폼: 제출 비활성 + 안내 aria-describedby + 실패 토스트, 스크린샷 가져오기: 실패 토스트", () => {
+    const form = read(INPUT_FILES[0]);
     expect(form).toContain('disabled={zeroQtyBlocked} aria-describedby={zeroQtyBlocked ? "crypto-zero-qty-note" : undefined}');
     expect(form).toContain('id="crypto-zero-qty-note"');
     expect(form).toContain(FAIL);
-    const shot = read("src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx");
-    expect(shot).toContain(FAIL);
+    expect(read(INPUT_FILES[1])).toContain(FAIL);
   });
-  it("TRADE_SAVE_FAIL_TOAST는 모든 사용처에서 break-keep", () => {
-    for (const f of [
-      "src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx",
-      "src/app/(main)/_components/forms/trade/crypto-trade-screenshot-import.tsx",
-      "src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx",
-      "src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx",
-    ]) {
-      const src = read(f);
-      const calls = src.match(/toast\.error\(TRADE_SAVE_FAIL_TOAST[^)]*\)/g) ?? [];
+  it("TRADE_SAVE_FAIL_TOAST는 입력 폼 경로에만, 삭제 경로에는 없다", () => {
+    for (const f of INPUT_FILES) expect(read(f), f).toContain("TRADE_SAVE_FAIL_TOAST");
+    for (const f of DELETE_FILES) expect(read(f), f).not.toContain("TRADE_SAVE_FAIL_TOAST");
+  });
+  it("실패 토스트 전부 className = break-keep text-balance", () => {
+    for (const f of [...INPUT_FILES, ...DELETE_FILES]) {
+      const calls = read(f).match(/toast\.error\((?:TRADE_SAVE_FAIL_TOAST|TRADE_DELETE_FAIL_TOAST|preview\.quantity <= 0 \? COIN_DELETE_ZERO_FAIL_TOAST : TRADE_DELETE_FAIL_TOAST), \{[^}]*\}\)/g) ?? [];
       expect(calls.length, f).toBeGreaterThan(0);
-      for (const c of calls) expect(c, f).toBe(FAIL);
+      for (const c of calls) expect(c.endsWith(`, ${CLS})`), `${f}: ${c}`).toBe(true);
     }
   });
-  it("반영 거래 삭제 실패(코인·주식): 창 유지 + 실패 토스트 — 성공 분기만 창을 닫는다(O-3·B1)", () => {
-    const coinView = read("src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx");
+  it("반영 거래 삭제 실패(코인·주식): 창 유지 + 실패 토스트 — 성공 분기만 창을 닫는다(O-3·B1), 코인 0개 결과는 0개 문구", () => {
+    const coinView = read(DELETE_FILES[0]);
     const coinFn = coinView.slice(coinView.indexOf("const runReflectedDelete"), coinView.indexOf("if (!target || !coin)"));
-    expect(coinFn).toMatch(/\} else \{\s*\/\/[^\n]*\n\s*toast\.error\(TRADE_SAVE_FAIL_TOAST, \{ className: "break-keep" \}\);\s*return;\s*\}\s*setDeleteTarget\(null\);/);
-    const stockView = read("src/app/(main)/_components/views/detail/trades/stock-trades-view.tsx");
+    expect(coinFn).toContain(`toast.error(preview.quantity <= 0 ? COIN_DELETE_ZERO_FAIL_TOAST : TRADE_DELETE_FAIL_TOAST, ${CLS});`);
+    expect(coinFn).toMatch(/\} else \{\s*\/\/[^\n]*\n\s*toast\.error\([^\n]*\);\s*return;\s*\}\s*setDeleteTarget\(null\);/);
+    const stockView = read(DELETE_FILES[1]);
     const stockFn = stockView.slice(stockView.indexOf("const handleConfirmDelete"), stockView.indexOf("if (!target || groupStocks.length === 0)"));
-    expect(stockFn).toMatch(/if \(!ok\) \{\s*\/\/[^\n]*\n\s*toast\.error\(TRADE_SAVE_FAIL_TOAST, \{ className: "break-keep" \}\);\s*return;\s*\}/);
+    expect(stockFn).toMatch(new RegExp(`if \\(!ok\\) \\{\\s*//[^\\n]*\\n\\s*toast\\.error\\(TRADE_DELETE_FAIL_TOAST, \\{ className: "break-keep text-balance" \\}\\);\\s*return;\\s*\\}`));
     expect(stockFn).not.toMatch(/if \(!ok\) \{ setDeleteTarget\(null\)/);
   });
   it("주식 삭제 확인창: label id ↔ 확인 버튼 aria-describedby(평단 미상일 때만), 입력칸 aria-label 덮어쓰기 0", () => {

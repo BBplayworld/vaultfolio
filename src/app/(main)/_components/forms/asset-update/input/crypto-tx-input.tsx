@@ -233,7 +233,7 @@ export function CryptoTxInput() {
       resetAndClose();
     } else {
       // 저장 관문 거부 — 폼을 닫지 않고 알린다(무음 실패 0, #357)
-      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep" });
+      toast.error(TRADE_SAVE_FAIL_TOAST, { className: "break-keep text-balance" });
     }
   };
 
