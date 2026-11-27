@@ -30,7 +30,7 @@
 | ~~5.164~~ [#327](https://github.com/BBplayworld/vaultfolio/issues/327) | 저장 스키마 passthrough | **보류**(받은 배당 기록이 분리 키 방식이라 불필요, 예·적금 재개 시) | — |
 | **v5.162** [PR #331](https://github.com/BBplayworld/vaultfolio/pull/331) | #328 맞추기 결과 대조 1줄('맞아요'만, 축소) | **운영 반영 11/27 02:03~14 KST** · 스모크 PASS | 철수선 4주(~12/25) |
 | **5.165** [#332](https://github.com/BBplayworld/vaultfolio/issues/332) | 배당 표 2단 640 미만·max-[359px] 정리 · [PR #333](https://github.com/BBplayworld/vaultfolio/pull/333) | **운영 반영 11/27 08:30** · 화면 스모크 PASS(09:35 v5.164 스모크와 함께) | — |
-| **5.166** [#329](https://github.com/BBplayworld/vaultfolio/issues/329) | 받은 배당 기록(분리 키, risk:high) · [PR #334](https://github.com/BBplayworld/vaultfolio/pull/334) | **운영 반영 11/27 09:20~35** · 스모크 백업·삭제·화면 PASS, 2기기 왕복은 로컬 대체 진행 | 관측 G2 ~12/4 |
+| **5.166** [#329](https://github.com/BBplayworld/vaultfolio/issues/329) | 받은 배당 기록(분리 키, risk:high) · [PR #334](https://github.com/BBplayworld/vaultfolio/pull/334) | **운영 반영 11/27 09:20~35** · 스모크 PASS(2기기 왕복은 로컬 prod 대체) · G1 통과 | 관측 G2 ~12/4 · G3 ~12/11 |
 | **v5.160** [PR #324](https://github.com/BBplayworld/vaultfolio/pull/324) | #323 배당 문구·숫자 마감(지급일 수량 문구·예상 단일 정본·차트 320) | **운영 반영 11/26 22:50~23:04 KST** · 스모크 PASS | 320 배당 표 2단 → 별도 |
 | **v5.152** [PR #307](https://github.com/BBplayworld/vaultfolio/pull/307) | #306 데이터 안전 회귀 테스트(앱 코드 0) | **운영 반영 11/26 04:30 KST** | — |
 | **다음** | 상세·현금 320 현금 거래 9자리 출금 겹침 | 11/27 10:17 착수 예약 | 하루 1머지 |

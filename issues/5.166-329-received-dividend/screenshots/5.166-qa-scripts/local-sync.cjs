@@ -11,7 +11,7 @@ const W = (ms) => new Promise((r) => setTimeout(r, ms));
   const ext = [], sync = [];
   const mk = async (name) => {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
-    const p = await ctx.newPage(); const errs = [];
+    const p = await ctx.newPage(); const errs = []; await require("./lib.cjs").mockDividend(p); // 로컬 배당 API 대체(기존 qa와 같은 픽스처)
     p.on("pageerror", (e) => errs.push("PAGEERR " + String(e).slice(0, 200)));
     p.on("console", (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 140)); });
     p.on("request", (r) => { const u = r.url(); if (!u.startsWith(BASE) && !u.startsWith("data:") && !u.startsWith("blob:")) ext.push(name + " " + u.slice(0, 80)); if (u.includes("/api/sync")) sync.push(`${name} ${r.method()} ${u.replace(BASE, "").slice(0, 60)} body:${(r.postData() || "").slice(0, 0)}${r.postData() ? Object.keys(JSON.parse(r.postData())).join(",") : ""}`); });
@@ -44,7 +44,7 @@ const W = (ms) => new Promise((r) => setTimeout(r, ms));
   await A.p.goto(BASE + "/"); await W(2500);
   await A.p.locator('input[type="file"][accept="application/json"]').first().setInputFiles(SEED); await W(3500);
   await A.p.evaluate(() => { location.hash = "#more"; }); await W(1500);
-  await A.p.getByText("기기 동기화", { exact: true }).first().click(); await W(1000);
+  await A.p.click('[data-testid="more-row-share-sync"]'); await W(800); await A.p.getByText("기기 동기화", { exact: true }).first().click(); await W(1000);
   await A.p.locator('input[type="password"]').first().fill(PASS); await A.p.getByRole("button", { name: /동기화 시작/ }).click(); await W(5000);
   const a0 = await st(A.p); L("A vault", { assetId: !!a0.assetId, ver: a0.ver, armed: await A.p.evaluate(() => /자동 동기화 켜짐/.test(document.body.innerText)) });
   await A.p.keyboard.press("Escape"); await W(400);
