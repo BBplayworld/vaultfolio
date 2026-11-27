@@ -34,6 +34,7 @@ import { shouldAskPastDate } from "@/lib/trade/trade-form";
 import { dividendQueryOptions } from "@/lib/finance/dividend-client";
 import { latestPaidPayout, payoutMonthDay } from "@/lib/finance/dividend-calc";
 import { dividendDateQueryArgs } from "../../../views/activity/use-dividend-data";
+import { brokerCashDefault, nextAutoCash } from "@/lib/asset/broker-totals";
 
 const cashTxFormSchema = z.object({
   cashId: z.string().min(1, "계좌를 선택해주세요"),
@@ -66,6 +67,7 @@ export function CashTxInput() {
   const [dividendStock, setDividendStock] = useState(NO_STOCK);
   const [answered, setAnswered] = useState(false); // 과거 날짜 질문에 답했거나 체크박스를 직접 눌렀는지(화면 전용, 저장 0)
   const [dateStatus, setDateStatus] = useState(""); // 지급일 버튼을 누른 뒤 스크린리더 알림(화면 전용, #339)
+  const [autoCashId, setAutoCashId] = useState<string | null>(null); // 증권사 현금 규칙이 채운 계좌 id(화면 전용, #339). 사용자가 계좌를 고르면 null
 
   const cashAccounts = assetData.cash;
   // 종목 칸 — 보유 주식을 티커 단위로, groupStocksByTicker 순서 그대로(정렬 신설 없음)
@@ -127,6 +129,25 @@ export function CashTxInput() {
     setDateStatus(`날짜를 ${payM}월 ${payD}일로 바꿨어요`);
   };
 
+  // 배당 종목 선택(#339) — 계좌 기본값은 여기서 1회 판정(effect 아님). 계좌 고정 진입·`선택 안 함`은 계좌를 건드리지 않는다.
+  // 빈칸이거나 직전에 규칙이 채운 값일 때만 그 종목 증권사의 현금 계좌로(없으면 빈칸으로 되돌림). 금액 > 0이면 표시 통화가 바뀌는 교체는 하지 않는다
+  const pickDividendStock = (v: string) => {
+    setDividendStock(v);
+    setDateStatus("");
+    const items = v === NO_STOCK ? undefined : stockGroups.get(v);
+    if (lockedCash || !items) return;
+    const next = nextAutoCash({
+      current: form.getValues("cashId"),
+      auto: autoCashId,
+      candidate: brokerCashDefault(items, cashAccounts),
+      amount: form.getValues("amount"),
+      cash: cashAccounts,
+    });
+    if (!next) return;
+    form.setValue("cashId", next.cashId);
+    setAutoCashId(next.auto);
+  };
+
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ cashId?: string; dividend?: boolean }>).detail;
@@ -167,6 +188,7 @@ export function CashTxInput() {
     setDividend(false);
     setDividendStock(NO_STOCK);
     setDateStatus("");
+    setAutoCashId(null);
   }, [form]);
 
   const buildTx = (data: CashTxFormValues): CashTransaction => {
@@ -259,27 +281,39 @@ export function CashTxInput() {
         {!dupPending && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* 계좌 선택 (사전선택 진입 시 숨김) */}
-              {!lockedCash && (
-                <FormItem>
-                  <FormLabel>계좌</FormLabel>
-                  <Select value={selectedCashId} onValueChange={(v) => form.setValue("cashId", v)}>
-                    <SelectTrigger><SelectValue placeholder="계좌 선택" /></SelectTrigger>
-                    <SelectContent>
-                      {cashAccounts.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-
-              {selectedCash && (
-                <div className="flex items-center gap-2 rounded-lg bg-muted/50 dark:bg-muted/40 px-3 py-2 text-sm">
-                  <span className="font-medium truncate">{selectedCash.name}</span>
-                  <span className="ml-auto text-muted-foreground shrink-0">잔액 {formatCurrencyDisplay(selectedCash.balance, selectedCash.currency)}</span>
+              {/* 계좌 칸 + 요약 상자 한 블록(#339, ui.md 3장) — 요약 상자는 항상 마운트하고 높이만 펼친다(design-system §6).
+                  종목을 골라 계좌가 채워질 때 위쪽이 갑자기 늘어 방금 누른 칸이 튀지 않게. 간격 16px는 펼침 안쪽(빈 상태 높이 = 이전과 같음) */}
+              <div data-testid="cash-tx-account-block">
+                {/* 계좌 선택 (사전선택 진입 시 숨김) — 사용자가 고르면 규칙 값 표시를 지우고 이후 손대지 않는다 */}
+                {!lockedCash && (
+                  <FormItem>
+                    <FormLabel>계좌</FormLabel>
+                    <Select value={selectedCashId} onValueChange={(v) => { setAutoCashId(null); form.setValue("cashId", v); }}>
+                      <SelectTrigger data-testid="cash-tx-account" data-autofill={selectedCashId && selectedCashId === autoCashId ? "broker" : "none"}><SelectValue placeholder="계좌 선택" /></SelectTrigger>
+                      <SelectContent>
+                        {cashAccounts.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+                <div
+                  inert={!selectedCash}
+                  className={`grid ease-out motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${selectedCash ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div className={lockedCash ? "pt-0" : "pt-4"}>
+                      {selectedCash && (
+                        <div data-testid="cash-tx-account-summary" className="flex items-center gap-2 rounded-lg bg-muted/50 dark:bg-muted/40 px-3 py-2 text-sm">
+                          <span className="font-medium truncate">{selectedCash.name}</span>
+                          <span className="ml-auto text-muted-foreground shrink-0">잔액 {formatCurrencyDisplay(selectedCash.balance, selectedCash.currency)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
               {/* 입금/출금 토글 */}
               <FormField
@@ -363,7 +397,7 @@ export function CashTxInput() {
                         <div className="min-h-0 overflow-hidden">
                           <div className="space-y-2 pl-6 pt-3">
                             <label htmlFor="cash-tx-dividend-stock" className="block text-sm font-medium">종목 (선택)</label>
-                            <Select value={dividendStock} onValueChange={(v) => { setDividendStock(v); setDateStatus(""); }}>
+                            <Select value={dividendStock} onValueChange={pickDividendStock}>
                               <SelectTrigger
                                 id="cash-tx-dividend-stock"
                                 data-testid="cash-tx-dividend-stock"
