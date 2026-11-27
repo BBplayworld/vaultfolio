@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-27 13:50 KST** · 운영 최신 **v5.165** (v5.163 머지·스모크 대기) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
+> **마지막 갱신: 2026-11-27 14:30 KST** · 운영 최신 **v5.165** (v5.166 머지·스모크 대기) (v5.163 머지·스모크 대기) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -31,7 +31,7 @@
 | **v5.162** [PR #331](https://github.com/BBplayworld/vaultfolio/pull/331) | #328 맞추기 결과 대조 1줄('맞아요'만, 축소) | **운영 반영 11/27 02:03~14 KST** · 스모크 PASS | 철수선 4주(~12/25) |
 | **5.165** [#332](https://github.com/BBplayworld/vaultfolio/issues/332) | 배당 표 2단 640 미만·max-[359px] 정리 · [PR #333](https://github.com/BBplayworld/vaultfolio/pull/333) | **운영 반영 11/27 08:30** · 화면 스모크 PASS(09:35 v5.164 스모크와 함께) | — |
 | **v5.165** [PR #336](https://github.com/BBplayworld/vaultfolio/pull/336) | #335 증권사 현금 한 장 | **운영 반영 11/27 13:25~39** · 스모크 PASS | — |
-| **5.168** [PR #338](https://github.com/BBplayworld/vaultfolio/pull/338) | #337 R3 평단만 맞춘 종목 맞춘 날 유지(과거 배당 과대 수정) | qa 중 | CEO → 머지 · 이후 5.169 지급일 버튼(G2 ~12/4 뒤) |
+| **5.168** [PR #338](https://github.com/BBplayworld/vaultfolio/pull/338) | #337 R3 평단만 맞춘 종목 맞춘 날 유지(과거 배당 과대 수정) | **v5.166 머지 11/27 14:29** · 스모크 대기 | 이후 5.169 지급일 버튼(G2 ~12/4 뒤 머지) |
 | **5.166** [#329](https://github.com/BBplayworld/vaultfolio/issues/329) | 받은 배당 기록(분리 키, risk:high) · [PR #334](https://github.com/BBplayworld/vaultfolio/pull/334) | **운영 반영 11/27 09:20~35** · 스모크 PASS(2기기 왕복은 로컬 prod 대체) · G1 통과 | 관측 G2 ~12/4 · G3 ~12/11 |
 | **v5.160** [PR #324](https://github.com/BBplayworld/vaultfolio/pull/324) | #323 배당 문구·숫자 마감(지급일 수량 문구·예상 단일 정본·차트 320) | **운영 반영 11/26 22:50~23:04 KST** · 스모크 PASS | 320 배당 표 2단 → 별도 |
 | **v5.152** [PR #307](https://github.com/BBplayworld/vaultfolio/pull/307) | #306 데이터 안전 회귀 테스트(앱 코드 0) | **운영 반영 11/26 04:30 KST** | — |
