@@ -212,7 +212,7 @@ export function buildGrowRows(
   const rows: GrowRow[] = [];
   for (const [key, items] of groupStocksByTicker(stocks)) {
     if (!key.startsWith("t:")) continue; // 티커 없는 종목
-    const merged = mergeStockGroup(items);
+    const merged = mergeStockGroup(items, exchangeRates);
     const ticker = normalizeTicker(merged);
     if (!isStockLabelKey(ticker)) continue;
     const m = computeStockMetrics(merged, exchangeRates, totalValue);

@@ -254,7 +254,7 @@ export function ProfitCard({ isActive = true, period }: { isActive?: boolean; pe
   );
 
   const groupedMap = groupStocksByTickerCategory(stocksWithPrice);
-  const mergedStocks = Array.from(groupedMap.values()).map(mergeStockGroup);
+  const mergedStocks = Array.from(groupedMap.values()).map((g) => mergeStockGroup(g));
 
   // 점진 노출: 배치 응답이 올 때마다 누적된 결과를 state에 반영
   // 각 종목은 데이터가 채워지는 순서대로 화면에 표시됨

@@ -14,7 +14,7 @@ import { useTradeViewStore } from "@/stores/trade-view-store";
 import { dispatchAddTrade } from "../../../layout/navigation/asset-dispatch";
 import { formatCurrency, formatPriceByCurrency } from "@/lib/number-utils";
 import { getMultiplier, mergeStockGroup } from "../asset-detail-tabs";
-import { rollbackTransaction } from "@/lib/trade/trade-utils";
+import { rollbackStockTrade } from "@/lib/trade/trade-form";
 import { RelinkEntry } from "../../../forms/asset-update/relink/relink-entry";
 import { planRemoveLink } from "@/lib/trade/linked-record";
 import { revertNoteText, revertToastSuffix } from "@/lib/trade/link-text";
@@ -168,7 +168,8 @@ export function StockTradesView() {
       lockedByManual: false,
     };
     const allTx = (assetData.transactions || []).filter((t) => t.stockId === stock.id);
-    const rolledBack = rollbackTransaction(currentPosition, allTx, tx.id);
+    // 역산한 기준 보유분 환율이 0이면 남은 첫 매수 체결 환율로 채운 뒤 재계산(희석 방지, #349)
+    const rolledBack = rollbackStockTrade(currentPosition, allTx, tx.id);
     setDeleteTarget({
       tx, stock,
       preview: { quantity: rolledBack.quantity, avgPrice: rolledBack.avgPrice, avgExchangeRate: rolledBack.avgExchangeRate },

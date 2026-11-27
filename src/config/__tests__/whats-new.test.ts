@@ -56,6 +56,12 @@ describe("WHATS_NEW 데이터 형식", () => {
     expect(WHATS_NEW.filter((x) => x.trialHidden).map((x) => x.id)).toEqual(["20261127-02", "20261127-04"]);
   });
 
+  it("5.166 받은 배당(5.173 #350 보충): 본문은 하단 `상세`부터 계좌 펼침까지 모든 단계, id·바로 가기 유지(C148)", () => {
+    const e = WHATS_NEW.find((x) => x.id === "20261127-03")!;
+    expect(e.body).toBe("상세 › 현금 › 계좌를 펼쳐 입출금\u00a0기록에서 배당으로 적으면 성과 › 배당에 모여요");
+    expect(e.featureId).toBe("dividend");
+  });
+
   it("5.167 증권사 현금: 현금 줄이 조건부라 바로 가기 없음, 체험 데모 기관에 증권사가 없어 체험 목록에서 숨김(C87·C126)", () => {
     const e = WHATS_NEW.find((x) => x.id === "20261127-04")!;
     expect(e.title).toBe("증권사 현금도 증권사 이름으로 적을\u00a0수 있어요");

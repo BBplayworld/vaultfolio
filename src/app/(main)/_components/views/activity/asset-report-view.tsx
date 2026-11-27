@@ -233,7 +233,7 @@ export function AssetReportView() {
   // 주식 집중도 (X-Ray theme topShare — 분산 축 입력)
   const stockConcentration = useMemo(() => {
     if (assetData.stocks.length === 0) return null;
-    const merged = Array.from(groupStocksByTicker(assetData.stocks).values()).map(mergeStockGroup);
+    const merged = Array.from(groupStocksByTicker(assetData.stocks).values()).map((g) => mergeStockGroup(g));
     return computeBreakdown("theme", merged, exchangeRates);
   }, [assetData.stocks, exchangeRates]);
   const topShare = stockConcentration && stockConcentration.total > 0 ? stockConcentration.topShare : null;

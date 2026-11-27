@@ -1075,7 +1075,22 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 resolveTradeRate({ input, currentRate, isForeign }): number | undefined // 체결 환율 단일 값: 칸>0 → 현재 환율>0 → undefined. 0 반환 0, 국내 undefined
 shouldAskPastDate({ date, today, isNewSelected? }): boolean            // 과거 날짜 질문 표시(date < todayKst(), 빈 날짜·신규 자산 false)
 roundTradePrice(value, currency): number                                // '현재가 넣기' 반올림 USD 3·JPY 4·KRW 0
+// #5.173 #349 — 환율 없는 보유에 매수할 때 저장 환율 희석 방지(주식 쓰기 3곳 전용)
+fillBaseRateForBuy(pos, tx): pos                                        // 기준 수량>0·기준 환율≤0·매수·체결 환율>0이면 기준 환율 = 체결 환율, 아니면 pos 그대로(같은 객체)
+applyStockTrade(pos, tx): PositionPreview                               // computeNewPosition(fillBaseRateForBuy(pos, tx), tx) — trade-input 미리보기·저장, trade-screenshot-import 시뮬레이션
+rollbackStockTrade(currentPosition, allTx, removeTxId): P               // rollbackTransaction + 역산 기준분 환율≤0이면 남은 첫 매수(재계산 순) 체결 환율로 채움 — stock-trades-view 삭제 롤백
 ```
+- `computeNewPosition`·`rollbackTransaction`(성적표·세금 replay·relink·코인 공용)은 불변 — 0 기준 환율 희석(예: 1,400 → 700)은 replay 통제군으로 그대로 남는다. 기존 저장값 일괄 보정 없음(사용자가 그 종목의 다른 거래를 삭제할 때만 재계산 결과가 바뀐다).
+
+### 주식 그룹 합산 (`views/detail/asset-detail-tabs.tsx`, #5.173 #348)
+```typescript
+mergeStockGroup(items, rates?): Stock          // 그룹 대표(가상, 저장 안 함). rates를 넘기면 매입환율 있음·없음(0 포함)이 섞인 USD·JPY 그룹만
+                                               // 합친 purchaseExchangeRate = Σ(평단×수량×항목 환율|미입력은 지금 환율) ÷ Σ(평단×수량), 저장 단위(엔화 100엔당)
+                                               // → 합친 원가·환차 = 항목 합(computeStockTotals). 그 밖(전부 있음·전부 없음·국내·단일·합계 0주)은 기존 값
+hasMixedPurchaseRate(items): boolean           // 0주 제외한 USD·JPY 그룹에 환율 있음·없음이 섞였는가 — 펼침 '매입환율' 칸 `일부 미입력 (현재환율)` 판정
+```
+- rates를 넘기는 곳은 표시 손익을 쓰는 4곳뿐: `stock-tab.tsx` 행(→ 인증카드 같은 hook)·`stock-page.ts` `buildStockGroupHead`·`grow-rows.ts` `buildGrowRows`, 그리고 `tax-utils.ts` `groupForeignStocksByTicker`(복제 규칙, 섞이면 `estimated=true`). 평가액·이름만 쓰는 곳(grow-board·X-Ray·지역 분할·성적표 집중도·수익 차트·배당·오늘 내 종목·거래내역 머리)은 인자 없이 호출. `.map(mergeStockGroup)`처럼 index가 rates로 들어가는 호출 금지 — `.map((g) => mergeStockGroup(g))`.
+- `tax-utils` 환율 단위(#347): 저장 환율(체결·매입, 엔화 100엔당)은 `perUnitRate`로 1엔당으로 바꾼 뒤 곱한다(실현손익 replay·폴백·매도 환율, 절세 시뮬 원가).
 - 거래 폼 `linkRate`(칸·미리보기·연결 금액·`÷ N`)와 `buildTransaction` 저장이 `resolveTradeRate` 하나를 쓴다. 해외 종목이 정해지면 칸을 현재 환율로 채우고(`rateTouched` ref로 사용자가 고친 값은 유지, 자동 값은 통화·환율 변경 시 재채움) 안내 `exrate-auto-help`. `trade-utils`(포지션 정·역)는 저장 포지션과 대칭이어야 해서 여기에 두지 않았다.
 - 체결 환율 0(예전 폼에서 칸을 지워 저장) 읽기 보정은 `tax-utils.computeForeignRealizedGain` 한 곳(replay·매도 환율 모두 '값 없음' → 현재 환율 + `estimated`). `trade-utils`·`tradeKrwRate`는 손대지 않는다(후자는 이미 `>0` 검사).
 

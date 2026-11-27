@@ -30,7 +30,7 @@ export interface StockGroupHead {
 
 // 누른 행의 그룹 → 머리. 행은 mergeStockGroup + computeStockMetrics(비중 0)를 그대로 쓴다
 export function buildStockGroupHead(items: Stock[], rates: Rates, displayCurrency: StockDisplayCurrency): StockGroupHead {
-  const merged = mergeStockGroup(items);
+  const merged = mergeStockGroup(items, rates);
   const m = computeStockMetrics(merged, rates, 0, displayCurrency);
   const tone = profitTone(m.profit, m.profitRate);
   const fmt = (v: number) => formatByDisplayCurrency(v, displayCurrency, rates.USD);
