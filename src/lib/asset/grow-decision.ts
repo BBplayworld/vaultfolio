@@ -95,26 +95,3 @@ export function dueTipOf(boards: GrowBoards): DueTip | null {
     : reasons.some((r) => r.kind === "date") ? "내가 정한 조건·기간에 닿았어요" : "내가 정한 조건에 닿았어요";
   return { count: status.due, unit: status.unit, reason };
 }
-
-export interface GrowTileValue {
-  kind: "due" | "labeled" | "first";
-  due: number;
-  keep: number;
-  check: number;
-  count: number;
-  /** 값 줄 조각 — 화면은 조각 사이에 가운뎃점을 둔다. 줄은 조각 사이에서만 바뀐다 */
-  parts: string[];
-}
-
-/**
- * `내 자산 점검` 타일 값 줄 — 주식 행 기준(boardStatus). 주식 행이 없으면 null(타일 없음).
- * 앞의 `주식`은 허브·세그먼트(전 종류 합)와 수가 달라 보이지 않게 하는 범위 낱말. 처음 상태는 수가 없어 붙이지 않는다
- */
-export function growTileValueOf(rows: BoardRow[]): GrowTileValue | null {
-  const s = boardStatus(rows);
-  if (s.kind === "empty") return null;
-  const parts = s.kind === "due"
-    ? [`주식 점검 차례 ${s.due}종목`]
-    : s.kind === "labeled" ? [`주식 장기 보유 ${s.keep}`, `점검 대상 ${s.check}`] : ["장기 보유", "점검 대상 정하기 전"];
-  return { kind: s.kind, due: s.due, keep: s.keep, check: s.check, count: s.count, parts };
-}

@@ -66,11 +66,11 @@ describe("한 화면 1개·우선순위 — 실제 recordVisit 결과로 넘어�
     recordViewVisits(WEEK_ALL);
     expect(pickNewSpot(["hub-week", "hub-market"], TODAY, lastVisited)).toBe("hub-market");
   });
-  it("시장과 비교 방문은 상세·주식 stock-market과 허브 hub-market을 함께 끈다(같은 visitKey)", () => {
-    expect(pickNewSpot(["stock-market"], TODAY, lastVisited)).toBe("stock-market");
+  it("시장과 비교 방문은 허브 hub-market을 끈다(5.171: 상세·주식 stock-market 정의 제거 — 쓰는 화면 0)", () => {
+    expect(pickNewSpot(["hub-market"], TODAY, lastVisited)).toBe("hub-market");
     recordViewVisits({ type: "activity", tab: "change-market" });
-    expect(pickNewSpot(["stock-market"], TODAY, lastVisited)).toBeNull();
     expect(pickNewSpot(["hub-market"], TODAY, lastVisited)).toBeNull();
+    expect(Object.keys(NEW_SPOTS)).not.toContain("stock-market");
   });
   it("새 소식 시트 읽음 기록은 `새`에 영향 없음(방문으로만 꺼짐)", () => {
     store.set("secretasset_notice_seen", JSON.stringify({ id: "20261111-08", seenAt: Date.now() + 1e9 }));

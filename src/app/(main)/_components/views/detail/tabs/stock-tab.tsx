@@ -41,7 +41,7 @@ import { displayShareWidths } from "@/lib/report/min-share";
 import { useStockLabelsRead } from "@/hooks/use-stock-labels";
 import { isStockLabelKey, type StockLabels } from "@/lib/asset/stock-labels";
 import { buildBoardRows } from "@/lib/asset/grow-board";
-import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, growTileValueOf, type DecisionKind } from "@/lib/asset/grow-decision";
+import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, type DecisionKind } from "@/lib/asset/grow-decision";
 import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { DUE_TEXT, GrowDueEntry } from "../../activity/grow-due-entry";
@@ -317,15 +317,13 @@ export function StockRowHeader({ stock, color, pct, currentVal, profit, profitRa
             <Badge variant="outline" className={`text-destructive border-destructive ${badgeCls}`}>상장폐지</Badge>
           )}
         </div>
-        <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap${decision ? ` ${DOT_WRAP_ROW}` : ""}`}>
+        {/* 5.171 #343: 일반 화면은 늘 dot-wrap 줄(`수량 · 비중 · 점검 차례`, 조각 nowrap — 줄은 조각 사이에서만 바뀌고 줄 머리·끝에 `·` 없음, C152). 인증카드는 기존 그대로 */}
+        <div className={`${ASSET_THEME.cardInfoMeta} flex-wrap${!screenshotMode || decision ? ` ${DOT_WRAP_ROW}` : ""}`}>
           {/* 인증카드 금액 숨김(maskFn이 ••• 반환) 시 수량도 가림 — 수량×현재가로 평가금액 역산 차단(#155) */}
-          <span className={`${qtyCls} text-foreground tabular-nums${decision ? ` ${DOT_WRAP_FIRST}` : ""}`}>{screenshotMode && hideAmounts ? maskFn!(stock.quantity) : stock.quantity.toLocaleString()}주</span>
-          {/* 인증카드는 비중 정보를 상단 범례로 통합 — 리스트 행에서는 % 미노출 */}
+          <span className={`${qtyCls} text-foreground tabular-nums${screenshotMode ? (decision ? ` ${DOT_WRAP_FIRST}` : "") : ` whitespace-nowrap ${DOT_WRAP_FIRST}`}`}>{screenshotMode && hideAmounts ? maskFn!(stock.quantity) : stock.quantity.toLocaleString()}주</span>
+          {/* 보유 비중 — 모바일 포함 모든 폭(5.171, 범례가 상위 3 + 그 외로 줄어 행이 비중 정본). 인증카드는 비중 정보를 상단 범례로 통합 — 리스트 행에서는 % 미노출 */}
           {!screenshotMode && (
-            <>
-              <span className="text-sm text-muted-foreground max-sm:hidden">·</span>
-              <span className="text-sm font-semibold text-primary max-sm:hidden">{pct.toFixed(1)}%</span>
-            </>
+            <span data-testid="stock-row-share" className="whitespace-nowrap text-sm font-semibold text-primary tabular-nums"><DotLead />{pct.toFixed(1)}%</span>
           )}
           {/* 내 결정(#245) — 차례면 `점검 차례`만. 줄이 바뀌어도 가운뎃점이 줄 머리·줄 끝에 남지 않는다(dot-wrap). 390 미만은 차례 행에만(좁은 폭 행 높이 +0, #245 qa D-1) */}
           {!screenshotMode && decision && (
@@ -960,6 +958,8 @@ export interface StockCategorySectionProps {
   renderItem: (stock: Stock, isFirstOverall: boolean, color: string) => React.ReactNode;
   /** 종목 리스트 최대 노출 개수 — 초과분은 "외 N종목" 요약행. 비중바도 같은 개수로 축약(인증카드용) */
   maxItems?: number;
+  /** 일반 화면(screenshotMode 아님) 비중 바·범례 최대 칸 수(5.171) — 종목이 이보다 많으면 상위 (legendMax−1) + `그 외 N종목`. 목록은 줄이지 않는다 */
+  legendMax?: number;
   /** 금액 마스킹 함수(인증카드 "금액 표시" 오프) — "외 N종목" 요약행 금액에 적용 */
   maskFn?: (v: number) => string;
   /** "외 N종목" 손익 합산용 — 미전달 시 요약행은 평가금액만 노출 */
@@ -978,6 +978,7 @@ export function StockCategorySection({
   shotBig = false,
   renderItem,
   maxItems,
+  legendMax,
   maskFn,
   exchangeRates,
 }: StockCategorySectionProps) {
@@ -994,8 +995,11 @@ export function StockCategorySection({
           범례(색점 + 이름 + 비중%)는 주식 탭·인증카드 공통으로 노출한다.
           인증카드는 캡처 폭 480px 고정이라 반응형 대신 SHOT 토큰 값을 쓴다(R25). */}
       {barItems.length > 0 && totalValue > 0 && (() => {
-        const barShown = maxItems ? barItems.slice(0, maxItems) : barItems;
-        const barRest = maxItems ? barItems.slice(maxItems) : [];
+        // 일반 화면 legendMax(5.171): N > legendMax면 상위 legendMax−1 + 그 외(기존 그 외 경로·계산 재사용). 인증카드는 maxItems 경로 그대로
+        const legendCut = !screenshotMode && legendMax && barItems.length > legendMax ? legendMax - 1 : undefined;
+        const barCut = legendCut ?? maxItems;
+        const barShown = barCut ? barItems.slice(0, barCut) : barItems;
+        const barRest = barCut ? barItems.slice(barCut) : [];
         const restValue = barRest.reduce((s, b) => s + b.value, 0);
         const restPct = (restValue / totalValue) * 100;
         const ETC_COLOR = "#9ca3af";
@@ -1014,11 +1018,11 @@ export function StockCategorySection({
                 <div className="overflow-hidden transition-all" style={{ width: `${barWidths[barShown.length]}%`, backgroundColor: ETC_COLOR }} title={`그 외: ${restPct.toFixed(1)}%`} />
               )}
             </div>
-            <div className={screenshotMode ? ASSET_THEME_SHOT.legendGrid : "grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2"}>
+            <div data-testid={screenshotMode ? undefined : "stock-legend"} className={screenshotMode ? ASSET_THEME_SHOT.legendGrid : "grid grid-cols-2 sm:grid-cols-4 gap-x-4 max-[360px]:gap-x-2 gap-y-2 px-2"}>
               {barShown.map(({ stock, value: v, color }) => {
                 const pct = (v / totalValue) * 100;
                 return (
-                  <div key={stock.id} className="flex items-center gap-1">
+                  <div key={stock.id} data-testid={screenshotMode ? undefined : "stock-legend-item"} className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                     <span className={`${legendTextCls} text-foreground truncate`}>{stock.name}</span>
                     <span className={`${legendTextCls} font-bold shrink-0`} style={{ color: color }}>{pct.toFixed(1)}%</span>
@@ -1026,9 +1030,9 @@ export function StockCategorySection({
                 );
               })}
               {barRest.length > 0 && restPct > 0 && (
-                <div className="flex items-center gap-1">
+                <div data-testid={screenshotMode ? undefined : "stock-legend-rest"} data-count={screenshotMode ? undefined : barRest.length} className="flex items-center gap-1">
                   <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: ETC_COLOR }} />
-                  <span className={`${legendTextCls} text-muted-foreground truncate`}>그 외 {barRest.length}종목</span>
+                  <span className={`${legendTextCls} text-muted-foreground ${screenshotMode ? "truncate" : "whitespace-nowrap shrink-0"}`}>그 외 {barRest.length}종목</span>
                   <span className={`${legendTextCls} font-bold shrink-0 text-muted-foreground`}>{restPct.toFixed(1)}%</span>
                 </div>
               )}
@@ -1058,8 +1062,9 @@ export function StockCategorySection({
         const hideAmounts = !!maskFn && maskFn(123456).includes("•");
         const restAmountCls = screenshotMode ? shotTok.cardAmountMain : ASSET_THEME.cardAmountMain;
         const restSubCls = screenshotMode ? `${shotTok.bodyText} font-bold tabular-nums` : ASSET_THEME.cardAmountSub;
+        // 범례~목록 간격: 일반 화면 16px(5.171, 위 블록 space-y-4와 같은 리듬) / 인증카드 40px 그대로
         return (
-          <div data-testid="detail-list-box-stocks" className={`space-y-2 mt-10 ${screenshotMode ? "" : ASSET_THEME.listBox}`}>
+          <div data-testid="detail-list-box-stocks" className={`space-y-2 ${screenshotMode ? "mt-10 " : `mt-4 ${ASSET_THEME.listBox}`}`}>
             {shown.map((s, i) => renderItem(s, i === 0, colorOf(s)))}
             {/* "외 N종목" 요약 — 별도 박스를 두지 않고 위 종목 카드와 같은 래퍼·아이콘 자리(spacer)를 써서 좌우·상하 정렬을 맞춘다 */}
             {rest.length > 0 && (
@@ -1175,14 +1180,13 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
 
   const getCategoryLabel = (cat: string) => stockCategories.find((c) => c.value === cat)?.label ?? cat;
 
-  // 내 결정(#245) — 점검 칸 주식 보기와 같은 행을 1번 만들어(buildBoardRows) 행 표시·차례 진입·타일 값이 함께 읽는다. 새 판정 0.
+  // 내 결정(#245) — 점검 칸 주식 보기와 같은 행을 1번 만들어(buildBoardRows) 행 표시·차례 진입이 함께 읽는다. 새 판정 0.
   // 차례·%는 티커 전체·원화 기준이다(카테고리 탭·달러 보기의 부분 묶음과 다를 수 있다 — 정본은 점검 칸)
   const boardRows = useMemo(
     () => buildBoardRows(assetData.stocks, exchangeRates, labels, growNow, assetData.transactions ?? []),
     [assetData.stocks, assetData.transactions, exchangeRates, labels, growNow],
   );
   const decisions = useMemo(() => (labelsReady ? decisionRowsOf(boardRows) : null), [labelsReady, boardRows]);
-  const growTile = boardRows.length === 0 ? undefined : labelsReady ? growTileValueOf(boardRows) ?? undefined : "pending";
   const decisionOf = (stock: Stock) => {
     if (!decisions || !stock.ticker || stock.inactiveStatus === "delisted" || !(stock.quantity > 0)) return undefined;
     const key = normalizeTicker(stock);
@@ -1241,8 +1245,8 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
           priceAsOf={priceAsOf}
         />
 
-        {/* 내 주식 도구 타일(X-Ray·내 자산 점검, 4.83·#245·5.170 — 인증카드 제외) */}
-        <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} grow={growTile} />
+        {/* 내 주식 도구 타일(X-Ray 1개, 4.83·5.170·5.171 — 인증카드 제외) */}
+        <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} />
 
         {/* 카테고리 selector — 목록은 늘 평가금 순(#288 R1) */}
         <div data-testid="stock-category-row" className="flex items-center gap-2">
@@ -1261,7 +1265,7 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
             현금 줄(#335)은 '전체' 탭에서만 — 현금은 계좌 유형이 없어 국내·해외·IRP 등 탭에 붙이면 오해된다 */}
         <BrokerTotalsBlock stocks={tabStocks} exchangeRates={exchangeRates} displayCurrency={effectiveDisplayCurrency} cash={activeCategory === "all" ? assetData.cash : undefined} />
 
-        {/* 비중바 + 종목 목록 (인증카드과 공통) */}
+        {/* 비중바 + 종목 목록 (인증카드과 공통) — 범례는 최대 4칸(상위 3 + 그 외, 5.171), 행마다 비중 % */}
         <StockCategorySection
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
@@ -1270,6 +1274,7 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
           barItems={barItems}
           barColors={barColors}
           screenshotMode={false}
+          legendMax={4}
           renderItem={(stock, isFirst, color) => {
             const groupKey = groupKeyOf(stock);
             const groupItems = groupedStocks.get(groupKey) ?? [stock];

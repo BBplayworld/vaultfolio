@@ -7,7 +7,7 @@ import type { AssetData, Stock } from "@/types/asset";
 import { recordReview, type StockLabels } from "../asset/stock-labels";
 import { buildBoardRows, boardStatus, dueReasonText, hitOf } from "../asset/grow-board";
 import { buildGrowBoards, growStatus } from "../asset/grow-kinds";
-import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, dueTipOf, growTileValueOf, headDecisionOf, headDecisionText } from "../asset/grow-decision";
+import { DECISION_TEXT, decisionKindOf, decisionRowsOf, dueEntryText, dueTipOf, headDecisionOf, headDecisionText } from "../asset/grow-decision";
 import { featureTitleOf } from "../analytics/ga";
 
 const RATES = { USD: 1400, JPY: 925 };
@@ -190,35 +190,6 @@ describe("spec 4-3 — 홈 팁 수·단위·이유 1줄(허브 카드와 같은 
   });
 });
 
-describe("spec 4-4 — `내 자산 점검` 타일 값 줄(주식 행 기준)", () => {
-  const plan = { down: 15, up: 25 };
-  const tile = (stocks: Stock[], labels: StockLabels) => growTileValueOf(buildBoardRows(stocks, RATES, labels, NOW));
-  it("주식 행 없음 → 타일 없음(null)", () => {
-    expect(tile([], mk())).toBeNull();
-    expect(tile([st("a", 110, { quantity: 0 })], mk())).toBeNull();
-  });
-  it("차례 / 정함 / 처음 3상태 문자열", () => {
-    expect(tile([st("a", 84), st("b", 126), st("c")], mk({ A: check(30, 100, plan), B: check(30, 100, plan) }))!.parts.join(" · ")).toBe("주식 점검 차례 2종목");
-    expect(tile([st("a"), st("b"), st("c"), st("d"), st("e")], mk({ A: keep(10, 100), B: keep(10, 100), C: keep(10, 100), D: check(10, 100), E: check(10, 100) }))!.parts.join(" · ")).toBe("주식 장기 보유 3 · 점검 대상 2");
-    expect(tile([st("a"), st("b")], mk())!.parts.join(" · ")).toBe("장기 보유 · 점검 대상 정하기 전");
-  });
-  it("수는 주식 보기 상태(boardStatus)와 같다 — 차례 수 = 목록의 점검 차례 행 수", () => {
-    const rows = buildBoardRows([st("a", 84), st("b"), st("c")], RATES, mk({ A: check(30, 100, plan), B: keep(10, 100) }), NOW);
-    const t = growTileValueOf(rows)!;
-    expect(t).toMatchObject({ kind: "due", due: rows.filter((r) => r.due).length, keep: boardStatus(rows).keep, check: boardStatus(rows).check, count: 3 });
-  });
-  it("코인만 차례(주식 차례 0)면 주식 상태 그대로 — 전 종류 합(허브)과 섞지 않는다", () => {
-    const labels = mk({ A: keep(10, 100), "c:BTC": check(200, undefined, { months: 6 }) });
-    const d = data({ stocks: [st("a")], crypto: [{ id: "c1", name: "비트코인", symbol: "BTC", quantity: 1, averagePrice: 100, currentPrice: 120, purchaseDate: "2025-01-01" }] as unknown as AssetData["crypto"] });
-    const b = buildGrowBoards(d, RATES, labels, NOW);
-    expect(growStatus(b)).toMatchObject({ kind: "due", due: 1 });
-    expect(growTileValueOf(b.stock)!.parts.join(" · ")).toBe("주식 장기 보유 1 · 점검 대상 0");
-  });
-  it("값 줄에 권유 낱말이 없다", () => {
-    for (const p of ["주식 점검 차례 2종목", "주식 장기 보유 3 · 점검 대상 2", "장기 보유 · 점검 대상 정하기 전"]) expect(p).not.toMatch(/팔|사세요|늦|위험|기회|추천|하세요|해 보세요/);
-  });
-});
-
 describe("문장 정본 일치 · GA title(AC-10)", () => {
   it("진입 문장 = 점검 한 장 이유 줄과 같은 꼴(`점검 차례 · {dueReasonText}`)", () => {
     const row = buildBoardRows([st("a", 84)], RATES, mk({ A: check(30, 100, { down: 15 }) }), NOW)[0];
@@ -237,10 +208,15 @@ describe("문장 정본 일치 · GA title(AC-10)", () => {
   });
   it("GA 호출부는 category만 넘기고 preview 가드가 앞에 있다", () => {
     const root = path.resolve(__dirname, "../../app/(main)/_components/views");
-    for (const [file, cat] of [["activity/grow-due-entry.tsx", "stock_decision"], ["detail/stock-tools.tsx", "stock_check_tile"], ["detail/tabs/stock-tab.tsx", "stock_decision_view"], ["home/home-tip-box.tsx", "home_tip_due"]] as const) {
+    for (const [file, cat] of [["activity/grow-due-entry.tsx", "stock_decision"], ["detail/tabs/stock-tab.tsx", "stock_decision_view"], ["home/home-tip-box.tsx", "home_tip_due"]] as const) {
       const src = readFileSync(path.join(root, file), "utf8");
       expect(src).toContain(`if (!isPreviewEnv()) track("feature_use", { category: "${cat}" });`);
       expect(src.split(`category: "${cat}"`)).toHaveLength(2); // 전송 1곳
     }
+  });
+  it("5.171: `내 자산 점검` 타일 제거 — stock_check_tile 전송 0(이름표는 지난 데이터 판독용으로 남음)", () => {
+    const src = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/views/detail/stock-tools.tsx"), "utf8");
+    expect(src).not.toContain("stock_check_tile");
+    expect(src).not.toContain("track(");
   });
 });
