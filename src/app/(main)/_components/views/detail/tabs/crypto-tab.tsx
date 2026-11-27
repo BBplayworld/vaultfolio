@@ -146,7 +146,7 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
           </CollapsibleTrigger>
         </div>
         <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
-          <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+          <div className="h-full motion-safe:transition-[width]" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
         {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
