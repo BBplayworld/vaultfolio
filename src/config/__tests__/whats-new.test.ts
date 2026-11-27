@@ -64,6 +64,14 @@ describe("WHATS_NEW 데이터 형식", () => {
     expect(e.trialHidden).toBe(true);
   });
 
+  it("5.169 배당 지급일: 폼 안 조건부 버튼이라 바로 가기 없음, 해외 과장 없이 '배당 종목', 체험에서 숨기지 않음(C87·C126) — id는 머지일로 교체", () => {
+    const e = WHATS_NEW.find((x) => x.title === "배당 입금 날짜를 지급일로 채울\u00a0수 있어요")!;
+    expect(e.body).toBe("현금 › 입출금 기록에서 배당 종목을 고르면 최근 지급일로 날짜를 채울\u00a0수 있어요");
+    expect(e.body).not.toMatch(/모든|전부|해외/);
+    expect(e.featureId).toBeUndefined();
+    expect(e.trialHidden).toBeUndefined();
+  });
+
   it("길이: title 2~32자, body 48자 이하", () => {
     for (const e of WHATS_NEW) {
       expect(e.title.length, e.id).toBeGreaterThanOrEqual(2);
