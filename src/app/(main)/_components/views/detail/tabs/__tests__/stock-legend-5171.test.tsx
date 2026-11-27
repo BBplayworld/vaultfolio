@@ -73,6 +73,13 @@ describe("범례 최대 4칸 — 일반 화면(legendMax=4)", () => {
     expect(html).not.toContain("stock-legend-rest");
     expect(barOf(html).match(/background-color:/g)).toHaveLength(n);
   });
+  it("320 `그 외 N종목` 잘림 0 — 이름 nowrap·shrink-0(말줄임 없음), 360 미만 격자 gap-x-2(ui-review FAIL 수정)", () => {
+    const l = legendOf(section(6, { legendMax: 4 }));
+    expect(l).toMatch(/^data-testid="stock-legend" class="grid grid-cols-2 sm:grid-cols-4 gap-x-4 max-\[360px\]:gap-x-2 gap-y-2 px-2"/);
+    expect(l).toContain('<span class="text-sm text-muted-foreground whitespace-nowrap shrink-0">그 외 3종목</span>');
+    // 상위 칸 이름은 그대로 truncate
+    expect(l.match(/text-foreground truncate/g)).toHaveLength(3);
+  });
   it("범례·`그 외`는 누를 수 없다(button·role·tabIndex 0)", () => {
     const l = legendOf(section(6, { legendMax: 4 }));
     expect(l).not.toMatch(/<button|role=|tabindex|onClick/i);

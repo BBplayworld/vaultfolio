@@ -1018,7 +1018,7 @@ export function StockCategorySection({
                 <div className="overflow-hidden transition-all" style={{ width: `${barWidths[barShown.length]}%`, backgroundColor: ETC_COLOR }} title={`그 외: ${restPct.toFixed(1)}%`} />
               )}
             </div>
-            <div data-testid={screenshotMode ? undefined : "stock-legend"} className={screenshotMode ? ASSET_THEME_SHOT.legendGrid : "grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 px-2"}>
+            <div data-testid={screenshotMode ? undefined : "stock-legend"} className={screenshotMode ? ASSET_THEME_SHOT.legendGrid : "grid grid-cols-2 sm:grid-cols-4 gap-x-4 max-[360px]:gap-x-2 gap-y-2 px-2"}>
               {barShown.map(({ stock, value: v, color }) => {
                 const pct = (v / totalValue) * 100;
                 return (
@@ -1032,7 +1032,7 @@ export function StockCategorySection({
               {barRest.length > 0 && restPct > 0 && (
                 <div data-testid={screenshotMode ? undefined : "stock-legend-rest"} data-count={screenshotMode ? undefined : barRest.length} className="flex items-center gap-1">
                   <span className="size-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: ETC_COLOR }} />
-                  <span className={`${legendTextCls} text-muted-foreground truncate`}>그 외 {barRest.length}종목</span>
+                  <span className={`${legendTextCls} text-muted-foreground ${screenshotMode ? "truncate" : "whitespace-nowrap shrink-0"}`}>그 외 {barRest.length}종목</span>
                   <span className={`${legendTextCls} font-bold shrink-0 text-muted-foreground`}>{restPct.toFixed(1)}%</span>
                 </div>
               )}
