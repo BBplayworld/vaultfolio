@@ -68,6 +68,9 @@ export interface ForeignRealizedGain {
 const krwMul = (cur: string | undefined, rates: { USD: number; JPY: number }): number =>
   cur === "USD" ? rates.USD : cur === "JPY" ? rates.JPY / 100 : 1;
 
+/** 저장 환율(체결·매입 환율, 엔화는 100엔당) → 원통화 1단위당 원화. krwMul과 같은 단위로 맞춘다(#347) */
+const perUnitRate = (rate: number, cur: string | undefined): number => (cur === "JPY" ? rate / 100 : rate);
+
 /**
  * 당해 연도 해외주식 매도 거래의 실현손익을 KRW로 통산한다.
  *
@@ -119,14 +122,15 @@ export function computeForeignRealizedGain(
       const stock = stockById.get(tx.stockId);
       // 매수 로그가 없어 평단을 모르면 현재 보유 평단으로 폴백(추정)
       let costPrice = cur.avgPrice;
-      let costRate = cur.avgExchangeRate;
+      // 환율은 모두 1단위당 원화로 맞춘다 — 저장값(엔화 100엔당)을 그대로 곱하면 100배가 된다(#347)
+      let costRate = perUnitRate(cur.avgExchangeRate, tx.currency);
       if (cur.quantity <= 0 || costPrice <= 0) {
         costPrice = stock?.averagePrice ?? 0;
-        costRate = stock?.purchaseExchangeRate ?? 0;
+        costRate = perUnitRate(stock?.purchaseExchangeRate ?? 0, tx.currency);
         estimated = true;
       }
 
-      const sellRate = tx.exchangeRate ?? krwMul(tx.currency, rates);
+      const sellRate = tx.exchangeRate !== undefined ? perUnitRate(tx.exchangeRate, tx.currency) : krwMul(tx.currency, rates);
       if (tx.exchangeRate === undefined) estimated = true;
       if (costRate <= 0) {
         costRate = sellRate;
@@ -217,7 +221,8 @@ function computeStockUnrealizedGainKrw(
   rates: { USD: number; JPY: number },
 ): { gainKrw: number; estimated: boolean } {
   const sellRate = krwMul(stock.currency, rates);
-  let costRate = stock.purchaseExchangeRate;
+  // 매입 환율 저장값(엔화 100엔당)을 1단위당으로 — sellRate와 같은 단위(#347)
+  let costRate = stock.purchaseExchangeRate !== undefined ? perUnitRate(stock.purchaseExchangeRate, stock.currency) : undefined;
   let estimated = false;
   if (costRate === undefined || costRate <= 0) {
     costRate = sellRate;
