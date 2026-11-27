@@ -21,7 +21,8 @@ import { formatPriceByCurrency } from "@/lib/number-utils";
 import { normalizeStockName, findClosestNames } from "@/lib/name-match";
 import type { Stock } from "@/types/asset";
 import type { Transaction, PositionSnapshot } from "@/types/transaction";
-import { computeNewPosition, findDuplicateTransaction } from "@/lib/trade/trade-utils";
+import { findDuplicateTransaction } from "@/lib/trade/trade-utils";
+import { applyStockTrade } from "@/lib/trade/trade-form";
 import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effective-target";
 import {
   StockTargetPicker,
@@ -177,7 +178,8 @@ export function TradeScreenshotImport({ open, onOpenChange }: TradeScreenshotImp
         results.set(t.id, { kind: "oversell", held: cur.quantity });
         continue;
       }
-      const p = computeNewPosition(cur, { type: t.type, quantity: t.quantity, price: t.price, exchangeRate: txExchangeRate(t.currency) } as Transaction);
+      // 기준 환율 0(미입력) 보유에 매수 → 체결 환율로 채운 뒤 계산(희석 방지, #349)
+      const p = applyStockTrade(cur, { type: t.type, quantity: t.quantity, price: t.price, exchangeRate: txExchangeRate(t.currency) } as Transaction);
       const after: PositionSnapshot = { ...cur, quantity: p.quantity, avgPrice: p.avgPrice, avgExchangeRate: p.avgExchangeRate, source: "computed", effectiveDate: t.date };
       results.set(t.id, { kind: "preview", before: cur, after });
       finalPos.set(key, after);

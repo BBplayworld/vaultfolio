@@ -33,9 +33,9 @@ import { useAssetData } from "@/contexts/asset-data-context";
 import { Stock, type Transaction } from "@/types/asset";
 import type { PositionSnapshot } from "@/types/transaction";
 import { validateReflection } from "@/lib/trade/validate-reflection";
-import { computeNewPosition, TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
+import { TRANSACTION_RETENTION_YEARS, findDuplicateTransaction } from "@/lib/trade/trade-utils";
 import { todayKst } from "@/lib/tax-utils";
-import { resolveTradeRate, roundTradePrice, shouldAskPastDate } from "@/lib/trade/trade-form";
+import { applyStockTrade, resolveTradeRate, roundTradePrice, shouldAskPastDate } from "@/lib/trade/trade-form";
 import { PastDateQuestion } from "../common/past-date-question";
 import { resolveEffectiveTarget, findSameComboStock } from "@/lib/trade/effective-target";
 import { LinkAccountRow } from "./link-account-row";
@@ -223,7 +223,7 @@ export function TradeInput() {
     const pos = getPositionSnapshot(selectedStock);
     if (tradeType === "sell" && watchedQty > pos.quantity) return { oversell: true as const };
     const tentativeTx = { type: tradeType, quantity: watchedQty, price, exchangeRate: linkRate } as Transaction;
-    return { before: pos, after: computeNewPosition(pos, tentativeTx) };
+    return { before: pos, after: applyStockTrade(pos, tentativeTx) }; // 저장(buildReflectionPatch)과 같은 계산(#349)
   }, [reflected, isNewSelected, selectedStock, watchedQty, watchedPrice, linkRate, priceInKrw, tradeType]);
 
   // 연결 계좌 평가 — 화면 표시(미리보기·오류)와 제출 차단이 같은 값을 쓴다
@@ -457,7 +457,8 @@ export function TradeInput() {
   // 반영 시 종목에 적용할 포지션 패치 계산
   const buildReflectionPatch = (tx: Transaction, stock: Stock): Partial<Stock> => {
     const pos = getPositionSnapshot(stock);
-    const preview = computeNewPosition(pos, tx);
+    // 기준 환율 0(미입력) 보유에 매수 → 기준 환율을 체결 환율로 채운 뒤 계산(희석 방지, #349)
+    const preview = applyStockTrade(pos, tx);
     return {
       quantity: preview.quantity,
       averagePrice: preview.avgPrice,
