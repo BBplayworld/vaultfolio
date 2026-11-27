@@ -28,8 +28,9 @@ const NUM = "font-semibold text-foreground";
 export function GrowTileValueLine({ value }: { value: GrowTileValue | "pending" }) {
   // 이름표를 읽기 전 — 값 줄만 비운다(타일 높이 불변)
   if (value === "pending") return <span data-testid="stock-tool-grow-value" data-kind="pending" aria-hidden className="block">{"\u00a0"}</span>;
-  // 조각은 한 줄로 묶되, 360 미만 반 칸(5.170 한 줄 2칸)에서 조각 하나가 칸보다 길면 그 조각 안 어절에서만 꺾는다(넘침 0, break-keep)
-  const piece = "whitespace-nowrap max-[360px]:whitespace-normal";
+  // 조각은 한 줄로 묶되, 360 미만 반 칸(5.170 한 줄 2칸)에서 조각 하나가 칸보다 길면 그 조각 안 어절에서만 꺾는다(넘침 0, break-keep·text-pretty).
+  // 둘째 조각은 조각 안에서 접히므로 inset 규약(DotLead inset + ml-2) — 접힌 줄이 clip 가장자리에서 시작해 잘림 0
+  const piece = "whitespace-nowrap max-[360px]:whitespace-normal max-[360px]:text-pretty";
   return (
     <span
       data-testid="stock-tool-grow-value"
@@ -45,12 +46,12 @@ export function GrowTileValueLine({ value }: { value: GrowTileValue | "pending" 
       ) : value.kind === "labeled" ? (
         <>
           <span className={`${piece} ${DOT_WRAP_FIRST}`}>주식 장기 보유 <span className={NUM}>{value.keep}</span></span>
-          <span className={piece}><DotLead />점검 대상 <span className={NUM}>{value.check}</span></span>
+          <span className={`${piece} ml-2`}><DotLead inset />점검 대상 <span className={NUM}>{value.check}</span></span>
         </>
       ) : (
         <>
           <span className={`${piece} ${DOT_WRAP_FIRST}`}>장기 보유</span>
-          <span className={piece}><DotLead />점검 대상 정하기 전</span>
+          <span className={`${piece} ml-2`}><DotLead inset />점검 대상 정하기 전</span>
         </>
       )}
     </span>

@@ -110,6 +110,16 @@ describe("도구 타일 묶음 — 구조", () => {
     const html = renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Stock[]} exchangeRates={RATES} grow={{ kind: "labeled", keep: 2, check: 1, due: 0, count: 3, parts: ["주식 장기 보유 2", "점검 대상 1"] }} />);
     const pieces = html.match(/<span class="whitespace-nowrap max-\[360px\]:whitespace-normal[^"]*">/g) ?? [];
     expect(pieces).toHaveLength(2);
+    expect(html).toContain("max-[360px]:text-pretty");
+  });
+  it("320 둘째 조각 inset — 조각 ml-2 + 가운뎃점 -ml-3(접힌 줄이 clip 가장자리에서 시작), labeled·미판정 모두", () => {
+    for (const grow of [
+      { kind: "labeled", keep: 2, check: 1, due: 0, count: 3, parts: ["주식 장기 보유 2", "점검 대상 1"] },
+      { kind: "first", keep: 0, check: 0, due: 0, count: 3, parts: ["장기 보유", "점검 대상 정하기 전"] },
+    ] as const) {
+      const html = renderToStaticMarkup(<StockToolTiles stocks={h.stocks as Stock[]} exchangeRates={RATES} grow={{ ...grow, parts: [...grow.parts] }} />);
+      expect(html).toMatch(/<span class="whitespace-nowrap [^"]* ml-2"><span aria-hidden="true" class="-ml-3 /);
+    }
   });
   it("주식 0건이면 렌더 없음 + 분류 훅은 []로 호출(no-op)", () => {
     h.stocks = [];
