@@ -91,3 +91,22 @@ export function applyRollbackAvgInput<P extends AvgPosition>(p: P, input: number
   if (!(input !== undefined && input > 0)) return null;
   return { ...p, avgPrice: input };
 }
+
+// ─────────────────────────────────────────────
+// 코인 전량 매도 반영 무음 실패 제거(5.175 #357 N1(a))
+// 저장 관문(saveAssetData, strict cryptoSchema 수량>0)이 0개 코인을 거부한다. 스키마는 바꾸지 않고
+// 폼에서 미리 막고(이유 1줄), 그래도 저장이 false면 오류 토스트를 띄운다.
+// ─────────────────────────────────────────────
+
+/** 코인 '반영' 매도 결과가 0개인지 — 보유 초과(oversell)는 기존 가드가 따로 막으므로 제외 */
+export function blocksCoinZeroQty(opts: { reflected: boolean; type: "buy" | "sell"; quantity: number; holding: number }): boolean {
+  if (!opts.reflected || opts.type !== "sell" || !(opts.quantity > 0)) return false;
+  if (opts.quantity > opts.holding) return false;
+  return !(opts.holding - opts.quantity > 0);
+}
+
+/** 코인 0개 반영 차단 이유(제출 버튼 위 1줄) — 코인 삭제를 권하지 않는다 */
+export const COIN_ZERO_QTY_NOTE = "코인은 0개로 남길 수 없어요. '반영'을 끄면 기록만 남아요.";
+
+/** 거래 저장 실패(saveAssetData false) 공용 토스트 — 폼은 닫지 않는다 */
+export const TRADE_SAVE_FAIL_TOAST = "저장하지 못했어요. 입력값을 확인해 주세요.";
