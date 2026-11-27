@@ -68,3 +68,26 @@ export function rollbackStockTrade<P extends PositionLike, T extends TxLike & { 
   const base = deriveBaseSnapshot(currentPosition, allTransactions);
   return recomputeFromLog(firstBuy ? fillBaseRateForBuy(base, firstBuy) : base, remaining);
 }
+
+// ─────────────────────────────────────────────
+// 반영 거래 삭제 롤백 결과 평단 미상 가드(5.175 #354)
+// 전량 매도는 평단을 0으로 지우므로(computeNewPosition) 그 매도를 지우면 기준 보유분 평단을 되살릴 수 없다.
+// 결과가 수량 > 0 · 평단 ≤ 0이면 확인창에서 평단을 입력받아 그 값으로 저장한다. 저장 스키마·계산 함수는 그대로.
+// ─────────────────────────────────────────────
+
+type AvgPosition = { quantity: number; avgPrice: number };
+
+/** 롤백 결과에 평단 입력이 필요한가 — 수량 > 0 · 평단 ≤ 0(또는 NaN) */
+export function needsRollbackAvgInput(p: AvgPosition): boolean {
+  return p.quantity > 0 && !(p.avgPrice > 0);
+}
+
+/**
+ * 확인창에서 저장할 롤백 결과. 입력이 필요 없으면 p 그대로(입력값 무시),
+ * 필요하면 입력값 > 0일 때만 평단을 바꾼 결과, 아니면 null(저장 차단).
+ */
+export function applyRollbackAvgInput<P extends AvgPosition>(p: P, input: number | undefined): P | null {
+  if (!needsRollbackAvgInput(p)) return p;
+  if (!(input !== undefined && input > 0)) return null;
+  return { ...p, avgPrice: input };
+}
