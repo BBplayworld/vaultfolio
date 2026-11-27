@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { InlineSelector } from "../../../layout/ui/inline-selector";
+import { CategoryScrollRow } from "./category-scroll-row";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { dispatchAddLoanTx } from "../../../layout/navigation/asset-dispatch";
 import { useLoanTxViewStore } from "@/stores/loan-tx-view-store";
@@ -68,7 +68,7 @@ function LoanCard({ loan, pct, color, typeLabel, daysElapsed, dDay, linkedRealEs
           </CollapsibleTrigger>
         </div>
         <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
-          <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+          <div className="h-full motion-safe:transition-[width]" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
         {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
@@ -290,15 +290,14 @@ export function LoanTab() {
           ) : undefined}
         />
 
-        {/* 카테고리 selector — 항목 많아 가로 스크롤 (모바일 스크롤바 숨김) */}
-        <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <InlineSelector
-            value={activeCategory}
-            onChange={setActiveCategory}
-            options={visibleCategories}
-            ariaLabel="대출 카테고리 선택"
-          />
-        </div>
+        {/* 카테고리 selector — 항목 많아 가로 스크롤 (스크롤바 숨김) */}
+        <CategoryScrollRow
+          value={activeCategory}
+          onChange={setActiveCategory}
+          options={visibleCategories}
+          ariaLabel="대출 카테고리 선택"
+          testId="loan-category-row"
+        />
 
         <div className="space-y-3">
           {/* 비중 바·범례 — 지금 탭 목록·합계 기준(카드 %와 같은 분모) */}

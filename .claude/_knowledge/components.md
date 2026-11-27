@@ -173,6 +173,13 @@ _components/
 - 색은 호출부가 `assignColors(지금 탭 목록)`으로 정해 카드 점·하단 막대와 같은 값을 넘긴다(종류 고정색 `CASH_TYPE_COLORS`·`LOAN_TYPE_COLORS`는 5.176에서 삭제).
 - testId `share-bar[data-scope]`·`share-bar-seg[data-pct]`·`share-legend[data-scope]`·`share-legend-item[data-pct]`·`share-legend-rest[data-count][data-pct]`(`data-pct` = 화면 문자열과 같은 `toFixed(1)`). 4탭 카드 % span은 `row-share`. 주식·인증카드는 이 컴포넌트를 쓰지 않는다(`StockCategorySection` 그대로, 통합은 후속 후보).
 
+### CategoryScrollRow (`views/detail/tabs/category-scroll-row.tsx`, #5.177 #362)
+- 상세 부동산·현금·대출 카테고리 줄 공용(로컬). props `value·onChange·options·ariaLabel·testId`(스크롤 컨테이너 testId: `realestate-category-row`·`cash-category-row`·`loan-category-row`). 안에 기본 경로 `InlineSelector`(컴포넌트 미수정).
+- 넘치면 줄 안에서만 가로 스크롤(`-my-0.5 min-w-0 overflow-x-auto rounded-lg py-0.5`, `scroll-px-6`, 스크롤바 숨김) — 페이지 가로 넘침 0(R33). 넘치는 쪽 끝에만 24px 마스크 페이드: `edgeOf(el)`(`start = scrollLeft > 1`, `end = scrollLeft + clientWidth < scrollWidth − 1`)를 `onScroll`·`ResizeObserver`(컨테이너·트랙)·칸 수 변경 때 계산 → `fadeClass(edge)` = `FADE_END`·`FADE_START`·`FADE_BOTH`(정적 `[mask-image:linear-gradient(...)]` 3종, 전환 없음), 넘치지 않으면 빈 문자열(첫 렌더·SSR도 0). `scroll-px-6`으로 선택·포커스 칸은 페이드 밖에 오고 다음 칸이 일부 보인다(#5.177 D-1, 트랙 패딩 2px가 가려지던 O-1도 해소). 6칸 이상이면 칸 좌우 `[&>button]:px-1.5`. 칸 히트 40px = `[&>button]:relative [&>button]:after:absolute [&>button]:after:inset-x-0 [&>button]:after:-inset-y-1`(보이는 칸 32 그대로).
+- 높이 변화 0: `-my-0.5`를 부모 `space-y` 자식에 직접 두면 space-y 간격(`:where`, 특이도 0)을 덮어 카드가 16px 줄어든다 → 바깥 div 한 겹이 간격을 받고 안쪽 음수 마진은 바깥과 마진 상쇄.
+- 선택이 바뀔 때만(마운트 제외) 선택 칸 `scrollIntoView({inline:"nearest",block:"nearest"})` 즉시 이동, 칸이 줄어 `all`로 돌아갈 때도 같음. 컨테이너 `onFocus` → `focusScroll`: `:focus-visible`(키보드) 칸만 같은 호출(크롬은 몇 px만 잘린 칸에 Tab 포커스가 와도 스크롤하지 않음. 마우스 포커스에 걸면 mousedown 중 줄이 움직여 클릭이 사라진다). export `ROW_CLASS`·`selectorClass(count)`·`edgeOf`·`fadeClass`·`FADE_*`·`focusScroll`·`scrollActiveIntoView(container)`·`DENSE_MIN=6`.
+- 주식 `stock-category-row`는 옮기지 않았다(후속 후보), 암호화폐는 칸 1개라 미적용. 테스트 `category-scroll-row-362.test.tsx`.
+
 ### ExchangeTotalsBlock (`views/detail/tabs/exchange-totals-block.tsx`, #5.163 #325)
 - 상세·암호화폐 selector 아래·비중바 위 접기형 `거래소별 · N곳`(기본 접힘, `useState`만, 패널 항상 마운트 grid-rows+inert). props `crypto`(`assetData.crypto` 전체). 묶음 2개 미만·총 평가금 0이면 `null`. **읽기 전용**: 버튼은 토글 1개뿐(`맞추기` 없음). 행 = `BrokerRow`(broker-totals-block에서 export) 재사용 — `onResync` 생략 시 버튼 DOM 0, `countText`로 `코인 N개`. testId `exchange-totals(-toggle|-panel|-note)` + 행은 `broker-row*` 그대로. 미지정 안내 `거래소를 적지 않은 코인이에요.`. 인증카드 `data-screenshot-hide`. 주식 블록을 제네릭화하지 않는다(값 계산만 다른 얇은 래퍼).
 

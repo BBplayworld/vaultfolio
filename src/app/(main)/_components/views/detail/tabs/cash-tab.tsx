@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { InlineSelector } from "../../../layout/ui/inline-selector";
+import { CategoryScrollRow } from "./category-scroll-row";
 import { useAssetNavigation } from "../../../layout/navigation/navigation-context";
 import { dispatchAddCashTx } from "../../../layout/navigation/asset-dispatch";
 import { useCashTxViewStore } from "@/stores/cash-tx-view-store";
@@ -62,7 +62,7 @@ function CashCard({ item, value, pct, color, typeLabel, linkedLoans, onDelete }:
           </CollapsibleTrigger>
         </div>
         <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
-          <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+          <div className="h-full motion-safe:transition-[width]" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
         {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
@@ -227,14 +227,13 @@ export function CashTab() {
           </div>
         )}
 
-        <div className="flex justify-start">
-          <InlineSelector
-            value={activeCategory}
-            onChange={setActiveCategory}
-            options={visibleCategories}
-            ariaLabel="현금 카테고리 선택"
-          />
-        </div>
+        <CategoryScrollRow
+          value={activeCategory}
+          onChange={setActiveCategory}
+          options={visibleCategories}
+          ariaLabel="현금 카테고리 선택"
+          testId="cash-category-row"
+        />
 
         <div className="space-y-3">
           {/* 비중 바·범례 — 지금 탭 목록·합계 기준(카드 %와 같은 분모, #360) */}

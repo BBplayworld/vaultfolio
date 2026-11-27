@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { InlineSelector } from "../../../layout/ui/inline-selector";
+import { CategoryScrollRow } from "./category-scroll-row";
 import { useAssetData } from "@/contexts/asset-data-context";
 import { formatHoldingPeriod, formatPriceByMode, formatArea } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE, PAGE_TITLE } from "@/config/theme";
@@ -78,7 +78,7 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
           </CollapsibleTrigger>
         </div>
         <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
-          <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+          <div className="h-full motion-safe:transition-[width]" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
         {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
@@ -314,14 +314,13 @@ export function RealEstateTab() {
           inline={<ProfitMetric label="평가손익" profit={displayProfit} cost={displayCost} decimals={1} />}
         />
 
-        <div className="flex justify-start">
-          <InlineSelector
-            value={activeCategory}
-            onChange={setActiveCategory}
-            options={visibleCategories}
-            ariaLabel="부동산 카테고리 선택"
-          />
-        </div>
+        <CategoryScrollRow
+          value={activeCategory}
+          onChange={setActiveCategory}
+          options={visibleCategories}
+          ariaLabel="부동산 카테고리 선택"
+          testId="realestate-category-row"
+        />
 
         <div className="space-y-3">
           {/* 비중 바·범례 — 지금 탭 목록·합계 기준(카드 %와 같은 분모, #360) */}
