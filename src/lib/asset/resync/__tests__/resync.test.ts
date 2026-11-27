@@ -242,10 +242,12 @@ describe("S3 연결 사실·수량 감소 확인 필요", () => {
 
 describe("S4 평단 규칙 (averagePriceEstimated)", () => {
   const e = () => [st("a", "005930", "domestic", "토스증권", 10, 70000)];
-  it("화면 실값이 다르면 변경하고 positionSource manual", () => {
+  it("화면 실값이 다르면 평단만 변경 — 수량 그대로라 positionSource·맞춘 날은 바꾸지 않음(5.168 R3)", () => {
     const { diff, result } = run(e(), [screen(0, [row("005930", 10, 72000, { brokerHint: "토스증권" })])]);
     expect(diff.rows[0].change?.avg).toEqual({ before: 70000, after: 72000 });
-    expect(result.stocks[0]).toMatchObject({ averagePrice: 72000, positionSource: "manual", positionEffectiveDate: TODAY });
+    expect(result.stocks[0]).toMatchObject({ averagePrice: 72000 });
+    expect(result.stocks[0].positionSource).toBeUndefined();
+    expect(result.stocks[0].positionEffectiveDate).toBeUndefined();
   });
   it("역산값이면 기존 평단 유지(1% 넘게 달라도), 그대로 + 표시 플래그", () => {
     const { diff, result } = run(e(), [screen(0, [row("005930", 10, 80000, { brokerHint: "토스증권", averagePriceEstimated: true })])]);

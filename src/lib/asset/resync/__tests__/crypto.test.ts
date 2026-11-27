@@ -7,6 +7,8 @@ import {
 import type { AssetData, Crypto } from "@/types/asset";
 import type { RawScreen } from "../types";
 import { emptySel, TODAY } from "./fixtures";
+import { computeNewPosition, type PositionLike, type TxLike } from "@/lib/trade/trade-utils";
+import { validateReflection } from "@/lib/trade/validate-reflection";
 
 const co = (id: string, symbol: string, exchange: string | undefined, quantity: number, averagePrice: number, extra: Partial<Crypto> = {}): Crypto => ({
   id, name: `코인${symbol}`, symbol, quantity, averagePrice, currentPrice: averagePrice, purchaseDate: "2025-04-04", description: `메모${id}`,
@@ -136,5 +138,33 @@ describe("되돌리기 코인", () => {
     expect(u.restored).toBe(3);
     expect(u.data.crypto.map((c) => c.id)).toEqual(["a", "c", "b"]);
     expect(u.data.crypto.find((c) => c.id === "a")).toEqual(ex[0]);
+  });
+});
+
+// 5.168 R3 — 코인도 같은 applyResync. 거래 반영(crypto-tx-input buildReflectionPatch와 같은 계산)으로 만든 computed 코인
+describe("5.168 R3 코인 — 평단만 맞추면 출처·맞춘 날 유지", () => {
+  const buy = (quantity: number, price: number, date: string): TxLike => ({ type: "buy", quantity, price, date, reflected: true, createdAt: `${date}T00:00:00Z` });
+  // crypto-tx-input getCryptoPosition과 같은 스냅샷
+  const position = (c: Crypto): PositionLike => ({
+    quantity: c.quantity, avgPrice: c.averagePrice, avgExchangeRate: 0,
+    source: c.positionSource ?? "manual", effectiveDate: c.positionEffectiveDate ?? c.purchaseDate,
+    lockedByManual: c.positionSource === "manual" || !c.positionSource,
+  });
+  const reflect = (c: Crypto, t: TxLike): Crypto => {
+    const p = computeNewPosition(position(c), t);
+    return { ...c, quantity: p.quantity, averagePrice: p.avgPrice, positionSource: "computed", positionEffectiveDate: t.date };
+  };
+  const traded = () => [buy(1, 50_000_000, "2026-01-02"), buy(1, 50_000_000, "2026-07-01")].reduce(reflect, co("a", "BTC", "업비트", 0, 0));
+
+  it("평단만 변경: computed · 07-01 유지 → 다음 거래 '직접 입력값 변경' 확인 창 없음", () => {
+    const { coins } = run([traded()], [scr(0, [raw("BTC", 2, 52_000_000, "업비트")])]);
+    expect(coins[0]).toMatchObject({ quantity: 2, averagePrice: 52_000_000, positionSource: "computed", positionEffectiveDate: "2026-07-01" });
+    expect(position(coins[0]).lockedByManual).toBe(false);
+    expect(validateReflection(buy(1, 50_000_000, "2026-11-20"), position(coins[0])).level).toBe("pass");
+  });
+  it("통제군 — 수량 변경: manual · 오늘 → 확인 창 대상", () => {
+    const { coins } = run([traded()], [scr(0, [raw("BTC", 3, 52_000_000, "업비트")])]);
+    expect(coins[0]).toMatchObject({ quantity: 3, positionSource: "manual", positionEffectiveDate: TODAY });
+    expect(validateReflection(buy(1, 50_000_000, "2026-11-20"), position(coins[0]))).toMatchObject({ level: "confirm", reason: "manual_override" });
   });
 });
