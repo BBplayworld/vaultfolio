@@ -66,7 +66,7 @@ describe("WHATS_NEW 데이터 형식", () => {
 
   it("5.169 배당 지급일: 폼 안 조건부 버튼이라 바로 가기 없음, 해외 과장 없이 '배당 종목', 체험에서 숨기지 않음, 본문은 하단 `상세`부터 모든 단계(C87·C126·C148)", () => {
     const e = WHATS_NEW.find((x) => x.title === "배당 입금 날짜를 지급일로 채울\u00a0수 있어요")!;
-    expect(e.body).toBe("상세 › 현금 › 입출금 기록 › 배당으로 받은 돈에서 종목을 고르면 지급일로 채워요");
+    expect(e.body).toBe("상세 › 현금 › 계좌를 펼쳐 입출금\u00a0기록에서 배당 종목을 고르면 지급일로 채워요");
     expect(e.body).not.toMatch(/모든|전부|해외/);
     expect(e.featureId).toBeUndefined();
     expect(e.trialHidden).toBeUndefined();
