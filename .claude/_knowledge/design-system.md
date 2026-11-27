@@ -55,13 +55,15 @@
 
 **`PORTFOLIO_PALETTE` / `SHARE_SAFE_PALETTE` / `SHARE_ETC_COLOR` / `pickOnColor()`** (theme.ts) — 인증카드 "포트폴리오" 타입 전용 **고채도 10색**(`MAIN_PALETTE`와는 별개인 독립 팔레트 — 포트폴리오 도넛·분야 막대바·보유 유형 막대바는 계속 `SHARE_SAFE_PALETTE`로 참조).
 - "그 외"/미분류는 `SHARE_ETC_COLOR`(`#8E8E93`).
-- **다크 배경 대비 4.3~8.6:1**로 전부 안전. 라이트 배경에서는 라임·앰버가 1.8:1 수준이라 약하다 — 이 카드는 다크 우선 설계이며, 라이트에서 문제되면 해당 2색만 조정한다.
+- **팔레트 색을 글자색으로 쓰지 않는다(5.174 실측).** 다크(배경·팝오버)에서는 4.0~10.6:1이지만 **라이트에서는 10색 전부 4.5:1 미달**(프리뷰 배경 #F0F2F4 대비 1.76~3.53, 저장 PNG 흰 배경 대비 1.98~3.96). 이전 문구 "라이트에서 문제되면 2색만 조정"은 실측과 달라 폐기.
+- **범례 % 규칙**: 범례·도넛 라벨의 비중 % 글자는 `text-foreground font-bold tabular-nums`, 식별색은 점·막대·조각 면만 담당한다(주식 현황·상세 주식 범례, 분야·보유 유형 막대 범례, 포트폴리오 도넛 라벨). 주식 범례의 `그 외 N종목` % 는 `text-muted-foreground` 유지.
+- 팔레트 색 **면 위 글자**(해시태그 쪽지 등)는 `pickDonutLabelColor`(흰/검정 중 대비 큰 쪽)를 쓴다 — `pickOnColor`(휘도 0.45 컷)는 에메랄드·시안·오렌지·라임·앰버에서 흰 글자를 골라 2.0~2.6:1이 된다.
 - `pickOnColor(hex)` = 배경 상대휘도로 흰/검정 글자색 선택(조각색 위 ETF 브랜드 배지 텍스트용). 6·8자리(`#RRGGBBAA`) hex를 모두 받도록 방어적으로 구현(현재 `MAIN_PALETTE`엔 8자리 값 없음, 과거 호환용).
 - `darkenColor(hex, factor=0.55)` = hex를 검정 쪽으로 `factor`만큼 혼합(2026-09, ETF 배지 원형 배경용) — 조각색 그대로(밋밋)나 `pickOnColor` 흰/검정 2톤 고정(팔레트 대부분이 흰색으로 수렴)의 대안. `SHARE_SAFE_PALETTE` 10색 전체가 기본값 0.55에서 상대휘도 0.45 미만(=밝은 텍스트로 충분히 대비)까지 낮아지도록 실측 검증됨. 조각마다 색조를 유지한 채 어두워져 "다양하면서도 항상 대비되는" 배지 배경에 재사용.
 
 **`--ring-divider`** (globals.css) — 인증카드 포트폴리오 도넛 **조각 구분선**. **라이트 `#ffffff` / 다크 `#000000`** 고정. 웨지 `stroke` **5px**(`GAP_DEG=0`, 인접 조각의 stroke가 공유 모서리에서 겹쳐 한 줄이 됨). **도넛 외곽 링은 없다** — 별도 테두리 없이 조각 색면만으로 마감(#4.24).
 
-**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드 프리뷰 전용 토큰**(캡처 저장 PNG는 별도 `ASSET_THEME_SHOT_BIG`, 아래 참조). 인증카드는 프리뷰·캡처 두 인스턴스 모두 뷰포트 미디어쿼리(`sm:`/`lg:`) 없는 고정값을 써야 PC/모바일에서 같은 사용자가 다른 PNG를 얻는 버그가 없다(qa-full-test-plan **R32**). 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-[17px]`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-xs` 고정)를 값으로 고정해 둔 세트다. 2026-09부터 상세>주식 탭 모바일보다 ~2px 작게 의도 조정(포트폴리오 도넛 라벨과 밀도 정렬). `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **프리뷰 DOM에 새 클래스를 넣을 때 반응형이 필요하면 여기에 고정값을 추가한다 — `sm:`을 직접 쓰지 않는다.**
+**`ASSET_THEME_SHOT`** (theme.ts) — **인증카드 프리뷰 전용 토큰**(캡처 저장 PNG는 별도 `ASSET_THEME_SHOT_BIG`, 아래 참조). **뷰포트 반응형 접두 금지는 캡처 인스턴스(`ASSET_THEME_SHOT_BIG`·`big`/`shotBig` 분기)에만 해당**한다 — 저장 PNG가 PC/모바일에서 달라지는 버그 방지(qa-full-test-plan **R32**). 프리뷰 세트(`ASSET_THEME_SHOT`)는 화면 표시 전용이라 sm 경계 접두를 허용한다(현행 코드, 5.174 문서 정정). 타이포 토큰은 두 래퍼의 `type-fixed`가 모바일 값으로 고정한다. 그래서 `cardHeader`·`cardTriggerButton`·`cardInfoName`·`cardAmountMain`·`icon`·`iconInitial`·`badge`·`summaryValue`(`text-[17px]`)·`profitAmount`·`profitRate`·`legendGrid`(`grid-cols-2` 고정)·`legendText`(`text-xs` 고정)를 값으로 고정해 둔 세트다. 2026-09부터 상세>주식 탭 모바일보다 ~2px 작게 의도 조정(포트폴리오 도넛 라벨과 밀도 정렬). `screenshotMode`인 컴포넌트만 `ASSET_THEME` 대신 이 값을 쓴다(`StockCard`/`StockRowHeader`/`StockIcon`/`StockCategorySection`/`DetailSummaryHeader`/`ProfitMetric`). **캡처 DOM에 새 클래스를 넣을 때 반응형이 필요하면 SHOT 토큰에 고정값을 추가한다 — 캡처 분기에 반응형 접두를 직접 쓰지 않는다.**
 
 ---
 
@@ -182,6 +184,7 @@
 - **헤더 아이콘 진입 버튼(인증카드)** = brand 인디고 채움 `bg-brand text-white`(공용 상수 `HEADER_ENTRY_BTN_BRAND`, `MAIN_PALETTE[0]` = 하단 업데이트 버튼과 같은 색 — 대표 결정 #4.66 R8, R7 foreground 반전 폐기). hover `opacity-85`·누름 `scale-[0.96]`·40/44px 히트영역.
 - **키패드(잠금 화면)**: 테두리·배경 없는 72px 숫자(`text-2xl font-medium`), 눌림만 `active:bg-muted` 원형. 낮은 화면(`max-height:620px`) 64px.
 - **체크박스**: 기본 `Checkbox`(checked 시 자동 brand). 별도 색 금지.
+- **스위치**: 공용 `Switch` checked 색은 `primary`(공용 기본값 불변). 인증카드 `금액 표시`만 사용처 className으로 checked `bg-brand`(5.174, R8 인증카드=인디고와 같은 방향). 스위치 행은 `min-h-10` + Label 히트, `scale-*` 축소 금지(히트영역 미달).
 - **다크 활성 칸 = `bg-foreground/15`**(5.148 #290 B6): InlineSelector 비-fullWidth 활성 칸은 라이트 `bg-background`, 다크 `dark:bg-foreground/15` + `dark:ring-1 dark:ring-inset dark:ring-foreground/50`(면 알파만으로는 트랙 대비 3:1 불가 — 테두리로 ≥3:1 확보, 활성 글자 ≥4.5 유지). 다크 대비 감사 기준 = 본문 4.5·큰 글자/조작 요소 3:1, `.dark` 변수 값은 건드리지 않고 요소 클래스만 교체(예: 손익 `dark:text-rose-400/blue-400`, 상장폐지 `text-destructive`, `새` 칩 면 `dark:bg-orange-500/5`)
 - **탭/세그먼트**: InlineSelector로 전 차수 통일(`tabList2/3` 토큰은 #4.34에 삭제, `tabList1`·`tabList3Wrap`만 legacy 잔존). 화면 폭을 채우는 1차 선택(자산 변화 범위·기간)은 `InlineSelector fullWidth` — 같은 폭 칸·채운 썸+굵은 글자(외곽선 없음)·썸 `motion-safe:transition-[transform] duration-200`·칸 `min-h-10 text-sm active:scale-[0.96]`·화살표 키 이동.
 - **카드**: 접힘행 왼쪽=핵심 식별(이름·비중%), 상세(종류·금리·매입가 등)는 펼침(Collapsible)에. 비종목 자산도 주식 카드와 동일 패턴. 토큰: `cardWrapper`/`cardHeader`/`cardInfoName`/`cardAmountMain`…
