@@ -1,0 +1,200 @@
+320-light theme {"cls":"","bg":"oklch(0.96 0.004 250)"}
+320-light sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":42,"chipH":20,"hit":40,"next":null,"ox":0}
+320-light sum frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+320-light dot pixels hidden(sum) true
+320-light focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":200.8125,"h":20}
+320-light month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":42,"annualInert":true,"annualOpacity":"0","chartTop":345.9}
+320-light focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":198,"w":227.65625,"h":20}
+320-light month chip opens form {"dividend":"checked","dep":true,"ox":0}
+320-light focus after esc dividend-received-month
+320-light month1(no record) {"chip":null,"cellH":42,"chartTop":345.9}
+320-light form {"on":[{"top":322.2,"h":84.5,"w":240},{"top":414.7,"h":168.5,"w":240},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":322.2,"h":84.5,"w":240},{"top":414.7,"h":84.5,"w":240},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+320-light dup frags {"rowH":40,"cutX":52,"frags":[{"t":"배당 입금","top":383,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":383,"h":20,"lines":1,"glyph":[115.73,119.78],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":403,"h":20,"lines":1,"glyph":[43.97,48.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+320-light dot pixels hidden(dup) true
+320-light rows [{"h":91,"title":"입금배당","badge":"36x16","stock":null,"amt":"+398,200원","ox":0},{"h":91,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":107,"title":"입금배당","badge":"36x16","stock":{"t":"삼성전자","trunc":false,"h":16},"amt":"+398,200원","ox":0},{"h":107,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":106,"title":"입금배당기록만","badge":"36x16","stock":{"t":"TIGER 미국배당다우","trunc":false,"h":16},"amt":"+123,456,789원","ox":0}]
+320-light rows overflowX 0
+320-light errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+320-light empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":42,"state":"empty","hit":40,"next":null}
+320-light empty frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+320-light dot pixels hidden(empty) true
+320-light focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":125.53125,"h":20}
+320-light no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":42,"chip":null,"next":" · 다음 지급 12월 6종목"}
+320-light solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":40,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+320-light focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":142,"w":232.921875,"h":20}
+320-light solo opens form checked
+320-light none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+320-dark theme {"cls":"dark","bg":"oklch(0.16 0.01 265)"}
+320-dark sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":42,"chipH":20,"hit":40,"next":null,"ox":0}
+320-dark sum frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+320-dark dot pixels hidden(sum) true
+320-dark focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":200.8125,"h":20}
+320-dark month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":42,"annualInert":true,"annualOpacity":"0","chartTop":345.9}
+320-dark focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":198,"w":227.65625,"h":20}
+320-dark month chip opens form {"dividend":"checked","dep":true,"ox":0}
+320-dark focus after esc dividend-received-month
+320-dark month1(no record) {"chip":null,"cellH":42,"chartTop":345.9}
+320-dark form {"on":[{"top":322.2,"h":84.5,"w":240},{"top":414.7,"h":168.5,"w":240},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":322.2,"h":84.5,"w":240},{"top":414.7,"h":84.5,"w":240},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+320-dark dup frags {"rowH":40,"cutX":52,"frags":[{"t":"배당 입금","top":383,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":383,"h":20,"lines":1,"glyph":[115.73,119.78],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":403,"h":20,"lines":1,"glyph":[43.97,48.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+320-dark dot pixels hidden(dup) true
+320-dark rows [{"h":91,"title":"입금배당","badge":"36x16","stock":null,"amt":"+398,200원","ox":0},{"h":91,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":107,"title":"입금배당","badge":"36x16","stock":{"t":"삼성전자","trunc":false,"h":16},"amt":"+398,200원","ox":0},{"h":107,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":106,"title":"입금배당기록만","badge":"36x16","stock":{"t":"TIGER 미국배당다우","trunc":true,"h":16},"amt":"+123,456,789원","ox":0}]
+320-dark rows overflowX 0
+320-dark errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+320-dark empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":42,"state":"empty","hit":40,"next":null}
+320-dark empty frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+320-dark dot pixels hidden(empty) true
+320-dark focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":125.53125,"h":20}
+320-dark no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":42,"chip":null,"next":" · 다음 지급 12월 6종목"}
+320-dark solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":40,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+320-dark focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":142,"w":232.921875,"h":20}
+320-dark solo opens form checked
+320-dark none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+375-light theme {"cls":"","bg":"oklch(0.96 0.004 250)"}
+375-light sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":42,"chipH":20,"hit":40,"next":null,"ox":0}
+375-light sum frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+375-light dot pixels hidden(sum) true
+375-light focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":200.8125,"h":20}
+375-light month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":42,"annualInert":true,"annualOpacity":"0","chartTop":345.9}
+375-light focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":198,"w":227.65625,"h":20}
+375-light month chip opens form {"dividend":"checked","dep":true,"ox":0}
+375-light focus after esc dividend-received-month
+375-light month1(no record) {"chip":null,"cellH":42,"chartTop":345.9}
+375-light form {"on":[{"top":322.2,"h":84.5,"w":295},{"top":414.7,"h":149.3,"w":295},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":322.2,"h":84.5,"w":295},{"top":414.7,"h":65.3,"w":295},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+375-light dup frags {"rowH":40,"cutX":52,"frags":[{"t":"배당 입금","top":383,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":383,"h":20,"lines":1,"glyph":[115.73,119.78],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":403,"h":20,"lines":1,"glyph":[43.97,48.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+375-light dot pixels hidden(dup) true
+375-light rows [{"h":61,"title":"입금배당","badge":"36x16","stock":null,"amt":"+398,200원","ox":0},{"h":61,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":81,"title":"입금배당","badge":"36x16","stock":{"t":"삼성전자","trunc":false,"h":20},"amt":"+398,200원","ox":0},{"h":81,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":80,"title":"입금배당기록만","badge":"36x16","stock":{"t":"TIGER 미국배당다우","trunc":true,"h":20},"amt":"+123,456,789원","ox":0}]
+375-light rows overflowX 0
+375-light errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+375-light empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":42,"state":"empty","hit":40,"next":null}
+375-light empty frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+375-light dot pixels hidden(empty) true
+375-light focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":125.53125,"h":20}
+375-light no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":42,"chip":null,"next":" · 다음 지급 12월 6종목"}
+375-light solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":40,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+375-light focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":142,"w":232.921875,"h":20}
+375-light solo opens form checked
+375-light none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+375-dark theme {"cls":"dark","bg":"oklch(0.16 0.01 265)"}
+375-dark sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":42,"chipH":20,"hit":40,"next":null,"ox":0}
+375-dark sum frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+375-dark dot pixels hidden(sum) true
+375-dark focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":200.8125,"h":20}
+375-dark month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":42,"annualInert":true,"annualOpacity":"0","chartTop":345.9}
+375-dark focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":198,"w":227.65625,"h":20}
+375-dark month chip opens form {"dividend":"checked","dep":true,"ox":0}
+375-dark focus after esc dividend-received-month
+375-dark month1(no record) {"chip":null,"cellH":42,"chartTop":345.9}
+375-dark form {"on":[{"top":322.2,"h":84.5,"w":295},{"top":414.7,"h":149.3,"w":295},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":322.2,"h":84.5,"w":295},{"top":414.7,"h":65.3,"w":295},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+375-dark dup frags {"rowH":40,"cutX":52,"frags":[{"t":"배당 입금","top":383,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":383,"h":20,"lines":1,"glyph":[115.73,119.78],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":403,"h":20,"lines":1,"glyph":[43.97,48.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+375-dark dot pixels hidden(dup) true
+375-dark rows [{"h":61,"title":"입금배당","badge":"36x16","stock":null,"amt":"+398,200원","ox":0},{"h":61,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":81,"title":"입금배당","badge":"36x16","stock":{"t":"삼성전자","trunc":false,"h":20},"amt":"+398,200원","ox":0},{"h":81,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":101.8,"title":"입금배당기록만","badge":"36x16","stock":{"t":"TIGER 미국배당다우","trunc":true,"h":20},"amt":"+123,456,789원","ox":0}]
+375-dark rows overflowX 0
+375-dark errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+375-dark empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":42,"state":"empty","hit":40,"next":null}
+375-dark empty frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+375-dark dot pixels hidden(empty) true
+375-dark focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":125.53125,"h":20}
+375-dark no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":42,"chip":null,"next":" · 다음 지급 12월 6종목"}
+375-dark solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":40,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+375-dark focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":142,"w":232.921875,"h":20}
+375-dark solo opens form checked
+375-dark none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+390-light theme {"cls":"","bg":"oklch(0.96 0.004 250)"}
+390-light sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":42,"chipH":20,"hit":40,"next":null,"ox":0}
+390-light sum frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+390-light dot pixels hidden(sum) true
+390-light focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":200.8125,"h":20}
+390-light month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":42,"annualInert":true,"annualOpacity":"0","chartTop":345.9}
+390-light focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":198,"w":227.65625,"h":20}
+390-light month chip opens form {"dividend":"checked","dep":true,"ox":0}
+390-light focus after esc dividend-received-month
+390-light month1(no record) {"chip":null,"cellH":42,"chartTop":345.9}
+390-light form {"on":[{"top":322.2,"h":65.3,"w":310},{"top":395.5,"h":149.3,"w":310},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":322.2,"h":65.3,"w":310},{"top":395.5,"h":65.3,"w":310},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+390-light dup frags {"rowH":20,"cutX":52,"frags":[{"t":"배당 입금","top":393,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":393,"h":20,"lines":1,"glyph":[115.73,119.78],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":393,"h":20,"lines":1,"glyph":[218.52,222.56],"dotHidden":false,"lineHead":false}],"overflowX":0}
+390-light dot pixels hidden(dup) true
+390-light rows [{"h":61,"title":"입금배당","badge":"36x16","stock":null,"amt":"+398,200원","ox":0},{"h":61,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":81,"title":"입금배당","badge":"36x16","stock":{"t":"삼성전자","trunc":false,"h":20},"amt":"+398,200원","ox":0},{"h":81,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":80,"title":"입금배당기록만","badge":"36x16","stock":{"t":"TIGER 미국배당다우","trunc":true,"h":20},"amt":"+123,456,789원","ox":0}]
+390-light rows overflowX 0
+390-light errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+390-light empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":42,"state":"empty","hit":40,"next":null}
+390-light empty frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+390-light dot pixels hidden(empty) true
+390-light focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":125.53125,"h":20}
+390-light no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":42,"chip":null,"next":" · 다음 지급 12월 6종목"}
+390-light solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":40,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+390-light focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":142,"w":232.921875,"h":20}
+390-light solo opens form checked
+390-light none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+390-dark theme {"cls":"dark","bg":"oklch(0.16 0.01 265)"}
+390-dark sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":42,"chipH":20,"hit":40,"next":null,"ox":0}
+390-dark sum frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+390-dark dot pixels hidden(sum) true
+390-dark focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":200.8125,"h":20}
+390-dark month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":42,"annualInert":true,"annualOpacity":"0","chartTop":345.9}
+390-dark focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":198,"w":227.65625,"h":20}
+390-dark month chip opens form {"dividend":"checked","dep":true,"ox":0}
+390-dark focus after esc dividend-received-month
+390-dark month1(no record) {"chip":null,"cellH":42,"chartTop":345.9}
+390-dark form {"on":[{"top":322.2,"h":65.3,"w":310},{"top":395.5,"h":149.3,"w":310},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":322.2,"h":65.3,"w":310},{"top":395.5,"h":65.3,"w":310},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+390-dark dup frags {"rowH":20,"cutX":52,"frags":[{"t":"배당 입금","top":393,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":393,"h":20,"lines":1,"glyph":[115.73,119.78],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":393,"h":20,"lines":1,"glyph":[218.52,222.56],"dotHidden":false,"lineHead":false}],"overflowX":0}
+390-dark dot pixels hidden(dup) true
+390-dark rows [{"h":61,"title":"입금배당","badge":"36x16","stock":null,"amt":"+398,200원","ox":0},{"h":61,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":81,"title":"입금배당","badge":"36x16","stock":{"t":"삼성전자","trunc":false,"h":20},"amt":"+398,200원","ox":0},{"h":81,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":80,"title":"입금배당기록만","badge":"36x16","stock":{"t":"TIGER 미국배당다우","trunc":true,"h":20},"amt":"+123,456,789원","ox":0}]
+390-dark rows overflowX 0
+390-dark errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+390-dark empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":42,"state":"empty","hit":40,"next":null}
+390-dark empty frags {"rowH":42,"cutX":9,"frags":[{"t":"지급 5,294,065원","top":198,"h":20,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":198,"h":20,"lines":1,"glyph":[132.67,136.72],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":220,"h":20,"lines":1,"glyph":[3.97,8.02],"dotHidden":true,"lineHead":true}],"overflowX":0}
+390-dark dot pixels hidden(empty) true
+390-dark focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":220,"w":125.53125,"h":20}
+390-dark no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":42,"chip":null,"next":" · 다음 지급 12월 6종목"}
+390-dark solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":40,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+390-dark focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":12,"top":142,"w":232.921875,"h":20}
+390-dark solo opens form checked
+390-dark none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+1280-light theme {"cls":"","bg":"oklch(0.96 0.004 250)"}
+1280-light sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":22.8,"chipH":22.8,"hit":43,"next":null,"ox":0}
+1280-light sum frags {"rowH":22.8,"cutX":45,"frags":[{"t":"지급 5,294,065원","top":218,"h":22.8,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":218,"h":22.8,"lines":1,"glyph":[185.05,189.66],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":218,"h":22.8,"lines":1,"glyph":[340.75,345.36],"dotHidden":false,"lineHead":false}],"overflowX":0}
+1280-light dot pixels hidden(sum) true
+1280-light focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":349.1,"top":218.421875,"w":224.0625,"h":22.84375}
+1280-light month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":22.8,"annualInert":true,"annualOpacity":"0","chartTop":351.8}
+1280-light focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":48,"top":218.421875,"w":254.734375,"h":22.84375}
+1280-light month chip opens form {"dividend":"checked","dep":true,"ox":0}
+1280-light focus after esc dividend-received-month
+1280-light month1(no record) {"chip":null,"cellH":22.8,"chartTop":351.8}
+1280-light form {"on":[{"top":333,"h":70.8,"w":400},{"top":411.8,"h":157.7,"w":400},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":333,"h":70.8,"w":400},{"top":411.8,"h":70.8,"w":400},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+1280-light dup frags {"rowH":22.8,"cutX":452,"frags":[{"t":"배당 입금","top":457,"h":22.8,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":457,"h":22.8,"lines":1,"glyph":[523.98,528.59],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":457,"h":22.8,"lines":1,"glyph":[639.73,644.34],"dotHidden":false,"lineHead":false}],"overflowX":0}
+1280-light dot pixels hidden(dup) true
+1280-light rows [{"h":66.7,"title":"입금배당","badge":"38x17","stock":null,"amt":"+398,200원","ox":0},{"h":66.7,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":89.5,"title":"입금배당","badge":"38x17","stock":{"t":"삼성전자","trunc":false,"h":23},"amt":"+398,200원","ox":0},{"h":89.5,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":88.5,"title":"입금배당기록만","badge":"38x17","stock":{"t":"TIGER 미국배당다우","trunc":false,"h":23},"amt":"+123,456,789원","ox":0}]
+1280-light rows overflowX 0
+1280-light errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+1280-light empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":22.8,"state":"empty","hit":43,"next":null}
+1280-light empty frags {"rowH":22.8,"cutX":45,"frags":[{"t":"지급 5,294,065원","top":218,"h":22.8,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":218,"h":22.8,"lines":1,"glyph":[185.05,189.66],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":218,"h":22.8,"lines":1,"glyph":[340.75,345.36],"dotHidden":false,"lineHead":false}],"overflowX":0}
+1280-light dot pixels hidden(empty) true
+1280-light focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":349.1,"top":218.421875,"w":138.59375,"h":22.84375}
+1280-light no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":22.8,"chip":null,"next":" · 다음 지급 12월 6종목"}
+1280-light solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":43,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+1280-light focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":48,"top":151.59375,"w":260.765625,"h":22.84375}
+1280-light solo opens form checked
+1280-light none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+1280-dark theme {"cls":"dark","bg":"oklch(0.16 0.01 265)"}
+1280-dark sum {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 기록124,270,835원","rowH":22.8,"chipH":22.8,"hit":43,"next":null,"ox":0}
+1280-dark sum frags {"rowH":22.8,"cutX":45,"frags":[{"t":"지급 5,294,065원","top":218,"h":22.8,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":218,"h":22.8,"lines":1,"glyph":[185.05,189.66],"dotHidden":false,"lineHead":false},{"t":"· 받은 기록124,270,835원","top":218,"h":22.8,"lines":1,"glyph":[340.75,345.36],"dotHidden":false,"lineHead":false}],"overflowX":0}
+1280-dark dot pixels hidden(sum) true
+1280-dark focus sum {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":349.1,"top":218.421875,"w":224.0625,"h":22.84375}
+1280-dark month3 {"badge":"3월 · 전체 보기 ×","chip":"3월 받은 기록123,474,435원","received":"123474435","cellH":22.8,"annualInert":true,"annualOpacity":"0","chartTop":351.8}
+1280-dark focus month {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":48,"top":218.421875,"w":254.734375,"h":22.84375}
+1280-dark month chip opens form {"dividend":"checked","dep":true,"ox":0}
+1280-dark focus after esc dividend-received-month
+1280-dark month1(no record) {"chip":null,"cellH":22.8,"chartTop":351.8}
+1280-dark form {"on":[{"top":333,"h":70.8,"w":400},{"top":411.8,"h":157.7,"w":400},true,"배당을 끄면 선택할 수 있어요"],"off":[{"top":333,"h":70.8,"w":400},{"top":411.8,"h":70.8,"w":400},false,"해제 시 비정기(성과급 등)로 기록됩니다"],"ox":[0,0]}
+1280-dark dup frags {"rowH":22.8,"cutX":452,"frags":[{"t":"배당 입금","top":457,"h":22.8,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 2026-03-10","top":457,"h":22.8,"lines":1,"glyph":[523.98,528.59],"dotHidden":false,"lineHead":false},{"t":"· 123,456,789원","top":457,"h":22.8,"lines":1,"glyph":[639.73,644.34],"dotHidden":false,"lineHead":false}],"overflowX":0}
+1280-dark dot pixels hidden(dup) true
+1280-dark rows [{"h":66.7,"title":"입금배당","badge":"38x17","stock":null,"amt":"+398,200원","ox":0},{"h":66.7,"title":"입금","badge":null,"stock":null,"amt":"+777원","ox":0},{"h":89.5,"title":"입금배당","badge":"38x17","stock":{"t":"삼성전자","trunc":false,"h":23},"amt":"+398,200원","ox":0},{"h":89.5,"title":"출금","badge":null,"stock":null,"amt":"−1,500,000원","ox":0},{"h":88.5,"title":"입금배당기록만","badge":"38x17","stock":{"t":"TIGER 미국배당다우","trunc":false,"h":23},"amt":"+123,456,789원","ox":0}]
+1280-dark rows overflowX 0
+1280-dark errs ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+1280-dark empty {"row":"지급 5,294,065원 · 예상 10,402,215원 · 받은 배당 적기","rowH":22.8,"state":"empty","hit":43,"next":null}
+1280-dark empty frags {"rowH":22.8,"cutX":45,"frags":[{"t":"지급 5,294,065원","top":218,"h":22.8,"lines":1,"glyph":null,"dotHidden":null,"lineHead":false},{"t":"· 예상 10,402,215원","top":218,"h":22.8,"lines":1,"glyph":[185.05,189.66],"dotHidden":false,"lineHead":false},{"t":"· 받은 배당 적기","top":218,"h":22.8,"lines":1,"glyph":[340.75,345.36],"dotHidden":false,"lineHead":false}],"overflowX":0}
+1280-dark dot pixels hidden(empty) true
+1280-dark focus empty {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":349.1,"top":218.421875,"w":138.59375,"h":22.84375}
+1280-dark no-cash {"row":"지급 5,294,065원 · 예상 10,402,215원 · 다음 지급 12월 6종목","rowH":22.8,"chip":null,"next":" · 다음 지급 12월 6종목"}
+1280-dark solo {"solo":true,"chip":"올해 받은 기록124,270,835원","hit":43,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 받은 기록 124,270,835원 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}
+1280-dark focus solo {"fv":true,"shadow":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0","left":48,"top":151.59375,"w":260.765625,"h":22.84375}
+1280-dark solo opens form checked
+1280-dark none {"solo":false,"chip":null,"hit":0,"hero":false,"card":"배당 지급일에 보유한 수량 기준 · 세전 추정 올해 배당이 아직 없어요 보유 종목에서 올해 받을 배당이 없어요","ox":0}

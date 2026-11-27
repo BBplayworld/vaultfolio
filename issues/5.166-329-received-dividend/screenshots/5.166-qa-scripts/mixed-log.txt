@@ -1,0 +1,57 @@
+QA 1-newA-create-push | codebase | "NEW(5.166)"
+QA 1-newA-create-push | push | {"status":"ok","version":1}
+QA 1-newA-create-push | serverTopKeys | ["assetData","profitBasis","cashTxTags"]
+QA 1-newA-create-push | serverTags | {"v":1,"ctx_1764200000001_aaaaa":{"kind":"dividend","ticker":"005930","stockName":"삼성전자"},"ctx_1764200000002_bbbbb":{"kind":"dividend"}}
+QA 1-newA-create-push | bodyKeys | ["iv","ciphertext","baseVersion","pubKey"]
+QA 1-newA-create-push | A | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000002_bbbbb","ctx_1764200000003_ccccc"],"amt":57999,"bal":[3000000],"nick":"","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 1-newA-create-push | A sum | {"annual":57000,"count":2,"live":["ctx_1764200000001_aaaaa","ctx_1764200000002_bbbbb"]}
+QA 2-oldB-pull-edit-push | codebase | "OLD(main)"
+QA 2-oldB-pull-edit-push | pull | {"status":"ok","version":1,"mergedAdditions":false}
+QA 2-oldB-pull-edit-push | B after pull | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000002_bbbbb","ctx_1764200000003_ccccc"],"amt":57999,"bal":[3000000],"nick":"","tagsRaw":null}
+QA 2-oldB-pull-edit-push | B record keys | ["amount,cashId,createdAt,currency,date,id,recurring,reflected,reflectedAt,reflectionId,type","amount,cashId,createdAt,currency,date,id,recurring,reflected,type","amount,cashId,createdAt,currency,date,id,recurring,reflected,reflectedAt,reflectionId,type"]
+QA 2-oldB-pull-edit-push | push | {"status":"ok","version":2}
+QA 2-oldB-pull-edit-push | serverTopKeys | ["assetData","profitBasis","nickname"]
+QA 3-newA-pull-repush | codebase | "NEW(5.166)"
+QA 3-newA-pull-repush | pull | {"status":"ok","version":2,"mergedAdditions":true}
+QA 3-newA-pull-repush | A | {"n":4,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000002_bbbbb","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":59233,"bal":[3000000],"nick":"구기기B","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 3-newA-pull-repush | A sum | {"annual":57000,"count":2,"live":["ctx_1764200000001_aaaaa","ctx_1764200000002_bbbbb"]}
+QA 3-newA-pull-repush | repush | {"status":"ok","version":3}
+QA 3-newA-pull-repush | serverTags | {"v":1,"ctx_1764200000001_aaaaa":{"kind":"dividend","ticker":"005930","stockName":"삼성전자"},"ctx_1764200000002_bbbbb":{"kind":"dividend"}}
+QA 3-newA-pull-repush | pull again | {"status":"ok","version":3,"mergedAdditions":false}
+QA 3-newA-pull-repush | C fresh pull | {"status":"ok","version":3,"mergedAdditions":false}
+QA 3-newA-pull-repush | C sum | {"annual":57000,"count":2,"live":["ctx_1764200000001_aaaaa","ctx_1764200000002_bbbbb"]}
+QA 4-oldB-pull-delete-tagged-push | codebase | "OLD(main)"
+QA 4-oldB-pull-delete-tagged-push | pull | {"status":"ok","version":3,"mergedAdditions":false}
+QA 4-oldB-pull-delete-tagged-push | B | {"n":4,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000002_bbbbb","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":59233,"bal":[3000000],"nick":"구기기B","tagsRaw":null}
+QA 4-oldB-pull-delete-tagged-push | push | {"status":"ok","version":4}
+QA 5-newA-pull-after-old-delete | codebase | "NEW(5.166)"
+QA 5-newA-pull-after-old-delete | pull | {"status":"ok","version":4,"mergedAdditions":true}
+QA 5-newA-pull-after-old-delete | A | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"구기기B","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 5-newA-pull-after-old-delete | A sum | {"annual":50000,"count":1,"live":["ctx_1764200000001_aaaaa"]}
+QA 5-newA-pull-after-old-delete | repush | {"status":"ok","version":5}
+QA 5-newA-pull-after-old-delete | serverTags | {"v":1,"ctx_1764200000001_aaaaa":{"kind":"dividend","ticker":"005930","stockName":"삼성전자"}}
+QA 5-newA-pull-after-old-delete | C pull | {"status":"ok","version":5,"mergedAdditions":false}
+QA 5-newA-pull-after-old-delete | C | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"구기기B","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 5-newA-pull-after-old-delete | C sum | {"annual":50000,"count":1,"live":["ctx_1764200000001_aaaaa"]}
+QA 6-old-rollback-on-A | codebase | "OLD(main)"
+QA 6-old-rollback-on-A | A read by OLD | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"구기기B","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 6-old-rollback-on-A | old pull on A | {"status":"ok","version":5,"mergedAdditions":false}
+QA 6-old-rollback-on-A | A after old import | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"구기기B","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 6-old-rollback-on-A | old push from rolled-back A | {"status":"ok","version":6}
+QA 7-new-redeploy-on-A | codebase | "NEW(5.166)"
+QA 7-new-redeploy-on-A | A read by NEW after rollback | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"롤백 중 편집","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 7-new-redeploy-on-A | A sum | {"annual":50000,"count":1,"live":["ctx_1764200000001_aaaaa"]}
+QA 7-new-redeploy-on-A | pull | {"status":"ok","version":6,"mergedAdditions":true}
+QA 7-new-redeploy-on-A | repush | {"status":"ok","version":7}
+QA 7-new-redeploy-on-A | serverTags | {"v":1,"ctx_1764200000001_aaaaa":{"kind":"dividend","ticker":"005930","stockName":"삼성전자"}}
+QA 7-new-redeploy-on-A | backup-new top keys | ["assetData","profitBasis","nickname","cashTxTags"]
+QA 8-old-import-new-backup-export | codebase | "OLD(main)"
+QA 8-old-import-new-backup-export | D(old) after import of new backup | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"롤백중편집","tagsRaw":null}
+QA 8-old-import-new-backup-export | backup-old top keys | ["assetData","profitBasis","nickname"]
+QA 9-new-import-old-backup | codebase | "NEW(5.166)"
+QA 9-new-import-old-backup | A after importing old backup | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"롤백중편집","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_1764200000002_bbbbb\":{\"kind\":\"dividend\"}}"}
+QA 9-new-import-old-backup | A sum | {"annual":50000,"count":1,"live":["ctx_1764200000001_aaaaa"]}
+QA 9-new-import-old-backup | E(fresh) after old backup | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"롤백중편집","tagsRaw":null}
+QA 9-new-import-old-backup | E sum | {"annual":0,"count":0,"live":[]}
+QA 9-new-import-old-backup | F(fresh) after new backup | {"n":3,"ids":["ctx_1764200000001_aaaaa","ctx_1764200000003_ccccc","ctx_1764200000009_oldbb"],"amt":52233,"bal":[3000000],"nick":"롤백중편집","tagsRaw":"{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"}}"}
+QA 9-new-import-old-backup | G union raw | "{\"v\":1,\"ctx_1764200000001_aaaaa\":{\"kind\":\"dividend\",\"ticker\":\"005930\",\"stockName\":\"삼성전자\"},\"ctx_local_only_1\":{\"kind\":\"dividend\",\"stockName\":\"로컬\"}}"
