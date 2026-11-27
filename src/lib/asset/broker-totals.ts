@@ -1,11 +1,11 @@
 // 상세·주식 증권사별 합계(#319, 5.160) — 순수 함수(저장·React·서버 호출 없음).
 // 평가·원가는 computeStockTotals를 묶음마다 그대로 호출한다(헤더와 값이 어긋나지 않게 재계산 금지).
 // 화면 문자열의 합 = 헤더 문자열(C150): 원(달러 보기는 센트) 단위로 반올림한 뒤 최대 잔여 방식으로 흡수한다.
-import type { Stock } from "@/types/asset";
-import { matchBrokerHint } from "@/config/asset-options";
+import type { Cash, Stock } from "@/types/asset";
+import { ALL_SECURITIES_FIRMS, matchBrokerHint } from "@/config/asset-options";
 import { isUnassignedBroker, sameBroker } from "@/lib/asset/resync/match";
 import { largestRemainderTenths } from "@/lib/ratio-preview/ratio-list";
-import { computeStockTotals, type StockDisplayCurrency } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
+import { computeStockTotals, getMultiplier, type StockDisplayCurrency } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 
 export const UNASSIGNED_BROKER_LABEL = "증권사 미지정";
 
@@ -106,4 +106,32 @@ export function computeBrokerTotals(
   const rawValue = new Map(rows.map((r, i) => [r, totals[i].totalValue]));
   rows.sort((a, b) => Number(a.unassigned) - Number(b.unassigned) || (rawValue.get(b) ?? 0) - (rawValue.get(a) ?? 0));
   return { rows, scale };
+}
+
+const noSpace = (s: string) => s.replace(/\s/g, "");
+// 증권사 목록 값(공백 제거, '기타' 제외) — 현금 조인은 이 목록 안에서 정확히 같은 글자만
+const FIRM_NAMES = new Set(ALL_SECURITIES_FIRMS.filter((f) => f !== "기타").map(noSpace));
+
+/**
+ * 증권사별 행 이름 → 그 증권사 현금 원화 합(#335, 5.167). 읽기 전용 참고값 — 헤더·행 평가금·비중에는 더하지 않는다(C150).
+ * 매칭: 행 이름이 증권사 목록 값('기타' 제외)이고, 공백을 지운 cash.institution이 그 이름과 정확히 같을 때만.
+ * sameBroker(부분 일치)는 쓰지 않는다 — '하나'·'키움' 같은 부분 글자, 은행('하나은행'), '기타'끼리가 붙지 않게.
+ * 값 = round(Σ balance × getMultiplier) — 현금 카드와 같은 환산. 합 0원인 행은 Map에 넣지 않는다(줄 숨김).
+ */
+export function brokerCashByRow(rows: BrokerTotalRow[], cash: Cash[], exchangeRates: { USD: number; JPY: number }): Map<string, number> {
+  const sums = new Map<string, number>();
+  for (const c of cash) {
+    const inst = noSpace(c.institution ?? "");
+    if (!inst || !FIRM_NAMES.has(inst)) continue;
+    sums.set(inst, (sums.get(inst) ?? 0) + c.balance * getMultiplier(c.currency, exchangeRates));
+  }
+  const out = new Map<string, number>();
+  for (const r of rows) {
+    if (r.unassigned) continue;
+    const key = noSpace(r.name);
+    if (!FIRM_NAMES.has(key)) continue;
+    const krw = Math.round(sums.get(key) ?? 0);
+    if (krw !== 0) out.set(r.name, krw);
+  }
+  return out;
 }

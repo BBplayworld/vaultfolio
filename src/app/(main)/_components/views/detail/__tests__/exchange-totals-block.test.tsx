@@ -60,7 +60,9 @@ describe("ExchangeTotalsBlock", () => {
   });
 
   it("320: 금액 칸은 다음 줄로 내려가도 오른쪽 끝에 붙는다(ml-auto), 금액·손익은 줄바꿈 없음", () => {
-    expect(html).toMatch(/class="shrink-0 text-right ml-auto"><p data-testid="broker-row-value" class="[^"]*whitespace-nowrap/);
+    // 5.167 E1: 금액 열 shrink-0 제거(손익 줄 flex-wrap) — ml-auto·nowrap은 그대로
+    expect(html).toMatch(/class="text-right ml-auto"><p data-testid="broker-row-value" class="[^"]*whitespace-nowrap/);
+    expect(html).not.toContain("broker-row-cash");
   });
 
   it("묶음 1개·코인 0건·총 평가금 0이면 DOM 0", () => {

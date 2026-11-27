@@ -1257,8 +1257,9 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
           </div>
         </div>
 
-        {/* 증권사별 합계(#319) — 묶음 2개 이상일 때만, 접힘 기본. 지금 탭·달러 보기 기준. 인증카드 DOM 0 */}
-        <BrokerTotalsBlock stocks={tabStocks} exchangeRates={exchangeRates} displayCurrency={effectiveDisplayCurrency} />
+        {/* 증권사별 합계(#319) — 묶음 2개 이상일 때만, 접힘 기본. 지금 탭·달러 보기 기준. 인증카드 DOM 0.
+            현금 줄(#335)은 '전체' 탭에서만 — 현금은 계좌 유형이 없어 국내·해외·IRP 등 탭에 붙이면 오해된다 */}
+        <BrokerTotalsBlock stocks={tabStocks} exchangeRates={exchangeRates} displayCurrency={effectiveDisplayCurrency} cash={activeCategory === "all" ? assetData.cash : undefined} />
 
         {/* 비중바 + 종목 목록 (인증카드과 공통) */}
         <StockCategorySection
