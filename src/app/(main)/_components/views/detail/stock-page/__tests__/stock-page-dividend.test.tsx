@@ -12,6 +12,7 @@ vi.mock("../../../../layout/navigation/navigation-context", async (importOrigina
   return { ...mod, useAssetNavigation: () => ({ navigate: () => {}, view: { type: "home" }, back: () => {}, slideDir: null }) };
 });
 const mocked = vi.hoisted(() => ({ value: {} as unknown }));
+vi.mock("@/contexts/asset-data-context", () => ({ useAssetData: () => ({ assetData: { stocks: [], transactions: [] }, exchangeRates: { USD: 1400, JPY: 900 } }) }));
 vi.mock("../../../activity/use-dividend-data", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../../../activity/use-dividend-data")>();
   return { ...mod, useDividendData: () => mocked.value };
@@ -38,13 +39,14 @@ const val = (html: string, id: string) => Number(html.match(new RegExp(`data-tes
 const PAYOUTS = [pay(`${YEAR}-01-15`, 100), pay(`${YEAR}-12-31`, 50, true)];
 
 describe("종목 한 장 배당 줄", () => {
-  it("배당 있음 — 지급+예상이 배당 표 행 합계와 같고 '올해 배당'으로 시작, 세전 추정 1곳", () => {
+  it("배당 있음 — 지급+예상이 배당 표 행 합계와 같고 '올해 배당'으로 시작, 둘째 줄 `세전 추정` 자리에 투입 대비(#371)", () => {
     const { calc, html } = setup([stock({})], PAYOUTS);
     const row = calc.byStock.get(dividendStockKey(stock({})))!;
     expect(val(html, "stock-page-dividend-paid") + val(html, "stock-page-dividend-expected")).toBe(Math.round(row.paid + row.expected));
     expect(html).toContain('data-state="ready"');
-    expect(text(html)).toMatch(/^올해 배당 지급 .+ 예상 .+ 다음 지급 \d+월 · 세전 추정/);
-    expect(html.match(/세전 추정/g)).toHaveLength(1);
+    expect(text(html)).toMatch(/^올해 배당 지급 .+ 예상 .+ 다음 지급 \d+월 · 투입 대비 \d+\.\d%\(세전\)$/);
+    expect(html).not.toContain("세전 추정");
+    expect(html).toContain('data-yield="shown"');
   });
   it("여러 계좌·카테고리 그룹 — 값 = 행들 합계", () => {
     const a = stock({ id: "A" });
@@ -64,7 +66,7 @@ describe("종목 한 장 배당 줄", () => {
   });
   it("지급만이면 예상 조각 없음, 예상만이면 '올해 배당 예상'", () => {
     const paidOnly = setup([stock({})], [pay(`${YEAR}-01-15`, 100)]).html;
-    expect(text(paidOnly)).toMatch(/^올해 배당 지급 .+ 세전 추정/);
+    expect(text(paidOnly)).toMatch(/^올해 배당 지급 .+ 투입 대비 \d+\.\d%\(세전\)$/);
     expect(paidOnly).not.toContain("stock-page-dividend-expected");
     expect(paidOnly).not.toContain("stock-page-dividend-next");
     const expOnly = setup([stock({})], [pay(`${YEAR}-12-31`, 50, true)]).html;

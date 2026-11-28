@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeDividendYield as computeYield, type DividendYieldItem } from "@/lib/finance/dividend-yield";
+import { computeDividendYield as computeYield, stockPageDividendYield, type DividendYieldItem } from "@/lib/finance/dividend-yield";
 import { computeDividends } from "@/lib/finance/dividend-calc";
-import type { Stock } from "@/types/asset";
+import { computeNewPosition } from "@/lib/trade/trade-utils";
+import { getPositionSnapshot } from "@/app/(main)/_components/forms/trade/stock-target-picker";
+import { buildDividendGroups } from "@/app/(main)/_components/views/activity/use-dividend-data";
+import type { Stock, Transaction } from "@/types/asset";
 import type { DividendPayoutResult } from "@/lib/finance/finance-service";
 
 const stock = (o: Partial<Stock>): Stock =>
@@ -63,5 +66,86 @@ describe("computeDividendYield (#4.46 #80)", () => {
   it("0.1% 미만 표기", () => {
     const r = computeDividendYield([{ stock: stock({ averagePrice: 1_000_000 }), payouts: [pay("2026-03-15", 1)] }], 1400, "all", YM);
     expect(r?.text).toBe("0.1% 미만");
+  });
+});
+
+// #371(5.181) 종목 한 장 투입 대비 — 숨김 3조건, 표시면 탭과 같은 함수 값
+describe("stockPageDividendYield (#371)", () => {
+  const PAY = [pay("2026-03-15", 500), pay("2026-09-15", 500)];
+  const run = (stocks: Stock[], txs: Transaction[] = [], usd = 1400, payouts = PAY) => {
+    const groups = buildDividendGroups(stocks).grouped.map((g) => ({ ...g, payouts, isLoading: false }));
+    const calc = computeDividends(groups.flatMap((g) => g.items.map((s) => ({ stock: s, payouts }))), txs, usd, YM);
+    return { r: stockPageDividendYield(groups, txs, usd, calc), tab: computeYield(groups, usd, "all", calc) };
+  };
+  let seq = 0;
+  const tx = (o: Partial<Transaction>): Transaction =>
+    ({ id: `t${++seq}`, stockId: "s", ticker: "T", stockName: "t", type: "buy", quantity: 0, price: 10_000, currency: "KRW", date: "2026-01-02", reflected: true, createdAt: "2026-01-01T00:00:00Z", ...o }) as Transaction;
+  // 거래를 반영한 뒤의 수량·평단은 실제 쓰기 경로와 같은 computeNewPosition으로 만든다(C162)
+  const after = (base: Stock, t: Transaction): Stock => {
+    const p = computeNewPosition(getPositionSnapshot(base), t);
+    return { ...base, quantity: p.quantity, averagePrice: p.avgPrice, positionSource: "computed" } as Stock;
+  };
+
+  it("표시: 수량 기준이 같으면 탭과 같은 함수 값(KRW·USD·국내+ISA)", () => {
+    expect(run([stock({})]).r?.text).toBe("10.0%");
+    const usd = [stock({ currency: "USD", category: "foreign", averagePrice: 100, quantity: 5 })];
+    expect(run(usd, [], 1300, [pay("2026-03-15", 1.5)]).r?.text).toBe(run(usd, [], 1450, [pay("2026-03-15", 1.5)]).r?.text);
+    const two = [stock({ id: "a" }), stock({ id: "b", category: "isa", quantity: 30 })];
+    const { r, tab } = run(two);
+    expect(r).not.toBeNull();
+    expect(r).toEqual(tab);
+  });
+  it("숨김 ①: 올해 매수(첫 지급 뒤 매수일)", () => {
+    expect(run([stock({ purchaseDate: "2026-05-01" })]).r).toBeNull();
+    // 1월 첫 지급 전에 샀으면 수량이 같아 표시
+    expect(run([stock({ purchaseDate: "2026-01-10" })]).r?.text).toBe("10.0%");
+  });
+  it("숨김 ①: 지급 뒤 추가 매수·일부 매도가 지금 수량의 10% 초과(반영 거래)", () => {
+    const base = stock({});
+    // 재판정(5.181) 뒤에도 숨김 — 10주 → +5주는 지급일 10 vs 지금 15(33%), −4주는 10 vs 6(67%)
+    const buy = tx({ type: "buy", quantity: 5, date: "2026-04-01" });
+    expect(run([after(base, buy)], [buy]).r).toBeNull();
+    const sell = tx({ type: "sell", quantity: 4, date: "2026-04-01" });
+    expect(run([after(base, sell)], [sell]).r).toBeNull();
+    // 기록만(반영 안 함) 거래는 수량을 바꾸지 않으므로 표시
+    const memo = tx({ type: "buy", quantity: 5, date: "2026-04-01", reflected: false });
+    expect(run([base], [memo]).r?.text).toBe("10.0%");
+    // 지급일 뒤에 수량을 직접 덮어쓴 행(manual)은 heldQtyAt이 지금 수량을 쓴다 → 표시
+    const manual = { ...after(base, buy), positionSource: "manual", positionEffectiveDate: "2026-10-01" } as Stock;
+    expect(run([manual], [buy]).r).not.toBeNull();
+  });
+  it("경계: |지급일 − 지금| / 지금 10%는 표시, 10.1%는 숨김(매수·매도 양방향), 값은 탭과 같은 함수", () => {
+    const at = (q: number, t: Transaction) => run([after(stock({ quantity: q }), t)], [t]);
+    // 매수: 지금 100 = 지급일 90 + 지급 뒤 10(10%) → 표시, 89.9 + 10.1(10.1%) → 숨김
+    const b10 = tx({ type: "buy", quantity: 10, date: "2026-04-01" });
+    const shown = at(90, b10);
+    expect(shown.r).not.toBeNull();
+    expect(shown.r).toEqual(shown.tab);
+    expect(at(89.9, tx({ type: "buy", quantity: 10.1, date: "2026-04-01" })).r).toBeNull();
+    // 매도: 지금 100 = 지급일 110 − 10(−10%) → 표시, 110.1 − 10.1 → 숨김
+    const s10 = tx({ type: "sell", quantity: 10, date: "2026-04-01" });
+    expect(at(110, s10).r).toEqual(at(110, s10).tab);
+    expect(at(110, s10).r).not.toBeNull();
+    expect(at(110.1, tx({ type: "sell", quantity: 10.1, date: "2026-04-01" })).r).toBeNull();
+    // 5% 차이(데모 TIGER 형태)는 표시
+    expect(at(100, tx({ type: "buy", quantity: 5, date: "2026-04-01" })).r).not.toBeNull();
+  });
+  it("숨김 ①: 지급일 보유 0(그 지급 뒤 처음 반영 매수)", () => {
+    const first = tx({ type: "buy", quantity: 10, date: "2026-04-01" });
+    // 기준 0주 + 4월 반영 매수 10주 → 3월 지급일 보유 0
+    expect(run([after(stock({ quantity: 0, averagePrice: 0 }), first)], [first]).r).toBeNull();
+  });
+  it("숨김 ②: 원본 행 중 평단 0 이하(병합 평단은 양수여도)", () => {
+    const rows = [stock({ id: "a" }), stock({ id: "b", broker: "나", averagePrice: 0 })];
+    expect(run(rows).tab).not.toBeNull();
+    expect(run(rows).r).toBeNull();
+  });
+  it("숨김 ③: 수량 0·환율 0·분자 0", () => {
+    expect(run([stock({ quantity: 0 })]).r).toBeNull();
+    expect(run([stock({ currency: "USD", category: "foreign", averagePrice: 100 })], [], 0, [pay("2026-03-15", 1.5)]).r).toBeNull();
+    expect(run([stock({})], [], 1400, []).r).toBeNull();
+  });
+  it("극소값은 탭과 같은 '0.1% 미만'", () => {
+    expect(run([stock({ averagePrice: 100_000_000 })]).r?.text).toBe("0.1% 미만");
   });
 });
