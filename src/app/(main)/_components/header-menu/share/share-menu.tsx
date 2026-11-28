@@ -62,6 +62,16 @@ async function settleImages(imgs: HTMLImageElement[]): Promise<void> {
   ]);
 }
 
+// 캡처 설명 줄 판정 대기 — data-desc-fit="pending"이 사라질 때까지(상한 DESC_FIT_WAIT_MS). rAF는 백그라운드 탭에서
+// 멈추므로 setTimeout으로 짧게 확인한다
+const DESC_FIT_WAIT_MS = 3000;
+async function waitDescriptionFit(root: HTMLElement | null) {
+  const start = Date.now();
+  while (root?.querySelector('[data-desc-fit="pending"]') && Date.now() - start < DESC_FIT_WAIT_MS) {
+    await new Promise((r) => setTimeout(r, 16));
+  }
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -137,6 +147,10 @@ export function ShareScreenshotDialog({ open, onOpenChange, initialVariant }: Pr
         }
       }),
     );
+
+    // 3) 투자 유형 설명의 긴 묶음 한 줄/2줄 실측(useCaptureLineFit)이 끝난 뒤에만 캡처(#373, 5.182) —
+    //    판정 전 폴백(2줄)과 판정 뒤 줄 구조가 PNG에 섞이지 않게. 상한을 넘기면 폴백 그대로 캡처한다(넘침 0 쪽)
+    await waitDescriptionFit(cardRef.current);
 
     const el = cardRef.current;
     // offsetWidth(레이아웃 폭, 항상 CARD_WIDTH 고정) 기준 — getBoundingClientRect는 미리보기 축소
