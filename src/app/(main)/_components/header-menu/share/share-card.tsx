@@ -16,7 +16,7 @@ import { stockCategories } from "@/config/asset-options";
 import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, PORTFOLIO_PALETTE, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, SHOT_BIG_SCALE, pickDonutLabelColor } from "@/config/theme";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { getEtfBrand } from "@/lib/finance/logo-source";
-import { resolveInvestorType, splitLongDescriptionLine, type AccountKey, type RegionKey, type KrUsBalance } from "@/lib/xray/investor-type";
+import { resolveInvestorType, type AccountKey, type RegionKey, type KrUsBalance } from "@/lib/xray/investor-type";
 import type { Sector, StockType } from "@/lib/xray/classification-store";
 import { PortfolioRingCard, type RingSegment, type SubLogo } from "./portfolio-ring-card";
 import { PortfolioSectorBar, type SectorBarItem } from "./portfolio-sector-bar";
@@ -69,7 +69,6 @@ function renderDescriptionWithHighlights(text: string, terms: string[]) {
 // 개행하는 그리디 방식으로 실제 렌더 폭에 맞게 자연스럽게 묶는다.
 // fixedLinePx(캡처 전용): 한 줄 예상 묶음(글자수 ≤ targetChars)을 고정 높이 블록으로 감싸 OS 한글 폰트와
 // 글꼴이 섞일 때 줄 박스가 폰트 메트릭에 따라 커지는 것(기기별 카드 높이 차이)을 막는다.
-// targetChars를 넘는 한 문장 묶음은 splitLongDescriptionLine으로 2줄을 정해 줄마다 같은 고정 높이를 준다.
 function renderDescriptionInLines(text: string, terms: string[], targetChars: number, fixedLinePx?: number) {
   const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -84,22 +83,11 @@ function renderDescriptionInLines(text: string, terms: string[], targetChars: nu
   }
   if (current) lines.push(current);
   if (fixedLinePx) {
-    return lines.map((line, i) => {
-      if (line.length <= targetChars) {
-        return <div key={i} style={{ height: fixedLinePx }}>{renderDescriptionWithHighlights(line, terms)}</div>;
-      }
-      // targetChars를 넘는 한 문장 묶음(#371 동승, 5.181) — 브라우저 줄바꿈에 맡기면 PNG에 꼬리 줄·빈 줄이 생겨
-      // JS로 2줄을 정하고 줄마다 고정 높이(DOM = PNG). 자를 자리가 없으면 기존처럼 최소 높이만
-      const halves = splitLongDescriptionLine(line, terms, targetChars);
-      if (!halves) return <div key={i} style={{ minHeight: fixedLinePx }}>{renderDescriptionWithHighlights(line, terms)}</div>;
-      return (
-        <div key={i}>
-          {halves.map((h, k) => (
-            <div key={k} className="whitespace-nowrap" style={{ height: fixedLinePx }}>{renderDescriptionWithHighlights(h, terms)}</div>
-          ))}
-        </div>
-      );
-    });
+    return lines.map((line, i) => (
+      <div key={i} style={line.length <= targetChars ? { height: fixedLinePx } : { minHeight: fixedLinePx }}>
+        {renderDescriptionWithHighlights(line, terms)}
+      </div>
+    ));
   }
   return lines.map((line, i) => (
     <React.Fragment key={i}>
