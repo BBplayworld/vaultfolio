@@ -2,6 +2,7 @@
 // 규칙(spec 4장): ① 계좌별 원본 행(stock.id)마다 먼저 계산한 뒤 월·카테고리·종목 키로 합친다(병합 행 × 지금 수량 금지)
 // ② 반영된 거래가 있으면 지급일 시점 수량을 역산한다(지급일 당일 거래는 지급일 뒤로 본다)
 // ③ 지급 = payoutDate <= 오늘(KST) && !isEstimated, 그 밖은 예상 ④ 엔화 행 제외 ⑤ 반올림은 소비처가 마지막 합산 뒤 1회.
+// ⑥ 지난 달 추정(isPastEstimate)은 계산·표시에서 뺀다(#376, 5.183) — 이번 달 추정은 예상으로 남긴다.
 // 순수 함수(React 의존 0). 서버로 보내는 값 0 — 수량·거래는 이 함수 안에서만 쓴다.
 import type { Stock, Transaction } from "@/types/asset";
 import type { DividendPayoutResult } from "./finance-service";
@@ -62,6 +63,15 @@ export function isDividendExcludedCurrency(stock: Pick<Stock, "currency">): bool
 /** 지급 판정(날짜 기준) — 추정 행은 날짜가 지나도 예상, 확정이어도 미래 날짜면 예상 */
 export function isDividendPaid(p: Pick<DividendPayoutResult, "payoutDate" | "isEstimated">, todayKst: string): boolean {
   return p.payoutDate <= todayKst && !p.isEstimated;
+}
+
+/**
+ * 지난 달 추정(#376, 5.183) — 추정 행(isEstimated) 중 지급 달이 이번 달(KST)보다 앞선 것. 실제로 없었던 지급이라
+ * 금액·배지·주당 어디에도 넣지 않는다. 이번 달 추정은 늦게 반영될 수 있어 예상으로 남긴다.
+ * 서버(route.ts)도 지난 달 추정을 만들지 않지만 캐시가 30일이라 이 클라이언트 규칙이 정본이다.
+ */
+export function isPastEstimate(p: Pick<DividendPayoutResult, "payoutDate" | "isEstimated">, todayKst: string): boolean {
+  return !!p.isEstimated && p.payoutDate.slice(0, 7) < todayKst.slice(0, 7);
 }
 
 /**
@@ -155,6 +165,7 @@ export function computeDividends(
     for (const p of payouts) {
       const m = parseInt(p.payoutDate.split("-")[1], 10) - 1;
       if (!(m >= 0 && m < 12)) continue;
+      if (isPastEstimate(p, todayKst)) continue; // 지난 달 추정 제외(⑥)
       const { qty, qtyUsed } = heldQtyAt(stock, txs, p.payoutDate);
       if (qtyUsed === "current") entry.qtyUsed = "current";
       if (!(qty > 0)) {

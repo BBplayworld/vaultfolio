@@ -1,6 +1,6 @@
 // #313(5.157) 배당 공용 계산 — tech-review §6 1~10 + spec 9-1 경계 3건(당일 매수·당일 매도·매수일 = 지급일)
 import { describe, expect, it } from "vitest";
-import { computeDividends, heldQtyAt, isDividendPaid, monthSums, roundedAnnual, dividendStockKey, nextDividendMonth } from "../dividend-calc";
+import { computeDividends, heldQtyAt, isDividendPaid, isPastEstimate, monthSums, roundedAnnual, dividendStockKey, nextDividendMonth } from "../dividend-calc";
 import { computeDividendYield } from "../dividend-yield";
 import { groupStocksByTickerCategory, mergeStockGroup } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
 import type { Stock, Transaction } from "@/types/asset";
@@ -262,7 +262,8 @@ describe("nextDividendMonth(#317) — 결과에서 고르기만 한다", () => {
   });
   it("오늘 달 이전 예상은 잡지 않고, 남은 예상이 없으면 null", () => {
     const past = computeDividends([{ stock: a, payouts: [pay("2026-05-15", 100, { isEstimated: true })] }], [], 1400, TODAY);
-    expect(past.annual.expected).toBeGreaterThan(0);
+    // 5.183(#376): 지난 달 추정은 계산에서 빠진다(이전 기대값 > 0은 결함 그대로를 고정한 것)
+    expect(past.annual.expected).toBe(0);
     expect(nextDividendMonth(past, TODAY)).toBeNull();
   });
 });
@@ -438,5 +439,33 @@ describe("5.167 맞추기 이전 지급분 R1~R5 (현재 값 고정, R3은 5.168
     const added = stocks[0];
     expect(added).toMatchObject({ quantity: 80, purchaseDate: "2026-01-01", positionSource: "manual", positionEffectiveDate: "2026-11-27" });
     for (const p of QUARTERLY) expect(heldQtyAt(added, [], p.payoutDate)).toEqual({ qty: 80, qtyUsed: "current" });
+  });
+});
+
+describe("5.183(#376) 지난 달 추정 제외 — 이번 달 추정은 예상 유지", () => {
+  const s = stock({ id: "p", ticker: "005930", quantity: 10, purchaseDate: "2025-01-01" });
+  it("isPastEstimate — 추정 + 이번 달 앞만 true, 확정·이번 달·미래는 false", () => {
+    expect(isPastEstimate(pay("2026-10-15", 1, { isEstimated: true }), TODAY)).toBe(true);
+    expect(isPastEstimate(pay("2025-12-15", 1, { isEstimated: true }), TODAY)).toBe(true);
+    expect(isPastEstimate(pay("2026-11-15", 1, { isEstimated: true }), TODAY)).toBe(false);
+    expect(isPastEstimate(pay("2026-12-15", 1, { isEstimated: true }), TODAY)).toBe(false);
+    expect(isPastEstimate(pay("2026-10-15", 1), TODAY)).toBe(false);
+  });
+  it("지난 달 추정은 금액·월 배지·주당(firstPayout)에서 빠지고, 이번 달·미래 추정은 예상", () => {
+    const payouts = [
+      pay("2026-07-15", 500, { isEstimated: true }),
+      pay("2026-10-20", 400),
+      pay("2026-11-15", 300, { isEstimated: true }),
+      pay("2026-12-15", 200, { isEstimated: true }),
+    ];
+    const calc = computeDividends([{ stock: s, payouts }], [], 1400, TODAY);
+    const r = calc.byStock.get(dividendStockKey(s))!;
+    expect(calc.annual).toEqual({ paid: 4000, expected: 5000, total: 9000 });
+    expect(r.monthState[6]).toBe("none");
+    expect(r.monthState[9]).toBe("paid");
+    expect(r.monthState[10]).toBe("expected");
+    expect(r.monthState[11]).toBe("expected");
+    expect(r.firstPayout?.payoutDate).toBe("2026-10-20");
+    expect(monthSums(calc)[6]).toEqual({ paid: 0, expected: 0 });
   });
 });

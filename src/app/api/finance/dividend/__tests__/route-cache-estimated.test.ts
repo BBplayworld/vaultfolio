@@ -37,8 +37,8 @@ describe("배당 라우트 캐시 히트", () => {
     const body = await res.json();
     expect(body.data).toEqual(cached);
     expect(body.data[1].isEstimated).toBe(true);
-    // 캐시 키(v12)·외부 호출 0
-    expect(getDividend).toHaveBeenCalledWith("005930-domestic-v12");
+    // 캐시 키(v13)·외부 호출 0
+    expect(getDividend).toHaveBeenCalledWith("005930-domestic-v13");
     expect(getToken).not.toHaveBeenCalled();
   });
 });

@@ -18,7 +18,8 @@ import { getKisAccessToken } from "@/lib/finance/kis-token";
 const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
 // v12: 캐시 키에 type 포함(type=domestic으로 해외 티커를 조회해 빈 배열을 30일 저장 → 전 사용자 배당 공백되던 오염 경로 차단)
-const DIVIDEND_CACHE_VERSION = "v12";
+// v13(#376, 5.183): 지난 달 추정 생성 중단 — 이전 버전 캐시에 남은 지난 달 추정을 버린다
+const DIVIDEND_CACHE_VERSION = "v13";
 // 실패·빈 결과 음성 캐시 — 반복 호출 방지용 짧은 TTL(정상 결과 30일과 분리)
 const DIVIDEND_EMPTY_TTL_SEC = 600;
 const DIVIDEND_TYPES = ["domestic", "foreign"] as const;
@@ -145,7 +146,9 @@ function inferEstimatedPayouts(
     expectedMonths.add(((anchorMonth - 1 + offset) % 12) + 1);
   }
 
-  const candidateMonths = [...expectedMonths].filter((m) => !actualMonthsSet.has(m)).sort((a, b) => a - b);
+  // 지난 달은 후보에서 뺀다(#376) — 이번 달은 늦게 반영될 수 있어 남긴다. 정본 규칙은 클라이언트 isPastEstimate
+  const nowMonth = parseInt(todayMonth, 10);
+  const candidateMonths = [...expectedMonths].filter((m) => !actualMonthsSet.has(m) && m >= nowMonth).sort((a, b) => a - b);
   debugInfo.anchorMonth = anchorMonth;
   debugInfo.expectedMonths = [...expectedMonths].sort((a, b) => a - b);
   debugInfo.candidateMonths = candidateMonths;
