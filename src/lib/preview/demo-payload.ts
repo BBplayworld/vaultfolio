@@ -102,8 +102,24 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /**
  * 데모 주입 직후 기록할 최신화 메타(기존 키·형식, 새 키 없음).
  * 현금·대출은 40일 전(오래됨), 주식·코인은 2일 전(최근) — #32 블록 7 점검용.
+ * brokers.stock(#366): 증권사별 맞춘 날 세 표기 확인용 — 데모증권 국내·해외 2일 전(`M/D 맞춤`), 연금저축 작년 12/3(`YYYY.M.D 맞춤`), ISA 기록 없음(`N종목`만).
+ * count는 데모 JSON의 계좌별 항목 수(데모증권 국내 2·해외 2, 연금저축 1)와 같아야 날짜가 보인다.
  */
-export function buildDemoRefreshMeta(now: number = Date.now()): { categories: Record<"stock" | "crypto" | "cash" | "loan", string> } {
+export function buildDemoRefreshMeta(now: number = Date.now()): {
+  categories: Record<"stock" | "crypto" | "cash" | "loan", string>;
+  brokers: { stock: { broker: string; category: "domestic" | "foreign" | "pension"; date: string; count: number }[] };
+} {
   const ago = (days: number) => new Date(now - days * DAY_MS).toISOString();
-  return { categories: { stock: ago(2), crypto: ago(2), cash: ago(40), loan: ago(40) } };
+  const recent = kstToday(now - 2 * DAY_MS);
+  const lastYear = `${Number(kstToday(now).slice(0, 4)) - 1}-12-03`;
+  return {
+    categories: { stock: ago(2), crypto: ago(2), cash: ago(40), loan: ago(40) },
+    brokers: {
+      stock: [
+        { broker: "데모증권", category: "domestic", date: recent, count: 2 },
+        { broker: "데모증권", category: "foreign", date: recent, count: 2 },
+        { broker: "연금저축", category: "pension", date: lastYear, count: 1 },
+      ],
+    },
+  };
 }

@@ -157,6 +157,7 @@ describe("featureTitleOf 매핑", () => {
     ["feature_use", { category: "stock_broker_open" }, "상세·주식·증권사별 열기"],
     ["feature_use", { category: "crypto_exchange_open" }, "상세·암호화폐·거래소별 열기"],
     ["feature_use", { category: "resync_apply" }, "보유 현황 맞추기 적용"],
+    ["feature_use", { category: "resync_confirm_same" }, "보유 현황 맞추기 확인·변경 없음"],
     ["feature_use", { category: "resync_undo" }, "보유 현황 맞추기 되돌리기"],
     ["feature_use", { category: "resync_check_match" }, "보유 현황 맞추기 대조·일치"],
     ["feature_use", { category: "resync_check_diff" }, "보유 현황 맞추기 대조·차이"],
