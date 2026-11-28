@@ -112,7 +112,7 @@ export function CryptoTxView() {
       averagePrice: preview.avgPrice,
       positionSource: "computed",
     }, linkPlan ? { revertLink: true } : undefined)) {
-      toast.success(`삭제하고 포지션을 되돌렸습니다.${linkPlan ? revertToastSuffix(linkPlan.kind) : ""}`);
+      toast.success(`삭제하고 포지션을 되돌렸어요.${linkPlan ? revertToastSuffix(linkPlan.kind) : ""}`);
     } else {
       // 저장 관문 거부 — 창을 유지하고 알린다(무음 실패 0, #357). 결과 0개면 그 이유를 말한다
       toast.error(preview.quantity <= 0 ? COIN_DELETE_ZERO_FAIL_TOAST : TRADE_DELETE_FAIL_TOAST, { className: "break-keep text-balance" });
@@ -125,7 +125,7 @@ export function CryptoTxView() {
     return (
       <Card className={`min-w-0 ${ASSET_THEME.contentCard}`}>
         <CardContent className={`py-10 text-center text-sm text-muted-foreground ${ASSET_THEME.contentPad}`}>
-          코인을 선택하면 매수/매도 내역이 표시됩니다.
+          코인을 선택하면 매수/매도 내역이 표시돼요.
         </CardContent>
       </Card>
     );
@@ -197,7 +197,7 @@ export function CryptoTxView() {
             })}
           </div>
         ) : (
-          <p className="py-8 text-center text-sm text-muted-foreground">매수/매도 기록이 없습니다.</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">매수/매도 기록이 없어요.</p>
         )}
       </CardContent>
 
@@ -206,8 +206,8 @@ export function CryptoTxView() {
         <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteTarget(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-background dark:bg-popover p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <p className="text-base font-bold">반영된 기록 삭제</p>
-            <p className="text-sm text-muted-foreground">
-              이 기록은 보유 수량·평단에 반영되어 있습니다. 삭제하면 포지션이 되돌아갑니다.
+            <p className="text-sm text-muted-foreground break-keep text-pretty">
+              이 기록은 보유 수량·평단에 반영돼 있어요. 삭제하면 포지션이 되돌아가요.
             </p>
             <div className="text-sm tabular-nums rounded-lg bg-muted/40 p-3 space-y-1">
               <p>
@@ -242,7 +242,7 @@ export function CryptoTxView() {
             <p className="text-sm text-muted-foreground text-pretty break-keep">이 기록만 지워요. 보유 수량은 그대로예요</p>
             <div className="flex gap-2 justify-end">
               <Button data-testid="tx-delete-confirm-cancel" size="lg" variant="secondary" autoFocus onClick={() => setRecordOnlyTarget(null)}>취소</Button>
-              <Button data-testid="tx-delete-confirm-ok" size="lg" variant="destructive" onClick={() => { if (deleteCryptoTransaction(recordOnlyTarget.id)) toast.success("삭제되었습니다."); setRecordOnlyTarget(null); }}>삭제</Button>
+              <Button data-testid="tx-delete-confirm-ok" size="lg" variant="destructive" onClick={() => { if (deleteCryptoTransaction(recordOnlyTarget.id)) toast.success("삭제했어요."); setRecordOnlyTarget(null); }}>삭제</Button>
             </div>
           </div>
         </div>

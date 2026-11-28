@@ -128,7 +128,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 
 ### F-CRYPTO-TX. 암호화폐 매수/매도 거래내역 ([crypto-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/crypto-tx-input.tsx) · [crypto-tx-view.tsx](../../src/app/(main)/_components/views/detail/crypto-tx/crypto-tx-view.tsx)) — 명세 [S-4.25](../specs/4.25-crypto-transactions.md)
 - 👤 코인 카드(병합·거래소별 하위 카드) "매수/매도 기록·내역" 진입, "자산업데이트" 플로팅 버튼(코인 선택) → "매수/매도 기록"에서도 동일 폼 진입(현금·대출과 동일 동선). 폼: 코인 선택·매수/매도 토글·수량·체결단가·날짜·메모·반영 ON/OFF·반영 후 예상 포지션 인라인 미리보기·중복 인라인 확인. 로그 뷰 총매수·총매도 통계, 기간·유형 필터
-- 👤 반영 거래 삭제 → 포지션 롤백 확인 다이얼로그(수량·평단 변화 표시) / 기록만 삭제 → 앱 안 확인 창 '이 기록만 지워요. 보유 수량은 그대로예요'(#5.149 #295)
+- 👤 반영 거래 삭제 → 포지션 롤백 확인 다이얼로그(수량·평단 변화 표시, 본문 `이 기록은 보유 수량·평단에 반영돼 있어요. 삭제하면 포지션이 되돌아가요.` `break-keep text-pretty` — 320~440 어절 중간 꺾임 0, #371 동승 5.181. 성공 토스트 `삭제하고 포지션을 되돌렸어요.`·기록만 `삭제했어요.`·빈 상태 `매수/매도 기록이 없어요.`, 자동 `coin-delete-copy-5181.test.ts`) / 기록만 삭제 → 앱 안 확인 창 '이 기록만 지워요. 보유 수량은 그대로예요'(#5.149 #295)
 - ⚙ **계산 엔진은 잔액 선형 가감(현금·대출)이 아니라 수량×평단 가중평균** — `trade-utils.ts`를 새 유틸 파일 없이 재사용(`computeNewPosition`/`recomputeFromLog`/`reverseTransaction`/`deriveBaseSnapshot`/`rollbackTransaction`/`pruneTransactions`/`findDuplicateTransaction`을 `TxLike`/`PositionLike` 구조적 타입으로 일반화, `validateReflection`도 동일). 삭제 시 단순 산술 역가감이 아니라 `rollbackTransaction`(거래로그 전체 재적용)으로 재계산
 - ⚙ 단일 저장 `addCryptoTransactionWithPosition`/`deleteCryptoTransactionWithPosition`(로그+포지션, stale-closure 방지, R4 대칭)
 - ⚙ 종합 카드는 하위 항목(거래소) 존재 시 `!hasSubItems` 조건으로 기록/내역 버튼을 항상 숨김(1개 거래소만 지정된 경우도 포함) — 개별 거래소 하위 카드(`SubCryptoCard`)에서만 기록. 주식(F-STOCK)과 동일 규칙
