@@ -57,3 +57,16 @@ describe("physical-tab 막대", () => {
     expect(s).toContain('className="h-full motion-safe:transition-[width]"');
   });
 });
+
+describe("O-2 부동산 카드 펼침 ˅ 잘림", () => {
+  it("금액 열은 shrink-0이 아니고(min-w-0), 손익 줄만 넘칠 때 줄바꿈(justify-end·gap-y-0), 금액 조각은 nowrap", () => {
+    const s = src("real-estate-tab.tsx");
+    const right = s.slice(s.indexOf('data-testid="re-row-right"'), s.indexOf("<ChevronDown"));
+    expect(right).toContain('className="text-right min-w-0"');
+    expect(right).not.toContain("ASSET_THEME.cardInfoRight");
+    expect(right).toContain("flex-wrap justify-end gap-y-0");
+    expect((right.match(/whitespace-nowrap/g) ?? []).length).toBe(3);
+    // 반응형 경계 추가 0(C99)
+    expect(right).not.toMatch(/(max|min)-\[|\bsm:|\bmd:/);
+  });
+});
