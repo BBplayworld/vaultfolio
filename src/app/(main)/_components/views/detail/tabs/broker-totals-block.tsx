@@ -156,6 +156,7 @@ export function BrokerTotalsBlock({ stocks, exchangeRates, displayCurrency, cash
                 onResync={(b) => dispatchAddStock("screenshot", b)}
                 cashText={cashByRow?.has(r.name) ? formatPriceByMode(cashByRow.get(r.name)!) : undefined}
                 synced={syncedLabel(r, synced, today)}
+                share={false}
               />
             ))}
           </div>

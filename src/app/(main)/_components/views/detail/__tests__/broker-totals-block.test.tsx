@@ -36,16 +36,14 @@ describe("BrokerTotalsBlock", () => {
     expect(html).not.toMatch(/data-state="open"/);
   });
 
-  it("소계 화면 문자열 합 = 헤더 합계 문자열, 비중 합 100.0%, 미지정 맨 아래", () => {
+  it("소계 화면 문자열 합 = 헤더 합계 문자열, 주식 행 비중 조각 0(5.179, 합 100.0%는 broker-totals.test), 미지정 맨 아래", () => {
     const html = renderToStaticMarkup(<BrokerTotalsBlock stocks={STOCKS} exchangeRates={RATES} displayCurrency="KRW" />);
     const t = computeStockTotals(STOCKS, RATES);
     const values = texts(html, "broker-row-value");
     expect(values).toHaveLength(4);
     expect(values.reduce((a, v) => a + num(v), 0)).toBe(num(formatCurrency(t.totalValue)));
-    // 5.179: 주식 메타 줄은 dot-wrap — 비중 조각 머리에 DotLead(` · `)가 붙는다
-    const shares = [...html.matchAll(/data-testid="broker-row-share"[^>]*><span[^>]*> · <\/span>([\d.]+)%/g)].map((m) => num(m[1]) * 10);
-    expect(shares).toHaveLength(4);
-    expect(Math.round(shares.reduce((a, b) => a + b, 0))).toBe(1000);
+    // 5.179: 주식 행은 비중 조각을 그리지 않는다(코인 거래소 행은 유지)
+    expect(html).not.toContain('data-testid="broker-row-share"');
     const names = texts(html, "broker-row-name");
     expect(names.at(-1)).toBe("증권사 미지정");
     expect(html).toContain('data-testid="broker-totals-note"');
@@ -155,13 +153,13 @@ describe("dispatchAddStock broker 전달(#319)", () => {
     expect(events.map((e) => e.detail)).toEqual([{ mode: "screenshot", broker: "키움증권" }, { mode: "screenshot" }]);
   });
 
-  it("5.162 메타 줄: 종목 수·'· 비중' 두 조각 모두 nowrap(320 꺾임은 조각 사이에서만, C152) — 5.179부터 dot-wrap", () => {
+  it("5.162 메타 줄: 종목 수 조각 nowrap(320 꺾임은 조각 사이에서만, C152) — 5.179부터 dot-wrap·비중 조각 0", () => {
     const long = [
       st({ id: "l1", broker: "한국투자증권 종합계좌 아주긴이름", quantity: 7 }),
       st({ id: "l2", broker: "미래에셋증권", ticker: "000660", quantity: 3 }),
     ];
     const html = renderToStaticMarkup(<BrokerTotalsBlock stocks={long} exchangeRates={RATES} displayCurrency="KRW" />);
     expect(html).toMatch(/data-testid="broker-row-count" class="whitespace-nowrap ml-2"/);
-    expect(html).toMatch(/data-testid="broker-row-share" class="whitespace-nowrap"><span aria-hidden="true" class="-ml-1 inline-block w-3 text-center font-normal text-muted-foreground"> · <\/span>/);
+    expect(html).not.toContain("broker-row-share");
   });
 });
