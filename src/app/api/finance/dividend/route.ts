@@ -78,7 +78,9 @@ function inferFrequencyFromMonths(months: number[]): DividendFrequency {
 }
 
 // 올해 실제 데이터 기준으로 예상 지급 생성
-// - 빈도 판단 우선순위: 올해 월 간격 → 작년 건수 → 올해 1건+작년 1건 월 간격 → annual
+// - 빈도 판단 우선순위(#376, 5.183): 연간 지급 건수(작년 건수와 올해 실지급 건수 중 큰 값) → 올해 2건 이상 월 간격
+//   → 올해 1건+작년 1건 월 간격 → annual. 건수가 있으면 간격은 보지 않는다(4·5·8·11월 분기를 월배당으로 오판하던 문제)
+// - 올해 실지급 건수가 빈도의 연간 횟수에 닿으면 추정을 만들지 않는다
 // - 금액: 최신 실제 지급액 사용 (평균 아닌 가장 최근)
 function inferEstimatedPayouts(
   thisYearFiltered: DividendPayoutResult[],
@@ -108,13 +110,15 @@ function inferEstimatedPayouts(
   let frequency: DividendFrequency;
   let decisionReason: string;
 
-  if (actualPayouts.length >= 2) {
-    // 올해 2건 이상: 건수 대신 월 간격으로 빈도 역산 (2건=반기/분기 모호 문제 해결)
+  if (prevYear.length >= 2) {
+    // 작년 건수가 있으면 건수 우선 — 올해 실지급이 더 많으면(배당 횟수 증가) 그 건수를 쓴다
+    const count = Math.max(prevYear.length, actualPayouts.length);
+    frequency = calcFrequency(count);
+    decisionReason = `연간 건수 기준(작년 ${prevYear.length}건, 올해 ${actualPayouts.length}건 → ${count}건): ${frequency}`;
+  } else if (actualPayouts.length >= 2) {
+    // 작년 건수가 없을 때만 월 간격으로 보조 역산 (2건=반기/분기 모호 문제 해결)
     frequency = inferFrequencyFromMonths(actualMonths);
-    decisionReason = `올해 ${actualPayouts.length}건, 월간격 역산: ${actualMonths.join(",")} → ${frequency}`;
-  } else if (prevYear.length >= 2) {
-    frequency = calcFrequency(prevYear.length);
-    decisionReason = `올해 1건, 작년 ${prevYear.length}건 기준: ${frequency}`;
+    decisionReason = `작년 건수 부족, 올해 ${actualPayouts.length}건 월간격 역산: ${actualMonths.join(",")} → ${frequency}`;
   } else if (prevYear.length === 1) {
     const thisMonth = parseInt(actualPayouts[0].payoutDate.split("-")[1], 10);
     const prevMonth = parseInt(prevYear[0].payoutDate.split("-")[1], 10);
@@ -137,6 +141,12 @@ function inferEstimatedPayouts(
 
   if (frequency === "annual") {
     return { payouts: [], frequency, debugInfo };
+  }
+
+  // 올해 실지급 건수가 연간 횟수에 닿았으면 더 받을 회차가 없다
+  const perYear = frequency === "monthly" ? 12 : frequency === "quarterly" ? 4 : 2;
+  if (actualPayouts.length >= perYear) {
+    return { payouts: [], frequency, debugInfo: { ...debugInfo, decision: `올해 실지급 ${actualPayouts.length}건 ≥ 연 ${perYear}회 → 추정 없음` } };
   }
 
   const gap = frequency === "monthly" ? 1 : frequency === "quarterly" ? 3 : 6;
