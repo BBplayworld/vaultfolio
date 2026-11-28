@@ -83,7 +83,7 @@ export function LoanTxView() {
     // 반영 역가감: 상환 삭제=+amount / 추가대출 삭제=−amount
     const newBalance = loan.balance + (tx.type === "repay" ? tx.amount : -tx.amount);
     if (deleteLoanTransactionWithBalance(tx.id, loan.id, { balance: Math.max(0, newBalance) })) {
-      toast.success("삭제하고 잔액을 되돌렸습니다.");
+      toast.success("삭제하고 잔액을 되돌렸어요.");
     }
     setDeleteTarget(null);
   };
@@ -173,8 +173,8 @@ export function LoanTxView() {
         <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteTarget(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-background dark:bg-popover p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <p className="text-base font-bold">반영된 기록 삭제</p>
-            <p className="text-sm text-muted-foreground">
-              이 기록은 잔액에 반영되어 있습니다. 삭제하면 잔액이 되돌아갑니다.
+            <p className="text-sm text-muted-foreground break-keep text-balance">
+              이 기록은 잔액에 반영돼 있어요. 삭제하면 잔액이 되돌아가요.
             </p>
             <p className="text-sm tabular-nums rounded-lg bg-muted/40 p-3">
               {formatCurrency(loan.balance)}
@@ -196,7 +196,7 @@ export function LoanTxView() {
             <p className="text-sm text-muted-foreground text-pretty break-keep">이 기록만 지워요. 잔액은 그대로예요</p>
             <div className="flex gap-2 justify-end">
               <Button data-testid="tx-delete-confirm-cancel" size="lg" variant="secondary" autoFocus onClick={() => setRecordOnlyTarget(null)}>취소</Button>
-              <Button data-testid="tx-delete-confirm-ok" size="lg" variant="destructive" onClick={() => { if (deleteLoanTransaction(recordOnlyTarget.id)) toast.success("삭제되었습니다."); setRecordOnlyTarget(null); }}>삭제</Button>
+              <Button data-testid="tx-delete-confirm-ok" size="lg" variant="destructive" onClick={() => { if (deleteLoanTransaction(recordOnlyTarget.id)) toast.success("삭제했어요."); setRecordOnlyTarget(null); }}>삭제</Button>
             </div>
           </div>
         </div>

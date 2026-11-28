@@ -16,13 +16,14 @@ import { stockCategories } from "@/config/asset-options";
 import { SHARE_SAFE_PALETTE, SHARE_ETC_COLOR, PORTFOLIO_PALETTE, ASSET_THEME_SHOT, ASSET_THEME_SHOT_BIG, SHOT_BIG_SCALE, pickDonutLabelColor } from "@/config/theme";
 import { computeBreakdown } from "@/lib/xray/stock-xray";
 import { getEtfBrand } from "@/lib/finance/logo-source";
-import { resolveInvestorType, type AccountKey, type RegionKey, type KrUsBalance } from "@/lib/xray/investor-type";
+import { resolveInvestorType, splitLongDescriptionLine, type AccountKey, type RegionKey, type KrUsBalance } from "@/lib/xray/investor-type";
 import type { Sector, StockType } from "@/lib/xray/classification-store";
 import { PortfolioRingCard, type RingSegment, type SubLogo } from "./portfolio-ring-card";
 import { PortfolioSectorBar, type SectorBarItem } from "./portfolio-sector-bar";
 import { InvestorAvatar } from "./investor-avatar";
 import { usePcPreview } from "./use-pc-preview";
 import { useKoreanAdvanceScale } from "./use-korean-advance-scale";
+import { HIGHLIGHT_CLASS, splitHighlightParts, useCaptureLineFit } from "./use-capture-line-fit";
 
 // 인증카드 축약 상수 — 비중 바·종목 리스트 모두 상위 N개만 노출하고 나머지는 "기타"/"외 N종목"으로 집계
 const SHOT_MAX = 7;
@@ -50,16 +51,13 @@ const TAG_PIN_COLOR = PORTFOLIO_PALETTE[9]; // 코랄레드 — 실제 압정과
 // 특수문자 이스케이프 + 긴 용어부터 매칭(짧은 용어가 긴 용어 일부를 잘못 가로채지 않게).
 function renderDescriptionWithHighlights(text: string, terms: string[]) {
   if (terms.length === 0) return text;
-  const sorted = [...terms].sort((a, b) => b.length - a.length);
-  const escaped = sorted.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const re = new RegExp(`(${escaped.join("|")})`, "g");
-  return text.split(re).map((part, i) =>
-    terms.includes(part) ? (
-      <strong key={i} className="font-semibold text-foreground">
-        {part}
+  return splitHighlightParts(text, terms).map((part, i) =>
+    part.strong ? (
+      <strong key={i} className={HIGHLIGHT_CLASS}>
+        {part.text}
       </strong>
     ) : (
-      <React.Fragment key={i}>{part}</React.Fragment>
+      <React.Fragment key={i}>{part.text}</React.Fragment>
     ),
   );
 }
@@ -67,9 +65,7 @@ function renderDescriptionWithHighlights(text: string, terms: string[]) {
 // 문장 길이가 제각각이라 "N문장마다 개행"은 짧은 문장 조합에서 빈 줄, 긴 문장 조합에서 이중 줄바꿈이
 // 생겨 리듬이 들쭉날쭉해진다. 대신 문장을 순서대로 누적하다 목표 글자수(대략 2줄 분량)를 넘기 직전에
 // 개행하는 그리디 방식으로 실제 렌더 폭에 맞게 자연스럽게 묶는다.
-// fixedLinePx(캡처 전용): 한 줄 예상 묶음(글자수 ≤ targetChars)을 고정 높이 블록으로 감싸 OS 한글 폰트와
-// 글꼴이 섞일 때 줄 박스가 폰트 메트릭에 따라 커지는 것(기기별 카드 높이 차이)을 막는다.
-function renderDescriptionInLines(text: string, terms: string[], targetChars: number, fixedLinePx?: number) {
+export function groupDescriptionLines(text: string, targetChars: number): string[] {
   const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
@@ -82,12 +78,40 @@ function renderDescriptionInLines(text: string, terms: string[], targetChars: nu
     }
   }
   if (current) lines.push(current);
+  return lines;
+}
+
+const EMPTY_TERMS: string[] = [];
+
+// fixedLinePx(캡처 전용): 한 줄 예상 묶음(글자수 ≤ targetChars)을 고정 높이 블록으로 감싸 OS 한글 폰트와
+// 글꼴이 섞일 때 줄 박스가 폰트 메트릭에 따라 커지는 것(기기별 카드 높이 차이)을 막는다.
+// targetChars를 넘는 한 문장 묶음은 longFit(useCaptureLineFit 실측)으로 정한다 — 한 줄에 들어가면 nowrap 한 줄,
+// 넘치거나 판정 전·측정 실패면 splitLongDescriptionLine 2줄. 어느 쪽이든 줄마다 같은 고정 높이(DOM = PNG).
+export function renderDescriptionInLines(text: string, terms: string[], targetChars: number, fixedLinePx?: number, longFit?: boolean[] | null) {
+  const lines = groupDescriptionLines(text, targetChars);
   if (fixedLinePx) {
-    return lines.map((line, i) => (
-      <div key={i} style={line.length <= targetChars ? { height: fixedLinePx } : { minHeight: fixedLinePx }}>
-        {renderDescriptionWithHighlights(line, terms)}
-      </div>
-    ));
+    let longIdx = -1;
+    return lines.map((line, i) => {
+      if (line.length <= targetChars) {
+        return <div key={i} style={{ height: fixedLinePx }}>{renderDescriptionWithHighlights(line, terms)}</div>;
+      }
+      longIdx += 1;
+      // 실측 결과 한 줄에 여유 있게 들어가는 묶음 — main과 같은 한 줄(높이 31px 고정 + nowrap)
+      if (longFit?.[longIdx] === true) {
+        return <div key={i} className="whitespace-nowrap" style={{ height: fixedLinePx }}>{renderDescriptionWithHighlights(line, terms)}</div>;
+      }
+      // 넘치는 한 문장 묶음(#371 동승 5.181 → #373 5.182 '넘칠 때만') — 브라우저 줄바꿈에 맡기면 PNG에 꼬리 줄·빈 줄이 생겨
+      // JS로 2줄을 정하고 줄마다 고정 높이. 자를 자리가 없으면 기존처럼 최소 높이만
+      const halves = splitLongDescriptionLine(line, terms, targetChars);
+      if (!halves) return <div key={i} style={{ minHeight: fixedLinePx }}>{renderDescriptionWithHighlights(line, terms)}</div>;
+      return (
+        <div key={i}>
+          {halves.map((h, k) => (
+            <div key={k} className="whitespace-nowrap" style={{ height: fixedLinePx }}>{renderDescriptionWithHighlights(h, terms)}</div>
+          ))}
+        </div>
+      );
+    });
   }
   return lines.map((line, i) => (
     <React.Fragment key={i}>
@@ -322,6 +346,15 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
     });
   }, [variant, mergedStocks, exchangeRates, categoryItems, xrayTick, assetData.stocks, totalValue]);
 
+  // 캡처 설명 긴 묶음 한 줄/2줄 실측(#373, 5.182) — 캡처 인스턴스(!responsive)의 투자 유형에서만
+  const descRef = React.useRef<HTMLDivElement>(null);
+  const CAPTURE_DESC_TARGET = 35;
+  const captureLongLines = React.useMemo(
+    () => (investorType ? groupDescriptionLines(investorType.description, CAPTURE_DESC_TARGET).filter((l) => l.length > CAPTURE_DESC_TARGET) : []),
+    [investorType],
+  );
+  const descFit = useCaptureLineFit(descRef, captureLongLines, investorType?.highlightTerms ?? EMPTY_TERMS, !responsive && !!investorType, krPx(17));
+
   // 하위 컴포넌트는 프리뷰·캡처 모두 항상 screenshotMode(=정적, 펼침 없음).
   // 캡처(!responsive)만 shotBig → ASSET_THEME_SHOT_BIG(폰트 ×SHOT_BIG_SCALE)로 680px 아트보드에서 프리뷰 비율 재현.
   // screenshotMode 자체를 responsive에 재결속하지 않는다(과거 프리뷰 펼침 부활 회귀).
@@ -409,14 +442,17 @@ export function ShareCard({ variant, hideAmounts, cardRef, xrayTick, responsive 
                 없으면 래퍼가 가장 긴 문장 묶음 폭에 맞춰 줄어들어 % 가 그 폭 기준이 돼, 가장 긴
                 묶음이 항상 줄바꿈되며 고아 줄이 생긴다(2026-09 스크린샷으로 확인). */}
             <div
+              ref={responsive ? undefined : descRef}
+              data-desc-fit={responsive ? undefined : descFit.ready ? "done" : "pending"}
               className={responsive ? "text-xs sm:text-sm text-muted-foreground mt-3 text-pretty break-keep [overflow-wrap:anywhere] leading-[1.85] max-w-[97%] sm:max-w-[90%]" : "text-muted-foreground mt-3 text-pretty break-keep [overflow-wrap:anywhere] max-w-[82%] mx-auto"}
               style={responsive ? undefined : { fontSize: krPx(17), lineHeight: "31px" }}
             >
               {renderDescriptionInLines(
                 investorType.description,
                 investorType.highlightTerms,
-                !responsive ? 35 : isPcPreview ? 50 : 27,
+                !responsive ? CAPTURE_DESC_TARGET : isPcPreview ? 50 : 27,
                 responsive ? undefined : 31,
+                responsive ? undefined : descFit.single,
               )}
             </div>
             {/* 대자보에 핀으로 꽂은 공고 쪽지 느낌 — 태그마다 회전각·세로 위치를 고정 배열에서
