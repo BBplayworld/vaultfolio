@@ -6,7 +6,7 @@ import { InlineSelector } from "../../../layout/ui/inline-selector";
 // 상세 탭 카테고리 줄(#362) — 칸이 많으면 줄 안에서만 가로 스크롤(페이지 넘침 0), 스크롤바 숨김.
 // 6칸 이상이면 칸 좌우 여백 8→6px. 칸 위아래 히트 영역을 after로 4px씩 넓혀 40px, 컨테이너 py-0.5/-my-0.5로 담아 레이아웃 높이 변화 0.
 // -my-0.5를 부모 space-y 자식에 직접 두면 space-y 간격(:where, 특이도 0)을 덮어 카드가 줄어들어 한 겹 감싼다.
-// 트랙 rounded-md(10) + 세로 여백 2 = rounded-lg(12) 동심. 주식 줄(stock-category-row)은 별도 유지.
+// 트랙 rounded-md(10) + 세로 여백 2 = rounded-lg(12) 동심. 주식 줄(stock-category-row)도 5.178부터 이 컴포넌트.
 // 넘침 힌트(5.177 D-1): 칸 사이 간격·둥근 끝에서 잘리면 숨은 칸 단서가 없어 넘치는 쪽 끝에만 24px 마스크 페이드.
 // scroll-px-6 — 선택·포커스로 옮긴 칸이 페이드 밖에 놓이고 다음 칸이 일부 보이게.
 export const DENSE_MIN = 6;
@@ -45,6 +45,14 @@ export function scrollActiveIntoView(container: Pick<HTMLElement, "querySelector
 // 키보드 포커스 칸만 nearest 스크롤(마우스 포커스는 클릭 뒤 선택 effect가 맡는다)
 export function focusScroll(target: Pick<Element, "matches" | "scrollIntoView">): void {
   if (target.matches(":focus-visible")) target.scrollIntoView({ inline: "nearest", block: "nearest" });
+}
+
+// 이미 선택된 칸을 다시 탭(5.177 O-4) — 값이 같아 선택 effect가 돌지 않으므로 클릭에서 직접 nearest.
+// click은 커밋 전에 버블되어 aria-checked가 아직 이전 선택이다 → 새 칸 클릭은 건너뛰고 effect가 맡는다(이중 스크롤 0).
+// mouseup 뒤라 클릭이 사라지는 회귀(포커스 스크롤 실측)와 무관
+export function retapScroll(target: unknown): void {
+  const btn = (target as Partial<Pick<Element, "closest">> | null)?.closest?.('[role="radio"]');
+  if (btn?.getAttribute("aria-checked") === "true") btn.scrollIntoView({ inline: "nearest", block: "nearest" });
 }
 
 export function CategoryScrollRow<T extends string>({ value, onChange, options, ariaLabel, testId }: {
@@ -90,6 +98,7 @@ export function CategoryScrollRow<T extends string>({ value, onChange, options, 
         className={`${ROW_CLASS} ${fadeClass(edge)}`}
         onScroll={syncEdge}
         onFocus={(e) => focusScroll(e.target)}
+        onClick={(e) => retapScroll(e.target)}
       >
         <InlineSelector value={value} onChange={onChange} options={options} ariaLabel={ariaLabel} className={selectorClass(options.length)} />
       </div>
