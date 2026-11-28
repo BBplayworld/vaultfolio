@@ -45,3 +45,34 @@ export function nextDialogWatch(seen: boolean, present: boolean): { seen: boolea
 export function shouldNotifyResyncClose(step: string, undo: { done: boolean } | null): boolean {
   return step === "result" && !!undo && !undo.done;
 }
+
+/** 결과 화면 전환 직후 바깥 닫기 무시 시간(#368) — 연타의 둘째 탭이 작아진 창 바깥(오버레이)에 닿아 닫히지 않게 */
+export const RESULT_CLOSE_GUARD_MS = 400;
+
+/** 결과 화면에 들어온 시각(enteredAt)부터 guardMs 안이면 바깥 클릭·Escape 닫기를 막는다. 결과 화면이 아니면(null) 막지 않는다 */
+export function isResultCloseGuarded(enteredAt: number | null, now: number, guardMs = RESULT_CLOSE_GUARD_MS): boolean {
+  return enteredAt !== null && now - enteredAt >= 0 && now - enteredAt < guardMs;
+}
+
+/**
+ * 되돌리기 토스트 id 칸(#368). sonner의 dismiss(id)는 삭제를 다음 프레임으로 미루므로,
+ * 같은 id로 dismiss → 곧바로 재생성하면 늦게 온 삭제가 새 토스트를 지운다.
+ * 토스트마다 새 id를 쓰고, 닫을 때는 지금 떠 있는 id만 돌려준다(재사용 0 → 경합 0).
+ */
+export function createUndoToastSlot(base: string) {
+  let seq = 0;
+  let current: string | null = null;
+  return {
+    /** 지금 떠 있는 되돌리기 토스트 id를 비우고 돌려준다(없으면 null) */
+    take(): string | null {
+      const id = current;
+      current = null;
+      return id;
+    },
+    /** 새 토스트 id — 이전 id와 겹치지 않는다 */
+    next(): string {
+      current = `${base}-${++seq}`;
+      return current;
+    },
+  };
+}
