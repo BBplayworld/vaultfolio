@@ -40,10 +40,10 @@ describe("WHATS_NEW 데이터 형식", () => {
     for (const e of WHATS_NEW) if (e.featureId) expect(ids.has(e.featureId), e.id).toBe(true);
   });
 
-  it("5.184 배당 용어: CEO 확정 문구(B 포함), 바로 가기 = 배당, 체험에서 숨기지 않음(C82·C87·C126)", () => {
+  it("5.184 배당 용어: CEO 확정 문구(B 폐기), 바로 가기 = 배당, 체험에서 숨기지 않음(C82·C87·C126)", () => {
     const e = WHATS_NEW.find((x) => x.id === "20261128-02")!;
     expect(e.title).toBe("배당 화면의 말을 지급과 예상 두\u00a0가지로 맞췄어요");
-    expect(e.body).toBe("맞지 않던 추정분이 빠져 올해 배당 예상이 줄었을\u00a0수 있어요");
+    expect(e.body).toBe("지난 달 추정분이 빠져 올해 배당 예상이 줄었을\u00a0수 있어요");
     expect(e.featureId).toBe("dividend");
     expect(e.trialHidden).toBeUndefined();
   });

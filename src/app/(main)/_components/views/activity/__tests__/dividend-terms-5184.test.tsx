@@ -70,6 +70,8 @@ describe("배당월 배지", () => {
     const c = chips(sel);
     expect(c.find((x) => x.month === 12)).toMatchObject({ selected: true, state: "expected" });
     expect(c.find((x) => x.month === 12)!.cls).toContain("border-dashed border-brand");
+    // qa D-C1: 선택 예상 글자는 톤차 면 규칙 그대로 라이트 indigo-600(≈5.6:1)·다크 indigo-300
+    expect(c.find((x) => x.month === 12)!.cls).toContain("text-indigo-600 dark:text-indigo-300");
     const sel1 = table([stock({})], [pay(1, 100), pay(12, 100, true)], 1);
     expect(chips(sel1).find((x) => x.month === 1)).toMatchObject({ selected: true, state: "paid" });
     expect(chips(sel1).find((x) => x.month === 1)!.cls).toContain("bg-brand border-brand text-brand-foreground");

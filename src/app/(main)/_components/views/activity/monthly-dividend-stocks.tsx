@@ -42,7 +42,7 @@ const CHIP_SHAPE: Record<MonthChipState, string> = {
 };
 const CHIP_SELECTED: Record<MonthChipState, string> = {
   paid: "bg-brand border-brand text-brand-foreground font-semibold",
-  expected: "bg-transparent border-dashed border-brand text-brand dark:text-indigo-300 font-semibold",
+  expected: "bg-transparent border-dashed border-brand text-indigo-600 dark:text-indigo-300 font-semibold",
   inactive: CHIP_SHAPE.inactive,
 };
 const CHIP_MOTION = "cursor-default transition-[color,background-color,border-color,box-shadow] motion-safe:duration-150 motion-reduce:transition-none";
