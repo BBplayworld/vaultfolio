@@ -10,7 +10,7 @@ const s = (o: Partial<Stock>): Stock =>
 
 // 추출 전 use-dividend-data.ts의 계산 그대로(회귀 기준)
 const OLD_DOMESTIC = new Set(["domestic", "irp", "isa", "pension"]);
-const oldKey = (st: Stock) => ["dividend", "v12", normalizeTicker(st), OLD_DOMESTIC.has(st.category) ? "domestic" : "foreign"];
+const oldKey = (st: Stock) => ["dividend", "v13", normalizeTicker(st), OLD_DOMESTIC.has(st.category) ? "domestic" : "foreign"];
 
 describe("dividendQueryArgs — 배당 화면 쿼리 키 불변", () => {
   const cases: Stock[] = [

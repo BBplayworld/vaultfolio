@@ -34,12 +34,12 @@ export function countFailedDividends(queries: ReadonlyArray<{ isError: boolean }
   return queries.filter((q) => q.isError).length;
 }
 
-// 배당 쿼리 공용 옵션 — retryOnMount:false 필수. v12(#376, 5.183): 지난 달 추정이 든 이전 응답을 버린다.
+// 배당 쿼리 공용 옵션 — retryOnMount:false 필수. v12(#376, 5.183): 지난 달 추정이 든 이전 응답을 버린다. v13(#377, 5.184): 이전 빈도 판정 응답을 버린다.
 // 실패(pending 없는 error) 쿼리를 같은 키의 다른 관찰자(월별 종목 등)가 마운트할 때마다 재조회하면
 // status가 pending으로 돌아가 로딩 뷰 → 관찰자 언마운트·재마운트 → 재조회가 무한 반복된다(#189 qa FAIL).
 export function dividendQueryOptions(ticker: string, type: string, excd = "NAS") {
   return {
-    queryKey: ["dividend", "v12", ticker, type] as const,
+    queryKey: ["dividend", "v13", ticker, type] as const,
     queryFn: () => fetchDividend(ticker, type, excd),
     staleTime: 30 * 24 * 60 * 60 * 1000,
     retry: false as const,
