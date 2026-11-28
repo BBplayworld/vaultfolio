@@ -6,7 +6,8 @@ import { formatCurrency } from "@/lib/number-utils";
 import { ASSET_THEME, MAIN_PALETTE } from "@/config/theme";
 import { normalizeTicker } from "@/lib/finance/finance-service";
 import type { DividendFrequency } from "@/lib/finance/finance-service";
-import type { DividendCalcResult, DividendMonthState } from "@/lib/finance/dividend-calc";
+import { latestPerSharePayout, type DividendCalcResult, type DividendMonthState } from "@/lib/finance/dividend-calc";
+import { kstTodayString } from "@/lib/asset/import-inherit";
 import type { Stock } from "@/types/asset";
 import type { DividendGroup } from "./use-dividend-data";
 
@@ -27,11 +28,29 @@ const CATEGORY_GROUPS = [
   { key: "pension", label: "연금저축", color: MAIN_PALETTE[7] },
 ] as const;
 
+/** 배당월 배지 상태(#377) — 진함 = 지급, 점선 = 예상, 테두리 없음 = 보유 전(그때 보유 0) */
+type MonthChipState = "paid" | "expected" | "inactive";
+const CHIP_STATES: readonly MonthChipState[] = ["paid", "expected", "inactive"];
+const CHIP_SR_SUFFIX: Record<MonthChipState, string> = { paid: " 지급", expected: " 예상", inactive: " 보유 전, 0원" };
+const LEGEND_LABEL: Record<MonthChipState, string> = { paid: "지급", expected: "예상", inactive: "보유 전" };
+
+// 모양만으로 구분(흑백·색맹): 지급 = 채운 면, 예상 = 점선 테두리, 보유 전 = 테두리 없음. 선택된 달은 색만 brand로 짙어진다(ui.md 2절)
+const CHIP_SHAPE: Record<MonthChipState, string> = {
+  paid: "bg-brand/15 dark:bg-brand/25 border-brand text-foreground dark:text-indigo-300 font-semibold",
+  expected: "bg-transparent border-dashed border-muted-foreground text-muted-foreground font-medium",
+  inactive: "bg-transparent border-transparent text-muted-foreground dark:text-muted-foreground/70 font-normal",
+};
+const CHIP_SELECTED: Record<MonthChipState, string> = {
+  paid: "bg-brand border-brand text-brand-foreground font-semibold",
+  expected: "bg-transparent border-dashed border-brand text-brand dark:text-indigo-300 font-semibold",
+  inactive: CHIP_SHAPE.inactive,
+};
+const CHIP_MOTION = "cursor-default transition-[color,background-color,border-color,box-shadow] motion-safe:duration-150 motion-reduce:transition-none";
+
 interface StockDividendRow {
   stock: Stock;
-  beforePurchaseMonths: number[];
-  actualMonths: number[];
-  estimatedMonths: number[];
+  /** 월 오름차순(상태 무관) — 검산 경로(진한 달 합 = 지급, 점선 달 합 = 올해 합계 − 지급)를 시간순으로 읽는다 */
+  chips: Array<{ month: number; state: MonthChipState }>;
   payoutMonths: number[];
   perShareForeign: number;
   perShareKRW: number;
@@ -61,26 +80,30 @@ const cents = (v: number) => Math.round(v * 100) / 100;
 export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
   const { exchangeRates } = useAssetData();
   const usdRate = exchangeRates.USD;
+  const todayKst = kstTodayString();
 
   const rows: StockDividendRow[] = groups
     .map(({ key, stock, payouts }): StockDividendRow | null => {
       const d = calc.byStock.get(key);
       if (!d || payouts.length === 0) return null;
       const firstPayout = d.firstPayout ?? payouts[0];
+      // 최근 1주당(#377): 지난 달 추정을 뺀 확정 회차 중 가장 늦은 1건(서버 예상 금액과 같은 회차)
+      const perShare = latestPerSharePayout(payouts, todayKst) ?? firstPayout;
       const currency = stock.currency === "USD" ? "USD" : "KRW";
       const rate = currency === "USD" ? usdRate : 1;
-      // 배당월 배지: 그 달 지급이 모두 '지급'이면 N월, 하나라도 예상이면 N월 예정, 그때 보유 0이면 흐린 N월
+      // 배당월 배지: 그 달이 모두 지급이면 paid, 하나라도 예상이면 expected, 그때 보유 0이면 inactive. 글자는 모두 `N월`
       const actualMonths = monthsIn(d.monthState, "paid");
       const estimatedMonths = monthsIn(d.monthState, "expected");
+      const chips = d.monthState
+        .map((st, i) => ({ month: i + 1, state: st }))
+        .filter((c): c is { month: number; state: MonthChipState } => c.state !== "none");
       const m = selectedMonth !== undefined ? selectedMonth - 1 : -1;
       return {
         stock,
-        beforePurchaseMonths: monthsIn(d.monthState, "inactive"),
-        actualMonths,
-        estimatedMonths,
+        chips,
         payoutMonths: [...actualMonths, ...estimatedMonths].sort((a, b) => a - b),
-        perShareForeign: currency === "USD" ? (firstPayout.amountForeign ?? firstPayout.amountPerShare) : 0,
-        perShareKRW: Math.round(firstPayout.amountPerShare * rate),
+        perShareForeign: currency === "USD" ? (perShare.amountForeign ?? perShare.amountPerShare) : 0,
+        perShareKRW: Math.round(perShare.amountPerShare * rate),
         currency,
         annualTotal: Math.round(d.paid + d.expected),
         annualForeign: cents(d.paidForeign + d.expectedForeign),
@@ -103,6 +126,10 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
     return { key, label, color, filtered };
   }).filter(({ filtered }) => filtered.length > 0);
 
+  // 배당월 범례(#377): 보이는 행에 있는 배지 상태만, 2개 이상일 때만(C170 — 기록할수록 숨는 역전 없음)
+  const shownStates = new Set(grouped.flatMap(({ filtered }) => filtered.flatMap((r) => r.chips.map((c) => c.state))));
+  const legendStates = CHIP_STATES.filter((st) => shownStates.has(st));
+
   if (grouped.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-3">
@@ -113,6 +140,21 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
 
   return (
     <div className="space-y-3">
+      {legendStates.length >= 2 && (
+        <div role="list" aria-label="배당월 표시" data-testid="dividend-month-legend" className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1">
+          {legendStates.map((st) => (
+            <Badge
+              key={st}
+              role="listitem"
+              variant="outline"
+              data-testid={`dividend-legend-${st}`}
+              className={`h-5 px-1.5 text-xs whitespace-nowrap cursor-default ${CHIP_SHAPE[st]}`}
+            >
+              {LEGEND_LABEL[st]}
+            </Badge>
+          ))}
+        </div>
+      )}
       {grouped.map(({ key, label, color, filtered }) => (
         <div key={key} className="rounded-lg border overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border-b">
@@ -123,14 +165,15 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
               접두는 `max-sm:`(폭 < 40rem), `sm:`와 정확히 맞물린다 */}
           <div role="table" aria-label={`${label} 배당 종목`} data-testid="dividend-table" data-category={key}>
           <div role="row" className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.5rem_3.5rem_3.5rem] sm:grid-cols-[minmax(0,1fr)_11.5rem_4.75rem_5.5rem_5.5rem] lg:grid-cols-[1fr_16rem_6rem_7rem_7rem] gap-x-1 sm:gap-x-2 lg:gap-x-3 px-2 sm:px-3 py-2 bg-muted/50 text-xs whitespace-nowrap text-muted-foreground border-b max-sm:grid-cols-[minmax(0,1fr)_5rem_5.5rem] max-sm:gap-x-2">
-            <span role="columnheader" className="max-sm:col-start-1 max-sm:row-start-1">종목명</span>
+            {/* 320~359: 종목명 머리는 sr-only(최근 1주당과 겹침 방지, 행 첫 줄 이름이 열 뜻을 대신) */}
+            <span role="columnheader" className="max-sm:col-start-1 max-sm:row-start-1 max-[360px]:sr-only">종목명</span>
             <span role="columnheader" data-testid="dividend-col-months" className="text-right max-sm:sr-only">배당월</span>
-            <span role="columnheader" data-testid="dividend-col-pershare" className="text-right max-sm:col-start-1 max-sm:row-start-1">주당</span>
-            <span role="columnheader" data-testid="dividend-col-paid" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 지급` : "지급금액"}</span>
-            <span role="columnheader" data-testid="dividend-col-total" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 합계` : "합계"}</span>
+            <span role="columnheader" data-testid="dividend-col-pershare" className="text-right max-sm:col-start-1 max-sm:row-start-1">최근 1주당</span>
+            <span role="columnheader" data-testid="dividend-col-paid" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 지급` : "지급"}</span>
+            <span role="columnheader" data-testid="dividend-col-total" className="text-right">{selectedMonth !== undefined ? `${selectedMonth}월 합계` : "올해 합계"}</span>
           </div>
           <div role="rowgroup" className="divide-y">
-            {filtered.map(({ stock, beforePurchaseMonths, actualMonths, estimatedMonths, perShareForeign, perShareKRW, currency, annualTotal, annualForeign, annualActual, annualForeignActual, monthlyTotal, monthlyForeign, monthlyActual, monthlyForeignActual, frequency }) => {
+            {filtered.map(({ stock, chips, perShareForeign, perShareKRW, currency, annualTotal, annualForeign, annualActual, annualForeignActual, monthlyTotal, monthlyForeign, monthlyActual, monthlyForeignActual, frequency }) => {
               const ticker = normalizeTicker(stock);
               const isDomestic = DOMESTIC_CATEGORIES.has(stock.category);
               const displayTotal = selectedMonth !== undefined ? monthlyTotal : annualTotal;
@@ -163,34 +206,21 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                     {stock.purchaseDate && <p data-testid="dividend-stock-purchase" className="text-xs text-muted-foreground mt-1 max-sm:mt-0.5 max-sm:whitespace-nowrap max-sm:tabular-nums">매수 {stock.purchaseDate}</p>}
                   </div>
                   <div role="cell" data-testid="dividend-stock-months" className="flex flex-wrap gap-1 sm:gap-1.5 justify-end max-sm:col-span-3 max-sm:justify-start">
-                    {beforePurchaseMonths.map((m) => (
-                      <Badge
-                        key={`before-${m}`}
-                        variant="outline"
-                        className="text-xs px-2 py-0.5 h-6 opacity-25 cursor-default"
-                      >
-                        {m}월
-                      </Badge>
-                    ))}
-                    {actualMonths.map((m) => (
-                      <Badge
-                        key={`actual-${m}`}
-                        variant={m === selectedMonth ? "default" : "outline"}
-                        className="text-xs px-2 py-0.5 h-6 font-semibold"
-                        style={m !== selectedMonth ? { backgroundColor: `${MAIN_PALETTE[0]}22`, color: MAIN_PALETTE[0], borderColor: `${MAIN_PALETTE[0]}66` } : undefined}
-                      >
-                        {m}월
-                      </Badge>
-                    ))}
-                    {estimatedMonths.map((m) => (
-                      <Badge
-                        key={`est-${m}`}
-                        variant={m === selectedMonth ? "default" : "outline"}
-                        className={`text-xs px-2 py-0.5 h-6 max-sm:px-[3px] max-sm:text-2xs max-sm:tracking-tighter ${m !== selectedMonth ? "border-dashed text-muted-foreground" : ""}`}
-                      >
-                        {m}월 예정
-                      </Badge>
-                    ))}
+                    {chips.map(({ month, state }) => {
+                      const selected = month === selectedMonth && state !== "inactive";
+                      return (
+                        <Badge
+                          key={`m-${month}`}
+                          variant="outline"
+                          data-testid="dividend-month-chip"
+                          data-state={state}
+                          data-selected={selected ? "true" : undefined}
+                          className={`h-6 px-2 py-0.5 text-xs tabular-nums ${CHIP_MOTION} ${selected ? CHIP_SELECTED[state] : CHIP_SHAPE[state]}`}
+                        >
+                          {month}월<span className="sr-only">{CHIP_SR_SUFFIX[state]}</span>
+                        </Badge>
+                      );
+                    })}
                   </div>
                   <div role="cell" data-testid="dividend-stock-pershare" className="text-right max-sm:whitespace-nowrap">
                     {!isDomestic && currency === "USD" ? (
@@ -201,7 +231,7 @@ export function MonthlyDividendStocks({ selectedMonth, groups, calc }: Props) {
                     ) : (
                       <p className="text-xs tabular-nums" style={{ color: MAIN_PALETTE[10] }}>{perShareKRW.toLocaleString()}원</p>
                     )}
-                    <p className="text-xs tabular-nums break-keep text-muted-foreground">보유 {stock.quantity}주</p>
+                    <p className="text-xs tabular-nums break-keep text-muted-foreground">지금 {stock.quantity}주</p>
                   </div>
                   <div role="cell" data-testid="dividend-cell-paid" className="text-right whitespace-nowrap max-sm:flex max-sm:flex-col max-sm:items-end">
                     {!isDomestic && currency === "USD" && displayForeignActual > 0 && (

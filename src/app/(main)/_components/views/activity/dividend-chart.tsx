@@ -214,9 +214,11 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2">
               <CardTitle className={`shrink-0 whitespace-nowrap ${PAGE_TITLE}`}>배당</CardTitle>
-              <InfoHint summary="지급일이 안 된 배당은 예상치이고, 해외는 입금일이 한 달쯤 밀릴 수 있어요.">
+              <InfoHint summary="지급일이 지난 배당은 지급, 아직이면 예상이에요.">
                 <p className="break-keep">거래 기록이 있으면 지급일에 갖고 있던 수량, 없으면 지금 수량으로 계산해요. 판 종목은 빠져요. 액면분할한 종목은 분할 전 배당이 실제와 다를 수 있어요.</p>
-                <p className="break-keep text-pretty">예상분은 작년 지급 기록으로 추정한 값이라 실제와 다를 수 있어요. 투입 대비 배당은 평단이 없거나 엔화인 종목을 뺀 값이에요.</p>
+                <p className="break-keep text-pretty">예상분은 최근 지급액과 지급 주기로 추정한 값이라 실제와 다를 수 있어요. 투입 대비 배당은 평단이 없거나 엔화인 종목을 뺀 값이에요.</p>
+                <p className="break-keep text-pretty">표의 최근 1주당은 가장 최근 지급 1회 값이고, 금액은 지급마다 그때 1주당 × 그날 가진 수량을 더해요.</p>
+                <p className="break-keep text-pretty">해외 종목은 현지 기준일을 지급일로 보고 오늘 환율로 계산해요. 실제 입금은 한 달쯤 늦을 수 있어요.</p>
                 <p className="break-keep text-pretty">받은 기록은 현금 입금에 배당으로 적은 실제 입금액 합이라, 세전으로 계산한 지급과 예상과는 다를 수 있어요.</p>
               </InfoHint>
             </div>
@@ -256,12 +258,12 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   </span>
                 )}
                 {heroStatus === "estimated" && (
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full border border-muted-foreground/30 text-muted-foreground">
-                    예상치
+                  <span data-testid="dividend-hero-expected" className="shrink-0 whitespace-nowrap text-xs font-semibold px-1.5 py-0.5 rounded-full border border-dashed border-muted-foreground text-muted-foreground">
+                    예상
                   </span>
                 )}
                 {heroStatus === "mixed" && (
-                  <span data-testid="dividend-hero-mixed" className="shrink-0 whitespace-nowrap text-xs font-semibold px-1.5 py-0.5 rounded-full border border-muted-foreground/30 text-muted-foreground">
+                  <span data-testid="dividend-hero-mixed" className="shrink-0 whitespace-nowrap text-xs font-semibold px-1.5 py-0.5 rounded-full border border-dashed border-muted-foreground text-muted-foreground">
                     일부 예상
                   </span>
                 )}
@@ -446,7 +448,7 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                                       <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
                                       {CATEGORY_LABELS[cat]}
                                     </span>
-                                    <span className="font-medium tabular-nums">{formatShortCurrency(actual)}</span>
+                                    <span className="font-medium tabular-nums whitespace-nowrap">{formatPriceByMode(actual)}</span>
                                   </div>
                                 )}
                                 {estimated > 0 && (
@@ -455,14 +457,15 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                                       <span className="inline-block w-2 h-2 rounded-full shrink-0 opacity-40" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
                                       {CATEGORY_LABELS[cat]} (예상)
                                     </span>
-                                    <span className="tabular-nums text-muted-foreground">{formatShortCurrency(estimated)}</span>
+                                    <span className="tabular-nums whitespace-nowrap text-muted-foreground">{formatPriceByMode(estimated)}</span>
                                   </div>
                                 )}
                               </div>
                             ))}
-                            <div className="border-t pt-1 flex justify-between font-semibold">
-                              <span>합계</span>
-                              <span className="tabular-nums">{formatShortCurrency(total)}</span>
+                            {/* 마지막 줄 = 그 달 전 종목 지급 + 예상(#377). `배당` = 전 종목, `합계` = 종목 한 행(표). 금액은 월 Hero와 같은 포맷터·같은 값 */}
+                            <div data-testid="dividend-tooltip-total" className="border-t pt-1 flex justify-between gap-3 font-semibold whitespace-nowrap">
+                              <span>{month} 배당</span>
+                              <span className="tabular-nums">{formatPriceByMode(total)}</span>
                             </div>
                           </div>
                         );
@@ -534,9 +537,9 @@ export function DividendCard({ isActive = true }: { isActive?: boolean }) {
                   </div>
                 ))}
                 {annualExpected > 0 && (
-                  <div className="flex items-center gap-1">
+                  <div data-testid="dividend-chart-legend-expected" className="flex items-center gap-1">
                     <span className="size-2.5 rounded-full shrink-0 bg-muted-foreground/40" />
-                    <span className="text-sm text-muted-foreground">예상 (옅음)</span>
+                    <span className="text-sm text-muted-foreground">예상</span>
                   </div>
                 )}
               </div>

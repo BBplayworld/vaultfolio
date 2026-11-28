@@ -91,6 +91,29 @@ export function latestPaidPayout<T extends Pick<DividendPayoutResult, "payoutDat
   return best;
 }
 
+/**
+ * 표 `최근 1주당`(#377, 5.184) — 지난 달 추정을 뺀 확정 회차(추정 아님·이번 달 이하) 중 지급일이 가장 늦은 1건.
+ * 서버(route.ts inferEstimatedPayouts)가 예상 금액으로 쓰는 '최신 실지급'과 같은 회차다. 사용자 수량과 무관.
+ * 확정 회차가 없으면 남은 회차(예상·미래 확정) 중 가장 이른 1건, 그것도 없으면 null. 순수 함수.
+ */
+export function latestPerSharePayout<T extends Pick<DividendPayoutResult, "payoutDate" | "isEstimated">>(
+  payouts: readonly T[],
+  todayKst: string,
+): T | null {
+  const nowMonth = todayKst.slice(0, 7);
+  let latest: T | null = null;
+  let earliest: T | null = null;
+  for (const p of payouts) {
+    if (!p.payoutDate || isPastEstimate(p, todayKst)) continue;
+    if (!p.isEstimated && p.payoutDate.slice(0, 7) <= nowMonth) {
+      if (!latest || p.payoutDate >= latest.payoutDate) latest = p; // 같은 날이면 나중 행(서버 정렬과 같음)
+    } else if (!earliest || p.payoutDate < earliest.payoutDate) {
+      earliest = p;
+    }
+  }
+  return latest ?? earliest;
+}
+
 /** "YYYY-MM-DD" → [월, 일](앞자리 0 없음). Date 객체를 쓰지 않는다(시간대 밀림 방지) */
 export function payoutMonthDay(date: string): [number, number] {
   const [, m, d] = date.split("-");
