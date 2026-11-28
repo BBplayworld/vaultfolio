@@ -46,6 +46,7 @@ import { isPreviewEnv } from "@/lib/cloud-sync/config";
 import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { DUE_TEXT, GrowDueEntry } from "../../activity/grow-due-entry";
 import { BrokerTotalsBlock } from "./broker-totals-block";
+import { CategoryScrollRow } from "./category-scroll-row";
 import { PriceAsOfLine, usePriceAsOfLine } from "../../price-asof-line";
 import type { PriceAsOfLineValue } from "@/lib/finance/price-freshness";
 
@@ -1209,17 +1210,6 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
     if (!isPreviewEnv()) track("feature_use", { category: "stock_decision_view" });
   }, [hasDecisionRow]);
 
-  // 카테고리 줄 — 6칸 이상이면 조밀(칸 좌우 여백 축소). 카테고리를 바꾸면 선택 칸을 보이게 스크롤
-  const denseCategories = visibleCategories.length >= 6;
-  const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const prevCategoryRef = useRef({ activeCategory });
-  useEffect(() => {
-    const prev = prevCategoryRef.current;
-    if (prev.activeCategory === activeCategory) return;
-    prevCategoryRef.current = { activeCategory };
-    categoryScrollRef.current?.querySelector('[aria-checked="true"]')?.scrollIntoView({ inline: "nearest", block: "nearest" });
-  }, [activeCategory]);
-
   const handleDelete = (id: string) => {
     toast.success("삭제되었습니다.");
     deleteStock(id);
@@ -1253,18 +1243,8 @@ export function StockTab({ labelStore }: { labelStore?: { labels: StockLabels; r
         {/* 내 주식 도구 타일(X-Ray 1개, 4.83·5.170·5.171 — 인증카드 제외) */}
         <StockToolTiles stocks={assetData.stocks} exchangeRates={exchangeRates} />
 
-        {/* 카테고리 selector — 목록은 늘 평가금 순(#288 R1) */}
-        <div data-testid="stock-category-row" className="flex items-center gap-2">
-          <div ref={categoryScrollRef} className="min-w-0 flex-1 overflow-x-auto rounded-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <InlineSelector
-              value={activeCategory}
-              onChange={setActiveCategory}
-              options={visibleCategories}
-              ariaLabel="주식 카테고리 선택"
-              className={denseCategories ? "[&>button]:px-1.5" : undefined}
-            />
-          </div>
-        </div>
+        {/* 카테고리 selector — 목록은 늘 평가금 순(#288 R1). 부동산·현금·대출과 같은 줄(5.178 이관: 끝 페이드·조밀·선택/포커스 스크롤) */}
+        <CategoryScrollRow value={activeCategory} onChange={setActiveCategory} options={visibleCategories} ariaLabel="주식 카테고리 선택" testId="stock-category-row" />
 
         {/* 증권사별 합계(#319) — 묶음 2개 이상일 때만, 접힘 기본. 지금 탭·달러 보기 기준. 인증카드 DOM 0.
             현금 줄(#335)은 '전체' 탭에서만 — 현금은 계좌 유형이 없어 국내·해외·IRP 등 탭에 붙이면 오해된다 */}

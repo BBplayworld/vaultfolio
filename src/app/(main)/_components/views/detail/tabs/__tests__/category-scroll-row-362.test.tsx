@@ -178,12 +178,12 @@ describe("CategoryScrollRow (#362)", () => {
 describe("탭 적용 범위 (#362)", () => {
   const src = (f: string) => readFileSync(join(__dirname, "..", f), "utf8");
 
-  it("부동산·현금·대출은 CategoryScrollRow, 주식은 기존 줄 유지", () => {
+  it("부동산·현금·대출·주식(5.178 이관) 모두 CategoryScrollRow", () => {
     expect(src("real-estate-tab.tsx")).toContain('testId="realestate-category-row"');
     expect(src("cash-tab.tsx")).toContain('testId="cash-category-row"');
     expect(src("loan-tab.tsx")).toContain('testId="loan-category-row"');
-    expect(src("stock-tab.tsx")).not.toContain("CategoryScrollRow");
-    expect(src("stock-tab.tsx")).toContain('data-testid="stock-category-row"');
+    expect(src("stock-tab.tsx")).toContain('testId="stock-category-row"');
+    expect(src("stock-tab.tsx")).not.toContain('data-testid="stock-category-row"');
   });
 
   it("카드 하단 막대 4곳 — transition-all 0건, motion-safe:transition-[width]", () => {

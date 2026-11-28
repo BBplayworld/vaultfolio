@@ -66,11 +66,13 @@ function RealEstateCard({ item, profit, profitRate, pct, color, typeLabel, linke
                   <span data-testid="row-share" className="text-sm font-semibold text-primary">{pct.toFixed(1)}%</span>
                 </div>
               </div>
-              <div className={ASSET_THEME.cardInfoRight}>
-                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(item.currentValue)}</p>
-                <div data-testid="profit-text" data-zero={tone.isZero} className={ASSET_THEME.cardAmountProfitRow}>
-                  <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass}`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
-                  <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass}`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
+              {/* 5.178 O-2 — 금액 열이 flex-shrink-0·손익 한 줄 고정이면 좁은 폭(다크 px-4 320)에서 버튼이 넘쳐 `˅`가 카드 밖으로 잘렸다.
+                  cardInfoRight에서 shrink-0만 빼고(min-w-0), 손익 줄은 넘칠 때만 수익률을 다음 줄로(증권사 합계 줄과 같은 flex-wrap justify-end, 줄 사이 gap-y-0으로 증가 최소). 금액 조각은 줄바꿈 0 */}
+              <div data-testid="re-row-right" className="text-right min-w-0">
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default} whitespace-nowrap`}>{formatPriceByMode(item.currentValue)}</p>
+                <div data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardAmountProfitRow} flex-wrap justify-end gap-y-0`}>
+                  <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass} whitespace-nowrap`}>{tone.sign}{formatPriceByMode(tone.amount)}</p>
+                  <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass} whitespace-nowrap`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
                 </div>
               </div>
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
