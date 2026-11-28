@@ -41,6 +41,7 @@ import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wr
 import { GrowDueEntry } from "../../activity/grow-due-entry";
 import { useDividendData } from "../../activity/use-dividend-data";
 import { nextDividendMonth } from "@/lib/finance/dividend-calc";
+import { stockPageDividendYield } from "@/lib/finance/dividend-yield";
 import { formatPriceByMode } from "@/lib/number-utils";
 import { kstTodayString } from "@/lib/asset/import-inherit";
 import { TRANSACTION_RETENTION_YEARS } from "@/lib/trade/trade-utils";
@@ -111,9 +112,11 @@ export function StockPageDecision({ value }: { value: HeadDecision }) {
 /**
  * 종목 한 장 배당 줄(#317, 5.159) — 그 그룹의 (ticker, type)만 조회하고, 금액은 computeDividends 결과(byStock)만 읽는다.
  * 조회 중·무배당·대상 아님은 줄 0, 실패·엔화는 안내 한 줄(누름 없음), 배당 있음은 누르면 성과 › 배당.
+ * 둘째 줄 `세전 추정` 자리는 투입 대비(#371, 5.181)가 1:1로 대신한다 — 숨김 조건(stockPageDividendYield null)이면 `세전 추정` 그대로.
  */
 export function StockPageDividendRow({ stocks }: { stocks: readonly Stock[] }) {
   const { navigate } = useAssetNavigation();
+  const { assetData, exchangeRates } = useAssetData();
   const { groups, calc, isLoading, failedCount, jpyCount } = useDividendData({ stocks });
   if (groups.length === 0) {
     if (jpyCount === 0) return null;
@@ -147,12 +150,14 @@ export function StockPageDividendRow({ stocks }: { stocks: readonly Stock[] }) {
   const expected = total - paid;
   if (paid + expected <= 0) return null;
   const next = nextDividendMonth(calc, kstTodayString(), keys);
+  // 탭 '투입 대비 배당'과 같은 함수·같은 .text(C150) — 그 그룹만 넣으므로 탭(포트폴리오) 값과 다른 것이 정상
+  const dividendYield = stockPageDividendYield(groups, assetData.transactions ?? [], exchangeRates.USD, calc);
   const open = () => {
     if (!isPreviewEnv()) track("feature_use", { category: "stock_dividend" });
     navigate({ type: "activity", tab: "dividend" });
   };
   return (
-    <div data-testid="stock-page-dividend" data-state="ready" className="border-t border-border/40 -mx-4 px-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
+    <div data-testid="stock-page-dividend" data-state="ready" data-yield={dividendYield ? "shown" : "hidden"} className="border-t border-border/40 -mx-4 px-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
       <button
         type="button"
         data-testid="stock-page-dividend-link"
@@ -174,7 +179,11 @@ export function StockPageDividendRow({ stocks }: { stocks: readonly Stock[] }) {
           </p>
           <p className={`mt-0.5 flex flex-wrap gap-x-1 gap-y-0.5 text-xs text-muted-foreground ${DOT_WRAP_ROW}`}>
             {next && <span data-testid="stock-page-dividend-next" data-month={next.month} className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>다음 지급 {next.month}월</span>}
-            <span data-testid="stock-page-dividend-note" className={`whitespace-nowrap ${next ? "" : DOT_WRAP_FIRST}`}>{next && <DotLead />}세전 추정</span>
+            {dividendYield ? (
+              <span data-testid="stock-page-dividend-yield" data-pct={dividendYield.pct} className={`whitespace-nowrap tabular-nums ${next ? "" : DOT_WRAP_FIRST}`}>{next && <DotLead />}투입 대비 {dividendYield.text}(세전)</span>
+            ) : (
+              <span data-testid="stock-page-dividend-note" className={`whitespace-nowrap ${next ? "" : DOT_WRAP_FIRST}`}>{next && <DotLead />}세전 추정</span>
+            )}
           </p>
         </div>
         <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />

@@ -1042,6 +1042,7 @@ cancelThenRefetchProfit(queryClient)                          // ["profit"] 취�
 
 ### 배당 투입 대비 배당 계산 (`src/lib/finance/dividend-yield.ts`, #4.46 #80)
 - `computeDividendYield(items, usdRate, mode, calc)` → `{pct, text, excluded}|null`. `items` = 표시 단위(병합) 종목, 포함 종목=평단>0이고 KRW/USD, 분모 Σ평단×지금 수량×(USD면 현재 환율), 분자 = `calc.byStock`의 그 종목 값(#313, `actual` 모드는 지급만). 0<값<0.05는 "0.1% 미만"
+- `stockPageDividendYield(groups, txs, usdRate, calc)`(#371, 5.181) → 종목 한 장 투입 대비. 숨김(null) = ① 원본 행 중 어느 지급일 `heldQtyAt` 수량 ≠ 지금 수량(올해 매수·추가 매수·일부 매도, 1e-8 허용) ② 원본 행 평단 ≤ 0 ③ `computeDividendYield` null. 표시면 `computeDividendYield(groups, usdRate, "all", calc)` 그대로(새 계산식 0)
 
 ### 도넛 라벨 글자색 (`config/theme.ts` `pickDonutLabelColor`, #4.46 #82)
 - 조각색 위에서 흰/검정 중 WCAG 대비가 큰 쪽(알파 없음). `pickOnColor`(휘도 0.45 컷)와 별개 — MAIN_PALETTE 12색 모두 4.5:1 이상이 테스트로 고정
