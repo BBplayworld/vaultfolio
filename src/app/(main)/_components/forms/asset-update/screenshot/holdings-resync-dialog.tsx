@@ -6,7 +6,7 @@
 // 0건 첫 등록·온보딩·/ratio 인계는 기존 StockScreenshotImport를 그대로 쓴다(이 컴포넌트는 진입 분기에서만 열린다).
 // 코인은 `resync/crypto.ts` 어댑터로 같은 5함수를 쓴다(kind="crypto": 범위=거래소, 문구만 증권사→거래소·주식→코인).
 import { useReturnFocusOnClose } from "@/lib/restore-focus";
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, ChevronDown, ImagePlus, Info, Loader2, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,7 +27,8 @@ import { track, trackParse } from "@/lib/analytics/ga";
 import { getAssetData } from "@/lib/asset/asset-storage";
 import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
 import { startScreenTotalCall, type ScreenTotalCall } from "@/lib/asset/resync/screen-total-call";
-import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreCategoryRefreshed } from "@/lib/asset/asset-refresh-status";
+import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreBrokersSynced, restoreCategoryRefreshed, type BrokerSyncUndo } from "@/lib/asset/asset-refresh-status";
+import { confirmSameResync, markAppliedResync, writableScopes } from "@/lib/asset/broker-synced";
 import {
   applyResync,
   buildCryptoResyncUndoEntries,
@@ -149,6 +150,10 @@ interface ResyncUndo {
   kind: ResyncKind;
   prevRefreshedAt: string | null; // 적용 직전 refresh 메타
   appliedAt: string; // 적용 때 markCategoryRefreshed가 쓴 값 — 원복 비교용
+  /** 증권사별 맞춘 날 원복 사본(#366) — 날짜를 남기지 않았으면 null */
+  brokers: BrokerSyncUndo | null;
+  /** 변경 0 확인(#366 경로 B) — 자산 저장 없이 맞춘 날·맞춘 시각만 남겼다(되돌리기도 그 둘만) */
+  confirmOnly?: boolean;
 }
 
 export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initialBroker }: Props) {
@@ -181,6 +186,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   const [applying, setApplying] = useState(false);
   const [transferOn, setTransferOn] = useState<Set<string>>(new Set()); // 이관 카드 '옮김' 체크(#310, 기본 해제)
   const [applied, setApplied] = useState<ResyncCounts | null>(null);
+  const [confirmedSame, setConfirmedSame] = useState(false); // 변경 0 확인 결과 화면(#366)
   const [reconcile, setReconcile] = useState<ReconcileView>({ state: "hidden" }); // 결과 화면 대조 1줄(메모리만, 5.164)
   const [appliedMoved, setAppliedMoved] = useState<{ moved: number; movedTx: number } | null>(null);
   const [undoInfo, setUndoInfo] = useState<{ skipped: number } | null>(null);
@@ -254,6 +260,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   const freshAdds = useMemo(() => applyResync(existing, diff, sel, { today: todayKst(), usdRate, now: 0 }).addedIds.length, [existing, diff, sel, usdRate]);
   // 새 종목 매수일 입력이 보일 때만 값 검증(#146) — 줄이 없으면 오류로 버튼이 잠기지 않는다
   const newDateInvalid = freshAdds > 0 && !isValidNewPurchaseDate(newDate, todayKst());
+  // 변경 0이어도 맞춘 날을 남길 범위가 있으면 '맞추기'를 켠다(#366, 주식만). 표시용 — 누르면 최신 보유 현황으로 다시 계산한다
+  const canConfirmSame = !isCrypto && changes === 0 && writableScopes(diff, sel, existing).length > 0;
+  const sameNoteId = useId();
 
   // ── 닫기·초기화 ─────────────────────────────────────────────────────
   const resetAll = () => {
@@ -280,6 +289,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     setTransferOn(new Set());
     setApplying(false);
     setApplied(null);
+    setConfirmedSame(false);
     setAppliedMoved(null);
     setReconcile({ state: "hidden" });
     setUndoInfo(null);
@@ -422,16 +432,44 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
   };
 
   // ── 적용(클릭 핸들러에서 저장 1회) ───────────────────────────────────
+  const currentScreens = (): RawScreen[] => (failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens);
+  const diffFor = (before: Stock[]) => {
+    const res = resolveWithDefault(currentScreens(), before);
+    return computeDiff(before, mergeScreens(res), res);
+  };
+
+  // 변경 0 확인(#366 경로 B) — 자산 저장·적용 계산·대조 0. 맞춘 날과 주식 맞춘 시각만 남긴다(본체는 confirmSameResync)
+  const handleConfirmSame = () => {
+    setApplying(true);
+    setUndoInfo(null);
+    setUndoing(false);
+    const r = confirmSameResync(diffFor, sel);
+    if (!r.ok) {
+      setApplying(false);
+      toast.error("맞춘 날을 남기지 못했어요");
+      return;
+    }
+    toast.dismiss(TOAST_ID);
+    undoRef.current = { entries: [], done: false, kind, prevRefreshedAt: r.prevRefreshedAt, appliedAt: r.appliedAt, brokers: r.brokers, confirmOnly: true };
+    setConfirmedSame(true);
+    setApplying(false);
+    setStep("result");
+  };
+
   const handleApply = () => {
-    if (applying || changes === 0 || newDateInvalid) return;
+    if (applying) return;
+    if (changes === 0) {
+      if (canConfirmSame) handleConfirmSame();
+      return;
+    }
+    if (newDateInvalid) return;
     setApplying(true);
     setUndoInfo(null);
     setUndoing(false);
     // 저장 직전 최신 보유 현황으로 다시 계산한다(그 사이 시세 갱신 등으로 낡은 값을 덮지 않게)
     const fresh = getAssetData();
     const before = isCrypto ? fresh.crypto.map(cryptoToStock) : fresh.stocks;
-    const res = resolveWithDefault(failedRemoved ? [...rawScreens, { index: -1, status: "failed", items: [] }] : rawScreens, before);
-    const d = computeDiff(before, mergeScreens(res), res);
+    const d = diffFor(before);
     const result = applyResync(before, d, sel, { today: todayKst(), usdRate, now: Date.now() });
     const nextCrypto = isCrypto ? stocksToCrypto(fresh.crypto, before, result.stocks) : fresh.crypto;
     // 주식: 체크 삭제 종목의 거래를 직접 삭제와 같은 규칙으로 정리해 stocks·transactions·loans를 한 번에 저장(#310)
@@ -448,7 +486,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     if (!isCrypto) pruneStockTargets(next.stocks);
     const prevRefreshedAt = lastRefreshedAt(kind);
     const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
-    undoRef.current = { entries: isCrypto ? buildCryptoResyncUndoEntries(fresh, next) : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt };
+    // 증권사별 맞춘 날(#366) — 주식만, 쓸 수 있는 범위에만. 실패해도 자산 저장이 정본이라 문구 0
+    const brokers = isCrypto ? null : markAppliedResync(d, sel, next.stocks);
+    undoRef.current = { entries: isCrypto ? buildCryptoResyncUndoEntries(fresh, next) : buildResyncUndoEntries(fresh, next), done: false, kind, prevRefreshedAt, appliedAt, brokers };
     track("feature_use", { category: "resync_apply" });
     if (!isCrypto) {
       // 결과 대조 1줄(주식만, 기기 메모리 비교) — 판정은 '맞추기'를 누른 지금 1번. 아직 안 온 합계는 버리고 뒤늦게 끼워 넣지 않는다.
@@ -498,9 +538,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     if (!u || u.done) return;
     u.done = true;
     if (!fromToast) setUndoing(true);
-    // 되돌리는 순간 보유 현황을 새로 읽는다(낡은 값 금지)
-    const plan = planUndo(u.entries, getAssetData());
-    const ok = saveData(plan.data);
+    // 되돌리는 순간 보유 현황을 새로 읽는다(낡은 값 금지). 변경 0 확인(#366)은 자산 저장 0 — 맞춘 날·맞춘 시각만 원복
+    const plan = u.confirmOnly ? null : planUndo(u.entries, getAssetData());
+    const ok = plan ? saveData(plan.data) : true;
     if (!ok) {
       u.done = false;
       if (!fromToast) setUndoing(false);
@@ -508,14 +548,16 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       return;
     }
     restoreCategoryRefreshed(u.kind, u.prevRefreshedAt, u.appliedAt); // 맞춤 표시 원복(그 사이 다시 맞췄다면 유지)
-    if (u.kind === "stock") pruneStockTargets(plan.data.stocks);
-    track("feature_use", { category: "resync_undo" });
+    if (u.brokers) restoreBrokersSynced(u.brokers); // 증권사별 맞춘 날 원복(같은 compare-and-restore)
+    if (plan && u.kind === "stock") pruneStockTargets(plan.data.stocks);
+    if (plan) track("feature_use", { category: "resync_undo" });
+    const skipped = plan?.skipped ?? 0;
     if (!fromToast) {
-      setUndoInfo({ skipped: plan.skipped });
+      setUndoInfo({ skipped });
       setUndoing(false);
     }
     toast.dismiss(TOAST_ID);
-    toast(plan.skipped > 0 ? `되돌렸어요. 직접 고친 항목 ${plan.skipped}건은 그대로 뒀어요` : "되돌렸어요", { duration: 2000 });
+    toast(skipped > 0 ? `되돌렸어요. 직접 고친 항목 ${skipped}건은 그대로 뒀어요` : "되돌렸어요", { duration: 2000 });
   };
 
   const parsedOk = shots.filter((s) => s.status === "ok").length;
@@ -590,6 +632,12 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
               setNewDate={setNewDate}
             />
           )}
+          {step === "result" && confirmedSame && (
+            <div data-screenshot-hide data-testid="resync-result" className="space-y-2 rounded-xl bg-muted/40 p-4" aria-live="polite">
+              {!undoInfo && <p data-testid="resync-result-same" className="text-sm text-foreground text-pretty break-keep">바뀐 내용 없이 오늘 맞춘 날로 남겼어요</p>}
+              <p className="text-sm text-muted-foreground text-pretty break-keep">{undoInfo ? "되돌렸어요" : "이 창을 닫기 전에는 되돌릴 수 있어요"}</p>
+            </div>
+          )}
           {step === "result" && applied && (
             <div data-screenshot-hide data-testid="resync-result" className="space-y-2 rounded-xl bg-muted/40 p-4" aria-live="polite">
               <p className="text-sm text-foreground tabular-nums">{summaryParts({ ...applied, same: 0, needs: 0 })}</p>
@@ -646,9 +694,27 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
                 </p>
               )}
               {changes === 0 && (
-                <p className="text-sm text-muted-foreground text-pretty break-keep sm:mr-auto sm:self-center">바뀌는 내용이 없어요</p>
+                <p
+                  id={sameNoteId}
+                  data-testid="resync-same-note"
+                  data-state={canConfirmSame ? "confirm" : "blocked"}
+                  aria-live="polite"
+                  className="text-sm text-muted-foreground text-pretty break-keep sm:mr-auto sm:self-center"
+                >
+                  {!canConfirmSame
+                    ? "바뀌는 내용이 없어요"
+                    : changeCount(counts) + counts.same + counts.needs === 0
+                      ? "맞추면 오늘 맞춘 날로 남아요" // 위 요약이 이미 '바뀌는 내용이 없어요'(같은 문장 두 번 금지)
+                      : "바뀌는 내용이 없어요. 맞추면 오늘 맞춘 날로 남아요"}
+                </p>
               )}
-              <Button variant="brand" data-testid="resync-apply" disabled={applying || changes === 0 || newDateInvalid} onClick={handleApply}>
+              <Button
+                variant="brand"
+                data-testid="resync-apply"
+                disabled={applying || (changes === 0 ? !canConfirmSame : newDateInvalid)}
+                aria-describedby={changes === 0 ? sameNoteId : undefined}
+                onClick={handleApply}
+              >
                 {applying ? (
                   <>
                     <Loader2 className="size-4 motion-safe:animate-spin" />

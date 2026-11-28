@@ -414,3 +414,41 @@ describe("(e) 삭제·체험 격리", () => {
     expect(JSON.stringify(Object.keys(original).sort().map((k) => [k, original.getItem(k)]))).toBe(before);
   });
 });
+
+describe("대화상자 정적 규칙(#366)", () => {
+  const dialog = readFileSync(path.resolve(__dirname, "../../app/(main)/_components/forms/asset-update/screenshot/holdings-resync-dialog.tsx"), "utf8");
+  const slice = (a: string, b: string) => dialog.slice(dialog.indexOf(a), dialog.indexOf(b));
+  it("경로 B 핸들러: 자산 저장·적용 계산·대조·GA 직접 호출 0, 실패 토스트 1종", () => {
+    const body = slice("const handleConfirmSame", "const handleApply");
+    expect(body).toMatch(/confirmSameResync\(diffFor, sel\)/);
+    expect(body).not.toMatch(/saveData|applyResync|planResyncSave|pruneStockTargets|computeReconcile|reconcile|track\(|markCategoryRefreshed/);
+    expect(body).toMatch(/toast\.error\("맞춘 날을 남기지 못했어요"\)/);
+    expect(body).toMatch(/confirmOnly: true/);
+  });
+  it("handleApply: 변경 0이면 주식 확인 경로만, 코인은 쓰기 0(경로 A의 날짜 기록도 주식만)", () => {
+    const body = slice("const handleApply", "// 맞춘 직후 화면 합계 대조");
+    expect(body).toMatch(/if \(changes === 0\) \{\n\s+if \(canConfirmSame\) handleConfirmSame\(\);\n\s+return;/);
+    expect(body).toMatch(/const brokers = isCrypto \? null : markAppliedResync\(d, sel, next\.stocks\)/);
+    expect(body.indexOf("saveData(next)")).toBeLessThan(body.indexOf("markAppliedResync"));
+    expect(dialog).toMatch(/const canConfirmSame = !isCrypto && changes === 0 && writableScopes\(diff, sel, existing\)\.length > 0/);
+  });
+  it("되돌리기: 확인 경로는 planUndo·saveData·resync_undo 0, 두 경로 모두 맞춘 날 원복", () => {
+    const body = slice("const doUndo", "const parsedOk");
+    expect(body).toMatch(/const plan = u\.confirmOnly \? null : planUndo/);
+    expect(body).toMatch(/const ok = plan \? saveData\(plan\.data\) : true/);
+    expect(body).toMatch(/if \(u\.brokers\) restoreBrokersSynced\(u\.brokers\)/);
+    expect(body).toMatch(/if \(plan\) track\("feature_use", \{ category: "resync_undo" \}\)/);
+  });
+  it("미리보기 안내: 한 요소·data-state·aria-live·버튼 aria-describedby(변경 0일 때만)", () => {
+    expect(dialog).toMatch(/data-testid="resync-same-note"\n\s+data-state=\{canConfirmSame \? "confirm" : "blocked"\}\n\s+aria-live="polite"/);
+    expect(dialog).toMatch(/aria-describedby=\{changes === 0 \? sameNoteId : undefined\}/);
+    expect(dialog).toMatch(/disabled=\{applying \|\| \(changes === 0 \? !canConfirmSame : newDateInvalid\)\}/);
+    expect(dialog).toContain('"바뀌는 내용이 없어요. 맞추면 오늘 맞춘 날로 남아요"');
+    expect(dialog).toContain('"맞추면 오늘 맞춘 날로 남아요"');
+  });
+  it("결과(B): 요약·대조 줄 없이 resync-result-same, 되돌린 뒤 숨김", () => {
+    const body = slice('{step === "result" && confirmedSame', '{step === "result" && applied');
+    expect(body).toMatch(/\{!undoInfo && <p data-testid="resync-result-same"[^>]*>바뀐 내용 없이 오늘 맞춘 날로 남겼어요<\/p>\}/);
+    expect(body).not.toMatch(/summaryParts|ReconcileLines|바뀌는 내용이 없어요/);
+  });
+});
