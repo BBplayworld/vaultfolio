@@ -1,6 +1,6 @@
 # 📋 시크릿에셋 대시보드
 
-> **마지막 갱신: 2026-11-28 18:40 KST** · 운영 최신 **v5.179** (스모크 PASS 18:39) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
+> **마지막 갱신: 2026-11-28 18:45 KST** · 운영 최신 **v5.179** (스모크 PASS 18:39) · 운영 결함 없음 (Vercel 차단 해제 — 160.79.106.144/28 허용)
 > 반영 승인은 CEO 에이전트. 대표 결정은 risk:high·반려 영역 재시도·원칙 변경·결제·외부 게시만.
 > 지난 기록: [archive/DASHBOARD-2026-11-20.md](archive/DASHBOARD-2026-11-20.md)
 
@@ -24,6 +24,7 @@
 ## 🔄 진행 중
 | 릴리스 | 내용 | 상태 | 다음 |
 |---|---|---|---|
+| **5.182** [#373](https://github.com/BBplayworld/vaultfolio/issues/373) | 투자 유형 PNG 넘칠 때만 분할 (+cash·loan 확인창 재현) | development · risk:low | developer 구현 + qa 재현 |
 | **5.181** [#371](https://github.com/BBplayworld/vaultfolio/issues/371) | 종목 한 장 '투입 대비 배당률'·코인 삭제 확인창 (PNG 제외) · [PR #372](https://github.com/BBplayworld/vaultfolio/pull/372) | **v5.179 머지 11-28 18:23** · 운영 스모크 PASS 18:39 | — |
 | **5.180** [#368](https://github.com/BBplayworld/vaultfolio/issues/368) | 맞추기 더블클릭·페이드 임계값·#369 코인 행 넘침 · [PR #370](https://github.com/BBplayworld/vaultfolio/pull/370) | **v5.178 머지 11-28 15:53** · 운영 스모크 PASS 16:09 | — |
 | **5.179** [#366](https://github.com/BBplayworld/vaultfolio/issues/366) | 증권사별 '마지막 맞춘 날' · [PR #367](https://github.com/BBplayworld/vaultfolio/pull/367) | **v5.177 머지 11-28 13:01** · 운영 스모크 PASS 13:16 · risk:high(일괄 승인·CEO 승인) | 4주 판독(철수선) |
