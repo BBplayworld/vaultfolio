@@ -42,7 +42,8 @@ describe("배당 종목 표 640px 미만 2단(#326·#332)", () => {
     expect(count(krw, /role="row"/g)).toBe(2);
     expect(count(krw, /role="cell"/g)).toBe(5);
     const heads = [...krw.matchAll(/role="columnheader"[^>]*>([^<]*)</g)].map((m) => m[1]);
-    expect(heads).toEqual(["종목명", "배당월", "주당", "지급금액", "합계"]);
+    // 5.184 #377: `주당`/`지급금액`/`합계` → `최근 1주당`/`지급`/`올해 합계`
+    expect(heads).toEqual(["종목명", "배당월", "최근 1주당", "지급", "올해 합계"]);
     // 셀 순서: 이름 → 배당월 → 주당 → 지급 → 합계
     const order = ["dividend-stock-name", "dividend-stock-months", "dividend-stock-pershare", "dividend-cell-paid", "dividend-cell-total"].map((id) => krw.indexOf(`data-testid="${id}"`));
     expect(order.every((v, i) => v > 0 && (i === 0 || v > order[i - 1]))).toBe(true);
@@ -85,7 +86,7 @@ describe("배당 종목 표 640px 미만 2단(#326·#332)", () => {
 
   it("정보 삭제 0: 이름·주기 배지·매수 날짜(형식 그대로)·칩·주당·보유·지급·합계", () => {
     const t = krw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    for (const w of ["TIGER 미국S&amp;P500", "분기", "매수 2024-09-03", "1월", "12월 예정", "361원", "보유 105주", "37,905원", "75,810원"]) expect(t, w).toContain(w);
+    for (const w of ["TIGER 미국S&amp;P500", "분기", "매수 2024-09-03", "1월", "12월 예상", "361원", "지금 105주", "37,905원", "75,810원"]) expect(t, w).toContain(w);
   });
 
   it("USD 행: 외화 지급이 0이면 지급 칸에 자리 채움 1줄(aria-hidden, 640 이상 숨김), 지급이 있으면 없음", () => {
@@ -95,9 +96,10 @@ describe("배당 종목 표 640px 미만 2단(#326·#332)", () => {
     expect(count(paid, /sm:hidden/g)).toBe(0);
   });
 
-  it("경계: 2단 전용 접두는 `max-sm:`(폭 < 640)만 쓴다 — 359·360 임의 값 접두는 쓰지 않는다", () => {
+  it("경계: 2단 전용 접두는 `max-sm:`(폭 < 640)만 쓴다 — 359 임의 값 접두 0, 360은 종목명 머리 sr-only 1곳만(5.184 #377 수용 기준 11)", () => {
     expect(krw + usd).not.toMatch(/max-\[359px\]:/);
-    expect(krw + usd).not.toContain("max-[360px]:");
+    expect(count(krw, /max-\[360px\]:/g)).toBe(1);
+    expect(krw).toMatch(/role="columnheader" class="[^"]*max-\[360px\]:sr-only"[^>]*>종목명</);
     expect(count(krw, /max-sm:/g)).toBeGreaterThan(20);
   });
 

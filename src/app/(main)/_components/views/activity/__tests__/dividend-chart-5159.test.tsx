@@ -38,11 +38,13 @@ describe("배당 압축", () => {
     const c = html.match(/data-testid="dividend-conclusion"[^>]*data-paid="(\d+)" data-expected="(\d+)"/)!;
     expect(Number(c[1]) + Number(c[2])).toBe(Math.round(calc.annual.total));
     expect(html).toContain('data-testid="dividend-conclusion-next"');
-    expect(html).toContain("예상 (옅음)");
+    // 5.184 #377: 범례 `예상 (옅음)` → `예상`
+    expect(html).toContain('data-testid="dividend-chart-legend-expected"');
+    expect(html).not.toContain("(옅음)");
   });
   it("예상 0이면 범례 '예상' 0·예상 조각 0", () => {
     const { html } = setup([stock({})], [pay(`${YEAR}-01-15`, 100)]);
-    expect(html).not.toContain("예상 (옅음)");
+    expect(html).not.toContain("dividend-chart-legend-expected");
     expect(html).not.toContain("dividend-conclusion-expected");
     expect(html).not.toContain("dividend-conclusion-next");
   });
@@ -51,11 +53,11 @@ describe("배당 압축", () => {
     expect(html).not.toContain("미지급 월은");
     expect(html).not.toContain("한 달 정도 오차");
   });
-  it("표 머리 '합계'(월 선택 시 '{m}월 합계'), '예상금액' 0", () => {
+  it("표 머리 '올해 합계'(월 선택 시 '{m}월 합계'), '예상금액' 0 — 5.184 #377 '합계' → '올해 합계'", () => {
     const { groups, calc } = setup([stock({})], both);
     const all = renderToStaticMarkup(<MonthlyDividendStocks selectedMonth={undefined} groups={groups} calc={calc} />);
     expect(all).not.toContain("예상금액");
-    expect(text(all.match(/data-testid="dividend-col-total"[^>]*>([^<]*)</)![1])).toBe("합계");
+    expect(text(all.match(/data-testid="dividend-col-total"[^>]*>([^<]*)</)![1])).toBe("올해 합계");
     const m = renderToStaticMarkup(<MonthlyDividendStocks selectedMonth={1} groups={groups} calc={calc} />);
     expect(text(m.match(/data-testid="dividend-col-total"[^>]*>([^<]*)</)![1])).toBe("1월 합계");
     expect(num(text(all))).toBeGreaterThan(0);
