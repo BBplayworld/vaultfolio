@@ -7,7 +7,7 @@ import { InlineSelector } from "../../../layout/ui/inline-selector";
 // 6칸 이상이면 칸 좌우 여백 8→6px. 칸 위아래 히트 영역을 after로 4px씩 넓혀 40px, 컨테이너 py-0.5/-my-0.5로 담아 레이아웃 높이 변화 0.
 // -my-0.5를 부모 space-y 자식에 직접 두면 space-y 간격(:where, 특이도 0)을 덮어 카드가 줄어들어 한 겹 감싼다.
 // 트랙 rounded-md(10) + 세로 여백 2 = rounded-lg(12) 동심. 주식 줄(stock-category-row)도 5.178부터 이 컴포넌트.
-// 넘침 힌트(5.177 D-1): 칸 사이 간격·둥근 끝에서 잘리면 숨은 칸 단서가 없어 넘치는 쪽 끝에만 24px 마스크 페이드.
+// 넘침 힌트(5.177 D-1): 칸 사이 간격·둥근 끝에서 잘리면 숨은 칸 단서가 없어 넘치는 쪽 끝에만 24px 마스크 페이드(넘침 4px 이하는 생략, 5.180).
 // scroll-px-6 — 선택·포커스로 옮긴 칸이 페이드 밖에 놓이고 다음 칸이 일부 보이게.
 export const DENSE_MIN = 6;
 export const ROW_CLASS = "-my-0.5 min-w-0 overflow-x-auto rounded-lg py-0.5 scroll-px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
@@ -25,8 +25,13 @@ export function selectorClass(count: number): string {
   return count >= DENSE_MIN ? `${HIT_CLASS} [&>button]:px-1.5` : HIT_CLASS;
 }
 
-// 시작·끝 쪽에 가려진 내용이 있는가(1px 오차 허용). 넘치지 않으면 둘 다 false
+// 페이드를 그릴 최소 넘침(5.180, 5.178 ui-review 관찰 A) — 4px 이하는 가려지는 게 끝 글자 일부뿐이라 숨은 칸이 없다.
+// 이때 24px 페이드는 실제보다 큰 넘침을 암시하고 끝 글자만 흐리게 하므로 생략한다
+export const FADE_MIN_OVERFLOW = 4;
+
+// 시작·끝 쪽에 가려진 내용이 있는가(1px 오차 허용). 넘치지 않거나 넘침이 FADE_MIN_OVERFLOW 이하이면 둘 다 false
 export function edgeOf(el: Pick<HTMLElement, "scrollLeft" | "clientWidth" | "scrollWidth">): Edge {
+  if (el.scrollWidth - el.clientWidth <= FADE_MIN_OVERFLOW) return NO_EDGE;
   return { start: el.scrollLeft > 1, end: el.scrollLeft + el.clientWidth < el.scrollWidth - 1 };
 }
 
