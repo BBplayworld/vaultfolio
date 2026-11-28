@@ -49,3 +49,11 @@ describe("주식 줄 이관", () => {
     expect(s).toContain('<CategoryScrollRow value={activeCategory} onChange={setActiveCategory} options={visibleCategories} ariaLabel="주식 카테고리 선택" testId="stock-category-row" />');
   });
 });
+
+describe("physical-tab 막대", () => {
+  it("transition-all 0, motion-safe:transition-[width]", () => {
+    const s = src("physical-tab.tsx");
+    expect(s).not.toContain("transition-all");
+    expect(s).toContain('className="h-full motion-safe:transition-[width]"');
+  });
+});

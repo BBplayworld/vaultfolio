@@ -55,7 +55,7 @@ function PhysicalCard({ item, pct, onDelete }: { item: PhysicalAsset; pct: numbe
           </CollapsibleTrigger>
         </div>
         <div className="h-0.5 w-full bg-muted dark:mx-4 dark:mb-3 dark:w-auto dark:rounded-full dark:overflow-hidden">
-          <div className="h-full transition-[width]" style={{ width: `${pct}%`, backgroundColor: COLOR }} />
+          <div className="h-full motion-safe:transition-[width]" style={{ width: `${pct}%`, backgroundColor: COLOR }} />
         </div>
         {!open && <div className="h-1.5 bg-muted/20 dark:hidden" />}
         <CollapsibleContent>
