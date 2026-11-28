@@ -19,8 +19,7 @@ const KIS_APP_KEY = process.env.KIS_APP_KEY || "";
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET || "";
 // v12: 캐시 키에 type 포함(type=domestic으로 해외 티커를 조회해 빈 배열을 30일 저장 → 전 사용자 배당 공백되던 오염 경로 차단)
 // v13(#376, 5.183): 지난 달 추정 생성 중단 — 이전 버전 캐시에 남은 지난 달 추정을 버린다
-// v14(#377, 5.184): 빈도를 건수 기준으로 판정 — 이전 판정(월배당 오판 등)으로 저장된 추정을 버린다
-const DIVIDEND_CACHE_VERSION = "v14";
+const DIVIDEND_CACHE_VERSION = "v13";
 // 실패·빈 결과 음성 캐시 — 반복 호출 방지용 짧은 TTL(정상 결과 30일과 분리)
 const DIVIDEND_EMPTY_TTL_SEC = 600;
 const DIVIDEND_TYPES = ["domestic", "foreign"] as const;
@@ -55,15 +54,12 @@ function filterOverseasOutliers(
   });
 }
 
-// 연간 지급 건수 → 빈도(#377): 월 n≥7·분기 n≥3·반기 2·그 밖 연간. 특별배당 1~3회가 섞여도 분기를 유지한다
-function frequencyFromCount(n: number): DividendFrequency {
-  if (n >= 7) return "monthly";
-  if (n >= 3) return "quarterly";
-  if (n >= 2) return "semiannual";
+function calcFrequency(count: number): DividendFrequency {
+  if (count >= 10) return "monthly";
+  if (count >= 3) return "quarterly";
+  if (count >= 2) return "semiannual";
   return "annual";
 }
-
-const PAYOUTS_PER_YEAR: Record<DividendFrequency, number> = { monthly: 12, quarterly: 4, semiannual: 2, annual: 1 };
 
 // 지급 월 배열에서 최소 간격(월)을 구해 빈도 역산
 // ex) [2, 5] → gap=3 → quarterly / [2, 8] → gap=6 → semiannual
@@ -82,9 +78,7 @@ function inferFrequencyFromMonths(months: number[]): DividendFrequency {
 }
 
 // 올해 실제 데이터 기준으로 예상 지급 생성
-// - 빈도(#377): 작년 0건 → 올해 월 간격 / 작년·올해 1건씩 → 실제 경과 개월 / 그 밖 → 건수 n(span 미사용)
-//   n = max(작년 건수, 올해 실지급 건수, 직전 12개월 건수(4 이상일 때만))
-// - 올해 실지급이 연 횟수 이상이면 추정하지 않는다
+// - 빈도 판단 우선순위: 올해 월 간격 → 작년 건수 → 올해 1건+작년 1건 월 간격 → annual
 // - 금액: 최신 실제 지급액 사용 (평균 아닌 가장 최근)
 function inferEstimatedPayouts(
   thisYearFiltered: DividendPayoutResult[],
@@ -114,31 +108,34 @@ function inferEstimatedPayouts(
   let frequency: DividendFrequency;
   let decisionReason: string;
 
-  const nowMonthNum = parseInt(todayMonth, 10);
-  // 직전 12개월 = 작년 이번 달 이후 + 올해 실지급(작년 중간 상장·누락 보정)
-  const recent12 =
-    prevYear.filter((p) => parseInt(p.payoutDate.split("-")[1], 10) > nowMonthNum).length + actualPayouts.length;
-  const n = Math.max(prevYear.length, actualPayouts.length, recent12 >= 4 ? recent12 : 0);
-
-  if (prevYear.length === 0) {
-    // 작년(재작년 포함) 기록 없음: 올해 월 간격으로 역산(올해 상장)
-    frequency = actualPayouts.length >= 2 ? inferFrequencyFromMonths(actualMonths) : "annual";
-    decisionReason = `작년 0건, 올해 월간격 ${actualMonths.join(",")} → ${frequency}`;
-  } else if (prevYear.length === 1 && actualPayouts.length === 1) {
-    // 작년·올해 1건씩: 실제 경과 개월(작년 달 → 올해 달). 양방향 최소 간격은 연 1회 지급월 이동을 잦은 빈도로 오판한다
+  if (actualPayouts.length >= 2) {
+    // 올해 2건 이상: 건수 대신 월 간격으로 빈도 역산 (2건=반기/분기 모호 문제 해결)
+    frequency = inferFrequencyFromMonths(actualMonths);
+    decisionReason = `올해 ${actualPayouts.length}건, 월간격 역산: ${actualMonths.join(",")} → ${frequency}`;
+  } else if (prevYear.length >= 2) {
+    frequency = calcFrequency(prevYear.length);
+    decisionReason = `올해 1건, 작년 ${prevYear.length}건 기준: ${frequency}`;
+  } else if (prevYear.length === 1) {
+    const thisMonth = parseInt(actualPayouts[0].payoutDate.split("-")[1], 10);
     const prevMonth = parseInt(prevYear[0].payoutDate.split("-")[1], 10);
-    const elapsed = 12 + actualMonths[0] - prevMonth;
-    frequency = elapsed <= 1 ? "monthly" : elapsed <= 3 ? "quarterly" : elapsed <= 6 ? "semiannual" : "annual";
-    decisionReason = `작년 1건(${prevMonth}월)+올해 1건(${actualMonths[0]}월), 경과 ${elapsed}개월 → ${frequency}`;
+    // 양방향 최소 간격 사용: 작년→올해, 올해→내년 두 방향 중 짧은 쪽이 실제 배당 주기
+    // ex) 작년 3월 + 올해 12월 → 단방향 gap=9, 양방향 minGap=3 → quarterly
+    const forwardGap = ((thisMonth - prevMonth + 12) % 12) || 12;
+    const backwardGap = ((prevMonth - thisMonth + 12) % 12) || 12;
+    const gap = Math.min(forwardGap, backwardGap);
+    if (gap <= 1) frequency = "monthly";
+    else if (gap <= 3) frequency = "quarterly";
+    else if (gap <= 6) frequency = "semiannual";
+    else frequency = "annual";
+    decisionReason = `올해 1건(${thisMonth}월)+작년 1건(${prevMonth}월), 양방향 gap=${gap}개월(forward=${forwardGap}, backward=${backwardGap}) → ${frequency}`;
   } else {
-    frequency = frequencyFromCount(n);
-    decisionReason = `건수 n=${n}(작년 ${prevYear.length}, 올해 ${actualPayouts.length}, 직전 12개월 ${recent12}) → ${frequency}`;
+    frequency = "annual";
+    decisionReason = "데이터 부족 → annual";
   }
 
   debugInfo.frequencyDecision = decisionReason;
 
-  // 올해 실지급이 연 횟수를 채웠으면 추정 0(연간 포함)
-  if (frequency === "annual" || actualPayouts.length >= PAYOUTS_PER_YEAR[frequency]) {
+  if (frequency === "annual") {
     return { payouts: [], frequency, debugInfo };
   }
 
@@ -150,7 +147,8 @@ function inferEstimatedPayouts(
   }
 
   // 지난 달은 후보에서 뺀다(#376) — 이번 달은 늦게 반영될 수 있어 남긴다. 정본 규칙은 클라이언트 isPastEstimate
-  const candidateMonths = [...expectedMonths].filter((m) => !actualMonthsSet.has(m) && m >= nowMonthNum).sort((a, b) => a - b);
+  const nowMonth = parseInt(todayMonth, 10);
+  const candidateMonths = [...expectedMonths].filter((m) => !actualMonthsSet.has(m) && m >= nowMonth).sort((a, b) => a - b);
   debugInfo.anchorMonth = anchorMonth;
   debugInfo.expectedMonths = [...expectedMonths].sort((a, b) => a - b);
   debugInfo.candidateMonths = candidateMonths;

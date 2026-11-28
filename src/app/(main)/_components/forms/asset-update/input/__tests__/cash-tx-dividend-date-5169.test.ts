@@ -12,7 +12,7 @@ describe("지급일 버튼 결선", () => {
     expect(src).toContain('const dateArgs = txType === "deposit" && pickedItems ? dividendDateQueryArgs(pickedItems) : null;');
     expect(src).toContain('useQuery({ ...dividendQueryOptions(dateArgs?.ticker ?? "", "domestic", "NAS"), enabled: !!dateArgs })');
     expect(src).toContain("const pickedItems = dividend && dividendStock !== NO_STOCK ? stockGroups.get(dividendStock) : undefined;");
-    expect(src).not.toMatch(/"v13"|\/api\/finance\/dividend/);
+    expect(src).not.toMatch(/"v12"|\/api\/finance\/dividend/);
   });
   it("조회 완료 + 후보 있을 때만 버튼(조회 중·실패는 DOM 0), 후보는 latestPaidPayout(오늘·폼 min)", () => {
     expect(src).toContain("const latestPaid = dateArgs && dateQuery.isSuccess ? latestPaidPayout(dateQuery.data, todayStr, minDate) : null;");

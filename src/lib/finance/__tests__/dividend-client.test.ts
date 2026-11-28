@@ -70,7 +70,7 @@ describe("실패 쿼리 재조회 차단 (#189 qa FAIL 회귀)", () => {
     mockFetch({ ok: false, status: 429, json: {} });
     const qc = new QueryClient();
     await mountOnce(qc, "NVDA", "foreign");
-    const st = qc.getQueryState(["dividend", "v13", "NVDA", "foreign"]);
+    const st = qc.getQueryState(["dividend", "v12", "NVDA", "foreign"]);
     expect(st?.status).toBe("error");
     expect(st?.data).toBeUndefined();
     qc.clear();
