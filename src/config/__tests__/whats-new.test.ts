@@ -78,6 +78,15 @@ describe("WHATS_NEW 데이터 형식", () => {
     expect(e.trialHidden).toBeUndefined();
   });
 
+  it("5.179 맞춘 날: 블록이 증권사 2곳 이상·접힘이라 바로 가기 없음, 체험 데모에 예시가 있어 숨기지 않음, 본문은 하단 `상세`부터 펼침까지(C87·C126·C148)", () => {
+    const e = WHATS_NEW.find((x) => x.id === "20261128-01")!;
+    expect(e.title).toBe("증권사마다 마지막으로 맞춘 날이 보여요");
+    expect(e.body).toBe("증권사가 2곳\u00a0이상이면 상세 › 주식 › 증권사별을 펼쳐 볼\u00a0수 있어요");
+    expect(e.featureId).toBeUndefined();
+    expect(e.trialHidden).toBeUndefined();
+    expect(WHATS_NEW[0].id).toBe("20261128-01");
+  });
+
   it("길이: title 2~32자, body 48자 이하", () => {
     for (const e of WHATS_NEW) {
       expect(e.title.length, e.id).toBeGreaterThanOrEqual(2);
