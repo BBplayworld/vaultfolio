@@ -174,7 +174,6 @@ const LOAN_MOBILE_LABELS: Record<string, string> = {
   "mortgage-insurance": "보험",
   "mortgage-deposit": "예금",
   "mortgage-other": "기타",
-  "tenant": "임차",
 };
 
 const LOAN_CATEGORY_TABS = [
