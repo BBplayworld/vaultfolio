@@ -23,7 +23,7 @@
 |---|---|---|---|
 | 배경 | `bg-background`/`text-foreground` | `oklch(0.96 0.004 250)` #F0F2F4 / 블랙 | `oklch(0.16 0.010 265)` #0B0D12 / foreground `oklch(0.965 0.004 265)` |
 | 카드 | `bg-card` `text-card-foreground` | 화이트 | `oklch(0.225 0.012 265)` #191C22 |
-| 팝오버·시트·다이얼로그 | `bg-popover` (다크 한정 Dialog·AlertDialog·Sheet·Drawer·FAB 시트 `dark:bg-popover`) | 화이트 | `oklch(0.275 0.014 265)` #24282F (불투명) |
+| 팝오버·시트·다이얼로그 | `bg-popover` (다크 한정 Dialog·AlertDialog·Sheet·Drawer·FAB 시트 `dark:bg-popover`. 예외: 인증카드 대화상자는 저장 카드와 한 면이 되도록 다크 `bg-background`, 외곽 `border` 유지) | 화이트 | `oklch(0.275 0.014 265)` #24282F (불투명) |
 | 약화 면/텍스트 | `bg-muted` `text-muted-foreground` | — | muted·secondary `oklch(0.31 0.014 265)` / mf `oklch(0.74 0.016 265)` / accent(hover) `oklch(0.33 0.014 265)` |
 | 보조 액션 | `bg-secondary` / `variant="secondary"` | — | — |
 | 보더 | `border-border` (다크는 `white/10`) | `oklch(0.91)` 장식 헤어라인(인터랙티브 경계는 `--input` .58) | white 10% |
