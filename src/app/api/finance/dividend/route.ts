@@ -61,6 +61,21 @@ function calcFrequency(count: number): DividendFrequency {
   return "annual";
 }
 
+const FREQ_RANK: Record<DividendFrequency, number> = { annual: 0, semiannual: 1, quarterly: 2, monthly: 3 };
+const moreFrequent = (a: DividendFrequency, b: DividendFrequency) => (FREQ_RANK[a] >= FREQ_RANK[b] ? a : b);
+
+// 작년 첫~마지막 지급 사이 평균 간격으로 빈도 역산(#376) — 작년 중간에 상장·배당을 시작해 건수가 적어도 주기를 맞게 본다
+// ex) 5~12월 8건 → 평균 1 → monthly / 8·11월 → 3 → quarterly / 6·12월 → 6 → semiannual / 4·5·8·11월 → 2.33 → quarterly
+function inferFrequencyFromSpan(months: number[]): DividendFrequency {
+  if (months.length < 2) return "annual";
+  const sorted = [...months].sort((a, b) => a - b);
+  const avgGap = (sorted[sorted.length - 1] - sorted[0]) / (sorted.length - 1);
+  if (avgGap <= 1.5) return "monthly";
+  if (avgGap <= 4.5) return "quarterly";
+  if (avgGap <= 9) return "semiannual";
+  return "annual";
+}
+
 // 지급 월 배열에서 최소 간격(월)을 구해 빈도 역산
 // ex) [2, 5] → gap=3 → quarterly / [2, 8] → gap=6 → semiannual
 function inferFrequencyFromMonths(months: number[]): DividendFrequency {
@@ -78,8 +93,9 @@ function inferFrequencyFromMonths(months: number[]): DividendFrequency {
 }
 
 // 올해 실제 데이터 기준으로 예상 지급 생성
-// - 빈도 판단 우선순위(#376, 5.183): 연간 지급 건수(작년 건수와 올해 실지급 건수 중 큰 값) → 올해 2건 이상 월 간격
-//   → 올해 1건+작년 1건 월 간격 → annual. 건수가 있으면 간격은 보지 않는다(4·5·8·11월 분기를 월배당으로 오판하던 문제)
+// - 빈도 판단 우선순위(#376, 5.183): 작년 2건 이상이면 연간 지급 건수(작년·올해 실지급·직전 12개월 실지급 중 큰 값)와
+//   작년 평균 간격(중간 상장 보정) 중 더 잦은 쪽 → 작년 부족 시 올해 2건 이상 월 간격 → 올해 1건+작년 1건 월 간격 → annual.
+//   최소 간격은 보지 않는다(4·5·8·11월 분기를 월배당으로 오판하던 문제). 올해 실지급 4건 초과면 월배당
 // - 올해 실지급 건수가 빈도의 연간 횟수에 닿으면 추정을 만들지 않는다
 // - 금액: 최신 실제 지급액 사용 (평균 아닌 가장 최근)
 function inferEstimatedPayouts(
@@ -111,10 +127,14 @@ function inferEstimatedPayouts(
   let decisionReason: string;
 
   if (prevYear.length >= 2) {
-    // 작년 건수가 있으면 건수 우선 — 올해 실지급이 더 많으면(배당 횟수 증가) 그 건수를 쓴다
-    const count = Math.max(prevYear.length, actualPayouts.length);
-    frequency = calcFrequency(count);
-    decisionReason = `연간 건수 기준(작년 ${prevYear.length}건, 올해 ${actualPayouts.length}건 → ${count}건): ${frequency}`;
+    // 건수 우선 — 작년 달력연도 건수만 보면 작년 중간 상장 종목을 낮게 본다(qa D-1). 직전 12개월(작년 이번 달 다음 ~ 올해) 실지급도 센다.
+    // 재작년 폴백 행은 날짜가 창 밖이라 자연히 빠진다
+    const windowStart = `${year - 1}-${todayMonth}`;
+    const trailing12 = prevYear.filter((p) => p.payoutDate.slice(0, 7) > windowStart).length + actualPayouts.length;
+    const count = Math.max(prevYear.length, actualPayouts.length, trailing12);
+    const prevMonths = prevYear.map((p) => parseInt(p.payoutDate.split("-")[1], 10));
+    frequency = moreFrequent(calcFrequency(count), inferFrequencyFromSpan(prevMonths));
+    decisionReason = `연간 건수 기준(작년 ${prevYear.length}건, 올해 ${actualPayouts.length}건, 직전 12개월 ${trailing12}건 → ${count}건) + 작년 평균 간격: ${frequency}`;
   } else if (actualPayouts.length >= 2) {
     // 작년 건수가 없을 때만 월 간격으로 보조 역산 (2건=반기/분기 모호 문제 해결)
     frequency = inferFrequencyFromMonths(actualMonths);
@@ -135,6 +155,12 @@ function inferEstimatedPayouts(
   } else {
     frequency = "annual";
     decisionReason = "데이터 부족 → annual";
+  }
+
+  // 올해 실지급이 4건을 넘으면 분기로는 설명할 수 없다
+  if (actualPayouts.length > 4 && frequency !== "monthly") {
+    frequency = "monthly";
+    decisionReason += ` → 올해 ${actualPayouts.length}건 > 4 → monthly`;
   }
 
   debugInfo.frequencyDecision = decisionReason;

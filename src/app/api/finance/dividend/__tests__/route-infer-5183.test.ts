@@ -126,12 +126,58 @@ describe("B. 빈도는 연간 지급 건수 우선, 올해 횟수를 채우면 �
     expect(d.every((p) => p.frequency === "annual")).toBe(true);
     expect(estimates(d)).toEqual([]);
   });
-  it("올해 실지급 완료(반기 2·3월 2건, 간격 1) → 반기, 추정 0", async () => {
-    vi.setSystemTime(new Date("2026-05-10T03:00:00Z"));
-    kis["DONE:2026"] = q(2026, [2, 3], 150);
+  // 5.183 D-1 수정으로 시나리오 교체: 이전 '작년 3·9월 + 올해 2·3월(5월)'은 직전 12개월 3건(9·2·3월)이라 건수 규칙상 분기가 맞다.
+  // 간격 1을 월배당으로 오판하지 않는지는 삼성 4·5·8·11월 케이스가 맡는다
+  it("올해 실지급 완료(반기 3·9월, 오늘 10월) → 반기, 추정 0", async () => {
+    vi.setSystemTime(new Date("2026-10-10T03:00:00Z"));
+    kis["DONE:2026"] = q(2026, [3, 9], 150);
     kis["DONE:2025"] = q(2025, [3, 9], 140);
     const d = await call("DONE", "domestic");
     expect(d.every((p) => p.frequency === "semiannual")).toBe(true);
     expect(estimates(d)).toEqual([]);
+  });
+});
+
+describe("B-2. 작년 중간 상장·배당 시작 — 직전 12개월 건수·작년 평균 간격 반영(qa D-1)", () => {
+  const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+  const months = (d: Out[]) => estimates(d).map((x) => Number(x.slice(5, 7)));
+  it("월배당 ETF 작년 5월 상장(작년 8건) · 오늘 2027-04 → 월배당, 5~12월 추정", async () => {
+    vi.setSystemTime(new Date("2027-04-20T03:00:00Z"));
+    kis["NEW1:2027"] = q(2027, range(1, 4), 100, "10");
+    kis["NEW1:2026"] = q(2026, range(5, 12), 100, "10");
+    const d = await call("NEW1", "domestic");
+    expect(d.every((p) => p.frequency === "monthly")).toBe(true);
+    expect(months(d)).toEqual(range(5, 12));
+  });
+  it("같은 ETF · 오늘 2027-08 → 월배당, 9~12월 추정", async () => {
+    vi.setSystemTime(new Date("2027-08-20T03:00:00Z"));
+    kis["NEW2:2027"] = q(2027, range(1, 8), 100, "10");
+    kis["NEW2:2026"] = q(2026, range(5, 12), 100, "10");
+    const d = await call("NEW2", "domestic");
+    expect(d.every((p) => p.frequency === "monthly")).toBe(true);
+    expect(months(d)).toEqual(range(9, 12));
+  });
+  it("분기 배당 작년 8월 시작(작년 2건) · 오늘 2027-05 → 분기, 8·11월 추정", async () => {
+    vi.setSystemTime(new Date("2027-05-20T03:00:00Z"));
+    kis["NEW3:2027"] = q(2027, [2, 5], 100, "10");
+    kis["NEW3:2026"] = q(2026, [8, 11], 100, "10");
+    const d = await call("NEW3", "domestic");
+    expect(d.every((p) => p.frequency === "quarterly")).toBe(true);
+    expect(months(d)).toEqual([8, 11]);
+  });
+  it("월배당 ETF 작년·올해 각 KIS 3회 누락(9건) · 오늘 2026-11 → 월배당, 12월만 추정(지난 달 0)", async () => {
+    kis["MISS:2026"] = q(2026, [1, 2, 3, 4, 5, 6, 8, 10, 11], 100, "10");
+    kis["MISS:2025"] = q(2025, [1, 2, 3, 4, 5, 6, 8, 10, 11], 100, "10");
+    const d = await call("MISS", "domestic");
+    expect(d.every((p) => p.frequency === "monthly")).toBe(true);
+    expect(months(d)).toEqual([12]);
+  });
+  it("작년 3월 상장(작년 10건) · 오늘 2027-04 → 월배당 유지", async () => {
+    vi.setSystemTime(new Date("2027-04-20T03:00:00Z"));
+    kis["NEW4:2027"] = q(2027, range(1, 4), 100, "10");
+    kis["NEW4:2026"] = q(2026, range(3, 12), 100, "10");
+    const d = await call("NEW4", "domestic");
+    expect(d.every((p) => p.frequency === "monthly")).toBe(true);
+    expect(months(d)).toEqual(range(5, 12));
   });
 });
