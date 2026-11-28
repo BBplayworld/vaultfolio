@@ -106,7 +106,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 - 👤 **320 거래 행(5.152 #302 A)**: 360 미만(`max-[360px]:`)에서 현금 거래 행이 코인 행과 같은 배치 — 금액·삭제 첫 줄 오른쪽, 날짜·메모 둘째 줄(아이콘 오른쪽 선). 9자리 출금 `−123,456,789원`+메모에서 날짜·금액 겹침 0·가로 넘침 0, 360 이상 배치 불변
 - 👤 **(#5.158 #311)** 과거 날짜 질문(`past-date-question`, F-TRADE와 같은 규칙, 미응답이면 `cash-tx-resync-warning` 0), 토스트 `입금/출금을 기록했어요`·`기존 기록을 그대로 뒀어요`. 목록 메모는 날짜 아래 `tx-memo` 2줄 말줄임(무공백 100자 넘침 0), 잘린 메모만 탭 펼침(`aria-expanded`) — 대출·코인 목록 공통
 - 👤 현금 카드 "입출금 기록/내역" 진입 → 입금/출금(입금 시 정기·비정기 토글)·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총입금·총출금·순유입 통계, 기간·유형 필터
-- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 기록만(`기록만` 배지) 삭제 → 앱 안 확인 창 '이 기록만 지워요. 잔액은 그대로예요'(#5.149 #295, 브라우저 confirm 0)
+- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그(본문 `이 기록은 잔액에 반영돼 있어요. 삭제하면 잔액이 되돌아가요.` `break-keep text-pretty` — 320~440(2px)·1280 어절 중간 꺾임 0, 성공 토스트 `삭제하고 잔액을 되돌렸어요.`·기록만 `삭제했어요.`, #374 5.182, 자동 `cash-loan-delete-copy-5182.test.ts`) / 기록만(`기록만` 배지) 삭제 → 앱 안 확인 창 '이 기록만 지워요. 잔액은 그대로예요'(#5.149 #295, 브라우저 confirm 0)
 - ⚙ `cash-tx-utils`: `pruneCashTransactions`(3년 롤링)·`findDuplicateCashTx`(계좌·날짜·금액·유형)·`reflectedBalanceDelta`(반영분만)·`isCashWithdrawalValid`(출금초과 가드). `cash[].balance`는 진실원본 — 로그 추가/삭제해도 balance 단일 저장으로만 변경
 - ⚙ 단일 저장 `addCashTransactionWithBalance`/`deleteCashTransactionWithBalance`(로그+잔액, stale-closure 방지, R4 대칭)
 - 엣지: 출금 반영액>잔액 차단, 미반영 로그는 잔액 무변경, 미래·보존기간(3년) 밖 날짜 차단, 통화(USD·JPY/100) 환산
@@ -116,7 +116,7 @@ npm run build           # 프로덕션 빌드 + 전체 라우트 생성
 ### F-LOAN-TX. 대출 상환/추가 대출 거래내역 ([loan-tx-input.tsx](../../src/app/(main)/_components/forms/asset-update/input/loan-tx-input.tsx) · [loan-tx-view.tsx](../../src/app/(main)/_components/views/detail/loan-tx/loan-tx-view.tsx)) — 명세 [S-4.24](../specs/4.24-loan-transactions.md)
 - ⚙ **날짜 기본값·max = KST 오늘(#4.35, `todayKst()`)** — 주식·현금 입력과 동일 기준
 - 👤 대출 카드 "상환/대출 기록·내역" 진입 → 상환/추가대출 토글·반영 ON/OFF·반영 후 예상 잔액·중복 인라인 확인. 로그 뷰 총상환·총추가대출·순상환 통계, 기간·유형 필터. 전역 "자산 업데이트" 플로팅 버튼의 대출 선택 → "상환/대출 기록"에서도 동일 폼 진입(대상 미지정, 폼에서 대출 직접 선택 — 현금과 대칭)
-- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그 / 기록만(`기록만` 배지) 삭제 → 앱 안 확인 창 '이 기록만 지워요. 잔액은 그대로예요'(#5.149 #295, 브라우저 confirm 0)
+- 👤 반영 거래 삭제 → 잔액 역가감 확인 다이얼로그(본문 `이 기록은 잔액에 반영돼 있어요. 삭제하면 잔액이 되돌아가요.` `break-keep text-pretty` — 320~440(2px)·1280 어절 중간 꺾임 0, 성공 토스트 `삭제하고 잔액을 되돌렸어요.`·기록만 `삭제했어요.`, #374 5.182, 자동 `cash-loan-delete-copy-5182.test.ts`) / 기록만(`기록만` 배지) 삭제 → 앱 안 확인 창 '이 기록만 지워요. 잔액은 그대로예요'(#5.149 #295, 브라우저 confirm 0)
 - ⚙ `loan-tx-utils`: `pruneLoanTransactions`(3년 롤링)·`findDuplicateLoanTx`(대출·날짜·금액·유형)·`reflectedLoanBalanceDelta`(반영분만)·`isLoanRepaymentValid`(상환초과 가드). `loans[].balance`는 진실원본 — 로그 추가/삭제해도 balance 단일 저장으로만 변경. 대출은 통화 필드 없음(항상 KRW) — `cashTransactionSchema` 대비 `currency`·`recurring` 필드 없음
 - ⚙ 단일 저장 `addLoanTransactionWithBalance`/`deleteLoanTransactionWithBalance`(로그+잔액, stale-closure 방지, R4 대칭)
 - ⚙ **완납(balance=0)·재활성화** — 상환으로 잔액이 정확히 0이 되면 `loan-tab.tsx`의 `allLoans`(`balance > 0` 필터)에서 자동으로 빠지고, 별도 "완납된 대출" 요약 목록(비중 바·이자 집계 미포함, 이름·"완납" 배지·내역/기록 버튼만)에 노출. 그 목록의 "기록"에서 추가 대출(반영 ON, `+amount`)을 남기면 `balance > 0`으로 복귀해 `allLoans`에 재노출(별도 재활성화 로직 없이 필터 재평가만으로 성립)
