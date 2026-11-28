@@ -2,11 +2,15 @@
 
 // 상세·주식 '증권사별' 접기 블록(#319, 5.160) — 읽기 전용. 열림 상태는 useState만(저장 키 0).
 // 값은 computeBrokerTotals(헤더와 같은 computeStockTotals 재사용). 인증카드(screenshotMode)에서는 부르는 쪽이 렌더하지 않는다.
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, useSyncExternalStore } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ASSET_THEME, getProfitLossColor } from "@/config/theme";
 import { brokerCashByRow, computeBrokerTotals, type BrokerTotalRow } from "@/lib/asset/broker-totals";
+import { brokerSyncedFromRaw, readAssetRefreshRaw, subscribeBrokerSynced } from "@/lib/asset/asset-refresh-status";
+import { syncedLabel } from "@/lib/asset/broker-synced";
+import { kstTodayString } from "@/lib/asset/import-inherit";
+import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 import { formatPriceByMode } from "@/lib/number-utils";
 import type { Cash, Stock } from "@/types/asset";
 import type { StockDisplayCurrency } from "../asset-detail-tabs";
@@ -26,8 +30,10 @@ export function formatBrokerUnits(units: number, scale: 1 | 100): string {
 export const formatShareTenths = (t: number) => `${(t / 10).toFixed(1)}%`;
 
 /** 합계 행 — 주식 증권사별·코인 거래소별(#325) 공용. onResync가 없으면 `맞추기` 버튼을 그리지 않는다(DOM 0). countText 기본 `N종목`.
- * cashText(#335, 주식 블록만)가 있을 때만 grid로 그리고 행 아래 독립 줄 `현금 N원`을 둔다. 없으면 기존 flex 마크업 그대로(코인 행 DOM 불변). */
-export function BrokerRow({ row, scale, onResync, countText, cashText }: { row: BrokerTotalRow; scale: 1 | 100; onResync?: (broker?: string) => void; countText?: string; cashText?: string }) {
+ * cashText(#335, 주식 블록만)가 있을 때만 grid로 그리고 행 아래 독립 줄 `현금 N원`을 둔다. 없으면 기존 flex 마크업 그대로(코인 행 DOM 불변).
+ * synced(#366, 주식 블록만)를 넘기면(null 포함) 메타 줄을 dot-wrap으로 그리고 `· M/D 맞춤` 조각을 둔다(null이면 조각 DOM 0). share=false면 비중 조각 0.
+ * synced를 넘기지 않는 코인 행은 기존 인라인 `· 비중` 마크업 그대로. */
+export function BrokerRow({ row, scale, onResync, countText, cashText, synced, share = true }: { row: BrokerTotalRow; scale: 1 | 100; onResync?: (broker?: string) => void; countText?: string; cashText?: string; synced?: { date: string; text: string } | null; share?: boolean }) {
   const zero = row.profitUnits === 0;
   const color = zero ? "text-muted-foreground" : getProfitLossColor(row.profitUnits);
   const sign = row.profitUnits > 0 ? "+" : "";
@@ -36,11 +42,20 @@ export function BrokerRow({ row, scale, onResync, countText, cashText }: { row: 
   const left = (
     <div className={grid ? "col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5" : "flex min-w-16 flex-1 flex-col gap-0.5"}>
       <span data-testid="broker-row-name" className={`${ASSET_THEME.cardInfoName} break-keep`}>{row.name}</span>
-      <span className="text-sm text-muted-foreground tabular-nums">
-        <span data-testid="broker-row-count" className="whitespace-nowrap">{countText ?? `${row.count}종목`}</span>
-        {" "}
-        <span data-testid="broker-row-share" className="whitespace-nowrap">· {formatShareTenths(row.shareTenths)}</span>
-      </span>
+      {synced === undefined ? (
+        <span className="text-sm text-muted-foreground tabular-nums">
+          <span data-testid="broker-row-count" className="whitespace-nowrap">{countText ?? `${row.count}종목`}</span>
+          {" "}
+          <span data-testid="broker-row-share" className="whitespace-nowrap">· {formatShareTenths(row.shareTenths)}</span>
+        </span>
+      ) : (
+        // 조각마다 nowrap, 줄바꿈은 조각 사이에서만(C152) — 줄 머리·끝에 `·`가 남지 않는 dot-wrap
+        <p data-testid="broker-row-meta" className={`flex flex-wrap gap-x-1 text-sm text-muted-foreground tabular-nums ${DOT_WRAP_ROW}`}>
+          <span data-testid="broker-row-count" className={`whitespace-nowrap ${DOT_WRAP_FIRST}`}>{countText ?? `${row.count}종목`}</span>
+          {share && <span data-testid="broker-row-share" className="whitespace-nowrap"><DotLead />{formatShareTenths(row.shareTenths)}</span>}
+          {synced && <span data-testid="broker-row-synced" data-date={synced.date} className="whitespace-nowrap"><DotLead />{synced.text}</span>}
+        </p>
+      )}
     </div>
   );
   // 금액 열은 shrink-0을 두지 않는다(E1) — 360 경계에서 손익 줄 `(율)`이 아래 줄로 내려가며 행 넘침이 0이 된다(평가금 nowrap 폭 아래로는 줄지 않음)
@@ -92,6 +107,10 @@ export function BrokerTotalsBlock({ stocks, exchangeRates, displayCurrency, cash
   const panelId = useId();
   const { rows, scale } = useMemo(() => computeBrokerTotals(stocks, exchangeRates, displayCurrency), [stocks, exchangeRates, displayCurrency]);
   const cashByRow = useMemo(() => (cash && scale === 1 ? brokerCashByRow(rows, cash, exchangeRates) : null), [cash, scale, rows, exchangeRates]);
+  // 증권사별 맞춘 날(#366) — 기기 로컬 메타 원문을 구독(맞추기·되돌리기 직후 신호). 서버 렌더는 "" → 조각 0
+  const refreshRaw = useSyncExternalStore(subscribeBrokerSynced, readAssetRefreshRaw, () => "");
+  const today = kstTodayString();
+  const synced = useMemo(() => brokerSyncedFromRaw(refreshRaw, today), [refreshRaw, today]);
   if (rows.length < 2) return null;
 
   const toggle = () => {
@@ -136,6 +155,7 @@ export function BrokerTotalsBlock({ stocks, exchangeRates, displayCurrency, cash
                 scale={scale}
                 onResync={(b) => dispatchAddStock("screenshot", b)}
                 cashText={cashByRow?.has(r.name) ? formatPriceByMode(cashByRow.get(r.name)!) : undefined}
+                synced={syncedLabel(r, synced, today)}
               />
             ))}
           </div>

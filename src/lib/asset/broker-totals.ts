@@ -6,6 +6,7 @@ import { ALL_SECURITIES_FIRMS, matchBrokerHint } from "@/config/asset-options";
 import { isUnassignedBroker, sameBroker } from "@/lib/asset/resync/match";
 import { largestRemainderTenths } from "@/lib/ratio-preview/ratio-list";
 import { computeStockTotals, getMultiplier, type StockDisplayCurrency } from "@/app/(main)/_components/views/detail/asset-detail-tabs";
+import type { BrokerSyncCategory } from "@/lib/asset/asset-refresh-status";
 
 export const UNASSIGNED_BROKER_LABEL = "증권사 미지정";
 
@@ -22,6 +23,14 @@ export interface BrokerTotalRow {
   profitRate: number | null;
   /** 비중 0.1% 단위 정수(합 1000, 값이 모두 0이면 0) */
   shareTenths: number;
+  /** 맞춘 날 대조용 계좌별 항목 수(#366, 주식만) — live 항목을 같은 티커도 따로 센다. 미지정 행·비상장은 넣지 않는다 */
+  scopeCounts?: Partial<Record<BrokerSyncCategory, number>>;
+}
+
+function countScopes(rows: Stock[]): Partial<Record<BrokerSyncCategory, number>> {
+  const out: Partial<Record<BrokerSyncCategory, number>> = {};
+  for (const s of rows) if (s.category !== "unlisted") out[s.category] = (out[s.category] ?? 0) + 1;
+  return out;
 }
 
 export interface BrokerTotals {
@@ -101,6 +110,7 @@ export function computeBrokerTotals(
     profitUnits: profits[i],
     profitRate: totals[i].totalCost > 0 ? totals[i].totalProfitRate : null,
     shareTenths: shares[i],
+    ...(g.unassigned ? {} : { scopeCounts: countScopes(g.rows) }),
   }));
   // 평가금 내림차순, 미지정은 항상 맨 아래
   const rawValue = new Map(rows.map((r, i) => [r, totals[i].totalValue]));

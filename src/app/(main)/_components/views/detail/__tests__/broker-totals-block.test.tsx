@@ -42,7 +42,9 @@ describe("BrokerTotalsBlock", () => {
     const values = texts(html, "broker-row-value");
     expect(values).toHaveLength(4);
     expect(values.reduce((a, v) => a + num(v), 0)).toBe(num(formatCurrency(t.totalValue)));
-    const shares = texts(html, "broker-row-share").map((v) => num(v) * 10);
+    // 5.179: 주식 메타 줄은 dot-wrap — 비중 조각 머리에 DotLead(` · `)가 붙는다
+    const shares = [...html.matchAll(/data-testid="broker-row-share"[^>]*><span[^>]*> · <\/span>([\d.]+)%/g)].map((m) => num(m[1]) * 10);
+    expect(shares).toHaveLength(4);
     expect(Math.round(shares.reduce((a, b) => a + b, 0))).toBe(1000);
     const names = texts(html, "broker-row-name");
     expect(names.at(-1)).toBe("증권사 미지정");
@@ -153,13 +155,13 @@ describe("dispatchAddStock broker 전달(#319)", () => {
     expect(events.map((e) => e.detail)).toEqual([{ mode: "screenshot", broker: "키움증권" }, { mode: "screenshot" }]);
   });
 
-  it("5.162 메타 줄: 종목 수·'· 비중' 두 조각 모두 nowrap(320 꺾임은 조각 사이에서만, C152)", () => {
+  it("5.162 메타 줄: 종목 수·'· 비중' 두 조각 모두 nowrap(320 꺾임은 조각 사이에서만, C152) — 5.179부터 dot-wrap", () => {
     const long = [
       st({ id: "l1", broker: "한국투자증권 종합계좌 아주긴이름", quantity: 7 }),
       st({ id: "l2", broker: "미래에셋증권", ticker: "000660", quantity: 3 }),
     ];
     const html = renderToStaticMarkup(<BrokerTotalsBlock stocks={long} exchangeRates={RATES} displayCurrency="KRW" />);
-    expect(html).toMatch(/data-testid="broker-row-count" class="whitespace-nowrap"/);
-    expect(html).toMatch(/data-testid="broker-row-share" class="whitespace-nowrap">· /);
+    expect(html).toMatch(/data-testid="broker-row-count" class="whitespace-nowrap ml-2"/);
+    expect(html).toMatch(/data-testid="broker-row-share" class="whitespace-nowrap"><span aria-hidden="true" class="-ml-1 inline-block w-3 text-center font-normal text-muted-foreground"> · <\/span>/);
   });
 });
