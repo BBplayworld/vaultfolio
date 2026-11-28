@@ -355,7 +355,13 @@ daysSinceRefresh(category): number | null
 getStaleCategories(assetLastUpdated?): RefreshCategory[]   // 30일 이상(또는 이력 없음+유예 경과) 오래된 순
 shouldShowRefreshNudge(opts): boolean
 markRefreshNudgeShown() / clearAssetRefreshStatus()
+// #366(5.179) 증권사별 마지막 맞춘 날 — 같은 키 안 `brokers.stock` 배열(BrokerSyncEntry {broker, category(unlisted 제외 5종), date KST, count})
+parseBrokerSynced(meta, today?) / brokerSyncedFromRaw(raw, today?)   // 관대한 파서(throw 0·hasOwn): 형식·달력·미래 날짜·미지정·40자 초과·count 비정수 항목 버림, 같은 범위 중복은 늦은 날
+markBrokersSynced(scopes, today?) → BrokerSyncUndo | null              // upsert(sameBroker×category) + 60개 상한, 다시 읽어 검증, 실패 null. 성공 시 window 이벤트 `asset-broker-synced`(BROKER_SYNCED_EVENT, 저장 0)
+restoreBrokersSynced(undo)                                           // compare-and-restore — 지금 값 = 적용 값일 때만 이전 값(없었으면 stock 키 삭제)
+readAssetRefreshRaw() / subscribeBrokerSynced(cb)                     // useSyncExternalStore용(서버 스냅샷 "")
 ```
+- `readMeta`는 plain object가 아니면(`null`·배열·원시값) `{}`(5.179 C1). `brokers`는 동기화·백업 payload에 없다(키 자체가 기기 로컬).
 `backup-status.ts`와 동일 패턴(단일 키 + 오늘 노출 여부). `STORAGE_KEYS.assetRefresh`, `clearAssetData` keepKeys에 포함(기기 로컬 메타). 백업·세금과의 동시 노출 배제는 `home-tip.ts`의 `pickHomeTip` 우선순위가 담당(S-4.32 후속 — 과거의 `suppressed` prop 방식은 제거됨).
 
 ### report/asset-report.ts — 원인분해 집계 헬퍼
@@ -615,7 +621,7 @@ findClosestNames(normalizedInput, keys)     // 허용 거리 이내 최소 거�
 ### preview/demo-payload.ts (`src/lib/preview/demo-payload.ts`, #4.34) — preview 데모 진입 순수 함수
 - `resolvePreviewAction(isPreview, search, hasAssets, choiceDismissed?)` → `"none"|"demo"|"empty"|"choose"`. `isPreview` false면 항상 `"none"`(운영 무동작 보증)
 - `materializeDemo(raw, today)` — 날짜 토큰(`@M<월오프셋>D<일>`·`@M<오프셋>`·`@D<일오프셋>`·`@NOW`)을 기준일(KST) 날짜로 변환. 이번 달 날짜는 오늘을 넘지 않게 보정
-- `buildDemoRefreshMeta(now)` — 기존 `secretasset_asset_refresh` 형식(현금·대출 40일 전, 주식·코인 2일 전)
+- `buildDemoRefreshMeta(now)` — 기존 `secretasset_asset_refresh` 형식(현금·대출 40일 전, 주식·코인 2일 전) + `brokers.stock`(#366: 데모증권 국내·해외 2일 전 count 2·2, 연금저축 작년 12/3 count 1, ISA 없음)
 - 데모 원본 `src/lib/preview/demo-data.json`은 **동적 import 전용**(정적 import 금지, `preview-safety.test.ts`가 소스 검색으로 강제)
 - preview 판별은 `cloud-sync/config.ts`의 `isPreviewEnv()` 단일 출처(`NEXT_PUBLIC_VERCEL_ENV === "preview"`). `isCloudSyncEnabled()`는 preview에서 false
 
@@ -1169,10 +1175,15 @@ computePriceChange(points) → % | null
 - 5.143 R3-3(#280·#282): `calc.ts` `fxYear`·`fxAxis`(원/달러 연평균 1982~·오른쪽 축 100원 단위 내림·올림, 눈금 `ticks3`/`ticks4`), `text.ts` `FX_SOURCE`·`FX_INFO`·`FX_DATASET_HREF`·`FX_DATASET_LABEL`, `guide-tables.ts` `spreadYearRows`(G4: `spreadNegMonths`·A1 규칙 재사용), `year-grid.tsx` 칸 글자는 `fmtPct` 한 벌. 데이터 `data/market-history/fx-krw-usd-annual.csv`(`build.mjs`가 JSON `fx`·공개 CSV 생성, 변환 도구는 memory 이슈 폴더 `tools/make-fx-annual.mjs`, 원자료 `data/EXKOUS.csv`). 저장 키·서버 요청 0.
 
 ### broker-totals (`src/lib/asset/broker-totals.ts`, #5.160 #319)
-- `computeBrokerTotals(stocks, rates, displayCurrency)` → `{ rows, scale }`. 행 = `{ name, unassigned, count, valueUnits, profitUnits, profitRate|null, shareTenths }`(units = 원/센트). 묶음 = `sameBroker`·`isUnassignedBroker`, 평가·손익 = `computeStockTotals` 묶음별 호출 + `apportionUnits`(최대 잔여)로 합 = 헤더. 비중 = `largestRemainderTenths`.
+- `computeBrokerTotals(stocks, rates, displayCurrency)` → `{ rows, scale }`. 행 = `{ name, unassigned, count, valueUnits, profitUnits, profitRate|null, shareTenths, scopeCounts? }`(units = 원/센트). `scopeCounts`(#366) = 계좌별 live 항목 수(같은 티커도 따로, 비상장 제외, 미지정 행 없음) — 맞춘 날 대조용, `count`(티커 중복 제거)와 다른 정의. 묶음 = `sameBroker`·`isUnassignedBroker`, 평가·손익 = `computeStockTotals` 묶음별 호출 + `apportionUnits`(최대 잔여)로 합 = 헤더. 비중 = `largestRemainderTenths`.
 - `brokerCashByRow(rows, cash, rates)`(#5.167 #335) → `Map<행 이름, 원화 정수>`. 행 이름이 증권사 목록 값(`기타` 제외)이고 공백 지운 `cash.institution`이 **정확히 같은** 현금만 `Math.round(Σ balance × getMultiplier)`. `sameBroker`(부분 일치) 미사용 — `키움`·`하나`·`하나은행`·`기타`·자유 텍스트·미지정은 조인 0. 합 0원 행은 Map에 없음. 읽기 전용 참고값으로 헤더·행 평가금·비중에 더하지 않는다(C150).
 - `brokerCashDefault(items, cash)`(#5.169 #339) → 종목 묶음 행 `broker`를 `matchBrokerHint(raw) ?? raw`로 맞춰 미지정·목록 밖·`기타`를 뺀 증권사가 **정확히 1곳**이고 공백 지운 `cash.institution`이 **정확히 같은** 현금 계좌가 1개(2개 이상이면 종목 통화와 같은 통화 1개)일 때 그 id, 아니면 null(잔액 0 포함, `sameBroker` 미사용) · `nextAutoCash({current, auto, candidate, amount, cash})` → 계좌 칸이 빈칸이거나 직전 규칙 값일 때만 `{cashId, auto}`(후보 없으면 빈칸), 금액 > 0이고 표시 통화(빈칸=원)가 바뀌면 null(통화 가드). 입금 폼 종목 선택 1회 판정용
 - `resolveScreensWithDefaultBroker(screens, existing, opts, defaultBroker?)`(`resync/merge.ts`) — 확정 못 한 장에만 증권사 기본값. `dispatchAddStock(mode, broker?)`·`HoldingsResyncDialog initialBroker?`(UI 상태, 저장 0).
+
+### broker-synced (`src/lib/asset/broker-synced.ts`, #5.179 #366)
+- `writableScopes(diff, sel, afterStocks)` → 날짜를 쓸 범위 `{broker, category, count}[]`. `incomplete`면 0, 맞추지 않는 확인 필요 행(ambiguous 후보·연결 항목 계좌 포함)·적용 뒤 남는 삭제 후보가 있는 범위 제외, 같은 증권사로 읽히는 두 범위는 둘 다 제외. `scopeCount(stocks, broker, cat)` = sameBroker·live 항목 수.
+- `syncedLabel(row, entries, today)` → `{date, text}|null` — 행 `scopeCounts`의 모든 계좌 기록·수 일치일 때만 가장 이른 날, `formatSyncedDate`(올해 `M/D`, 다른 해 `YYYY.M.D`).
+- `confirmSameResync(diffOf, sel, deps?)` — 변경 0 확인 본체(누른 순간 diff 재계산, 바뀔 내용 생기면 실패). 자산 저장·`applyResync`·대조 0, 성공 시 `markBrokersSynced` + `markCategoryRefreshed("stock",{notify:false})` + GA `resync_confirm_same`. `confirmSameDeps`가 실제 쓰기 경로(테스트도 같은 함수). `markAppliedResync(diff, sel, afterStocks)` = 변경 있음 경로(저장 성공 뒤).
 
 ### exchange-totals (`src/lib/asset/exchange-totals.ts`, #5.163 #325)
 - `computeExchangeTotals(crypto)` → `BrokerTotalRow[]`(broker-totals와 같은 행 모양, units = 원). 모집단 = 수량>0 전체(목록의 `value>0` 필터 미사용 — 헤더 `getAssetSummary().cryptoValue·cryptoProfit`과 같음). 합계 target은 헤더와 같은 순서·같은 식으로 더한 값의 `Math.round`, `apportionUnits`로 행 합 = 헤더 표시값. 비중 `largestRemainderTenths`(합 1000). 정렬 = 평가금 내림차순, 미지정 맨 아래. 코인 수 = 거래소 안 심볼(대소문자 무시) 고유 수.
