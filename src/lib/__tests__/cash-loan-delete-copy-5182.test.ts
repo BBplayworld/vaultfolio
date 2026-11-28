@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const read = (p: string) => readFileSync(resolve(__dirname, "../../app/(main)/_components/views/detail", p), "utf8");
-const FILES = { 현금: read("cash-tx/cash-tx-view.tsx"), 대출: read("loan-tx/loan-tx-view.tsx") };
+const FILES = {
+  현금: readFileSync(resolve(__dirname, "../../app/(main)/_components/views/detail/cash-tx/cash-tx-view.tsx"), "utf8"),
+  대출: readFileSync(resolve(__dirname, "../../app/(main)/_components/views/detail/loan-tx/loan-tx-view.tsx"), "utf8"),
+};
 
 describe.each(Object.entries(FILES))("%s 거래 삭제 확인창 문구", (_name, src) => {
   it("반영 기록 삭제 본문은 어절 단위로만 꺾인다(break-keep text-pretty) + 해요체", () => {
