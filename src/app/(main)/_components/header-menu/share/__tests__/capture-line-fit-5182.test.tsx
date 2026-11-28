@@ -9,13 +9,15 @@ import { groupDescriptionLines, renderDescriptionInLines } from "../share-card";
 
 const BLOCK_W = 511.67; // 캡처 680px · max-w 82% 실측 상한
 
-describe("fitsOneLine — w ≤ blockW − 17px일 때만 한 줄", () => {
+describe("fitsOneLine — w ≤ blockW − slack일 때만 한 줄(slack 기본 0, qa D-1)", () => {
   it("경계", () => {
-    expect(DESC_FIT_SLACK_PX).toBe(17);
-    expect(fitsOneLine(BLOCK_W - 17, BLOCK_W)).toBe(true);
-    expect(fitsOneLine(BLOCK_W - 16.99, BLOCK_W)).toBe(false);
+    expect(DESC_FIT_SLACK_PX).toBe(0);
+    expect(fitsOneLine(BLOCK_W, BLOCK_W)).toBe(true); // 블록 폭 이하면 main PNG와 같은 한 줄
+    expect(fitsOneLine(BLOCK_W + 0.01, BLOCK_W)).toBe(false);
     expect(fitsOneLine(511.83, BLOCK_W)).toBe(false); // 0.16px 경계 넘침(38자) → 2줄
-    expect(fitsOneLine(480, BLOCK_W)).toBe(true);
+    expect(fitsOneLine(502.78, BLOCK_W)).toBe(true); // 17px 여유 때 2줄로 가던 38자 경계 문장 → 다시 한 줄
+    expect(fitsOneLine(BLOCK_W - 4, BLOCK_W, 4)).toBe(true);
+    expect(fitsOneLine(BLOCK_W - 3.99, BLOCK_W, 4)).toBe(false);
   });
   it("측정 실패(0·NaN·블록 0)는 false = 2줄 폴백", () => {
     expect(fitsOneLine(0, BLOCK_W)).toBe(false);
@@ -24,10 +26,13 @@ describe("fitsOneLine — w ≤ blockW − 17px일 때만 한 줄", () => {
   });
 });
 
-// 최소 가짜 DOM — 글자당 px, strong은 글자당 +1px. el은 width:100%일 때만 BLOCK_W
-function fakeDom(opts: { throwOnRect?: boolean } = {}) {
+// 최소 가짜 DOM — 글자당 charPx(강조 strong은 +1px). el은 width:100%일 때만 BLOCK_W(레이아웃 offsetWidth 512).
+// scale = 조상 transform 배율(대화상자 열림 0.95→1) — 모든 rect 폭에 곱해지고 offsetWidth는 그대로
+function fakeDom(opts: { throwOnRect?: boolean; scale?: number; charPx?: number } = {}) {
+  const k = opts.scale ?? 1;
+  const cp = opts.charPx ?? 13;
   type Node = { tag: string; text: string; className?: string; children: Node[] };
-  const textOf = (n: Node): number => n.children.reduce((a, c) => a + textOf(c), n.tag === "#text" ? n.text.length * 13 : n.tag === "strong" ? n.text.length * 14 : 0);
+  const textOf = (n: Node): number => n.children.reduce((a, c) => a + textOf(c), n.tag === "#text" ? n.text.length * cp : n.tag === "strong" ? n.text.length * (cp + 1) : 0);
   const appended: unknown[] = [];
   const doc = {
     createElement(tag: string) {
@@ -40,7 +45,7 @@ function fakeDom(opts: { throwOnRect?: boolean } = {}) {
         },
       });
       node.appendChild = (c: Node) => node.children.push(c);
-      node.getBoundingClientRect = () => ({ width: textOf(node) });
+      node.getBoundingClientRect = () => ({ width: textOf(node) * k });
       node.remove = () => appended.splice(appended.indexOf(node), 1);
       return node;
     },
@@ -51,9 +56,12 @@ function fakeDom(opts: { throwOnRect?: boolean } = {}) {
   const el = {
     ownerDocument: doc,
     style: { width: "" },
+    get offsetWidth() {
+      return el.style.width === "100%" ? Math.round(BLOCK_W) : 300;
+    },
     getBoundingClientRect() {
       if (opts.throwOnRect) throw new Error("layout 없음");
-      return { width: el.style.width === "100%" ? BLOCK_W : 300 };
+      return { width: (el.style.width === "100%" ? BLOCK_W : 300) * k };
     },
     appendChild(c: unknown) {
       appended.push(c);
@@ -65,20 +73,34 @@ function fakeDom(opts: { throwOnRect?: boolean } = {}) {
 describe("measureLongLineFit", () => {
   it("블록 폭은 width:100%로 재고 끝나면 width·측정 span을 되돌린다", () => {
     const { el, appended } = fakeDom();
-    const short = "가".repeat(36); // 36×13 = 468 ≤ 494.67 → 한 줄
-    const long = "가".repeat(39); // 39×13 = 507 > 494.67 → 2줄
-    expect(measureLongLineFit(el, [short, long], [])).toEqual([true, false]);
+    const fit = "가".repeat(39); // 39×13 = 507 ≤ 511.67 → 한 줄
+    const over = "가".repeat(40); // 40×13 = 520 > 511.67 → 2줄
+    expect(measureLongLineFit(el, [fit, over], [])).toEqual([true, false]);
     expect(el.style.width).toBe("");
     expect(appended).toHaveLength(0);
   });
   it("강조어는 strong(굵은 폭)으로 잰다 — 같은 글자수라도 강조어가 있으면 넘칠 수 있다", () => {
     const { el } = fakeDom();
-    const line = "가".repeat(25) + "애플나스닥테크기업주"; // 일반 35×13=455 / 강조 25×13+10×14=465 둘 다 한 줄
-    expect(measureLongLineFit(el, [line], ["애플나스닥테크기업주"])).toEqual([true]);
-    const edge = "가".repeat(28) + "나스닥백테크기업주"; // 일반 37×13=481 / 강조 28×13+9×14=490 → 한 줄(≤494.67)
-    expect(measureLongLineFit(el, [edge], ["나스닥백테크기업주"])).toEqual([true]);
-    const over = "가".repeat(27) + "나스닥백테크기업주가가"; // 강조 포함 29×13+9×14=503 → 2줄
-    expect(measureLongLineFit(el, [over], ["나스닥백테크기업주"])).toEqual([false]);
+    const line = "가".repeat(29) + "애플나스닥테크기업주"; // 일반 39×13=507 / 강조 29×13+10×14=517
+    expect(measureLongLineFit(el, [line], [])).toEqual([true]);
+    expect(measureLongLineFit(el, [line], ["애플나스닥테크기업주"])).toEqual([false]);
+    const edge = "가".repeat(33) + "나스닥백테크"; // 강조 33×13+6×14=513 → 2줄, 강조 5자면 33×13+5×14=499 → 한 줄
+    expect(measureLongLineFit(el, [edge], ["나스닥백테크"])).toEqual([false]);
+    expect(measureLongLineFit(el, ["가".repeat(33) + "나스닥백테"], ["나스닥백테"])).toEqual([true]);
+  });
+  it("대화상자 열림 배율(0.95 rect)에서 재도 1배와 결과가 같다(qa D-2)", () => {
+    const lines = ["가".repeat(38), "가".repeat(39), "가".repeat(40), "가".repeat(29) + "애플나스닥테크기업주"];
+    const terms = ["애플나스닥테크기업주"];
+    const base = measureLongLineFit(fakeDom().el, lines, terms);
+    expect(base).toEqual([true, true, false, false]);
+    for (const scale of [0.95, 0.97, 0.996]) expect(measureLongLineFit(fakeDom({ scale }).el, lines, terms)).toEqual(base);
+  });
+  it("여유가 있어도 배율과 무관 — 여유만 배율로 환산한다", () => {
+    // 레이아웃 507.6px: 여유 4px 경계(507.67) 안. 배율 0.95에서 여유를 화면 px로 그대로 빼면 2줄로 뒤집히는 값
+    const line = ["가"];
+    expect(measureLongLineFit(fakeDom({ charPx: 507.6 }).el, line, [], 4)).toEqual([true]);
+    expect(measureLongLineFit(fakeDom({ charPx: 507.6, scale: 0.95 }).el, line, [], 4)).toEqual([true]);
+    expect(measureLongLineFit(fakeDom({ charPx: 508, scale: 0.95 }).el, line, [], 4)).toEqual([false]);
   });
   it("측정 중 예외는 전부 false(2줄 폴백)이고 width는 복원된다", () => {
     const { el } = fakeDom({ throwOnRect: true });

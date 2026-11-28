@@ -173,7 +173,7 @@ export function LoanTxView() {
         <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteTarget(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-background dark:bg-popover p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <p className="text-base font-bold">반영된 기록 삭제</p>
-            <p className="text-sm text-muted-foreground break-keep text-pretty">
+            <p className="text-sm text-muted-foreground break-keep text-balance">
               이 기록은 잔액에 반영돼 있어요. 삭제하면 잔액이 되돌아가요.
             </p>
             <p className="text-sm tabular-nums rounded-lg bg-muted/40 p-3">

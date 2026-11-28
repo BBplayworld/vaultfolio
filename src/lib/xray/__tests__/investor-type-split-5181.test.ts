@@ -30,6 +30,7 @@ function check(line: string, terms: readonly string[]) {
   }
   for (const t of terms) if (line.includes(t)) expect(a.includes(t) || b.includes(t), `${t} @ ${line}`).toBe(true);
   expect(b.startsWith("("), line).toBe(false);
+  expect(a.split(" ").at(-1)!.length, line).toBeGreaterThan(1); // 1자 어절 뒤에서 자르지 않음
 }
 
 describe("splitLongDescriptionLine", () => {
@@ -48,6 +49,11 @@ describe("splitLongDescriptionLine", () => {
     check(line, ["NASDAQ 100"]);
     const [a, b] = splitLongDescriptionLine(line, ["NASDAQ 100"], TARGET)!;
     expect(a.endsWith("NASDAQ") || b.startsWith("100")).toBe(false);
+  });
+  it("앞 어절이 1자인 자리에서는 자르지 않는다 — 합성어 `홈 화면` 보존(5.182 ui-review)", () => {
+    const line = "한 걸음 더 나아가 해외 계좌 앱이 홈 화면 첫 줄에 있을 것 같은 타입.";
+    check(line, []);
+    expect(splitLongDescriptionLine(line, [], TARGET)).toEqual(["한 걸음 더 나아가 해외 계좌 앱이", "홈 화면 첫 줄에 있을 것 같은 타입."]);
   });
   it("35자 이하는 분할 대상이 아니고, 자를 자리가 없으면 null(기존 최소 높이)", () => {
     expect(splitLongDescriptionLine("가나다라마바사아자차카타파하가나다라마바사아자차카타파하가나다라마바사아자차", [], TARGET)).toBeNull();

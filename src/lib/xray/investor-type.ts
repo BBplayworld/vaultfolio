@@ -589,7 +589,7 @@ export function resolveInvestorType(params: ResolveInvestorTypeParams): Investor
  * 캡처(PNG) 설명의 긴 단일 문장 2줄 분할(#371 동승, 5.181) — targetChars를 넘는 한 문장 묶음은 DOM과 html-to-image가
  * 줄을 다르게 접어 꼬리 줄(`챙기는 편.`)·빈 줄이 생긴다. 그래서 JS로 결정적으로 2줄을 만든다.
  * 자리: 어절 경계(공백)만, 쉼표 뒤를 우선하고 그다음 가운데에 가까운 곳. 강조어(공백 포함 종목명·지수명) 안과
- * 괄호 앞(`달러 (USD)`)에서는 자르지 않는다. 두 줄 모두 minChars(11)자 이상·maxChars 이하가 되는 자리가 없으면 null(그대로 둔다).
+ * 괄호 앞(`달러 (USD)`)·1자 어절 뒤(`홈 화면`)에서는 자르지 않는다. 두 줄 모두 minChars(11)자 이상·maxChars 이하가 되는 자리가 없으면 null(그대로 둔다).
  */
 export function splitLongDescriptionLine(line: string, terms: readonly string[], maxChars: number, minChars = 11): [string, string] | null {
   const blocked = new Set<number>();
@@ -601,6 +601,8 @@ export function splitLongDescriptionLine(line: string, terms: readonly string[],
   const cands: { i: number; comma: boolean; d: number }[] = [];
   for (let i = 1; i < line.length - 1; i++) {
     if (line[i] !== " " || blocked.has(i) || line[i + 1] === "(") continue;
+    // 앞 어절이 1자면 그 뒤에서 자르지 않는다 — 합성어(`홈 화면`) 끊김 방지(5.182 ui-review)
+    if (i - (line.lastIndexOf(" ", i - 1) + 1) === 1) continue;
     const a = i;
     const b = line.length - i - 1;
     if (a < minChars || b < minChars || a > maxChars || b > maxChars) continue;
