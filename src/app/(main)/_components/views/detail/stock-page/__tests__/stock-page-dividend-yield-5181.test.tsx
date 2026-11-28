@@ -112,11 +112,19 @@ describe("숨김 3조건 — main 그대로 `세전 추정`", () => {
     expect(html).not.toContain("stock-page-dividend-yield");
     expect(text(html)).toMatch(MAIN_FIRST);
   });
-  it("① 지급 뒤 반영 매수", () => {
-    const s = [stock({ quantity: 110, positionSource: "computed" })];
-    const t = { id: "t1", stockId: "A", ticker: "005930", stockName: "삼성", type: "buy", quantity: 10, price: 50_000, currency: "KRW", date: `${YEAR}-02-01`, reflected: true, createdAt: `${YEAR}-02-01T00:00:00Z` } as Transaction;
-    setup(s, { txs: [t] });
-    expect(row(s)).toContain('data-yield="hidden"');
+  it("① 지급 뒤 반영 매수가 지금 수량의 10% 초과면 숨김, 이내면 표시(재판정 5.181)", () => {
+    // 기존 픽스처(지급일 100 → 지금 110, 차이 9.1%)는 완화 뒤 표시 대상이라 숨김 픽스처를 130(23%)으로 바꿨다
+    const buy = (q: number) => ({ id: "t1", stockId: "A", ticker: "005930", stockName: "삼성", type: "buy", quantity: q, price: 50_000, currency: "KRW", date: `${YEAR}-02-01`, reflected: true, createdAt: `${YEAR}-02-01T00:00:00Z` }) as Transaction;
+    const big = [stock({ quantity: 130, positionSource: "computed" })];
+    setup(big, { txs: [buy(30)] });
+    expect(row(big)).toContain('data-yield="hidden"');
+    const small = [stock({ quantity: 105, positionSource: "computed" })];
+    setup(small, { txs: [buy(5)] });
+    const html = row(small);
+    expect(html).toContain('data-yield="shown"');
+    // 값은 탭과 같은 함수·같은 포맷(C150) — 그 종목만 가진 포트폴리오의 탭 글자와 같다
+    expect(yieldText(html)).toBe(`· 투입 대비 ${fnText(small)}(세전)`);
+    expect(tabText(renderToStaticMarkup(<DividendCard />))).toBe(fnText(small));
   });
   it("② 원본 행 평단 0, ③ 수량 0", () => {
     const s = [stock({ id: "A" }), stock({ id: "B", broker: "나", averagePrice: 0 })];

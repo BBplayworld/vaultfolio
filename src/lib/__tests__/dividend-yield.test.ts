@@ -100,8 +100,9 @@ describe("stockPageDividendYield (#371)", () => {
     // 1월 첫 지급 전에 샀으면 수량이 같아 표시
     expect(run([stock({ purchaseDate: "2026-01-10" })]).r?.text).toBe("10.0%");
   });
-  it("숨김 ①: 지급 뒤 추가 매수·일부 매도(반영 거래)", () => {
+  it("숨김 ①: 지급 뒤 추가 매수·일부 매도가 지금 수량의 10% 초과(반영 거래)", () => {
     const base = stock({});
+    // 재판정(5.181) 뒤에도 숨김 — 10주 → +5주는 지급일 10 vs 지금 15(33%), −4주는 10 vs 6(67%)
     const buy = tx({ type: "buy", quantity: 5, date: "2026-04-01" });
     expect(run([after(base, buy)], [buy]).r).toBeNull();
     const sell = tx({ type: "sell", quantity: 4, date: "2026-04-01" });
@@ -112,6 +113,27 @@ describe("stockPageDividendYield (#371)", () => {
     // 지급일 뒤에 수량을 직접 덮어쓴 행(manual)은 heldQtyAt이 지금 수량을 쓴다 → 표시
     const manual = { ...after(base, buy), positionSource: "manual", positionEffectiveDate: "2026-10-01" } as Stock;
     expect(run([manual], [buy]).r).not.toBeNull();
+  });
+  it("경계: |지급일 − 지금| / 지금 10%는 표시, 10.1%는 숨김(매수·매도 양방향), 값은 탭과 같은 함수", () => {
+    const at = (q: number, t: Transaction) => run([after(stock({ quantity: q }), t)], [t]);
+    // 매수: 지금 100 = 지급일 90 + 지급 뒤 10(10%) → 표시, 89.9 + 10.1(10.1%) → 숨김
+    const b10 = tx({ type: "buy", quantity: 10, date: "2026-04-01" });
+    const shown = at(90, b10);
+    expect(shown.r).not.toBeNull();
+    expect(shown.r).toEqual(shown.tab);
+    expect(at(89.9, tx({ type: "buy", quantity: 10.1, date: "2026-04-01" })).r).toBeNull();
+    // 매도: 지금 100 = 지급일 110 − 10(−10%) → 표시, 110.1 − 10.1 → 숨김
+    const s10 = tx({ type: "sell", quantity: 10, date: "2026-04-01" });
+    expect(at(110, s10).r).toEqual(at(110, s10).tab);
+    expect(at(110, s10).r).not.toBeNull();
+    expect(at(110.1, tx({ type: "sell", quantity: 10.1, date: "2026-04-01" })).r).toBeNull();
+    // 5% 차이(데모 TIGER 형태)는 표시
+    expect(at(100, tx({ type: "buy", quantity: 5, date: "2026-04-01" })).r).not.toBeNull();
+  });
+  it("숨김 ①: 지급일 보유 0(그 지급 뒤 처음 반영 매수)", () => {
+    const first = tx({ type: "buy", quantity: 10, date: "2026-04-01" });
+    // 기준 0주 + 4월 반영 매수 10주 → 3월 지급일 보유 0
+    expect(run([after(stock({ quantity: 0, averagePrice: 0 }), first)], [first]).r).toBeNull();
   });
   it("숨김 ②: 원본 행 중 평단 0 이하(병합 평단은 양수여도)", () => {
     const rows = [stock({ id: "a" }), stock({ id: "b", broker: "나", averagePrice: 0 })];

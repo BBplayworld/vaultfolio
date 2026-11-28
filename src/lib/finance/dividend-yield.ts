@@ -53,10 +53,14 @@ export function computeDividendYield(
 
 /**
  * 종목 한 장 투입 대비(#371, 5.181) — 그 종목 그룹만 넣은 computeDividendYield. 아래 중 하나면 null(숨김):
- * ① 지급일 수량(heldQtyAt) ≠ 지금 수량인 원본 행이 있다(올해 매수·추가 매수·일부 매도 — 분자·분모 수량 기준이 달라짐)
+ * ① 원본 행의 어느 지급일에 보유가 0이다(올해 처음 산 종목), 또는 그날 수량(heldQtyAt)과 지금 수량의 상대 차이
+ *    |지급일 − 지금| / 지금이 10%를 넘는다(매수·매도 양방향). 10% 이내면 분모 차이로 생기는 표시값 오차도 상대 10% 안팎이라 표시한다
  * ② 원본 행 중 평단 0 이하가 있다(병합 평단이 낮아져 값이 부풀음) ③ computeDividendYield가 null
  * 새 계산식 0 — 값은 탭과 같은 함수·같은 mode("all")다.
  */
+/** 종목 한 장 투입 대비 숨김 기준 — 지급일 수량과 지금 수량의 상대 차이 상한(#371 재판정) */
+export const STOCK_PAGE_QTY_DRIFT = 0.1;
+
 export function stockPageDividendYield(
   groups: readonly (DividendYieldItem & { items: readonly Stock[]; payouts: readonly Pick<DividendPayoutResult, "payoutDate">[] })[],
   txs: readonly Transaction[],
@@ -67,8 +71,10 @@ export function stockPageDividendYield(
     for (const item of g.items) {
       if (!(item.averagePrice > 0)) return null;
       for (const p of g.payouts) {
-        // heldQtyAt은 소수 8자리로 맞춘 값 — 부동소수 오차만큼의 차이는 같은 수량으로 본다
-        if (Math.abs(heldQtyAt(item, txs, p.payoutDate).qty - item.quantity) > 1e-8) return null;
+        const held = heldQtyAt(item, txs, p.payoutDate).qty;
+        if (!(held > 0) || !(item.quantity > 0)) return null;
+        // 경계(정확히 10%)는 표시 — 부동소수 오차(1e-9)만큼은 같은 값으로 본다
+        if (Math.abs(held - item.quantity) / item.quantity > STOCK_PAGE_QTY_DRIFT + 1e-9) return null;
       }
     }
   }
