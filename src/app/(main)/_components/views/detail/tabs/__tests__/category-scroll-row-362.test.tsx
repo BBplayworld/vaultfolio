@@ -29,7 +29,7 @@ vi.mock("react", async (importOriginal) => {
   return { ...r, default: { ...r, ...hooks }, ...hooks };
 });
 
-import { CategoryScrollRow, ROW_CLASS, FADE_BOTH, FADE_END, FADE_START, edgeOf, fadeClass, scrollActiveIntoView, selectorClass } from "../category-scroll-row";
+import { CategoryScrollRow, ROW_CLASS, FADE_BOTH, FADE_END, FADE_START, FADE_MIN_OVERFLOW, edgeOf, fadeClass, scrollActiveIntoView, selectorClass } from "../category-scroll-row";
 import { InlineSelector } from "../../../../layout/ui/inline-selector";
 
 const SEVEN = ["all", "apt", "officetel", "villa", "house", "land", "etc"].map((v, i) => ({ value: v, label: `칸${i}` }));
@@ -124,9 +124,16 @@ describe("CategoryScrollRow (#362)", () => {
     expect(mouse).not.toHaveBeenCalled();
   });
 
-  it("넘침 페이드 — edgeOf·fadeClass: 넘치지 않으면 0, 시작/끝/양쪽 3종", () => {
+  it("넘침 페이드 — edgeOf·fadeClass: 넘치지 않거나 ≤4px이면 0, 시작/끝/양쪽 3종", () => {
     expect(edgeOf({ scrollLeft: 0, clientWidth: 300, scrollWidth: 300 })).toEqual({ start: false, end: false });
     expect(edgeOf({ scrollLeft: 0, clientWidth: 300, scrollWidth: 301 })).toEqual({ start: false, end: false }); // 1px 오차
+    // 5.180 임계값(5.178 ui-review 관찰 A): 넘침 ≤4px이면 숨은 칸이 없어 페이드 생략. 5.177 때는 2~4px도 끝 페이드였다(320 주식 줄 2px·현금 줄 ≤2.5px)
+    expect(FADE_MIN_OVERFLOW).toBe(4);
+    expect(edgeOf({ scrollLeft: 0, clientWidth: 300, scrollWidth: 302 })).toEqual({ start: false, end: false }); // 320 주식 줄 2px
+    expect(edgeOf({ scrollLeft: 0, clientWidth: 300, scrollWidth: 304 })).toEqual({ start: false, end: false }); // 경계 4px
+    expect(edgeOf({ scrollLeft: 4, clientWidth: 300, scrollWidth: 304 })).toEqual({ start: false, end: false }); // 끝까지 밀어도 시작 페이드 0
+    expect(edgeOf({ scrollLeft: 0, clientWidth: 300, scrollWidth: 305 })).toEqual({ start: false, end: true }); // 5px부터 페이드
+    expect(edgeOf({ scrollLeft: 5, clientWidth: 300, scrollWidth: 305 })).toEqual({ start: true, end: false });
     expect(edgeOf({ scrollLeft: 0, clientWidth: 296, scrollWidth: 380 })).toEqual({ start: false, end: true });
     expect(edgeOf({ scrollLeft: 40, clientWidth: 296, scrollWidth: 380 })).toEqual({ start: true, end: true });
     expect(edgeOf({ scrollLeft: 84, clientWidth: 296, scrollWidth: 380 })).toEqual({ start: true, end: false });

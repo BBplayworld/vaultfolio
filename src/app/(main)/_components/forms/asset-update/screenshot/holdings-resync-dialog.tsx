@@ -25,7 +25,7 @@ import { cryptoExchanges, securitiesFirms, stockCategories } from "@/config/asse
 import { ASSET_THEME } from "@/config/theme";
 import { track, trackParse } from "@/lib/analytics/ga";
 import { getAssetData } from "@/lib/asset/asset-storage";
-import { shouldNotifyResyncClose } from "@/lib/asset/resync-return";
+import { createUndoToastSlot, isResultCloseGuarded, shouldNotifyResyncClose } from "@/lib/asset/resync-return";
 import { startScreenTotalCall, type ScreenTotalCall } from "@/lib/asset/resync/screen-total-call";
 import { lastRefreshedAt, markCategoryRefreshed, notifyCategoryRefreshed, restoreBrokersSynced, restoreCategoryRefreshed, type BrokerSyncUndo } from "@/lib/asset/asset-refresh-status";
 import { confirmSameResync, markAppliedResync, writableScopes } from "@/lib/asset/broker-synced";
@@ -93,6 +93,12 @@ export const KindCtx = createContext<ResyncKind>("stock");
 const useKind = () => useContext(KindCtx);
 const useT = () => COPY[useKind()];
 const TOAST_ID = "holdings-resync-undo";
+// 되돌리기 토스트는 매번 새 id(#368) — 같은 id로 dismiss→재생성하면 늦게 온 삭제가 새 토스트를 지운다
+const undoToast = createUndoToastSlot(TOAST_ID);
+const dismissUndoToast = () => {
+  const id = undoToast.take();
+  if (id) toast.dismiss(id);
+};
 const ACCOUNT_OPTIONS = stockCategories.filter((c) => c.value !== "foreign" && c.value !== "unlisted");
 const categoryShort = (c: Stock["category"]) => stockCategories.find((x) => x.value === c)?.shortLabel ?? c;
 const todayKst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().split("T")[0];
@@ -170,6 +176,8 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     resolveScreensWithDefaultBroker(screens, base, { ...resolveOpts, brokerOverrides, accountOverrides }, defaultBroker);
 
   const [step, setStep] = useState<Step>("upload");
+  // 결과 화면에 들어온 시각(#368) — 직후 잠깐 바깥 클릭·Escape 닫기를 막는다(연타 둘째 탭)
+  const resultAtRef = useRef<number | null>(null);
   const [shots, setShots] = useState<Shot[]>([]);
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(() => geminiUsage.remaining());
@@ -273,6 +281,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     totalAskedRef.current = new Set();
     urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
     urlsRef.current.clear();
+    resultAtRef.current = null;
     setStep("upload");
     setShots([]);
     setRunning(false);
@@ -302,8 +311,9 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     const u = undoRef.current;
     if (step === "result" && u && !u.done) {
       // 토스트가 이 맞추기의 사본을 직접 붙잡는다(대화상자를 다시 열어도 다른 맞추기를 되돌리지 않게)
+      dismissUndoToast();
       toast("보유 현황을 맞췄어요", {
-        id: TOAST_ID,
+        id: undoToast.next(),
         duration: 8000,
         actionButtonStyle: { minHeight: 40 },
         action: { label: "되돌리기", onClick: () => void doUndo(u, true) },
@@ -449,10 +459,11 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       toast.error("맞춘 날을 남기지 못했어요");
       return;
     }
-    toast.dismiss(TOAST_ID);
+    dismissUndoToast();
     undoRef.current = { entries: [], done: false, kind, prevRefreshedAt: r.prevRefreshedAt, appliedAt: r.appliedAt, brokers: r.brokers, confirmOnly: true };
     setConfirmedSame(true);
     setApplying(false);
+    resultAtRef.current = performance.now();
     setStep("result");
   };
 
@@ -482,7 +493,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       toast.error("맞추기에 실패했어요");
       return;
     }
-    toast.dismiss(TOAST_ID);
+    dismissUndoToast();
     if (!isCrypto) pruneStockTargets(next.stocks);
     const prevRefreshedAt = lastRefreshedAt(kind);
     const appliedAt = markCategoryRefreshed(kind, { notify: false }); // 결과 화면이 열려 있어 닫을 때 신호(handleClose)
@@ -504,6 +515,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
     setApplied(result.counts);
     setAppliedMoved(plan && plan.moved > 0 ? { moved: plan.moved, movedTx: plan.movedTx } : null);
     setApplying(false);
+    resultAtRef.current = performance.now();
     setStep("result");
   };
 
@@ -556,7 +568,7 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
       setUndoInfo({ skipped });
       setUndoing(false);
     }
-    toast.dismiss(TOAST_ID);
+    dismissUndoToast();
     toast(skipped > 0 ? `되돌렸어요. 직접 고친 항목 ${skipped}건은 그대로 뒀어요` : "되돌렸어요", { duration: 2000 });
   };
 
@@ -582,7 +594,11 @@ export function HoldingsResyncDialog({ open, onOpenChange, kind = "stock", initi
         onOpenAutoFocus={(e) => { e.preventDefault(); titleRef.current?.focus({ preventScroll: true }); }}
         onCloseAutoFocus={returnFocus}
         onEscapeKeyDown={(e) => {
-          if (running || applying) e.preventDefault();
+          if (running || applying || isResultCloseGuarded(resultAtRef.current, performance.now())) e.preventDefault();
+        }}
+        // 결과 화면 전환 직후 바깥 닫기 무시(#368, 이 창만) — 공용 dialog 기본값은 그대로
+        onInteractOutside={(e) => {
+          if (isResultCloseGuarded(resultAtRef.current, performance.now())) e.preventDefault();
         }}
       >
         <DialogHeader className={`px-5 pt-5 pb-3 text-left ${scrolled ? "border-b border-border/40 dark:border-white/10" : ""}`}>

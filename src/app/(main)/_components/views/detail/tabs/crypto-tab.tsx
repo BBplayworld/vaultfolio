@@ -18,6 +18,7 @@ import { DetailSummaryHeader, ProfitMetric, profitTone } from "../detail-summary
 import { Crypto } from "@/types/asset";
 import { ShareBarLegend } from "../share-bar-legend";
 import { ExchangeTotalsBlock } from "./exchange-totals-block";
+import { DOT_WRAP_FIRST, DOT_WRAP_ROW, DotLead } from "../../../layout/ui/dot-wrap";
 
 function computeCryptoMetrics(coin: Crypto) {
   const value = coin.quantity * coin.currentPrice;
@@ -45,12 +46,19 @@ function SubCryptoCard({ coin, idx, onDelete }: { coin: Crypto; idx: number; onD
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left">
               <ChevronDown className={`size-3.5 sm:size-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-              <span className="text-sm font-semibold text-foreground truncate">{label}</span>
-              <span className="text-sm text-foreground shrink-0 tabular-nums">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
-              <div className="flex flex-col items-end ml-auto mr-2 sm:mr-4 shrink-0">
-                <span className="text-sm font-medium text-foreground tabular-nums">{formatCurrency(Math.round(value))}</span>
-                <span data-testid="profit-text" data-zero={tone.isZero} className={`text-sm font-bold tabular-nums ${tone.colorClass}`}>
-                  {tone.sign}{formatCurrency(Math.round(tone.amount))} ({tone.sign}{tone.rate.toFixed(1)}%)
+              {/* 5.180 #369 — 수량·금액 열이 shrink-0이라 좁은 폭에서 금액이 카드 밖으로 잘리고 거래소명이 폭 0이 됐다.
+                  640 미만은 거래소명 위·수량 아래 2줄(카드 행의 이름/수량과 같은 구조). 수량은 자르지 않음 — 이 행이 거래소별 수량의 유일한 자리.
+                  넘칠 때 줄이는 순서: ① 금액 열(shrink-[100], 고정 상한 0, 최소 = 금액 한 줄 → 수익률만 다음 줄) ② 수량 줄바꿈(금액 열이 최소인데도 모자랄 때만).
+                  수량 폭 calc(100%+2px) = ①에서 왼쪽 묶음이 서브픽셀만큼 함께 줄어도 수량이 꺾이지 않게 하는 여유 */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+                <span className="text-sm font-semibold text-foreground truncate">{label}</span>
+                <span data-testid="sub-row-qty" className="w-[calc(100%+2px)] text-sm text-muted-foreground tabular-nums [overflow-wrap:anywhere] sm:w-auto">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
+              </div>
+              <div className="flex shrink-[100] flex-col items-end ml-auto mr-2 sm:mr-4 text-right">
+                <span className="text-sm font-medium text-foreground tabular-nums whitespace-nowrap">{formatCurrency(Math.round(value))}</span>
+                <span data-testid="profit-text" data-zero={tone.isZero} className={`flex flex-wrap justify-end gap-x-1 text-sm font-bold tabular-nums ${tone.colorClass}`}>
+                  <span className="whitespace-nowrap">{tone.sign}{formatCurrency(Math.round(tone.amount))}</span>{" "}
+                  <span className="whitespace-nowrap">({tone.sign}{tone.rate.toFixed(1)}%)</span>
                 </span>
               </div>
             </button>
@@ -123,20 +131,24 @@ function CryptoCard({ coin, value, profit, profitRate, pct, color, onDelete, onD
               <div className="size-6 sm:size-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color }}>
                 <span className="text-[10px] font-bold text-white">{(coin.symbol || coin.name).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?"}</span>
               </div>
-              <div className={ASSET_THEME.cardInfoLeft}>
-                <div className={ASSET_THEME.cardInfoTitle}>
+              {/* 5.180 #369 — 금액 열이 shrink-0(359 이하만 45% 상한)이라 360 이상에서 버튼이 넘쳐 `˅`·금액이 카드 밖으로 잘렸다.
+                  넘칠 때 줄이는 순서: ① 금액 열(shrink-[100], 최소 = 금액 한 줄 폭 → 수익률만 다음 줄) ② 메타 줄(조각 사이에서만 꺾음, C152 DotLead)
+                  ③ 수량 줄바꿈(금액 열이 최소이고 메타가 꺾여도 모자랄 때만, 30억대·320 다크 등). 수량은 자르지 않는다.
+                  왼쪽 열 기준 폭은 메타 한 줄(flex-auto, 이름 줄은 w-0 min-w-full로 폭 계산에서 빠지고 남는 폭에서 2줄까지).
+                  메타 줄 폭 = 왼쪽 열 + DOT_WRAP_ROW 당김 8px + 여유 2px — ①에서 왼쪽 열이 서브픽셀만큼 함께 줄어도 메타가 꺾이지 않게 */}
+              <div data-testid="crypto-row-left" className="flex-auto">
+                <div className={`${ASSET_THEME.cardInfoTitle} w-0 min-w-full`}>
                   <span className={ASSET_THEME.cardInfoName} title={coin.name.length > 10 ? coin.name : undefined}>{coin.name}</span>
                   {coin.symbol && <span className="text-2xs text-muted-foreground font-mono shrink-0">{coin.symbol}</span>}
                 </div>
-                <div className={`${ASSET_THEME.cardInfoMeta} max-[360px]:flex-wrap max-[360px]:gap-x-1.5`}>
-                  <span className="text-sm text-foreground dark:min-[360px]:whitespace-nowrap">{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
-                  <span className="text-sm text-muted-foreground max-[360px]:hidden">·</span>
-                  <span data-testid="row-share" className="text-sm font-semibold text-primary dark:min-[360px]:whitespace-nowrap">{pct.toFixed(1)}%</span>
+                <div data-testid="crypto-row-meta" className={`mt-0.5 flex w-[calc(100%+0.625rem)] flex-wrap items-center gap-1 ${DOT_WRAP_ROW}`}>
+                  <span data-testid="crypto-row-qty" className={`${DOT_WRAP_FIRST} text-sm text-foreground [overflow-wrap:anywhere]`}>{coin.quantity.toLocaleString(undefined, { maximumFractionDigits: 10 })}개</span>
+                  <span className="text-sm whitespace-nowrap"><DotLead /><span data-testid="row-share" className="font-semibold text-primary">{pct.toFixed(1)}%</span></span>
                 </div>
               </div>
-              <div className={`${ASSET_THEME.cardInfoRight} max-[360px]:max-w-[45%]`}>
-                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default}`}>{formatPriceByMode(value)}</p>
-                <div data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardAmountProfitRow} max-sm:flex-wrap max-sm:justify-end`}>
+              <div data-testid="crypto-row-right" className="shrink-[100] text-right">
+                <p className={`${ASSET_THEME.cardAmountMain} ${ASSET_THEME.text.default} whitespace-nowrap`}>{formatPriceByMode(value)}</p>
+                <div data-testid="profit-text" data-zero={tone.isZero} className={`${ASSET_THEME.cardAmountProfitRow} flex-wrap justify-end gap-y-0`}>
                   <p className={`${ASSET_THEME.cardAmountSub} ${tone.colorClass} whitespace-nowrap`}>{tone.sign}{formatPriceByMode(Math.round(tone.amount))}</p>
                   <p className={`${ASSET_THEME.cardAmountRate} ${tone.colorClass} whitespace-nowrap`}>({tone.sign}{tone.rate.toFixed(1)}%)</p>
                 </div>

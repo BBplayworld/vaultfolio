@@ -341,7 +341,7 @@ resolveKept(existing, importedKeys, mode: "merge"|"reset", keyOf): T[]  // merge
 
 ### min-share.ts (#148, 4.77) — 도넛·비중 바 표시 최소 비중
 `src/lib/report/min-share.ts`: `displayShareWidths(values, {minPct?, maxItems=5, total?})`(양수 항목 5개 이하면 최소 폭 보장·합 100, 6개 이상 순수 비례, 0 이하는 0, `total` 주면 합/total만 채움), `displayBarWidths`(4.70, composition.ts가 재노출), 상수 `MIN_BAR_PCT=7`·`MIN_DONUT_PCT=5`·`MIN_SHARE_MAX_ITEMS=5`. 폭·각도만 바꾸고 숫자·라벨 표시 기준(`DONUT_LABEL_MIN_PCT`)은 실제 값. 사용처: `AssetDonutChart`(Pie `dataKey="shown"`)·`SectionBar`·상세 5탭 비중 바·`PortfolioSectorBar`·`/ratio` 국내/해외 바·구성 막대. `portfolio-ring-card.tsx`의 `MIN_ARC_DEG` 링은 라벨·상한 로직이 달라 별도 유지.
-`sortHoldingsRows`(보유 우선 안정 정렬·과거 순자산 맨 아래), `resyncNoticeText`(상단 줄 문구), `consumeResyncSignal`(대기 자산군과 같은 신호만 복귀·소비), `shouldTrackResyncContinue`(GA 조건), `isRefreshCategory`, `RESYNC_LABELS`. 저장·스키마와 무관.
+`RESULT_CLOSE_GUARD_MS`=400·`isResultCloseGuarded(enteredAt, now)`(맞추기 결과 화면 진입 직후 바깥·Escape 닫기 무시 판정, null이면 false, 5.180 #368)·`createUndoToastSlot(base)`(`next()` 새 id·`take()` 떠 있는 id 비우고 반환 — sonner `dismiss(id)`가 삭제를 다음 프레임으로 미뤄 같은 id 재생성 토스트를 지우는 경합 방지)·`sortHoldingsRows`(보유 우선 안정 정렬·과거 순자산 맨 아래), `resyncNoticeText`(상단 줄 문구), `consumeResyncSignal`(대기 자산군과 같은 신호만 복귀·소비), `shouldTrackResyncContinue`(GA 조건), `isRefreshCategory`, `RESYNC_LABELS`. 저장·스키마와 무관.
 
 ### asset-refresh-status.ts (S-4.30) — 카테고리별 자산 최신화 상태(홈 넛지용)
 
