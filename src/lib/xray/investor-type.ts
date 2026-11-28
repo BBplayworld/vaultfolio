@@ -584,3 +584,30 @@ export function resolveInvestorType(params: ResolveInvestorTypeParams): Investor
     avatar: { themeKey, regionKey, accountKey, concentration, stockTypeKey },
   };
 }
+
+/**
+ * 캡처(PNG) 설명의 긴 단일 문장 2줄 분할(#371 동승, 5.181) — targetChars를 넘는 한 문장 묶음은 DOM과 html-to-image가
+ * 줄을 다르게 접어 꼬리 줄(`챙기는 편.`)·빈 줄이 생긴다. 그래서 JS로 결정적으로 2줄을 만든다.
+ * 자리: 어절 경계(공백)만, 쉼표 뒤를 우선하고 그다음 가운데에 가까운 곳. 강조어(공백 포함 종목명·지수명) 안과
+ * 괄호 앞(`달러 (USD)`)에서는 자르지 않는다. 두 줄 모두 minChars(11)자 이상·maxChars 이하가 되는 자리가 없으면 null(그대로 둔다).
+ */
+export function splitLongDescriptionLine(line: string, terms: readonly string[], maxChars: number, minChars = 11): [string, string] | null {
+  const blocked = new Set<number>();
+  for (const t of terms) {
+    if (!t.includes(" ")) continue;
+    for (let i = line.indexOf(t); i >= 0; i = line.indexOf(t, i + 1)) for (let k = i; k < i + t.length; k++) blocked.add(k);
+  }
+  const mid = line.length / 2;
+  const cands: { i: number; comma: boolean; d: number }[] = [];
+  for (let i = 1; i < line.length - 1; i++) {
+    if (line[i] !== " " || blocked.has(i) || line[i + 1] === "(") continue;
+    const a = i;
+    const b = line.length - i - 1;
+    if (a < minChars || b < minChars || a > maxChars || b > maxChars) continue;
+    cands.push({ i, comma: line[i - 1] === ",", d: Math.abs(i - mid) });
+  }
+  if (cands.length === 0) return null;
+  const pool = cands.some((c) => c.comma) ? cands.filter((c) => c.comma) : cands;
+  const best = pool.reduce((x, y) => (y.d < x.d ? y : x));
+  return [line.slice(0, best.i), line.slice(best.i + 1)];
+}
